@@ -86,8 +86,7 @@ def _overview(spending, income, categories, all_years) -> Overview:
             for y in all_years
         ],
         all_time_by_category=[
-            CategoryAmount(category=c, amount=money(all_time.get(c, 0)))
-            for c in categories
+            CategoryAmount(category=c, amount=money(all_time.get(c, 0))) for c in categories
         ],
     )
 
@@ -122,14 +121,9 @@ def _months(spending, income, all_months) -> dict[str, MonthPage]:
     months: dict[str, MonthPage] = {}
 
     for y, m in all_months:
-
         by_cat = spending.by_category(y, m)
         by_category = sorted(
-            (
-                CategoryAmount(category=c, amount=money(v))
-                for c, v in by_cat.items()
-                if v != 0
-            ),
+            (CategoryAmount(category=c, amount=money(v)) for c, v in by_cat.items() if v != 0),
             key=lambda ca: ca.amount,
             reverse=True,
         )
@@ -174,9 +168,7 @@ def _income(income) -> IncomeSection:
             )
             for y in income.years()
         ],
-        by_month={
-            f"{y:04d}": [money(v) for v in income.by_month(y)] for y in income.years()
-        },
+        by_month={f"{y:04d}": [money(v) for v in income.by_month(y)] for y in income.years()},
         recent_paychecks=[_paycheck_out(p) for p in recent],
     )
 

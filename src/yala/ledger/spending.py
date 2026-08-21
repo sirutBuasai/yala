@@ -1,7 +1,8 @@
 """Spending domain: discretionary ``Expenses:*`` transactions.
 
 Plain-Python aggregation over the loaded ledger. **Discretionary** excludes the
-``Expenses:Deductions:*`` expenses but not spending given that deductions are directly related to income.
+``Expenses:Deductions:*`` expenses but not spending given that deductions are directly
+related to income.
 -**Invariant:** a discretionary spending transaction has exactly one ``Expenses:*`` posting.
 """
 
@@ -64,7 +65,8 @@ class Spending:
                 continue  # non-spending directive (a paycheck, transfer, etc.)
             if len(expense_postings) > 1:
                 raise ValueError(
-                    f"spending txn {t.date} {t.payee!r} has {len(expense_postings)} Expenses postings; "
+                    f"spending txn {t.date} {t.payee!r} has "
+                    f"{len(expense_postings)} Expenses postings; "
                     "only one category is allowed per transaction."
                 )
 
@@ -89,16 +91,15 @@ class Spending:
         return out
 
     def categories(self) -> list[str]:
-        """Discretionary spending categories from ``Expenses:*`` accounts (excludes Deductions), sorted."""
+        """Discretionary spending categories from ``Expenses:*`` accounts (excludes
+        Deductions), sorted."""
         return sorted(
             a.split(":", 1)[1]
             for a in self._led.declared_accounts(EXPENSES)
             if _is_discretionary(a)
         )
 
-    def by_category(
-        self, year: int | None = None, month: int | None = None
-    ) -> dict[str, Decimal]:
+    def by_category(self, year: int | None = None, month: int | None = None) -> dict[str, Decimal]:
         totals: dict[str, Decimal] = defaultdict(lambda: Decimal(0))
 
         for t in self.transactions(year, month):

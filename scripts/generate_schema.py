@@ -159,9 +159,7 @@ def example_data() -> DashboardData:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "data.schema.json").write_text(json.dumps(schema.json_schema(), indent=2) + "\n")
-    (OUT / "data.example.json").write_text(
-        example_data().model_dump_json(indent=2) + "\n"
-    )
+    (OUT / "data.example.json").write_text(example_data().model_dump_json(indent=2) + "\n")
     print(f"wrote {OUT / 'data.schema.json'} and {OUT / 'data.example.json'}")
 
 

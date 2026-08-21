@@ -1,7 +1,8 @@
 """Core ledger access: load the beancount file once and expose shared, domain-agnostic primitives.
 
-:class:`Ledger` is the single object the rest of the backend uses to interact with the beancount data.
-Domain-specific questions live in their own modules and hang off the ledger as uniform query namespaces.
+:class:`Ledger` is the single object the rest of the backend uses to interact with the
+beancount data. Domain-specific questions live in their own modules and hang off the
+ledger as uniform query namespaces.
 
 Aggregation is plain Python over the loaded directives — deliberate at this scale (single
 currency, a few thousand txns, precomputed once by the builder). Domains that need beancount's
@@ -51,9 +52,7 @@ class Ledger:
         if self.strict and errors:
             shown = "; ".join(str(getattr(e, "message", e)) for e in errors[:5])
             more = "" if len(errors) <= 5 else f" (+{len(errors) - 5} more)"
-            raise LedgerError(
-                f"{len(errors)} error(s) loading {self.path}: {shown}{more}"
-            )
+            raise LedgerError(f"{len(errors)} error(s) loading {self.path}: {shown}{more}")
 
         return self
 
@@ -77,9 +76,7 @@ class Ledger:
 
         return "USD"
 
-    def transactions(
-        self, year: int | None = None, month: int | None = None
-    ) -> list[Transaction]:
+    def transactions(self, year: int | None = None, month: int | None = None) -> list[Transaction]:
         """All transaction views, optionally filtered by year/month. Domain-agnostic."""
 
         self._require()
@@ -120,8 +117,7 @@ class Ledger:
         return sorted(
             e.account
             for e in self._entries
-            if isinstance(e, data.Open)
-            and (prefix is None or e.account.startswith(prefix))
+            if isinstance(e, data.Open) and (prefix is None or e.account.startswith(prefix))
         )
 
     # --- domain query namespaces (uniform shape: Domain(ledger)) ---
