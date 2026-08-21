@@ -72,7 +72,3 @@ class Transaction:
     def pending(self) -> bool:
         """True for the beancount ``!`` flag — entered but not bank-confirmed."""
         return self.flag == "!"
-
-    def filtered_postings(self, prefix: str) -> list[Posting]:
-        """Postings whose account starts with ``prefix`` (e.g. ``'Expenses:'``)."""
-        return [p for p in self.postings if p.account.startswith(prefix)]
