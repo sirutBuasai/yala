@@ -1,0 +1,11 @@
+; Spending transactions for 2026
+
+2026-01-03 * "Example Gym"
+  src: "Card B"
+  Expenses:Subscription    99.95 USD
+  Liabilities:CC:CardB  -99.95 USD
+
+2026-01-04 * "boba"
+  src: "Card A"
+  Expenses:Takeouts    7.98 USD
+  Liabilities:CC:CardA  -7.98 USD

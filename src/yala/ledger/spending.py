@@ -39,6 +39,8 @@ class SpendingTransaction:
     category: str
     source: str | None
     pending: bool
+    locator: str
+    bill: Decimal | None
 
 
 class Spending:
@@ -80,6 +82,8 @@ class Spending:
                     category=cat,
                     source=t.source,
                     pending=t.pending,
+                    locator=t.locator,
+                    bill=t.bill,
                 )
             )
         return out

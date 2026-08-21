@@ -3,18 +3,18 @@ option "operating_currency" "USD"
 2020-01-01 commodity USD
 2020-01-01 open Expenses:Takeouts USD
 2020-01-01 open Expenses:Grocery USD
-2020-01-01 open Liabilities:CC:AmexGold USD
+2020-01-01 open Liabilities:CC:CardA USD
 
-2025-08-02 * "japan cafe"
-  src: "Amex Gold"
+2025-08-02 * "Example Cafe"
+  src: "Card A"
   Expenses:Takeouts          18.72 USD
-  Liabilities:CC:AmexGold   -18.72 USD
+  Liabilities:CC:CardA   -18.72 USD
 
-2025-08-10 * "lucky"
+2025-08-10 * "Example Grocery"
   Expenses:Grocery           50.00 USD
-  Liabilities:CC:AmexGold   -50.00 USD
+  Liabilities:CC:CardA   -50.00 USD
 
 2025-08-19 * "reimbursement"
   note: "10-20"
   Expenses:Grocery          -10.00 USD
-  Liabilities:CC:AmexGold    10.00 USD
+  Liabilities:CC:CardA    10.00 USD

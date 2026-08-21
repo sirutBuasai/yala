@@ -1,0 +1,47 @@
+option "title" "Yala Test Ledger"
+option "operating_currency" "USD"
+
+2020-01-01 commodity USD
+
+; ------------------------------------------------
+; Cash Accounts
+; ------------------------------------------------
+2020-01-01 open Assets:Cash:BankA USD
+2020-01-01 open Assets:Cash:BankB USD
+2020-01-01 open Assets:Venmo USD
+2020-01-01 open Assets:Receivable:Friends USD
+
+; ------------------------------------------------
+; Spendings
+; ------------------------------------------------
+2020-01-01 open Expenses:Grocery USD
+2020-01-01 open Expenses:Subscription USD
+2020-01-01 open Expenses:Takeouts USD
+
+; ------------------------------------------------
+; Credit Cards
+; ------------------------------------------------
+2020-01-01 open Liabilities:CC:CardA USD
+2020-01-01 open Liabilities:CC:CardB USD
+2026-08-14 open Liabilities:CC:CardC USD
+
+; ------------------------------------------------
+; Payroll
+; ------------------------------------------------
+2020-01-01 open Income:Salary USD
+2020-01-01 open Expenses:Deductions:Tax USD
+2020-01-01 open Expenses:Deductions:Insurance USD
+2020-01-01 open Assets:Investments:HSA USD
+2020-01-01 open Assets:Investments:Roth401k USD
+2020-01-01 open Assets:Investments:Trad401k USD
+2020-01-01 open Assets:Investments:AfterTax401k USD
+
+; Generic 401k retired in favor of the granular accounts; closed after its last posting.
+2020-01-01 open Assets:Investments:401k USD
+2026-08-21 close Assets:Investments:401k
+
+; ------------------------------------------------
+; Closed Accounts (exercise active-account filtering)
+; ------------------------------------------------
+2020-01-01 open Liabilities:CC:CardD USD
+2024-10-01 close Liabilities:CC:CardD

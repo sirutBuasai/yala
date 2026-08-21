@@ -34,8 +34,38 @@ class Transaction:
 
     @property
     def source(self) -> str | None:
-        """Human funding-source label from the ``src`` meta (e.g. 'Amex Gold')."""
-        return self.meta.get("src")
+        """Funding account: the account that paid for txn."""
+        funding = self.meta.get("funding")
+
+        if funding:
+            return funding
+
+        non_expense = [p for p in self.postings if not p.account.startswith(EXPENSES)]
+
+        if not non_expense:
+            return None
+
+        return min(non_expense, key=lambda p: p.amount).account
+
+    @property
+    def bill(self) -> Decimal | None:
+        """Pre-reimbursement total from the ``bill`` meta, when the txn was split with others."""
+        value = self.meta.get("bill")
+
+        if value is None:
+            return None
+
+        return getattr(value, "number", value)
+
+    @property
+    def locator(self) -> str:
+        """Stable handle for edits: ``id:<uuid>`` if the entry has an id, else ``line:<path>:<n>``."""
+        uid = self.meta.get("id")
+
+        if uid:
+            return f"id:{uid}"
+
+        return f"line:{self.meta['filename']}:{self.meta['lineno']}"
 
     @property
     def pending(self) -> bool:

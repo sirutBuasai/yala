@@ -12,13 +12,14 @@ def _ledger(name="mini.beancount", **kw):
     return Ledger(FIXTURES / name, **kw).load()
 
 
-# --- core access ---
-
 def test_loads_without_errors():
     led = _ledger()
     assert led.errors == []
     assert len(led.transactions()) == 3
-    assert led.declared_accounts("Expenses:") == ["Expenses:Grocery", "Expenses:Takeouts"]
+    assert led.declared_accounts("Expenses:") == [
+        "Expenses:Grocery",
+        "Expenses:Takeouts",
+    ]
 
 
 def test_load_raises_on_ledger_errors_by_default():
@@ -30,8 +31,6 @@ def test_non_strict_load_collects_errors_without_raising():
     led = Ledger(FIXTURES / "broken.beancount", strict=False).load()
     assert len(led.errors) >= 1  # unopened account
 
-
-# --- spending domain ---
 
 def test_spending_category_totals():
     s = _ledger().spending
@@ -46,9 +45,9 @@ def test_spending_transaction_fields():
     txns = s.transactions(2025, 8, category="Takeouts")
     assert len(txns) == 1
     t = txns[0]
-    assert t.payee == "japan cafe"
+    assert t.payee == "Example Cafe"
     assert t.category == "Takeouts"
-    assert t.source == "Amex Gold"
+    assert t.source == "Liabilities:CC:CardA"  # funding account, not a src label
     assert t.amount == Decimal("18.72")
     assert t.pending is False
 
@@ -59,14 +58,16 @@ def test_spending_coverage_helpers():
     assert s.months() == [(2025, 8)]
     assert s.count() == 3
     assert s.categories() == ["Grocery", "Takeouts"]
-    lo, hi = s.date_range()
+    rng = s.date_range()
+    assert rng is not None
+    lo, hi = rng
     assert (lo.isoformat(), hi.isoformat()) == ("2025-08-02", "2025-08-19")
 
 
 def test_pending_flag_is_read_from_beancount():
     t = _ledger("pending.beancount").spending.transactions()[0]
     assert t.pending is True
-    assert t.source == "Amex Gold"
+    assert t.source == "Liabilities:CC:CardA"
 
 
 def test_one_category_invariant_is_enforced():

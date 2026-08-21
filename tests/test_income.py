@@ -33,8 +33,8 @@ def test_income_categories_from_declared_accounts():
 
 def test_income_rollups_and_by_month():
     inc = _income()
-    assert inc.deductions(2025) == {"Tax": Decimal("600.00"), "Insurance": Decimal("100.00")}
     assert inc.contributions(2025) == {"HSA": Decimal("150.00"), "401k": Decimal("600.00")}
+    assert inc.deductions(2025) == {"Tax": Decimal("600.00"), "Insurance": Decimal("100.00")}
     by_month = inc.by_month(2025)                # net (money that stayed yours) per month
     assert len(by_month) == 12
     assert by_month[0] == Decimal("750.00")   # January  (1000 - 250 direct)

@@ -1,0 +1,7 @@
+include "accounts.beancount"
+
+include "spending/2025.beancount"
+include "spending/2026.beancount"
+
+include "income/2025.beancount"
+include "income/2026.beancount"

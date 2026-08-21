@@ -1,0 +1,562 @@
+{
+  "$defs": {
+    "CategoryAmount": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "amount": {
+          "title": "Amount",
+          "type": "number"
+        }
+      },
+      "required": [
+        "category",
+        "amount"
+      ],
+      "title": "CategoryAmount",
+      "type": "object"
+    },
+    "DateRange": {
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "title": "Start",
+          "type": "string"
+        },
+        "end": {
+          "title": "End",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "DateRange",
+      "type": "object"
+    },
+    "Domains": {
+      "additionalProperties": false,
+      "description": "Which domains carry data flag.",
+      "properties": {
+        "spending": {
+          "title": "Spending",
+          "type": "boolean"
+        },
+        "income": {
+          "title": "Income",
+          "type": "boolean"
+        },
+        "networth": {
+          "title": "Networth",
+          "type": "boolean"
+        },
+        "investments": {
+          "title": "Investments",
+          "type": "boolean"
+        },
+        "cards": {
+          "title": "Cards",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "spending",
+        "income",
+        "networth",
+        "investments",
+        "cards"
+      ],
+      "title": "Domains",
+      "type": "object"
+    },
+    "IncomeSection": {
+      "additionalProperties": false,
+      "properties": {
+        "by_year": {
+          "items": {
+            "$ref": "#/$defs/IncomeYear"
+          },
+          "title": "By Year",
+          "type": "array"
+        },
+        "by_month": {
+          "additionalProperties": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "title": "By Month",
+          "type": "object"
+        },
+        "recent_paychecks": {
+          "items": {
+            "$ref": "#/$defs/PaycheckOut"
+          },
+          "title": "Recent Paychecks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "by_year",
+        "by_month",
+        "recent_paychecks"
+      ],
+      "title": "IncomeSection",
+      "type": "object"
+    },
+    "IncomeYear": {
+      "additionalProperties": false,
+      "properties": {
+        "year": {
+          "title": "Year",
+          "type": "integer"
+        },
+        "gross": {
+          "title": "Gross",
+          "type": "number"
+        },
+        "net": {
+          "title": "Net",
+          "type": "number"
+        },
+        "take_home": {
+          "title": "Take Home",
+          "type": "number"
+        },
+        "deductions": {
+          "title": "Deductions",
+          "type": "number"
+        },
+        "contributions": {
+          "title": "Contributions",
+          "type": "number"
+        }
+      },
+      "required": [
+        "year",
+        "gross",
+        "net",
+        "take_home",
+        "deductions",
+        "contributions"
+      ],
+      "title": "IncomeYear",
+      "type": "object"
+    },
+    "InvestmentsSection": {
+      "additionalProperties": true,
+      "description": "Reserved: broker holdings / gain-loss.",
+      "properties": {},
+      "title": "InvestmentsSection",
+      "type": "object"
+    },
+    "Meta": {
+      "additionalProperties": false,
+      "properties": {
+        "years": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Years",
+          "type": "array"
+        },
+        "month_keys": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Month Keys",
+          "type": "array"
+        },
+        "transaction_count": {
+          "title": "Transaction Count",
+          "type": "integer"
+        },
+        "date_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DateRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "categories": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Categories",
+          "type": "array"
+        },
+        "domains": {
+          "$ref": "#/$defs/Domains"
+        }
+      },
+      "required": [
+        "years",
+        "month_keys",
+        "transaction_count",
+        "date_range",
+        "categories",
+        "domains"
+      ],
+      "title": "Meta",
+      "type": "object"
+    },
+    "MonthMatrixRow": {
+      "additionalProperties": false,
+      "properties": {
+        "month": {
+          "title": "Month",
+          "type": "integer"
+        },
+        "spent": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Spent",
+          "type": "object"
+        },
+        "income": {
+          "title": "Income",
+          "type": "number"
+        }
+      },
+      "required": [
+        "month",
+        "spent",
+        "income"
+      ],
+      "title": "MonthMatrixRow",
+      "type": "object"
+    },
+    "MonthPage": {
+      "additionalProperties": false,
+      "properties": {
+        "total_spent": {
+          "title": "Total Spent",
+          "type": "number"
+        },
+        "total_income": {
+          "title": "Total Income",
+          "type": "number"
+        },
+        "by_category": {
+          "items": {
+            "$ref": "#/$defs/CategoryAmount"
+          },
+          "title": "By Category",
+          "type": "array"
+        },
+        "transactions": {
+          "items": {
+            "$ref": "#/$defs/Txn"
+          },
+          "title": "Transactions",
+          "type": "array"
+        },
+        "paychecks": {
+          "items": {
+            "$ref": "#/$defs/PaycheckOut"
+          },
+          "title": "Paychecks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "total_spent",
+        "total_income",
+        "by_category",
+        "transactions",
+        "paychecks"
+      ],
+      "title": "MonthPage",
+      "type": "object"
+    },
+    "NetWorthSection": {
+      "additionalProperties": true,
+      "description": "Reserved: derived assets \u2212 liabilities over time.",
+      "properties": {},
+      "title": "NetWorthSection",
+      "type": "object"
+    },
+    "Overview": {
+      "additionalProperties": false,
+      "properties": {
+        "by_year": {
+          "items": {
+            "$ref": "#/$defs/YearSpend"
+          },
+          "title": "By Year",
+          "type": "array"
+        },
+        "all_time_by_category": {
+          "items": {
+            "$ref": "#/$defs/CategoryAmount"
+          },
+          "title": "All Time By Category",
+          "type": "array"
+        }
+      },
+      "required": [
+        "by_year",
+        "all_time_by_category"
+      ],
+      "title": "Overview",
+      "type": "object"
+    },
+    "PaycheckOut": {
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "title": "Date",
+          "type": "string"
+        },
+        "gross": {
+          "title": "Gross",
+          "type": "number"
+        },
+        "deductions": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Deductions",
+          "type": "object"
+        },
+        "contributions": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Contributions",
+          "type": "object"
+        },
+        "net": {
+          "title": "Net",
+          "type": "number"
+        },
+        "take_home": {
+          "title": "Take Home",
+          "type": "number"
+        },
+        "locator": {
+          "title": "Locator",
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "gross",
+        "deductions",
+        "contributions",
+        "net",
+        "take_home",
+        "locator"
+      ],
+      "title": "PaycheckOut",
+      "type": "object"
+    },
+    "Txn": {
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "title": "Date",
+          "type": "string"
+        },
+        "payee": {
+          "title": "Payee",
+          "type": "string"
+        },
+        "amount": {
+          "title": "Amount",
+          "type": "number"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source"
+        },
+        "pending": {
+          "title": "Pending",
+          "type": "boolean"
+        },
+        "locator": {
+          "title": "Locator",
+          "type": "string"
+        },
+        "bill": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bill"
+        }
+      },
+      "required": [
+        "date",
+        "payee",
+        "amount",
+        "category",
+        "source",
+        "pending",
+        "locator"
+      ],
+      "title": "Txn",
+      "type": "object"
+    },
+    "YearPage": {
+      "additionalProperties": false,
+      "properties": {
+        "total_spent": {
+          "title": "Total Spent",
+          "type": "number"
+        },
+        "total_income": {
+          "title": "Total Income",
+          "type": "number"
+        },
+        "matrix": {
+          "items": {
+            "$ref": "#/$defs/MonthMatrixRow"
+          },
+          "title": "Matrix",
+          "type": "array"
+        }
+      },
+      "required": [
+        "total_spent",
+        "total_income",
+        "matrix"
+      ],
+      "title": "YearPage",
+      "type": "object"
+    },
+    "YearSpend": {
+      "additionalProperties": false,
+      "properties": {
+        "year": {
+          "title": "Year",
+          "type": "integer"
+        },
+        "spent": {
+          "title": "Spent",
+          "type": "number"
+        },
+        "income": {
+          "title": "Income",
+          "type": "number"
+        },
+        "saved": {
+          "title": "Saved",
+          "type": "number"
+        }
+      },
+      "required": [
+        "year",
+        "spent",
+        "income",
+        "saved"
+      ],
+      "title": "YearSpend",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "generated_at": {
+      "title": "Generated At",
+      "type": "string"
+    },
+    "currency": {
+      "title": "Currency",
+      "type": "string"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    },
+    "overview": {
+      "$ref": "#/$defs/Overview"
+    },
+    "years": {
+      "additionalProperties": {
+        "$ref": "#/$defs/YearPage"
+      },
+      "title": "Years",
+      "type": "object"
+    },
+    "months": {
+      "additionalProperties": {
+        "$ref": "#/$defs/MonthPage"
+      },
+      "title": "Months",
+      "type": "object"
+    },
+    "income": {
+      "$ref": "#/$defs/IncomeSection"
+    },
+    "networth": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NetWorthSection"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "investments": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/InvestmentsSection"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "cards": {
+      "default": [],
+      "items": {},
+      "title": "Cards",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "generated_at",
+    "currency",
+    "meta",
+    "overview",
+    "years",
+    "months",
+    "income"
+  ],
+  "title": "DashboardData",
+  "type": "object"
+}

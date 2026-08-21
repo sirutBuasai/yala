@@ -66,6 +66,17 @@ class Ledger:
         self._require()
         return self._entries
 
+    @property
+    def currency(self) -> str:
+        """Operating currency, inferred from the ledger's ``commodity``."""
+        self._require()
+
+        for e in self._entries:
+            if isinstance(e, data.Commodity):
+                return e.currency
+
+        return "USD"
+
     def transactions(
         self, year: int | None = None, month: int | None = None
     ) -> list[Transaction]:

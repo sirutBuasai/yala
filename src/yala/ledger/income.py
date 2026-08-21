@@ -40,6 +40,7 @@ class Paycheck:
     gross: Decimal
     deductions: dict[str, Decimal]
     contributions: dict[str, Decimal]
+    locator: str = ""
 
     @property
     def direct_out(self) -> Decimal:
@@ -68,7 +69,9 @@ class Income:
     def __init__(self, ledger: "Ledger"):
         self._led = ledger
 
-    def paychecks(self, year: int | None = None, month: int | None = None) -> list[Paycheck]:
+    def paychecks(
+        self, year: int | None = None, month: int | None = None
+    ) -> list[Paycheck]:
         out: list[Paycheck] = []
 
         for t in self._led.transactions(year, month):
@@ -89,7 +92,11 @@ class Income:
                 elif p.account.startswith(INVESTMENTS):
                     contributions[_leaf(p.account)] += p.amount
 
-            out.append(Paycheck(t.date, gross, dict(deductions), dict(contributions)))
+            out.append(
+                Paycheck(
+                    t.date, gross, dict(deductions), dict(contributions), t.locator
+                )
+            )
 
         return out
 
@@ -110,7 +117,9 @@ class Income:
     def take_home(self, year: int | None = None, month: int | None = None) -> Decimal:
         return sum((p.take_home for p in self.paychecks(year, month)), Decimal(0))
 
-    def deductions(self, year: int | None = None, month: int | None = None) -> dict[str, Decimal]:
+    def deductions(
+        self, year: int | None = None, month: int | None = None
+    ) -> dict[str, Decimal]:
         totals: dict[str, Decimal] = defaultdict(lambda: Decimal(0))
 
         for p in self.paychecks(year, month):
@@ -119,7 +128,9 @@ class Income:
 
         return dict(totals)
 
-    def contributions(self, year: int | None = None, month: int | None = None) -> dict[str, Decimal]:
+    def contributions(
+        self, year: int | None = None, month: int | None = None
+    ) -> dict[str, Decimal]:
         totals: dict[str, Decimal] = defaultdict(lambda: Decimal(0))
 
         for p in self.paychecks(year, month):
