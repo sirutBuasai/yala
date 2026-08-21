@@ -18,10 +18,10 @@ export const CATEGORY_TOKEN: Record<string, string> = {
 	Utilities: 'teal',
 	Health: 'gold',
 	Travel: 'orange',
-	Personal: 'lav',
-	Recreation: 'green',
-	Transport: 'teal',
-	Subscription: 'gold',
+	Personal: 'magenta',
+	Recreation: 'aqua',
+	Transport: 'blue',
+	Subscription: 'berry',
 	Other: 'ink-3'
 };
 
@@ -33,8 +33,10 @@ export function categoryVar(category: string): string {
 function initialMode(): ThemeMode {
 	if (typeof document !== 'undefined') {
 		const attr = document.documentElement.getAttribute('data-theme');
+
 		if (attr === 'light' || attr === 'dark') return attr;
 	}
+
 	return 'dark';
 }
 
@@ -42,16 +44,19 @@ export const theme = writable<ThemeMode>(initialMode());
 
 export function setTheme(mode: ThemeMode): void {
 	document.documentElement.setAttribute('data-theme', mode);
+
 	try {
 		localStorage.setItem('yala-theme', mode);
 	} catch {
 		/* storage unavailable — theme just won't persist */
 	}
+
 	theme.set(mode);
 }
 
 export function toggleTheme(): void {
 	const current =
 		document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+
 	setTheme(current === 'light' ? 'dark' : 'light');
 }

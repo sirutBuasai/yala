@@ -17,11 +17,13 @@ export const MONTHS = [
 
 export function money(n: number | null | undefined): string {
 	const r = Math.round(n || 0);
+
 	return (r < 0 ? '-$' : '$') + Math.abs(r).toLocaleString();
 }
 
 export function moneyK(n: number | null | undefined): string {
 	n = n || 0;
+
 	return (n < 0 ? '-$' : '$') + (Math.abs(n) / 1000).toFixed(Math.abs(n) < 10000 ? 1 : 0) + 'k';
 }
 
@@ -48,6 +50,7 @@ export function esc(s: unknown): string {
 export function compact(n: number | null | undefined): string {
 	const v = Math.round(n || 0);
 	if (Math.abs(v) >= 1000) return (v / 1000).toFixed(1) + 'k';
+
 	return String(v);
 }
 
@@ -64,8 +67,11 @@ const ACCOUNT_ALIASES_OVERRIDE: Record<string, string> = {
 
 export function formatAccount(name: string | null | undefined): string {
 	if (!name) return '';
+
 	const leaf = String(name).split(':').pop() ?? '';
+
 	if (ACCOUNT_ALIASES_OVERRIDE[leaf]) return ACCOUNT_ALIASES_OVERRIDE[leaf];
+
 	return (
 		leaf
 			// insert a space between a lowercase/digit and an uppercase ("AmexGold" -> "Amex Gold")
@@ -79,11 +85,13 @@ export function formatAccount(name: string | null | undefined): string {
 /** "2025-01" -> "Jan 2025" */
 export function monthLabel(key: string): string {
 	const [y, m] = key.split('-');
+
 	return MONTHS[+m - 1] + ' ' + y;
 }
 
 /** "2025-01" -> "Jan 25" */
 export function monthShort(key: string): string {
 	const [y, m] = key.split('-');
+
 	return MONTHS[+m - 1] + ' ' + y.slice(2);
 }

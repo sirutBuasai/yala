@@ -16,7 +16,7 @@ export interface AccountsInfo {
 	deduction_categories: string[];
 	contribution_categories: string[];
 	cash_accounts: string[];
-	split_accounts: string[];
+	credit_accounts: string[];
 }
 
 export type Mode = 'view' | 'edit';
@@ -35,28 +35,35 @@ function checkSchema(doc: DashboardData): string | null {
 	if (doc.schema_version !== EXPECTED_SCHEMA) {
 		return `data.json is schema v${doc.schema_version} but this app expects v${EXPECTED_SCHEMA}. Rebuild it with \`python -m yala.builder\`.`;
 	}
+
 	if (!doc.meta.month_keys.length) {
 		return 'No transactions in the ledger yet. Add some, then rebuild with `python -m yala.builder`.';
 	}
+
 	return null;
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
 	const res = await fetch(url, { cache: 'no-store' });
+
 	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+
 	return res.json() as Promise<T>;
 }
 
 /** Load the static snapshot (view mode). Sets loadState accordingly. */
 export async function loadViewData(): Promise<void> {
 	loadState.set({ status: 'loading' });
+
 	try {
 		const doc = await fetchJson<DashboardData>(asset('/data.json'));
 		const problem = checkSchema(doc);
+
 		if (problem) {
 			loadState.set({ status: 'error', message: problem });
 			return;
 		}
+
 		data.set(doc);
 		mode.set('view');
 		accounts.set(null);
@@ -76,13 +83,17 @@ export async function loadViewData(): Promise<void> {
 export async function enableEditMode(): Promise<boolean> {
 	try {
 		const doc = await fetchJson<DashboardData>('/api/data');
+
 		if (checkSchema(doc)) return false;
+
 		data.set(doc);
+
 		try {
 			accounts.set(await fetchJson<AccountsInfo>('/api/accounts'));
 		} catch {
 			accounts.set(null);
 		}
+
 		mode.set('edit');
 		return true;
 	} catch {
@@ -116,6 +127,7 @@ export async function deleteTransaction(locator: string): Promise<string | null>
 			body: JSON.stringify({ locator })
 		});
 		const body = await res.json().catch(() => ({}));
+
 		return res.ok ? null : body.detail || `error ${res.status}`;
 	} catch (e) {
 		return 'API unreachable: ' + (e as Error).message;

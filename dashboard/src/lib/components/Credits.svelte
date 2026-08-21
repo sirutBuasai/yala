@@ -1,36 +1,36 @@
 <script lang="ts">
 	import { formatAccount } from '$lib/format';
 
-	export interface SplitLeg {
+	export interface Credit {
 		account: string;
 		amount: number | null;
 	}
 
 	interface Props {
-		splits: SplitLeg[];
-		splitAccounts: string[];
+		credits: Credit[];
+		creditAccounts: string[];
 	}
-	let { splits = $bindable(), splitAccounts }: Props = $props();
+	let { credits = $bindable(), creditAccounts }: Props = $props();
 
 	function add() {
-		splits = [...splits, { account: splitAccounts[0] ?? '', amount: null }];
+		credits = [...credits, { account: creditAccounts[0] ?? '', amount: null }];
 	}
 	function remove(i: number) {
-		splits = splits.filter((_, idx) => idx !== i);
+		credits = credits.filter((_, idx) => idx !== i);
 	}
 </script>
 
 <div class="legs">
 	<div class="linehdr">
-		<span>Payback / credit legs — amounts reimbursed to you (netted off the bill)</span>
-		<button type="button" class="mini" onclick={add}>+ leg</button>
+		<span>Credits — amounts reimbursed to you (netted off the bill)</span>
+		<button type="button" class="mini" onclick={add}>+ credit</button>
 	</div>
-	{#each splits as leg, i (i)}
+	{#each credits as credit, i (i)}
 		<div class="linerow">
-			<select bind:value={leg.account}>
-				{#each splitAccounts as a (a)}<option value={a}>{formatAccount(a)}</option>{/each}
+			<select bind:value={credit.account}>
+				{#each creditAccounts as a (a)}<option value={a}>{formatAccount(a)}</option>{/each}
 			</select>
-			<input type="number" step="0.01" bind:value={leg.amount} placeholder="amount" />
+			<input type="number" step="0.01" bind:value={credit.amount} placeholder="amount" />
 			<button type="button" class="mini rm" onclick={() => remove(i)}>✕</button>
 		</div>
 	{/each}

@@ -2,7 +2,7 @@
 	import type { AccountsInfo } from '$lib/data';
 	import { deleteTransaction } from '$lib/data';
 	import { formatAccount, money } from '$lib/format';
-	import SplitLegs, { type SplitLeg } from './SplitLegs.svelte';
+	import Credits, { type Credit } from './Credits.svelte';
 
 	interface Props {
 		locator: string;
@@ -19,7 +19,7 @@
 	let category = $state('');
 	let funding_account = $state('');
 	let pending = $state(false);
-	let splits = $state<SplitLeg[]>([]);
+	let credits = $state<Credit[]>([]);
 
 	let msg = $state('');
 	let err = $state(false);
@@ -45,7 +45,7 @@
 				category = s.category ?? '';
 				funding_account = s.funding_account ?? '';
 				pending = !!s.pending;
-				splits = (s.splits ?? []).map((x: { account: string; amount: number }) => ({
+				credits = (s.credits ?? []).map((x: { account: string; amount: number }) => ({
 					account: x.account,
 					amount: x.amount
 				}));
@@ -57,7 +57,7 @@
 		})();
 	});
 
-	const paybacks = $derived(splits.reduce((a, s) => a + (s.amount || 0), 0));
+	const paybacks = $derived(credits.reduce((a, s) => a + (s.amount || 0), 0));
 	const yourShare = $derived((total || 0) - paybacks);
 
 	let confirmingDelete = $state(false);
@@ -87,7 +87,7 @@
 			category,
 			funding_account,
 			pending,
-			splits: splits
+			credits: credits
 				.filter((s) => s.account && s.amount != null)
 				.map((s) => ({ account: s.account, amount: s.amount as number }))
 		};
@@ -145,7 +145,7 @@
 	<label class="chk"><input type="checkbox" bind:checked={pending} /> Pending</label>
 </div>
 
-<SplitLegs bind:splits splitAccounts={accounts.split_accounts} />
+<Credits bind:credits creditAccounts={accounts.credit_accounts} />
 
 <div class="mfoot">
 	<span class="share">Your share: <b>{money(yourShare)}</b></span>

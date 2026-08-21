@@ -16,10 +16,13 @@ export function categorySlices(items: { category: string; amount: number }[], to
 		.slice(0, topN)
 		.map((i) => ({ name: i.category, value: i.amount, color: categoryVar(i.category) }));
 	const otherSum = sorted.slice(topN).reduce((a, i) => a + i.amount, 0);
+
 	if (otherSum > 0) {
 		const existing = slices.find((s) => s.name === 'Other');
+
 		if (existing) existing.value += otherSum;
 		else slices.push({ name: 'Other', value: otherSum, color: 'var(--ink-3)' });
 	}
+
 	return slices;
 }

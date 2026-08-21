@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { AccountsInfo } from '$lib/data';
 	import { formatAccount, money } from '$lib/format';
-	import SplitLegs, { type SplitLeg } from './SplitLegs.svelte';
+	import Credits, { type Credit } from './Credits.svelte';
 
 	interface Props {
 		accounts: AccountsInfo;
@@ -16,7 +16,7 @@
 	let category = $state('');
 	let funding_account = $state('');
 	let pending = $state(false);
-	let splits = $state<SplitLeg[]>([]);
+	let credits = $state<Credit[]>([]);
 
 	// Seed the selects from the account lists once available (in $effect so a
 	// later-loading list still populates them) without clobbering the user's pick.
@@ -25,8 +25,8 @@
 		if (!funding_account) funding_account = accounts.funding_accounts[0] ?? '';
 	});
 
-	// Your share = total bill − everything paid back / credited on the split legs.
-	const paybacks = $derived(splits.reduce((a, s) => a + (s.amount || 0), 0));
+	// Your share = total bill − everything paid back / credited on the credits.
+	const paybacks = $derived(credits.reduce((a, s) => a + (s.amount || 0), 0));
 	const yourShare = $derived((total || 0) - paybacks);
 
 	let msg = $state('');
@@ -45,7 +45,7 @@
 			category,
 			funding_account,
 			pending,
-			splits: splits
+			credits: credits
 				.filter((s) => s.account && s.amount != null)
 				.map((s) => ({ account: s.account, amount: s.amount as number }))
 		};
@@ -103,7 +103,7 @@
 	<label class="chk"><input type="checkbox" bind:checked={pending} /> Pending</label>
 </div>
 
-<SplitLegs bind:splits splitAccounts={accounts.split_accounts} />
+<Credits bind:credits creditAccounts={accounts.credit_accounts} />
 
 <div class="mfoot">
 	<span class="share">Your share: <b>{money(yourShare)}</b></span>

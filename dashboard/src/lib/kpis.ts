@@ -13,7 +13,9 @@ export interface KpiTile {
 
 export function spendingKpis(data: DashboardData, year: number): KpiTile[] {
 	const yd = data.years[String(year)];
+
 	if (!yd) return [];
+
 	const monthly = yd.matrix.map((row) => Object.values(row.spent).reduce((a, b) => a + b, 0));
 	const activeMonths = monthly.filter((v) => v > 0).length || 1;
 	const biggestIdx = monthly.indexOf(Math.max(...monthly));
@@ -22,6 +24,7 @@ export function spendingKpis(data: DashboardData, year: number): KpiTile[] {
 		amount: yd.matrix.reduce((s, r) => s + (r.spent[c] ?? 0), 0)
 	}));
 	const top = [...cats].sort((a, b) => b.amount - a.amount)[0];
+
 	return [
 		{ label: `Spent ${year}`, value: money(yd.total_spent), foot: 'across the year' },
 		{
@@ -45,12 +48,15 @@ export function spendingKpis(data: DashboardData, year: number): KpiTile[] {
 
 export function overviewKpis(data: DashboardData): KpiTile[] {
 	const rows = data.overview.by_year;
+
 	if (!rows.length) return [];
+
 	const income = rows.reduce((a, r) => a + r.income, 0);
 	const spent = rows.reduce((a, r) => a + r.spent, 0);
 	const saved = rows.reduce((a, r) => a + r.saved, 0);
 	const first = rows[0].year;
 	const last = rows[rows.length - 1].year;
+
 	return [
 		{ label: 'Lifetime income', value: money(income), foot: 'net, all years' },
 		{ label: 'Lifetime spent', value: money(spent), foot: 'all years' },
@@ -68,10 +74,13 @@ export function overviewKpis(data: DashboardData): KpiTile[] {
 
 export function monthlyKpis(data: DashboardData, monthKey: string): KpiTile[] {
 	const md = data.months[monthKey];
+
 	if (!md) return [];
+
 	const income = md.total_income;
 	const spent = md.total_spent;
 	const saved = income - spent;
+
 	return [
 		{ label: `Income · ${monthLabel(monthKey)}`, value: money(income), foot: 'take-home + saved' },
 		{ label: 'Spent', value: money(spent), foot: 'this month' },
@@ -92,9 +101,12 @@ export function monthlyKpis(data: DashboardData, monthKey: string): KpiTile[] {
 export function incomeKpis(data: DashboardData, year: number): KpiTile[] {
 	const iy = data.income.by_year.find((r) => r.year === year);
 	const ovy = data.overview.by_year.find((r) => r.year === year);
+
 	if (!iy) return [];
+
 	const saved = ovy?.saved ?? 0;
 	const income = ovy?.income ?? iy.net;
+
 	return [
 		{ label: `Gross · ${year}`, value: money(iy.gross), foot: 'before tax & deductions' },
 		{
