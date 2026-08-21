@@ -150,7 +150,7 @@
     },
     "InvestmentsSection": {
       "additionalProperties": true,
-      "description": "Reserved: broker holdings / gain-loss.",
+      "description": "Reserved: broker holdings / gain-loss. Empty in v1.",
       "properties": {},
       "title": "InvestmentsSection",
       "type": "object"
@@ -280,7 +280,7 @@
     },
     "NetWorthSection": {
       "additionalProperties": true,
-      "description": "Reserved: derived assets \u2212 liabilities over time.",
+      "description": "Reserved: derived assets \u2212 liabilities over time. Empty in v1.",
       "properties": {},
       "title": "NetWorthSection",
       "type": "object"
