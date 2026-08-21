@@ -1,6 +1,13 @@
 # Pre-commit hooks for Yala (Python backend + SvelteKit dashboard).
 # Install: pre-commit install
 # Run over the whole tree: pre-commit run --all-files
+
+default_stages:
+  - pre-commit
+  - manual
+
+minimum_pre_commit_version: "3.0.0"
+
 exclude: |
   (?x)^(
     dashboard/build/|
@@ -11,51 +18,70 @@ exclude: |
   )
 
 repos:
-  # ---------------------------- Filesystem hygiene ---------------------------- #
+  # ---------------------------------------------------------------------------- #
+  #                              🧹 Filesystem Hygiene                           #
+  # ---------------------------------------------------------------------------- #
+
+  ### Pre-commit First-Party Tools ###
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-      - id: check-yaml
-      - id: check-json
-      - id: check-added-large-files
+  # ------------------------------- 🌳 Git Tools ------------------------------- #
       - id: check-merge-conflict
+        name: "🌳 git · Detect conflict markers"
+  # ---------------------------- 📁 Filesystem Tools --------------------------- #
+      - id: trailing-whitespace
+        name: "📁 filesystem/📝 file · Validate empty whitespaces"
+      - id: end-of-file-fixer
+        name: "📁 filesystem/📝 file · Fix end of files"
       - id: mixed-line-ending
+        name: "📁 filesystem/📝 file · Normalize line endings"
         args: ["--fix=lf"]
-      # Lightweight secret guards borrowed from the DLC config.
+      - id: check-added-large-files
+        name: "📁 filesystem/📝 file · Block large files"
+      - id: check-json
+        name: "📁 filesystem/🔧 config · Validate JSON file"
+      - id: check-yaml
+        name: "📁 filesystem/🔧 config · Validate YAML file"
+  # ----------------------------- 🔒 Security Tools ---------------------------- #
       - id: detect-private-key
+        name: "🔒 security · Detect private keys"
       - id: detect-aws-credentials
+        name: "🔒 security · Detect aws credentials"
         args: ["--allow-missing-credentials"]
 
-  # -------------------------------- Python ----------------------------------- #
+  # ---------------------------------------------------------------------------- #
+  #                              🔍 Code Quality Tools                           #
+  # ---------------------------------------------------------------------------- #
+
+  ### Python Tools ###
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.3
     hooks:
       - id: ruff
-        name: ruff (lint + fix)
+        name: "🐍 python · Lint python"
         args: ["--fix"]
         files: ^(src|tests|scripts)/.*\.py$
       - id: ruff-format
-        name: ruff (format)
+        name: "🐍 python · Format python"
         files: ^(src|tests|scripts)/.*\.py$
 
-  # ------------------------------- Frontend ----------------------------------- #
+  ### Frontend Tools ###
   - repo: local
     hooks:
       - id: prettier-dashboard
-        name: prettier (dashboard)
+        name: "💅 prettier · Format dashboard"
         entry: bash -c 'cd dashboard && npm run format'
         language: system
         pass_filenames: false
         files: ^dashboard/.*\.(ts|svelte|js|json|css|html)$
         exclude: ^dashboard/(build/|\.svelte-kit/|node_modules/|static/data\.json$)
 
-  # --------------------------- Schema freshness ------------------------------- #
+  ### Schema Tools ###
   - repo: local
     hooks:
       - id: schema-freshness
-        name: schema freshness (schemas/ must match pydantic models)
+        name: "📐 schema · Validate schema freshness"
         entry: bash -c 'python scripts/generate_schema.py && if ! git diff --exit-code -- schemas/; then echo "schemas/ is stale — run scripts/generate_schema.py and re-add"; exit 1; fi'
         language: system
         pass_filenames: false
