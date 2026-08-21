@@ -13,3 +13,6 @@ dist/
 *.xlsx
 *.csv
 !tests/**/*.csv
+
+# dashboard build output is a gitignored artifact
+data.json

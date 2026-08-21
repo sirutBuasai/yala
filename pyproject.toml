@@ -5,6 +5,7 @@ description = "Yala -- private, local-first personal finance backend (beancount 
 requires-python = ">=3.10"
 dependencies = [
     "beancount>=3.0",
+    "pydantic>=2.0",
 ]
 
 [project.optional-dependencies]
@@ -16,3 +17,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
