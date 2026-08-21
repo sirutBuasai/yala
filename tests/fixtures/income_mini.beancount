@@ -1,0 +1,36 @@
+option "operating_currency" "USD"
+
+2020-01-01 commodity USD
+2020-01-01 open Income:Salary USD
+2020-01-01 open Expenses:Deductions:Tax USD
+2020-01-01 open Expenses:Deductions:Insurance USD
+2020-01-01 open Assets:Investments:HSA USD
+2020-01-01 open Assets:Investments:401k USD
+2020-01-01 open Assets:Checking USD
+2020-01-01 open Expenses:Grocery USD
+2020-01-01 open Liabilities:CC:CardA USD
+
+; January paycheck: gross 1000, direct out 250 (tax 200 + insurance 50),
+; indirect out 250 (HSA 50 + 401k 200), take-home 500.
+2025-01-15 * "employer"
+  Income:Salary               -1000.00 USD
+  Expenses:Deductions:Tax        200.00 USD
+  Expenses:Deductions:Insurance   50.00 USD
+  Assets:Investments:HSA          50.00 USD
+  Assets:Investments:401k        200.00 USD
+  Assets:Checking                500.00 USD
+
+; February paycheck: gross 2000, direct out 450 (tax 400 + insurance 50),
+; indirect out 500 (HSA 100 + 401k 400), take-home 1050.
+2025-02-15 * "employer"
+  Income:Salary               -2000.00 USD
+  Expenses:Deductions:Tax        400.00 USD
+  Expenses:Deductions:Insurance   50.00 USD
+  Assets:Investments:HSA         100.00 USD
+  Assets:Investments:401k        400.00 USD
+  Assets:Checking               1050.00 USD
+
+; A plain spending txn (no Income posting) — must NOT be counted as a paycheck.
+2025-02-20 * "Example Grocery"
+  Expenses:Grocery              40.00 USD
+  Liabilities:CC:CardA      -40.00 USD

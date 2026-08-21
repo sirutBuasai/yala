@@ -1,0 +1,7 @@
+option "operating_currency" "USD"
+
+2020-01-01 commodity USD
+2020-01-01 open Expenses:Grocery USD
+
+; No transactions: the ledger loads clean and every query returns empty,
+; but the declared Expenses:Grocery account still surfaces as a category.

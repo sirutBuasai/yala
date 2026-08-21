@@ -1,0 +1,10 @@
+option "operating_currency" "USD"
+
+2020-01-01 commodity USD
+2020-01-01 open Liabilities:CC:CardA USD
+
+; Expenses:Takeouts is never opened -> unopened-account load error.
+2025-08-02 * "Example Cafe"
+  src: "Card A"
+  Expenses:Takeouts          18.72 USD
+  Liabilities:CC:CardA   -18.72 USD

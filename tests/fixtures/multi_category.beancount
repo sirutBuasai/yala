@@ -1,0 +1,13 @@
+option "operating_currency" "USD"
+
+2020-01-01 commodity USD
+2020-01-01 open Expenses:Takeouts USD
+2020-01-01 open Expenses:Grocery USD
+2020-01-01 open Liabilities:CC:CardA USD
+
+; Two discretionary Expenses postings in one txn violates the one-category invariant.
+2025-08-02 * "Example Store"
+  src: "Card A"
+  Expenses:Grocery           40.00 USD
+  Expenses:Takeouts          18.72 USD
+  Liabilities:CC:CardA   -58.72 USD
