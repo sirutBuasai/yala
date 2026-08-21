@@ -13,6 +13,9 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 EXPENSES = "Expenses:"
+DEDUCTIONS = EXPENSES + "Deductions:"
+INCOME = "Income:"
+INVESTMENTS = "Assets:Investments:"
 
 
 @dataclass

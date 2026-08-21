@@ -21,6 +21,7 @@ from yala import config
 from yala.ledger.entities import Posting, Transaction
 
 if TYPE_CHECKING:
+    from yala.ledger.income import Income
     from yala.ledger.spending import Spending
 
 
@@ -119,3 +120,9 @@ class Ledger:
         from yala.ledger.spending import Spending
 
         return Spending(self)
+
+    @property
+    def income(self) -> "Income":
+        from yala.ledger.income import Income
+
+        return Income(self)

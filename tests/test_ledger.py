@@ -1,41 +1,84 @@
 from decimal import Decimal
 from pathlib import Path
 
-from yala.ledger import Ledger
+import pytest
 
-FIXTURE = Path(__file__).parent / "fixtures" / "mini.beancount"
+from yala.ledger import Ledger, LedgerError
+
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
-def _ledger():
-    return Ledger(FIXTURE).load()
+def _ledger(name="mini.beancount", **kw):
+    return Ledger(FIXTURES / name, **kw).load()
 
+
+# --- core access ---
 
 def test_loads_without_errors():
     led = _ledger()
     assert led.errors == []
-    assert led.count() == 3
-    assert led.years() == [2025]
+    assert len(led.transactions()) == 3
+    assert led.declared_accounts("Expenses:") == ["Expenses:Grocery", "Expenses:Takeouts"]
 
 
-def test_category_totals():
-    led = _ledger()
-    totals = led.category_totals(2025, 8)
+def test_load_raises_on_ledger_errors_by_default():
+    with pytest.raises(LedgerError):
+        _ledger("broken.beancount")
+
+
+def test_non_strict_load_collects_errors_without_raising():
+    led = Ledger(FIXTURES / "broken.beancount", strict=False).load()
+    assert len(led.errors) >= 1  # unopened account
+
+
+# --- spending domain ---
+
+def test_spending_category_totals():
+    s = _ledger().spending
+    totals = s.by_category(2025, 8)
     assert totals["Takeouts"] == Decimal("18.72")
     assert totals["Grocery"] == Decimal("40.00")  # 50 - 10 reimbursement
-    assert led.total_spending(2025, 8) == Decimal("58.72")
+    assert s.total(2025, 8) == Decimal("58.72")
 
 
-def test_transaction_fields():
-    led = _ledger()
-    txns = led.transactions(2025, 8, category="Takeouts")
+def test_spending_transaction_fields():
+    s = _ledger().spending
+    txns = s.transactions(2025, 8, category="Takeouts")
     assert len(txns) == 1
     t = txns[0]
     assert t.payee == "japan cafe"
     assert t.category == "Takeouts"
     assert t.source == "Amex Gold"
     assert t.amount == Decimal("18.72")
+    assert t.pending is False
 
 
-def test_filter_by_month_returns_empty_for_other_month():
-    led = _ledger()
-    assert led.transactions(2025, 7) == []
+def test_spending_coverage_helpers():
+    s = _ledger().spending
+    assert s.years() == [2025]
+    assert s.months() == [(2025, 8)]
+    assert s.count() == 3
+    assert s.categories() == ["Grocery", "Takeouts"]
+    lo, hi = s.date_range()
+    assert (lo.isoformat(), hi.isoformat()) == ("2025-08-02", "2025-08-19")
+
+
+def test_pending_flag_is_read_from_beancount():
+    t = _ledger("pending.beancount").spending.transactions()[0]
+    assert t.pending is True
+    assert t.source == "Amex Gold"
+
+
+def test_one_category_invariant_is_enforced():
+    s = _ledger("multi_category.beancount").spending
+    with pytest.raises(ValueError, match="only one category"):
+        s.by_category()
+
+
+def test_empty_ledger_is_queryable():
+    s = _ledger("empty.beancount").spending
+    assert s.years() == []
+    assert s.months() == []
+    assert s.count() == 0
+    assert s.date_range() is None
+    assert s.categories() == ["Grocery"]

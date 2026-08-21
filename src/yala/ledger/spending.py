@@ -1,7 +1,8 @@
-"""Spending domain: questions about ``Expenses:*`` transactions.
+"""Spending domain: discretionary ``Expenses:*`` transactions.
 
-Plain-Python aggregation over the loaded ledger.
-**Invariant:** a spendingtransaction has exactly one ``Expenses:*`` posting.
+Plain-Python aggregation over the loaded ledger. **Discretionary** excludes the
+``Expenses:Deductions:*`` expenses but not spending given that deductions are directly related to income.
+-**Invariant:** a discretionary spending transaction has exactly one ``Expenses:*`` posting.
 """
 
 from __future__ import annotations
@@ -12,10 +13,15 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from yala.ledger.entities import EXPENSES
+from yala.ledger.entities import DEDUCTIONS, EXPENSES
 
 if TYPE_CHECKING:
     from yala.ledger.core import Ledger
+
+
+def _is_discretionary(account: str) -> bool:
+    """An Expenses account that counts as spending (excludes the payroll-deductions subtree)."""
+    return account.startswith(EXPENSES) and not account.startswith(DEDUCTIONS)
 
 
 @dataclass
@@ -50,10 +56,10 @@ class Spending:
         out: list[SpendingTransaction] = []
 
         for t in self._led.transactions(year, month):
-            expense_postings = t.filtered_postings(EXPENSES)
+            expense_postings = [p for p in t.postings if _is_discretionary(p.account)]
 
             if not expense_postings:
-                continue  # non-spending directive (e.g. a transfer / future income)
+                continue  # non-spending directive (a paycheck, transfer, etc.)
             if len(expense_postings) > 1:
                 raise ValueError(
                     f"spending txn {t.date} {t.payee!r} has {len(expense_postings)} Expenses postings; "
@@ -79,8 +85,12 @@ class Spending:
         return out
 
     def categories(self) -> list[str]:
-        """Spending category list: retrieved from ``Expenses:*`` accounts, sorted."""
-        return sorted(a.split(":", 1)[1] for a in self._led.declared_accounts(EXPENSES))
+        """Discretionary spending categories from ``Expenses:*`` accounts (excludes Deductions), sorted."""
+        return sorted(
+            a.split(":", 1)[1]
+            for a in self._led.declared_accounts(EXPENSES)
+            if _is_discretionary(a)
+        )
 
     def by_category(
         self, year: int | None = None, month: int | None = None
