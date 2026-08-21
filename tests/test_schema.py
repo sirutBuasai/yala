@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from scripts.gen_schema import example_data
+from scripts.generate_schema import example_data
 from yala.schema import SCHEMA_VERSION, DashboardData
 
 
