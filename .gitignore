@@ -1,0 +1,15 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Never commit real data to the public repo
+*.beancount
+!tests/fixtures/*.beancount
+*.xlsx
+*.csv
+!tests/**/*.csv

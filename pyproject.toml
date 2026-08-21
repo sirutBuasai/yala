@@ -1,0 +1,18 @@
+[project]
+name = "yala"
+version = "0.1.0"
+description = "Yala -- private, local-first personal finance backend (beancount source of truth)."
+requires-python = ">=3.10"
+dependencies = [
+    "beancount>=3.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
