@@ -327,6 +327,9 @@ def post_transaction_delete(body: TransactionDeleteIn) -> dict:
     except HTTPException:
         raise
 
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

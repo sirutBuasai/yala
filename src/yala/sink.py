@@ -22,6 +22,7 @@ from beancount.parser import printer
 
 from yala import config
 from yala.ledger import Ledger
+from yala.money import round_cents
 
 Credit = tuple[str, Decimal]
 
@@ -31,8 +32,8 @@ _MANAGED_META = {"id", "funding", "bill"}  # we always (re)compute these
 
 
 def _round_cents(value: Decimal) -> Decimal:
-    """Quantize to 2 decimal places (cents)."""
-    return Decimal(value).quantize(Decimal("0.01"))
+    """Quantize to 2 decimal places (cents) — banker's rounding via :mod:`yala.money`."""
+    return round_cents(value)
 
 
 def _posting(account: str, number: Decimal) -> data.Posting:
@@ -255,6 +256,16 @@ class FileLedgerSink(LedgerSink):
         deductions = {k: _round_cents(v) for k, v in deductions.items()}
         contributions = {k: _round_cents(v) for k, v in contributions.items()}
 
+        self._assert_accounts_active(
+            date,
+            [
+                "Income:Salary",
+                deposit_account,
+                *(f"Expenses:Deductions:{name}" for name in deductions),
+                *(f"Assets:Investments:{name}" for name in contributions),
+            ],
+        )
+
         take_home = (
             gross - sum(deductions.values(), Decimal(0)) - sum(contributions.values(), Decimal(0))
         )
@@ -358,6 +369,25 @@ class FileLedgerSink(LedgerSink):
         end = begin + 1
         while end < len(lines) and lines[end].startswith((" ", "\t")) and lines[end].strip():
             end += 1  # consume the entry's indented meta + posting lines (blank line ends it)
+
+        # A date edit that crosses into a different year must relocate the entry to that year's
+        # file (spending/<year>.beancount), not leave it stranded in the original year's file.
+        if resolved_date.year != entry.date.year:
+            _atomic_write(path, "".join(lines[:begin] + lines[end:]))  # drop from the old file
+
+            try:
+                self._append(
+                    "spending",
+                    resolved_date.year,
+                    f"; Spending transactions for {resolved_date.year}",
+                    block,
+                )
+
+            except Exception:
+                _atomic_write(path, original)  # restore the old file; _append rolled back its own
+                raise
+
+            return entry_id
 
         _atomic_write(path, "".join(lines[:begin] + block.splitlines(keepends=True) + lines[end:]))
 

@@ -1,0 +1,9 @@
+option "operating_currency" "USD"
+
+; No `commodity` directive: exercises Ledger.currency's "USD" fallback.
+2020-01-01 open Expenses:Grocery USD
+2020-01-01 open Liabilities:CC:CardA USD
+
+2025-08-10 * "Example Grocery"
+  Expenses:Grocery    50.00 USD
+  Liabilities:CC:CardA  -50.00 USD

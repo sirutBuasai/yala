@@ -1,9 +1,11 @@
+import datetime as dt
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
 from yala.ledger import Ledger, LedgerError
+from yala.ledger.entities import Posting, Transaction
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -83,3 +85,28 @@ def test_empty_ledger_is_queryable():
     assert s.count() == 0
     assert s.date_range() is None
     assert s.categories() == ["Grocery"]
+
+
+def test_currency_defaults_to_usd_without_commodity():
+    assert _ledger("no_commodity.beancount").currency == "USD"
+
+
+def test_load_raises_file_not_found_for_missing_path():
+    with pytest.raises(FileNotFoundError):
+        Ledger(FIXTURES / "does_not_exist.beancount").load()
+
+
+def test_queries_lazy_load_without_explicit_load_call():
+    # Never call .load(); accessing a query triggers _require() -> load().
+    led = Ledger(FIXTURES / "mini.beancount")
+    assert len(led.transactions()) == 3
+
+
+def test_source_is_none_when_no_non_expense_posting():
+    t = Transaction(
+        date=dt.date(2025, 8, 2),
+        payee="orphan expense",
+        postings=[Posting("Expenses:Grocery", Decimal("5.00"))],
+        meta={},
+    )
+    assert t.source is None

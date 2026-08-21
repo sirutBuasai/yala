@@ -223,3 +223,181 @@ def test_post_transaction_invalid_category_is_400(client: TestClient):
         },
     )
     assert r.status_code == 400
+
+
+def test_post_transaction_invalid_date_is_400(client: TestClient):
+    r = client.post(
+        "/api/transaction",
+        json={
+            "date": "2026-13-40",  # not a real date
+            "payee": "bad date",
+            "amount": 1.0,
+            "category": "Takeouts",
+            "funding_account": "Liabilities:CC:CardA",
+        },
+    )
+    assert r.status_code == 400
+    assert "invalid date" in r.json()["detail"]
+
+
+def test_get_transaction_unknown_locator_is_404(client: TestClient):
+    r = client.get("/api/transaction", params={"locator": "id:does-not-exist"})
+    assert r.status_code == 404
+    assert "no transaction found" in r.json()["detail"]
+
+
+def test_update_unknown_locator_is_404(client: TestClient):
+    r = client.post(
+        "/api/transaction/update",
+        json={
+            "locator": "id:does-not-exist",
+            "payee": "ghost",
+            "amount": 1.0,
+            "category": "Takeouts",
+            "funding_account": "Liabilities:CC:CardA",
+        },
+    )
+    assert r.status_code == 404
+    assert "no transaction found" in r.json()["detail"]
+
+
+# --- paycheck endpoint ---
+
+
+def test_post_paycheck_is_visible_on_next_get(client: TestClient):
+    r = client.post(
+        "/api/paycheck",
+        json={
+            "date": "2026-02-15",
+            "gross": 3000.0,
+            "deductions": {"Tax": 600.0, "Insurance": 100.0},
+            "contributions": {"HSA": 150.0, "Roth401k": 600.0},
+            "deposit_account": "Assets:Cash:BankB",
+        },
+    )
+    assert r.status_code == 200
+    assert r.json()["ok"] is True
+
+    paychecks = client.get("/api/data").json()["months"]["2026-02"]["paychecks"]
+    assert any(p["gross"] == 3000.0 for p in paychecks)
+
+
+def test_post_paycheck_take_home_negative_is_400(client: TestClient):
+    r = client.post(
+        "/api/paycheck",
+        json={
+            "gross": 1000.0,
+            "deductions": {"Tax": 900.0},
+            "contributions": {"Roth401k": 500.0},  # exceeds gross
+            "deposit_account": "Assets:Cash:BankB",
+        },
+    )
+    assert r.status_code == 400
+    assert "exceed gross" in r.json()["detail"]
+
+
+def test_post_paycheck_unopened_account_is_400_with_clear_detail(client: TestClient):
+    r = client.post(
+        "/api/paycheck",
+        json={
+            "date": "2026-02-15",
+            "gross": 1000.0,
+            "deductions": {"Tax": 100.0},
+            "contributions": {},
+            "deposit_account": "Assets:Cash:NonExistent",  # never opened
+        },
+    )
+    assert r.status_code == 400
+    detail = r.json()["detail"]
+    assert "Assets:Cash:NonExistent" in detail
+    assert "does not exist" in detail
+
+
+# --- delete endpoint ---
+
+
+def test_delete_transaction_flow(client: TestClient):
+    r = client.post(
+        "/api/transaction",
+        json={
+            "date": "2026-02-01",
+            "payee": "delete via api",
+            "amount": 9.0,
+            "category": "Takeouts",
+            "funding_account": "Liabilities:CC:CardA",
+        },
+    )
+    entry_id = r.json()["id"]
+
+    d = client.post("/api/transaction/delete", json={"locator": f"id:{entry_id}"})
+    assert d.status_code == 200
+    assert d.json()["ok"] is True
+
+    txns = client.get("/api/data").json()["months"].get("2026-02", {}).get("transactions", [])
+    assert not [t for t in txns if t["payee"] == "delete via api"]
+
+
+def test_delete_unknown_locator_is_404(client: TestClient):
+    r = client.post("/api/transaction/delete", json={"locator": "id:does-not-exist"})
+    assert r.status_code == 404
+    assert "no transaction found" in r.json()["detail"]
+
+
+def test_update_across_year_moves_txn_between_month_pages(client: TestClient):
+    r = client.post(
+        "/api/transaction",
+        json={
+            "date": "2026-02-01",
+            "payee": "relocating",
+            "amount": 12.0,
+            "category": "Takeouts",
+            "funding_account": "Liabilities:CC:CardA",
+        },
+    )
+    entry_id = r.json()["id"]
+    assert any(
+        t["payee"] == "relocating"
+        for t in client.get("/api/data").json()["months"]["2026-02"]["transactions"]
+    )
+
+    u = client.post(
+        "/api/transaction/update",
+        json={
+            "locator": f"id:{entry_id}",
+            "date": "2027-05-10",  # crosses into 2027
+            "payee": "relocating",
+            "amount": 12.0,
+            "category": "Takeouts",
+            "funding_account": "Liabilities:CC:CardA",
+        },
+    )
+    assert u.status_code == 200
+
+    data = client.get("/api/data").json()
+    # the only 2026-02 activity moved away, so that month page is gone entirely
+    old = data["months"].get("2026-02", {}).get("transactions", [])
+    assert not [t for t in old if t["payee"] == "relocating"]
+    assert any(t["payee"] == "relocating" for t in data["months"]["2027-05"]["transactions"])
+
+
+# --- layout persistence ---
+
+
+def test_layout_is_empty_when_absent(client: TestClient, tmp_path: Path, monkeypatch):
+    monkeypatch.setattr("yala.api._LAYOUTS_PATH", tmp_path / "layouts.json")
+    assert client.get("/api/layout").json() == {}
+
+
+def test_layout_round_trips_and_merges_per_page(client: TestClient, tmp_path: Path, monkeypatch):
+    monkeypatch.setattr("yala.api._LAYOUTS_PATH", tmp_path / "layouts.json")
+
+    client.post("/api/layout", json={"page": "overview", "layout": {"cols": 2}})
+    client.post("/api/layout", json={"page": "year", "layout": ["a", "b"]})
+
+    saved = client.get("/api/layout").json()
+    assert saved == {"overview": {"cols": 2}, "year": ["a", "b"]}
+
+    # posting the same page overwrites just that page, leaving others intact
+    client.post("/api/layout", json={"page": "overview", "layout": {"cols": 3}})
+    saved2 = client.get("/api/layout").json()
+    assert saved2 == {"overview": {"cols": 3}, "year": ["a", "b"]}

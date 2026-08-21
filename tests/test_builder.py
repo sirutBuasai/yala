@@ -113,3 +113,12 @@ def test_reserved_sections_empty():
     assert d.networth is None
     assert d.investments is None
     assert d.cards == []
+
+
+def test_income_only_month_still_produces_a_month_page():
+    d = build(Ledger(Path(__file__).parent / "fixtures" / "income_mini.beancount").load())
+    assert "2025-01" in d.months
+    jan = d.months["2025-01"]
+    assert jan.total_spent == 0
+    assert jan.transactions == []
+    assert jan.paychecks  # the paycheck still lands on the page

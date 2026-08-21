@@ -194,6 +194,55 @@ def test_append_paycheck_balances_and_loads(ledger_dir: Path):
     _loads_clean(ledger_dir)
 
 
+def test_paycheck_to_unopened_deposit_account_raises_not_found(ledger_dir: Path):
+    """A paycheck deposited to an account that was never opened is rejected up-front."""
+    target = ledger_dir / "income" / "2026.beancount"
+    before = target.read_bytes()
+
+    with pytest.raises(ValueError) as exc:
+        FileLedgerSink(ledger_dir).append_paycheck(
+            date=dt.date(2026, 2, 15),
+            gross=Decimal("1000.00"),
+            deductions={"Tax": Decimal("100.00")},
+            contributions={},
+            deposit_account="Assets:Cash:NonExistent",  # never opened
+        )
+    msg = str(exc.value)
+    assert msg.startswith("Unable to insert transaction:")
+    assert "Assets:Cash:NonExistent" in msg
+    assert "does not exist" in msg
+    assert target.read_bytes() == before  # nothing written
+
+
+def test_paycheck_to_closed_account_raises_closed(ledger_dir: Path):
+    """A paycheck dated after a deposit account's close date is rejected with a closed-message."""
+    with pytest.raises(ValueError) as exc:
+        FileLedgerSink(ledger_dir).append_paycheck(
+            date=dt.date(2025, 3, 2),
+            gross=Decimal("1000.00"),
+            deductions={},
+            contributions={},
+            deposit_account="Liabilities:CC:CardD",  # closed 2024-10-01
+        )
+    msg = str(exc.value)
+    assert "Liabilities:CC:CardD" in msg
+    assert "is closed as of date" in msg
+
+
+def test_paycheck_with_unopened_contribution_account_raises(ledger_dir: Path):
+    """The active-on-date check also covers deduction/contribution legs, not just the deposit."""
+    with pytest.raises(ValueError) as exc:
+        FileLedgerSink(ledger_dir).append_paycheck(
+            date=dt.date(2026, 2, 15),
+            gross=Decimal("1000.00"),
+            deductions={},
+            contributions={"Brokerage": Decimal("100.00")},  # Assets:Investments:Brokerage unopened
+            deposit_account="Assets:Cash:BankB",
+        )
+    assert "Assets:Investments:Brokerage" in str(exc.value)
+    assert "does not exist" in str(exc.value)
+
+
 def test_paycheck_with_wrong_legs_raises(ledger_dir: Path):
     with pytest.raises(ValueError):
         FileLedgerSink(ledger_dir).append_paycheck(
@@ -427,6 +476,74 @@ def test_update_does_not_swallow_next_entry_across_whitespace_line(ledger_dir: P
     second = [t for t in led.spending.transactions() if t.payee == "second"]
     assert len(second) == 1  # untouched
     assert second[0].amount == Decimal("6.00")
+
+
+# --- date-edit that crosses a year boundary relocates the entry ---
+
+
+def test_update_across_year_moves_entry_to_new_year_file(ledger_dir: Path):
+    """Editing a txn's date into another year removes it from the old file and appends to the
+    new year's file (creating that file + its include when needed)."""
+    sink = FileLedgerSink(ledger_dir)
+    entry_id = sink.append_transaction(
+        date=dt.date(2026, 2, 5),
+        payee="moving txn",
+        amount=Decimal("30.00"),
+        category="Takeouts",
+        funding_account="Liabilities:CC:CardA",
+    )
+    src_file = ledger_dir / "spending" / "2026.beancount"
+    assert '"moving txn"' in src_file.read_text()
+
+    new_id = sink.update_transaction(
+        f"id:{entry_id}",
+        payee="moving txn",
+        amount=Decimal("30.00"),
+        category="Takeouts",
+        funding_account="Liabilities:CC:CardA",
+        date=dt.date(2027, 3, 9),  # crosses 2026 -> 2027
+    )
+    assert new_id == entry_id  # id preserved across the move
+
+    dst_file = ledger_dir / "spending" / "2027.beancount"
+    assert '"moving txn"' not in src_file.read_text()  # gone from the old year
+    assert '"moving txn"' in dst_file.read_text()  # landed in the new year
+    assert '2027-03-09 * "moving txn"' in dst_file.read_text()
+    assert 'include "spending/2027.beancount"' in (ledger_dir / "main.beancount").read_text()
+
+    led = _loads_clean(ledger_dir)
+    moved = [t for t in led.spending.transactions() if t.payee == "moving txn"]
+    assert len(moved) == 1
+    assert moved[0].date == dt.date(2027, 3, 9)
+    assert moved[0].locator == f"id:{entry_id}"
+
+
+def test_update_across_year_with_bad_account_leaves_old_file_intact(ledger_dir: Path):
+    """A year-crossing edit that names an invalid account is rejected before any file is moved,
+    so the original year file is untouched."""
+    sink = FileLedgerSink(ledger_dir)
+    entry_id = sink.append_transaction(
+        date=dt.date(2026, 2, 6),
+        payee="stays put",
+        amount=Decimal("22.00"),
+        category="Takeouts",
+        funding_account="Liabilities:CC:CardA",
+    )
+    src_file = ledger_dir / "spending" / "2026.beancount"
+    before = src_file.read_bytes()
+
+    with pytest.raises(Exception):
+        sink.update_transaction(
+            f"id:{entry_id}",
+            payee="stays put",
+            amount=Decimal("22.00"),
+            category="Takeouts",
+            funding_account="Assets:Cash:Nope",  # unopened -> reload fails
+            date=dt.date(2027, 1, 1),  # would cross the year boundary
+        )
+
+    assert src_file.read_bytes() == before  # original year file byte-identical
+    _loads_clean(ledger_dir)
 
 
 # --- pre-write active-account validation ---

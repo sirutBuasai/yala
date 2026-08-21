@@ -7,10 +7,12 @@ Additive-versioning rule (keep ``SCHEMA_VERSION`` stable vs. bump it):
 
 from __future__ import annotations
 
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
+
+from yala.money import round_cents
 
 SCHEMA_VERSION = 1
 
@@ -159,5 +161,5 @@ def json_schema() -> dict:
 
 
 def money(value: Decimal | int | float) -> float:
-    """Normalize a ledger amount to a 2dp float."""
-    return float(Decimal(value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+    """Normalize a ledger amount to a 2dp float (banker's rounding, via :mod:`yala.money`)."""
+    return float(round_cents(value))
