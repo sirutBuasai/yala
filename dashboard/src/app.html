@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="theme-color" content="#16161f" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.svg" />
+		<link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" />
+		<title>Yala — personal finance</title>
+		<script>
+			// Apply saved theme before first paint to avoid a flash.
+			try {
+				var t = localStorage.getItem('yala-theme');
+				if (!t)
+					t =
+						window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches
+							? 'light'
+							: 'dark';
+				document.documentElement.setAttribute('data-theme', t);
+			} catch (e) {
+				document.documentElement.setAttribute('data-theme', 'dark');
+			}
+		</script>
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

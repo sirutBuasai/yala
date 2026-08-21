@@ -1,0 +1,32 @@
+{
+	"name": "yala-dashboard",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"format": "prettier --write .",
+		"gen:types": "json2ts -i ../schemas/data.schema.json -o src/lib/types.ts --no-additionalProperties --unreachableDefinitions"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-static": "^3.0.6",
+		"@sveltejs/kit": "^2.8.0",
+		"@sveltejs/vite-plugin-svelte": "^5.0.0",
+		"@types/d3-scale": "^4.0.8",
+		"@types/d3-shape": "^3.1.6",
+		"json-schema-to-typescript": "^15.0.3",
+		"prettier": "^3.4.0",
+		"prettier-plugin-svelte": "^3.3.0",
+		"svelte": "^5.2.0",
+		"svelte-check": "^4.1.0",
+		"typescript": "^5.6.0",
+		"vite": "^6.0.0"
+	},
+	"dependencies": {
+		"d3-scale": "^4.0.2",
+		"d3-shape": "^3.2.0"
+	}
+}

@@ -1,0 +1,183 @@
+<script lang="ts">
+	import type { AccountsInfo } from '$lib/data';
+	import { formatAccount, money } from '$lib/format';
+	import SplitLegs, { type SplitLeg } from './SplitLegs.svelte';
+
+	interface Props {
+		accounts: AccountsInfo;
+		/** Called after a successful save (parent refreshes data + closes the modal). */
+		onsaved: () => void;
+	}
+	let { accounts, onsaved }: Props = $props();
+
+	let date = $state('');
+	let payee = $state('');
+	let total = $state<number | null>(null);
+	let category = $state('');
+	let funding_account = $state('');
+	let pending = $state(false);
+	let splits = $state<SplitLeg[]>([]);
+
+	// Seed the selects from the account lists once available (in $effect so a
+	// later-loading list still populates them) without clobbering the user's pick.
+	$effect(() => {
+		if (!category) category = accounts.spending_categories[0] ?? '';
+		if (!funding_account) funding_account = accounts.funding_accounts[0] ?? '';
+	});
+
+	// Your share = total bill − everything paid back / credited on the split legs.
+	const paybacks = $derived(splits.reduce((a, s) => a + (s.amount || 0), 0));
+	const yourShare = $derived((total || 0) - paybacks);
+
+	let msg = $state('');
+	let err = $state(false);
+
+	async function submit() {
+		if (!payee.trim() || total == null) {
+			msg = 'Title and total bill are required.';
+			err = true;
+			return;
+		}
+		const body = {
+			date: date || undefined,
+			payee: payee.trim(),
+			amount: total,
+			category,
+			funding_account,
+			pending,
+			splits: splits
+				.filter((s) => s.account && s.amount != null)
+				.map((s) => ({ account: s.account, amount: s.amount as number }))
+		};
+		try {
+			const res = await fetch('/api/transaction', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(body)
+			});
+			const data = await res.json().catch(() => ({}));
+			if (!res.ok) {
+				msg = data.detail || `error ${res.status}`;
+				err = true;
+				return;
+			}
+			onsaved();
+		} catch (e) {
+			msg = 'API unreachable: ' + (e as Error).message;
+			err = true;
+		}
+	}
+</script>
+
+<div class="editrow">
+	<div class="field">
+		<label for="tx-date">Date</label><input id="tx-date" type="date" bind:value={date} />
+	</div>
+	<div class="field">
+		<label for="tx-payee">Title</label><input
+			id="tx-payee"
+			bind:value={payee}
+			placeholder="e.g. lucky"
+		/>
+	</div>
+	<div class="field">
+		<label for="tx-amt">Total bill</label><input
+			id="tx-amt"
+			type="number"
+			step="0.01"
+			bind:value={total}
+		/>
+	</div>
+	<div class="field">
+		<label for="tx-cat">Category</label>
+		<select id="tx-cat" bind:value={category}>
+			{#each accounts.spending_categories as c (c)}<option value={c}>{c}</option>{/each}
+		</select>
+	</div>
+	<div class="field">
+		<label for="tx-fund">Account</label>
+		<select id="tx-fund" bind:value={funding_account}>
+			{#each accounts.funding_accounts as a (a)}<option value={a}>{formatAccount(a)}</option>{/each}
+		</select>
+	</div>
+	<label class="chk"><input type="checkbox" bind:checked={pending} /> Pending</label>
+</div>
+
+<SplitLegs bind:splits splitAccounts={accounts.split_accounts} />
+
+<div class="mfoot">
+	<span class="share">Your share: <b>{money(yourShare)}</b></span>
+	<div class="right">
+		{#if msg}<span class="edit-msg" class:err>{msg}</span>{/if}
+		<button class="addbtn" onclick={submit}>+ Add</button>
+	</div>
+</div>
+
+<style>
+	.editrow {
+		display: flex;
+		gap: 10px;
+		flex-wrap: wrap;
+		align-items: flex-end;
+	}
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		min-width: 130px;
+		flex: 1;
+	}
+	.field label {
+		font-size: 11px;
+		color: var(--ink-3);
+		text-transform: uppercase;
+		letter-spacing: 0.6px;
+	}
+	.chk {
+		font-size: 12px;
+		color: var(--ink-2);
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding-bottom: 8px;
+	}
+	.mfoot {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 14px;
+		margin-top: 16px;
+	}
+	.right {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+	}
+	.share {
+		color: var(--ink-2);
+		font-size: 13px;
+	}
+	.share b {
+		color: var(--ink);
+		font-size: 16px;
+	}
+	.addbtn {
+		background: var(--lav);
+		color: #1a1522;
+		border: 0;
+		border-radius: 9px;
+		padding: 9px 16px;
+		font-weight: 700;
+		cursor: pointer;
+	}
+	.addbtn:hover {
+		filter: brightness(1.08);
+	}
+	.edit-msg {
+		font-size: 12px;
+		color: var(--good);
+	}
+	.edit-msg.err {
+		color: var(--crit);
+	}
+</style>
