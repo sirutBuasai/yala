@@ -21,6 +21,10 @@
 	--good: #9ece6a;
 	--warn: #e0af68;
 	--crit: #e46876;
+	--good-text: #9ece6a;
+	--crit-text: #e46876;
+	--gold-text: #e0af68;
+	--lav-text: #bb9af7;
 	--grid: #2a2a3c;
 	--s1: #26263a;
 	--s2: #3c3560;
@@ -32,6 +36,7 @@
 	--radius: 16px;
 }
 :root[data-theme='light'] {
+	/* Light mode overrides ONLY the neutral chrome (backgrounds, text, borders). */
 	--bg: #f0ebdd;
 	--surface: #faf6ec;
 	--surface-2: #f1ead9;
@@ -40,16 +45,11 @@
 	--ink: #2e2a22;
 	--ink-2: #6b6350;
 	--ink-3: #9a9078;
-	--salmon: #cc4863;
-	--lav: #6f4fc0;
-	--green: #558a2b;
-	--teal: #1f83a8;
-	--gold: #9a7817;
-	--orange: #cf5a22;
-	--blue: #3f5fc4;
-	--aqua: #12977e;
-	--magenta: #b8459d;
-	--berry: #b0426f;
+	/* Darker text variants of the accents for legibility on the light background. */
+	--good-text: #4f8129;
+	--crit-text: #c0334c;
+	--gold-text: #8a6a12;
+	--lav-text: #6a49bd;
 	--grid: #e6ddca;
 	--s1: #ece3f8;
 	--s2: #d6c4f0;

@@ -242,10 +242,10 @@
 	}
 	.edit-msg {
 		font-size: 12px;
-		color: var(--good);
+		color: var(--good-text);
 	}
 	.edit-msg.err {
-		color: var(--crit);
+		color: var(--crit-text);
 	}
 	/* Destructive action, set apart from Save so it isn't fat-fingered. */
 	.danger {
@@ -258,12 +258,12 @@
 	}
 	.confirm-q {
 		font-size: 12.5px;
-		color: var(--crit);
+		color: var(--crit-text);
 	}
 	.del {
 		background: none;
 		border: 1px solid color-mix(in srgb, var(--crit) 45%, var(--border));
-		color: var(--crit);
+		color: var(--crit-text);
 		border-radius: 8px;
 		padding: 6px 12px;
 		font-size: 12px;

@@ -95,6 +95,7 @@ export async function enableEditMode(): Promise<boolean> {
 		}
 
 		mode.set('edit');
+		loadState.set({ status: 'ready' }); // enableEditMode can be the primary loader on startup
 		return true;
 	} catch {
 		return false;

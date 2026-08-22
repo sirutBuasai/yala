@@ -45,10 +45,10 @@
 		margin-top: 5px;
 	}
 	.up {
-		color: var(--good);
+		color: var(--good-text);
 	}
 	.down {
-		color: var(--crit);
+		color: var(--crit-text);
 	}
 	.foot {
 		color: var(--ink-3);

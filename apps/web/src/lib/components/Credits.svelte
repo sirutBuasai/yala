@@ -80,6 +80,6 @@
 	}
 	.mini.rm:hover {
 		border-color: var(--crit);
-		color: var(--crit);
+		color: var(--crit-text);
 	}
 </style>

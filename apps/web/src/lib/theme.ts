@@ -37,7 +37,7 @@ function initialMode(): ThemeMode {
 		if (attr === 'light' || attr === 'dark') return attr;
 	}
 
-	return 'dark';
+	return 'light';
 }
 
 export const theme = writable<ThemeMode>(initialMode());

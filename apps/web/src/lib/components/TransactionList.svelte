@@ -106,7 +106,7 @@
 		white-space: nowrap;
 	}
 	.pending {
-		color: var(--gold);
+		color: var(--gold-text);
 		font-size: 10.5px;
 		font-weight: 600;
 		margin-left: 6px;
@@ -128,6 +128,6 @@
 		font-size: 13px;
 	}
 	.amt.refund {
-		color: var(--green);
+		color: var(--good-text);
 	}
 </style>

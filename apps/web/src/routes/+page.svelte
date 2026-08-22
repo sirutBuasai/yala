@@ -1,7 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import '../app.css';
-	import { data, accounts, mode, loadState, loadViewData, refreshEditData } from '$lib/data';
+	import {
+		data,
+		accounts,
+		mode,
+		loadState,
+		loadViewData,
+		enableEditMode,
+		refreshEditData
+	} from '$lib/data';
 	import OverviewView from '$lib/components/OverviewView.svelte';
 	import YearlyView from '$lib/components/YearlyView.svelte';
 	import MonthlyView from '$lib/components/MonthlyView.svelte';
@@ -17,8 +25,10 @@
 
 	const edit = $derived($mode === 'edit');
 
-	onMount(() => {
-		loadViewData();
+	onMount(async () => {
+		// Prefer edit mode when the local API is reachable; otherwise fall back to the
+		// read-only static snapshot (view mode).
+		if (!(await enableEditMode())) await loadViewData();
 	});
 
 	// Default scope selectors to the newest available year / month.

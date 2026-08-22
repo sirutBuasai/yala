@@ -186,9 +186,9 @@
 	}
 	.edit-msg {
 		font-size: 12px;
-		color: var(--good);
+		color: var(--good-text);
 	}
 	.edit-msg.err {
-		color: var(--crit);
+		color: var(--crit-text);
 	}
 </style>

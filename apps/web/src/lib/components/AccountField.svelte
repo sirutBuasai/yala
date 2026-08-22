@@ -154,6 +154,6 @@
 	}
 	.err {
 		font-size: 11px;
-		color: var(--crit);
+		color: var(--crit-text);
 	}
 </style>

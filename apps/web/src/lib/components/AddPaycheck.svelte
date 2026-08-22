@@ -277,7 +277,7 @@
 		font-size: 13px;
 	}
 	.takehome b {
-		color: var(--green);
+		color: var(--good-text);
 		font-size: 16px;
 	}
 	.addbtn {
@@ -295,10 +295,10 @@
 	.edit-msg {
 		font-size: 12px;
 		margin-top: 8px;
-		color: var(--good);
+		color: var(--good-text);
 	}
 	.edit-msg.err {
-		color: var(--crit);
+		color: var(--crit-text);
 	}
 	@media (max-width: 700px) {
 		.lines {

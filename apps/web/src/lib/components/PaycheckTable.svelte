@@ -109,10 +109,10 @@
 		letter-spacing: 0.5px;
 	}
 	td.saved {
-		color: var(--lav);
+		color: var(--lav-text);
 	}
 	td.income {
-		color: var(--green);
+		color: var(--good-text);
 		font-weight: 600;
 	}
 	.del-col {
@@ -129,7 +129,7 @@
 		border-radius: 6px;
 	}
 	.del:hover {
-		color: var(--crit);
+		color: var(--crit-text);
 		background: color-mix(in srgb, var(--crit) 12%, transparent);
 	}
 </style>
