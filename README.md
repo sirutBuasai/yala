@@ -1,60 +1,49 @@
 # Yala
 
-**Y**et **A**nother **L**edger **A**pp — a private, local-first personal-finance backend.
-A plain-text **beancount** ledger is the source of truth; this package is the storage/access
-layer over it. See `../PROJECT_SPEC.md` for the full design.
+**Y**et **A**nother **L**edger **A**pp — a private, local-first personal-finance dashboard over a
+plain-text [beancount](https://beancount.github.io/) ledger. The ledger is the source of truth;
+this repo is the read / write / visualize layer.
 
-Data lives in a **separate private repo** (`yala-private-data`). This repo (`yala`) holds
-only code and fake fixtures — never real financial data.
+Real financial data lives in a **separate private repo** (`yala-private-data`). This repo holds
+only code and fake fixtures — never real data.
 
-## Monorepo layout
+## Layout
 
-```
-apps/
-  api/                  backend — Python / FastAPI over the beancount ledger
-    src/yala/           package: ledger access, builder, sink (writes), api, schema
-    tests/              backend tests (pytest) + fake fixture ledger
-    scripts/            tooling (e.g. generate_schema.py)
-    pyproject.toml
-  web/                  frontend — SvelteKit dashboard (Vitest tests colocated in src/)
-packages/
-  contract/             shared data contract: data.schema.json + data.example.json
-                        (api generates it; web codegens TS types from it)
-```
+- `apps/api` — Python / FastAPI backend: ledger access, the `data.json` builder, and the write sink.
+- `apps/web` — SvelteKit dashboard (static build; hand-rolled SVG charts).
+- `packages/contract` — the shared `data.json` schema. The API generates it; the web codegens its
+  TypeScript types from it, so the contract can't silently drift.
 
-Backend and frontend are peers; their tests never intermix (pytest under `apps/api/tests`,
-Vitest under `apps/web/src/**/*.test.ts`). The only thing they share is `packages/contract`.
+## Requirements
+
+- Python ≥ 3.10 and [`uv`](https://docs.astral.sh/uv/)
+- Node ≥ 20 and npm
 
 ## Backend (`apps/api`)
 
 ```bash
 uv venv && source .venv/bin/activate      # venv at repo root
 uv pip install -e "apps/api[dev]"
-cd apps/api && pytest                      # unit tests over a fake fixture ledger
-python scripts/generate_schema.py          # regenerate packages/contract from the models
+cd apps/api
+pytest                                     # tests over a fake fixture ledger
+python -m yala.builder                     # write build/data.json from the ledger
+python -m yala.api                         # local edit API at http://127.0.0.1:8000
 ```
 
-The ledger location is read from the environment (default targets the sibling private repo):
-
-| Var | Default | Meaning |
-|---|---|---|
-| `YALA_LEDGER_DIR` | `~/personal_dev/yala-project/yala-private-data/ledger` | where the `.beancount` files are read |
-
-Run the local edit API (also serves the built frontend from `apps/web/build`):
-
-```bash
-python -m yala.api      # http://127.0.0.1:8000
-```
+The ledger location is read from `$YALA_LEDGER_DIR` (default:
+`~/personal_dev/yala-project/yala-private-data/ledger`). `python scripts/generate_schema.py`
+regenerates `packages/contract` from the pydantic models.
 
 ## Frontend (`apps/web`)
 
 ```bash
 cd apps/web
 npm install
-npm run gen:types       # regenerate src/lib/types.ts from packages/contract
-npm run test            # Vitest
-npm run build           # static build -> apps/web/build (served by the API)
+npm run gen:types    # regenerate src/lib/types.ts from packages/contract
+npm run dev          # dev server
+npm run test         # Vitest
+npm run build        # static build -> apps/web/build (served by the API)
 ```
 
-Data lives in a **separate private repo** (`yala-private-data`) — this repo holds only code
-and fake fixtures, never real financial data.
+With the API running, the built site gets live data and edit mode. Opened standalone it falls back
+to the static `data.json` snapshot (read-only).
