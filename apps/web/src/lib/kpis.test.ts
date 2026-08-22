@@ -5,14 +5,14 @@ import { makeData } from './__fixtures__/dashboard';
 const label = (tiles: KpiTile[], l: string) => tiles.find((t) => t.label.startsWith(l));
 
 describe('spendingKpis', () => {
-	it('summarizes a year: total, avg/active-month, biggest month, top category', () => {
+	it('summarizes a year: total spent, and per-active-month income / spending / savings', () => {
 		const tiles = spendingKpis(makeData(), 2025);
 		expect(label(tiles, 'Spent 2025')!.value).toBe('$46'); // rounds 45.5
 		// only January is active -> avg == total
-		expect(label(tiles, 'Avg / month')!.value).toBe('$46');
-		expect(label(tiles, 'Avg / month')!.foot).toBe('1 active months');
-		expect(label(tiles, 'Biggest month')!.value).toBe('Jan');
-		expect(label(tiles, 'Top category')!.value).toBe('Grocery'); // 30 > 15.5
+		expect(label(tiles, 'Avg income / month')!.value).toBe('$2,300');
+		expect(label(tiles, 'Avg spending / month')!.value).toBe('$46'); // rounds 45.5
+		expect(label(tiles, 'Avg savings / month')!.value).toBe('$2,255'); // 2300 - 45.5 -> 2254.5
+		expect(label(tiles, 'Avg savings / month')!.dir).toBe('up');
 	});
 
 	it('returns [] for an unknown year', () => {

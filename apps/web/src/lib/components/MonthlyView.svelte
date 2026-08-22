@@ -1,20 +1,18 @@
 <script lang="ts">
 	import type { DashboardData } from '$lib/types';
 	import type { AccountsInfo } from '$lib/data';
-	import { money, monthLabel } from '$lib/format';
+	import { MONTHS, money, monthLabel } from '$lib/format';
 	import { monthlyKpis } from '$lib/kpis';
 	import { categorySlices, type Slice } from '$lib/charts/slices';
 	import Kpi from './Kpi.svelte';
 	import Pane from './Pane.svelte';
 	import Donut from './charts/Donut.svelte';
-	import Modal from './Modal.svelte';
+	import Overlay from './Overlay.svelte';
 	import TransactionList from './TransactionList.svelte';
 	import PaycheckTable from './PaycheckTable.svelte';
-	import AddTransaction from './AddTransaction.svelte';
-	import AddPaycheck from './AddPaycheck.svelte';
+	import TransactionForm from './TransactionForm.svelte';
+	import PaycheckForm from './PaycheckForm.svelte';
 	import PendingList from './PendingList.svelte';
-	import ReconcileEditor from './ReconcileEditor.svelte';
-	import ReconcilePaycheck from './ReconcilePaycheck.svelte';
 	import Select from './Select.svelte';
 
 	interface Props {
@@ -26,8 +24,22 @@
 	}
 	let { data, monthKey = $bindable(), edit, accounts, onsaved }: Props = $props();
 
-	const months = $derived([...data.meta.month_keys].sort().reverse());
+	const months = $derived([...data.meta.month_keys].sort());
 	const md = $derived(data.months[monthKey]);
+
+	// Split the "YYYY-MM" key across two selects: a year picker and a month picker whose options
+	// narrow to the months present in the chosen year.
+	const years = $derived([...new Set(months.map((k) => k.slice(0, 4)))].sort().reverse());
+	const selYear = $derived(monthKey.slice(0, 4));
+	const monthsInYear = $derived(months.filter((k) => k.startsWith(selYear + '-')));
+	const monthName = (k: string) => MONTHS[+k.slice(5, 7) - 1];
+
+	// Switching year keeps the same month when that year has it, else falls back to its latest.
+	function pickYear(y: string) {
+		const inYear = months.filter((k) => k.startsWith(y + '-'));
+		const sameMonth = `${y}-${monthKey.slice(5)}`;
+		monthKey = inYear.includes(sameMonth) ? sameMonth : inYear[inYear.length - 1];
+	}
 
 	const txns = $derived(
 		md ? [...md.transactions].sort((a, b) => b.date.localeCompare(a.date)) : []
@@ -45,7 +57,6 @@
 	});
 	const noIncome = $derived(!!md && md.total_income <= 0);
 
-	// --- edit drawers ---
 	let showAdd = $state(false);
 	let showPaycheck = $state(false);
 	let editingLocator = $state<string | null>(null);
@@ -64,8 +75,18 @@
 
 <div class="mhead">
 	<h2 class="serif">Monthly</h2>
-	<div class="monthsel">
-		<Select ariaLabel="Month" bind:value={monthKey} options={months} optionLabel={monthLabel} />
+	<div class="selectors">
+		<div class="yearsel">
+			<Select ariaLabel="Year" value={selYear} options={years} onchange={pickYear} />
+		</div>
+		<div class="monthsel">
+			<Select
+				ariaLabel="Month"
+				bind:value={monthKey}
+				options={monthsInYear}
+				optionLabel={monthName}
+			/>
+		</div>
 	</div>
 </div>
 
@@ -80,8 +101,8 @@
 		<div class="ephead">
 			<h2 class="serif">Edit · {monthLabel(monthKey)}</h2>
 			<div class="epactions">
-				<button class="ghost" onclick={() => (showAdd = true)}>+ Add transaction</button>
-				<button class="ghost" onclick={() => (showPaycheck = true)}>+ Add paycheck</button>
+				<button class="btn-ghost" onclick={() => (showAdd = true)}>+ Add transaction</button>
+				<button class="btn-ghost" onclick={() => (showPaycheck = true)}>+ Add paycheck</button>
 			</div>
 		</div>
 		<PendingList {refreshKey} onedit={(l) => (editingLocator = l)} />
@@ -122,27 +143,27 @@
 </div>
 
 {#if showAdd && accounts}
-	<Modal title="Add transaction" onclose={() => (showAdd = false)}>
-		<AddTransaction {accounts} onsaved={afterSave} />
-	</Modal>
+	<Overlay title="Add transaction" onclose={() => (showAdd = false)}>
+		<TransactionForm {accounts} onsaved={afterSave} />
+	</Overlay>
 {/if}
 
 {#if showPaycheck && accounts}
-	<Modal title="Add paycheck" onclose={() => (showPaycheck = false)}>
-		<AddPaycheck {accounts} onsaved={afterSave} />
-	</Modal>
+	<Overlay title="Add paycheck" onclose={() => (showPaycheck = false)}>
+		<PaycheckForm {accounts} onsaved={afterSave} />
+	</Overlay>
 {/if}
 
 {#if editingLocator && accounts}
-	<Modal title="Edit transaction" onclose={() => (editingLocator = null)}>
-		<ReconcileEditor locator={editingLocator} {accounts} onsaved={afterSave} />
-	</Modal>
+	<Overlay title="Edit transaction" onclose={() => (editingLocator = null)}>
+		<TransactionForm locator={editingLocator} {accounts} onsaved={afterSave} />
+	</Overlay>
 {/if}
 
 {#if editingPaycheck && accounts}
-	<Modal title="Edit paycheck" onclose={() => (editingPaycheck = null)}>
-		<ReconcilePaycheck locator={editingPaycheck} {accounts} onsaved={afterSave} />
-	</Modal>
+	<Overlay title="Edit paycheck" onclose={() => (editingPaycheck = null)}>
+		<PaycheckForm locator={editingPaycheck} {accounts} onsaved={afterSave} />
+	</Overlay>
 {/if}
 
 <style>
@@ -158,8 +179,15 @@
 		font-weight: 600;
 		margin: 0;
 	}
+	.selectors {
+		display: flex;
+		gap: 8px;
+	}
+	.yearsel {
+		width: 100px;
+	}
 	.monthsel {
-		width: 160px;
+		width: 130px;
 	}
 	.kpis {
 		display: grid;
@@ -188,19 +216,6 @@
 		display: flex;
 		gap: 8px;
 		flex-wrap: wrap;
-	}
-	.ghost {
-		background: var(--inset);
-		border: 1px solid var(--border);
-		color: var(--ink-2);
-		border-radius: 9px;
-		padding: 7px 14px;
-		font-size: 12.5px;
-		cursor: pointer;
-	}
-	.ghost:hover {
-		border-color: var(--lav);
-		color: var(--ink);
 	}
 	.panes {
 		display: grid;

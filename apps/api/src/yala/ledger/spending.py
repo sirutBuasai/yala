@@ -1,9 +1,9 @@
 """Spending domain: discretionary ``Expenses:*`` transactions.
 
 Plain-Python aggregation over the loaded ledger. **Discretionary** excludes the
-``Expenses:Deductions:*`` expenses but not spending given that deductions are directly
-related to income.
--**Invariant:** a discretionary spending transaction has exactly one ``Expenses:*`` posting.
+``Expenses:Deductions:*`` subtree — payroll deductions belong to income, not spending.
+
+**Invariant:** a discretionary spending transaction has exactly one ``Expenses:*`` posting.
 """
 
 from __future__ import annotations

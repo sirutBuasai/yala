@@ -1,12 +1,11 @@
-"""FastAPI local edit API backend
+"""FastAPI local edit API backend.
 
-Financial data should never leaves the machine.
+Runs on localhost only — financial data never leaves the machine.
 """
 
 from __future__ import annotations
 
 import datetime as dt
-import json
 import re
 from decimal import Decimal
 from pathlib import Path
@@ -27,7 +26,6 @@ app = FastAPI(title="Yala")
 
 _NAME_RE = re.compile(r"^[A-Za-z0-9:-]+$")
 _LEAF_RE = re.compile(r"^[A-Za-z0-9-]+$")
-_LAYOUTS_PATH = Path("build") / "layouts.json"
 
 
 def _ledger() -> Ledger:
@@ -86,7 +84,6 @@ class TransactionIn(BaseModel):
     category: str
     funding_account: str
     pending: bool = False
-    bill: float | None = None
     credits: list[CreditIn] = []
 
 
@@ -98,7 +95,6 @@ class TransactionUpdateIn(BaseModel):
     category: str
     funding_account: str
     pending: bool = False
-    bill: float | None = None
     credits: list[CreditIn] = []
 
 
@@ -137,11 +133,6 @@ class PaycheckUpdateIn(BaseModel):
     contributions: dict[str, float] = {}
     deposit_account: str
     payee: str = "paycheck"
-
-
-class LayoutIn(BaseModel):
-    page: str
-    layout: object
 
 
 # --- read endpoints ---
@@ -476,28 +467,6 @@ def post_paycheck_update(body: PaycheckUpdateIn) -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
     return {"ok": True, "message": "updated paycheck", "id": entry_id}
-
-
-# --- layout persistence (edit mode) ---
-
-
-@app.get("/api/layout")
-def get_layout() -> dict:
-    if _LAYOUTS_PATH.exists():
-        return json.loads(_LAYOUTS_PATH.read_text())
-
-    return {}
-
-
-@app.post("/api/layout")
-def post_layout(body: LayoutIn) -> dict:
-    layouts = json.loads(_LAYOUTS_PATH.read_text()) if _LAYOUTS_PATH.exists() else {}
-    layouts[body.page] = body.layout
-
-    _LAYOUTS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _LAYOUTS_PATH.write_text(json.dumps(layouts, indent=2))
-
-    return {"ok": True, "message": f"saved layout for {body.page}"}
 
 
 # Static frontend (the SvelteKit static-adapter build output) is mounted LAST so /api/*

@@ -51,6 +51,34 @@ async function fetchJson<T>(url: string): Promise<T> {
 	return res.json() as Promise<T>;
 }
 
+export interface PostResult<T> {
+	ok: boolean;
+	data: T;
+	/** A user-facing message on failure (API detail, status, or a network error), else null. */
+	error: string | null;
+}
+
+/** POST a JSON body and parse the response, normalizing errors into a `PostResult`. */
+export async function postJson<T = Record<string, unknown>>(
+	url: string,
+	body: unknown
+): Promise<PostResult<T>> {
+	try {
+		const res = await fetch(url, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body)
+		});
+		const data = (await res.json().catch(() => ({}))) as T & { detail?: string };
+
+		return res.ok
+			? { ok: true, data, error: null }
+			: { ok: false, data, error: data.detail || `error ${res.status}` };
+	} catch (e) {
+		return { ok: false, data: {} as T, error: 'API unreachable: ' + (e as Error).message };
+	}
+}
+
 /** Load the static snapshot (view mode). Sets loadState accordingly. */
 export async function loadViewData(): Promise<void> {
 	loadState.set({ status: 'loading' });
@@ -121,18 +149,7 @@ export async function refreshEditData(): Promise<void> {
  * error message on failure, or null on success.
  */
 export async function deleteTransaction(locator: string): Promise<string | null> {
-	try {
-		const res = await fetch('/api/transaction/delete', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ locator })
-		});
-		const body = await res.json().catch(() => ({}));
-
-		return res.ok ? null : body.detail || `error ${res.status}`;
-	} catch (e) {
-		return 'API unreachable: ' + (e as Error).message;
-	}
+	return (await postJson('/api/transaction/delete', { locator })).error;
 }
 
 /** Re-pull the account lists (after declaring a new deduction/contribution type). */

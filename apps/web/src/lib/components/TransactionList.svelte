@@ -5,6 +5,7 @@
 
 	interface Props {
 		transactions: Txn[];
+		/** Edit mode: rows become clickable to open the transaction editor. */
 		edit: boolean;
 		onedit: (locator: string) => void;
 	}
@@ -19,35 +20,26 @@
 
 <div class="txlist">
 	{#each transactions as t (t.locator)}
-		{#if edit}
-			<button type="button" class="tx clickable" onclick={() => onedit(t.locator)}>
-				<span class="date">{md(t.date)}</span>
-				<span class="dot" style:background={categoryVar(t.category)}></span>
-				<span class="main">
-					<span class="title">
-						{t.payee}
-						{#if t.pending}<span class="pending">● pending</span>{/if}
-					</span>
-					<span class="cat">{t.category}</span>
+		<svelte:element
+			this={edit ? 'button' : 'div'}
+			class="tx"
+			class:clickable={edit}
+			type={edit ? 'button' : undefined}
+			role={edit ? 'button' : undefined}
+			onclick={edit ? () => onedit(t.locator) : undefined}
+		>
+			<span class="date">{md(t.date)}</span>
+			<span class="dot" style:background={categoryVar(t.category)}></span>
+			<span class="main">
+				<span class="title">
+					{t.payee}
+					{#if t.pending}<span class="pending">● pending</span>{/if}
 				</span>
-				<span class="src">{formatAccount(t.source)}</span>
-				<span class="amt" class:refund={t.amount < 0}>{money(t.amount)}</span>
-			</button>
-		{:else}
-			<div class="tx">
-				<span class="date">{md(t.date)}</span>
-				<span class="dot" style:background={categoryVar(t.category)}></span>
-				<span class="main">
-					<span class="title">
-						{t.payee}
-						{#if t.pending}<span class="pending">● pending</span>{/if}
-					</span>
-					<span class="cat">{t.category}</span>
-				</span>
-				<span class="src">{formatAccount(t.source)}</span>
-				<span class="amt" class:refund={t.amount < 0}>{money(t.amount)}</span>
-			</div>
-		{/if}
+				<span class="cat">{t.category}</span>
+			</span>
+			<span class="src">{formatAccount(t.source)}</span>
+			<span class="amt" class:refund={t.amount < 0}>{money(t.amount)}</span>
+		</svelte:element>
 	{/each}
 </div>
 

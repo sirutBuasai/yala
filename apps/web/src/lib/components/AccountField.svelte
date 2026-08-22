@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { refreshAccounts } from '$lib/data';
+	import { postJson, refreshAccounts } from '$lib/data';
 	import Select from './Select.svelte';
 
 	export interface CreatableKind {
@@ -54,26 +54,19 @@
 		}
 		busy = true;
 		err = '';
-		try {
-			const res = await fetch('/api/account', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ kind, leaf: trimmed })
-			});
-			const body = await res.json().catch(() => ({}));
-			if (!res.ok) {
-				err = body.detail || `error ${res.status}`;
-				return;
-			}
+		const { ok, data, error } = await postJson<{ account?: string }>('/api/account', {
+			kind,
+			leaf: trimmed
+		});
+		if (ok) {
 			await refreshAccounts();
-			value = deriveValue(body.account ?? trimmed);
+			value = deriveValue(data.account ?? trimmed);
 			adding = false;
 			leaf = '';
-		} catch (e) {
-			err = 'API unreachable: ' + (e as Error).message;
-		} finally {
-			busy = false;
+		} else {
+			err = error ?? 'add failed';
 		}
+		busy = false;
 	}
 </script>
 
@@ -97,8 +90,8 @@
 				placeholder="new name"
 				disabled={busy}
 			/>
-			<button type="button" class="mini" onclick={commit} disabled={busy}>Add</button>
-			<button type="button" class="mini" onclick={() => (adding = false)} disabled={busy}
+			<button type="button" class="btn-mini" onclick={commit} disabled={busy}>Add</button>
+			<button type="button" class="btn-mini" onclick={() => (adding = false)} disabled={busy}
 				>Cancel</button
 			>
 		</div>
@@ -106,27 +99,17 @@
 	{:else}
 		<div class="selrow">
 			<div class="grow"><Select {id} ariaLabel={label} bind:value {options} {optionLabel} /></div>
-			<button type="button" class="mini" onclick={open} title={`Add a new ${label.toLowerCase()}`}
-				>＋ new</button
+			<button
+				type="button"
+				class="btn-mini"
+				onclick={open}
+				title={`Add a new ${label.toLowerCase()}`}>＋ new</button
 			>
 		</div>
 	{/if}
 </div>
 
 <style>
-	.field {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		min-width: 130px;
-		flex: 1;
-	}
-	.field label {
-		font-size: 11px;
-		color: var(--ink-3);
-		text-transform: uppercase;
-		letter-spacing: 0.6px;
-	}
 	.selrow,
 	.addrow {
 		display: flex;
@@ -152,20 +135,6 @@
 		padding: 6px 9px;
 		font-size: 12.5px;
 		font-family: inherit;
-	}
-	.mini {
-		background: none;
-		border: 1px solid var(--border);
-		color: var(--ink-2);
-		border-radius: 7px;
-		padding: 5px 9px;
-		cursor: pointer;
-		font-size: 11.5px;
-		white-space: nowrap;
-	}
-	.mini:hover {
-		border-color: var(--lav);
-		color: var(--ink);
 	}
 	.err {
 		font-size: 11px;

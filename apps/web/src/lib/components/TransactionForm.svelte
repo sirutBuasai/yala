@@ -1,11 +1,15 @@
 <script lang="ts">
+	// Add / edit a transaction. Without `locator` it adds (POST /api/transaction); with one it
+	// prefills from that entry and saves an update (POST /api/transaction/update) or deletes it.
 	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data';
+	import { deleteTransaction, postJson } from '$lib/data';
 	import { formatAccount, money } from '$lib/format';
 	import { lastFundingAccount } from '$lib/editPrefs';
 	import AccountField from './AccountField.svelte';
 	import Credits, { type Credit } from './Credits.svelte';
 	import DatePicker from './DatePicker.svelte';
+	import DeleteConfirm from './DeleteConfirm.svelte';
 
 	const leafOf = (a: string) => a.split(':').pop() ?? a;
 	const FUNDING_KINDS = [
@@ -15,10 +19,14 @@
 
 	interface Props {
 		accounts: AccountsInfo;
-		/** Called after a successful save (parent refreshes data + closes the modal). */
+		/** When set, edit that entry; when absent, add a new transaction. */
+		locator?: string;
+		/** Called after a successful save or delete (parent refreshes data + closes the modal). */
 		onsaved: () => void;
 	}
-	let { accounts, onsaved }: Props = $props();
+	let { accounts, locator, onsaved }: Props = $props();
+
+	const editing = $derived(locator != null);
 
 	let date = $state('');
 	let payee = $state('');
@@ -28,26 +36,51 @@
 	let pending = $state(false);
 	let credits = $state<Credit[]>([]);
 
-	// Seed the selects from the account lists once available (in $effect so a
-	// later-loading list still populates them) without clobbering the user's pick.
-	// Funding defaults to the last account used this session (if still valid), so
-	// repeated adds keep the same payment method pre-selected.
-	$effect(() => {
-		if (!category) category = accounts.spending_categories[0] ?? '';
-		if (!funding_account) {
-			const remembered = get(lastFundingAccount);
-			funding_account = accounts.funding_accounts.includes(remembered)
-				? remembered
-				: (accounts.funding_accounts[0] ?? '');
-		}
-	});
-
-	// Your share = total bill − everything paid back / credited on the credits.
-	const paybacks = $derived(credits.reduce((a, s) => a + (s.amount || 0), 0));
-	const yourShare = $derived((total || 0) - paybacks);
-
 	let msg = $state('');
 	let err = $state(false);
+
+	$effect(() => {
+		if (locator == null) {
+			// Add mode: seed the selects once the account lists are available (so a later-loading list
+			// still populates them) without clobbering the user's pick. Funding defaults to the last
+			// account used this session, so repeated adds keep the same method.
+			if (!category) category = accounts.spending_categories[0] ?? '';
+			if (!funding_account) {
+				const remembered = get(lastFundingAccount);
+				funding_account = accounts.funding_accounts.includes(remembered)
+					? remembered
+					: (accounts.funding_accounts[0] ?? '');
+			}
+			return;
+		}
+		// Edit mode: prefill from the ledger entry (its `amount` is the total bill).
+		const l = locator;
+		(async () => {
+			const res = await fetch(`/api/transaction?locator=${encodeURIComponent(l)}`, {
+				cache: 'no-store'
+			});
+			const s = await res.json();
+			if (!res.ok) {
+				msg = s.detail || `error ${res.status}`;
+				err = true;
+				return;
+			}
+			date = s.date ?? '';
+			payee = s.payee ?? '';
+			total = s.amount ?? null;
+			category = s.category ?? '';
+			funding_account = s.funding_account ?? '';
+			pending = !!s.pending;
+			credits = (s.credits ?? []).map((x: { account: string; amount: number }) => ({
+				value: x.account,
+				amount: x.amount
+			}));
+		})();
+	});
+
+	// Your share = total bill − everything reimbursed on the credits.
+	const paybacks = $derived(credits.reduce((a, s) => a + (s.amount || 0), 0));
+	const yourShare = $derived((total || 0) - paybacks);
 
 	async function submit() {
 		if (!payee.trim() || total == null) {
@@ -56,6 +89,7 @@
 			return;
 		}
 		const body = {
+			locator,
 			date: date || undefined,
 			payee: payee.trim(),
 			amount: total,
@@ -63,27 +97,30 @@
 			funding_account,
 			pending,
 			credits: credits
-				.filter((s) => s.account && s.amount != null)
-				.map((s) => ({ account: s.account, amount: s.amount as number }))
+				.filter((s) => s.value && s.amount != null)
+				.map((s) => ({ account: s.value, amount: s.amount as number }))
 		};
-		try {
-			const res = await fetch('/api/transaction', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(body)
-			});
-			const data = await res.json().catch(() => ({}));
-			if (!res.ok) {
-				msg = data.detail || `error ${res.status}`;
-				err = true;
-				return;
-			}
-			lastFundingAccount.set(funding_account); // remember for the next add this session
-			onsaved();
-		} catch (e) {
-			msg = 'API unreachable: ' + (e as Error).message;
+		const { ok, error } = await postJson(
+			editing ? '/api/transaction/update' : '/api/transaction',
+			body
+		);
+		if (!ok) {
+			msg = error ?? 'save failed';
 			err = true;
+			return;
 		}
+		if (!editing) lastFundingAccount.set(funding_account);
+		onsaved();
+	}
+
+	async function del() {
+		const problem = await deleteTransaction(locator!);
+		if (problem) {
+			msg = problem;
+			err = true;
+			return;
+		}
+		onsaved();
 	}
 </script>
 
@@ -133,7 +170,18 @@
 	<span class="share">Your share: <b>{money(yourShare)}</b></span>
 	<div class="right">
 		{#if msg}<span class="edit-msg" class:err>{msg}</span>{/if}
-		<button class="addbtn" onclick={submit}>+ Add</button>
+		{#if editing}
+			<div class="actions">
+				<button class="btn-primary" onclick={submit}>Save changes</button>
+				<DeleteConfirm
+					label="Delete transaction"
+					question="Delete this transaction?"
+					ondelete={del}
+				/>
+			</div>
+		{:else}
+			<button class="btn-primary" onclick={submit}>+ Add</button>
+		{/if}
 	</div>
 </div>
 
@@ -144,18 +192,6 @@
 		grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 		gap: 12px;
 		align-items: end;
-	}
-	.field {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		min-width: 0;
-	}
-	.field label {
-		font-size: 11px;
-		color: var(--ink-3);
-		text-transform: uppercase;
-		letter-spacing: 0.6px;
 	}
 	.chk {
 		font-size: 12px;
@@ -168,14 +204,21 @@
 	.mfoot {
 		display: flex;
 		justify-content: space-between;
-		align-items: center;
+		align-items: flex-start;
 		gap: 14px;
 		margin-top: 16px;
 	}
 	.right {
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		gap: 14px;
+	}
+	/* Save changes and Delete stack, so Delete sits directly beneath Save (same width). */
+	.actions {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 8px;
 	}
 	.share {
 		color: var(--ink-2);
@@ -184,24 +227,5 @@
 	.share b {
 		color: var(--ink);
 		font-size: 16px;
-	}
-	.addbtn {
-		background: var(--lav);
-		color: #1a1522;
-		border: 0;
-		border-radius: 9px;
-		padding: 9px 16px;
-		font-weight: 700;
-		cursor: pointer;
-	}
-	.addbtn:hover {
-		filter: brightness(1.08);
-	}
-	.edit-msg {
-		font-size: 12px;
-		color: var(--good-text);
-	}
-	.edit-msg.err {
-		color: var(--crit-text);
 	}
 </style>

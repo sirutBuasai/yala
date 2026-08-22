@@ -1,15 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	MONTHS,
-	compact,
-	esc,
-	formatAccount,
-	money,
-	moneyK,
-	monthLabel,
-	monthShort,
-	pct
-} from './format';
+import { MONTHS, esc, formatAccount, money, moneyK, monthLabel, pct } from './format';
 
 describe('money', () => {
 	it('rounds to whole dollars and adds thousands separators', () => {
@@ -69,14 +59,6 @@ describe('esc', () => {
 	});
 });
 
-describe('compact', () => {
-	it('abbreviates thousands, plain below 1000', () => {
-		expect(compact(1700)).toBe('1.7k');
-		expect(compact(349)).toBe('349');
-		expect(compact(null)).toBe('0');
-	});
-});
-
 describe('formatAccount', () => {
 	it('takes the leaf and de-CamelCases it', () => {
 		expect(formatAccount('Liabilities:CC:AmexGold')).toBe('Amex Gold');
@@ -94,9 +76,8 @@ describe('formatAccount', () => {
 });
 
 describe('month labels', () => {
-	it('formats a YYYY-MM key long and short', () => {
+	it('formats a YYYY-MM key', () => {
 		expect(monthLabel('2025-01')).toBe('Jan 2025');
-		expect(monthShort('2025-01')).toBe('Jan 25');
 	});
 
 	it('has twelve month abbreviations', () => {

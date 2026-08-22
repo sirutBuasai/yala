@@ -18,8 +18,8 @@ describe('Credits', () => {
 		render(Credits, {
 			props: {
 				credits: [
-					{ account: 'Assets:Venmo', amount: 20 },
-					{ account: 'Assets:Venmo', amount: 5 }
+					{ value: 'Assets:Venmo', amount: 20 },
+					{ value: 'Assets:Venmo', amount: 5 }
 				],
 				creditAccounts: accts
 			}
@@ -32,7 +32,7 @@ describe('Credits', () => {
 
 	it('formats account options with the leaf de-CamelCaser', async () => {
 		render(Credits, {
-			props: { credits: [{ account: 'Liabilities:CC:CardA', amount: 1 }], creditAccounts: accts }
+			props: { credits: [{ value: 'Liabilities:CC:CardA', amount: 1 }], creditAccounts: accts }
 		});
 		// open the custom Select; "Liabilities:CC:CardA" -> "Card A"
 		await fireEvent.click(screen.getByLabelText('credit account'));

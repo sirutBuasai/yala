@@ -181,6 +181,139 @@ input[type='checkbox']:focus-visible {
 	box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 35%, transparent);
 }
 
+/* --- buttons --- */
+.btn-primary,
+.btn-danger {
+	border: 0;
+	border-radius: 9px;
+	padding: 9px 16px;
+	font-size: 13px;
+	font-weight: 700;
+	color: #1a1522;
+	cursor: pointer;
+}
+.btn-primary {
+	background: var(--lav);
+}
+.btn-danger {
+	background: var(--crit);
+}
+.btn-primary:hover,
+.btn-danger:hover {
+	filter: brightness(1.08);
+}
+.btn-ghost {
+	background: var(--inset);
+	border: 1px solid var(--border);
+	color: var(--ink-2);
+	border-radius: 9px;
+	padding: 7px 14px;
+	font-size: 12.5px;
+	cursor: pointer;
+}
+.btn-cancel {
+	background: none;
+	border: 1px solid var(--border);
+	color: var(--ink-2);
+	border-radius: 9px;
+	padding: 9px 16px;
+	font-size: 12px;
+	cursor: pointer;
+}
+.btn-ghost:hover,
+.btn-cancel:hover {
+	border-color: var(--lav);
+	color: var(--ink);
+}
+/* small outline button for inline row/type actions */
+.btn-mini {
+	background: none;
+	border: 1px solid var(--border);
+	color: var(--ink-2);
+	border-radius: 7px;
+	padding: 4px 9px;
+	font-size: 11.5px;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.btn-mini:hover {
+	border-color: var(--lav);
+	color: var(--ink);
+}
+/* rounded pill toggle (theme / edit-mode switches in the header) */
+.pill {
+	border: 1px solid var(--border);
+	background: var(--surface);
+	color: var(--ink-2);
+	border-radius: 999px;
+	padding: 8px 14px;
+	font-size: 12.5px;
+	cursor: pointer;
+	box-shadow: var(--shadow);
+}
+.pill:hover {
+	color: var(--ink);
+	border-color: var(--lav);
+}
+.pill.active {
+	background: color-mix(in srgb, var(--lav) 20%, transparent);
+	color: var(--ink);
+	border-color: var(--lav);
+}
+
+/* labeled form field: an uppercase label stacked over its control */
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+	flex: 1;
+}
+.field label {
+	font-size: 11px;
+	color: var(--ink-3);
+	text-transform: uppercase;
+	letter-spacing: 0.6px;
+}
+.edit-msg {
+	font-size: 12px;
+	color: var(--good-text);
+}
+.edit-msg.err {
+	color: var(--crit-text);
+}
+
+/* Select/DatePicker trigger button — replaces the native control's OS chrome. */
+.trigger {
+	display: inline-flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	width: 100%;
+	background-color: var(--inset);
+	border: 1px solid var(--border);
+	color: var(--ink);
+	border-radius: 9px;
+	padding: 7px 12px;
+	font-size: 13px;
+	font-family: inherit;
+	cursor: pointer;
+	text-align: left;
+}
+.trigger:focus-visible {
+	outline: none;
+	border-color: var(--lav);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 30%, transparent);
+}
+.trigger .val {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.trigger .val.placeholder {
+	color: var(--ink-3);
+}
+
 /* --- SVG chart primitives --- */
 svg.chart {
 	display: block;

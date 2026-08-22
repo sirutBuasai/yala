@@ -94,14 +94,6 @@ class Income:
 
         return out
 
-    def deduction_categories(self) -> list[str]:
-        """Deduction types from the declared ``Expenses:Deductions:*`` accounts, sorted."""
-        return sorted(_leaf(a) for a in self._led.declared_accounts(DEDUCTIONS))
-
-    def contribution_categories(self) -> list[str]:
-        """Contribution types from the declared ``Assets:Investments:*`` accounts, sorted."""
-        return sorted(_leaf(a) for a in self._led.declared_accounts(INVESTMENTS))
-
     def gross(self, year: int | None = None, month: int | None = None) -> Decimal:
         return sum((p.gross for p in self.paychecks(year, month)), Decimal(0))
 

@@ -46,14 +46,6 @@ export function esc(s: unknown): string {
 	);
 }
 
-/** Compact money for dense cells/labels. */
-export function compact(n: number | null | undefined): string {
-	const v = Math.round(n || 0);
-	if (Math.abs(v) >= 1000) return (v / 1000).toFixed(1) + 'k';
-
-	return String(v);
-}
-
 /** Display-name overrides for account leaves that plain de-CamelCasing gets wrong. */
 const ACCOUNT_ALIASES_OVERRIDE: Record<string, string> = {
 	BofACash: 'BofA Cash',
@@ -83,11 +75,4 @@ export function monthLabel(key: string): string {
 	const [y, m] = key.split('-');
 
 	return MONTHS[+m - 1] + ' ' + y;
-}
-
-/** Format a "YYYY-MM" key as a short month label with a 2-digit year. */
-export function monthShort(key: string): string {
-	const [y, m] = key.split('-');
-
-	return MONTHS[+m - 1] + ' ' + y.slice(2);
 }

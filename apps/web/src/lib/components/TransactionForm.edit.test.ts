@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
 import type { AccountsInfo } from '$lib/data';
-import ReconcileEditor from './ReconcileEditor.svelte';
+import TransactionForm from './TransactionForm.svelte';
 
 const accounts: AccountsInfo = {
 	spending_categories: ['Grocery', 'Takeouts'],
@@ -40,10 +40,10 @@ function routedFetch() {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe('ReconcileEditor', () => {
+describe('TransactionForm (edit)', () => {
 	it('prefills the form from GET /api/transaction', async () => {
 		vi.stubGlobal('fetch', routedFetch());
-		render(ReconcileEditor, { props: { locator: 'id:abc', accounts, onsaved: vi.fn() } });
+		render(TransactionForm, { props: { locator: 'id:abc', accounts, onsaved: vi.fn() } });
 
 		expect(await screen.findByDisplayValue('lunch')).toBeInTheDocument();
 		expect(screen.getByDisplayValue('40')).toBeInTheDocument();
@@ -53,7 +53,7 @@ describe('ReconcileEditor', () => {
 		const fetchSpy = routedFetch();
 		vi.stubGlobal('fetch', fetchSpy);
 		const onsaved = vi.fn();
-		render(ReconcileEditor, { props: { locator: 'id:abc', accounts, onsaved } });
+		render(TransactionForm, { props: { locator: 'id:abc', accounts, onsaved } });
 
 		await screen.findByDisplayValue('lunch');
 		await fireEvent.input(screen.getByDisplayValue('lunch'), { target: { value: 'brunch' } });
@@ -70,7 +70,7 @@ describe('ReconcileEditor', () => {
 		const fetchSpy = routedFetch();
 		vi.stubGlobal('fetch', fetchSpy);
 		const onsaved = vi.fn();
-		render(ReconcileEditor, { props: { locator: 'id:abc', accounts, onsaved } });
+		render(TransactionForm, { props: { locator: 'id:abc', accounts, onsaved } });
 		await screen.findByDisplayValue('lunch');
 
 		// First click only arms the confirmation — no delete request yet.

@@ -1,8 +1,8 @@
 <script lang="ts">
-	// On-brand replacement for <input type="date">: a trigger button + a fixed-positioned
-	// calendar popup (fixed so it escapes Modal/Drawer overflow). Value is an ISO "YYYY-MM-DD"
-	// string (empty = unset). Keyboard: arrows move the day, Enter selects, Esc closes.
+	// On-brand replacement for <input type="date">: a Popup-hosted calendar. Value is an ISO
+	// "YYYY-MM-DD" string (empty = unset). Keyboard: arrows move the day, Enter selects, Esc closes.
 	import { MONTHS } from '$lib/format';
+	import Popup from './Popup.svelte';
 
 	interface Props {
 		/** ISO date "YYYY-MM-DD" or '' (bindable). */
@@ -21,16 +21,10 @@
 	const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 	let open = $state(false);
-	let placement = $state<'below' | 'above'>('below');
-	let trigger = $state<HTMLButtonElement>();
-	let popEl = $state<HTMLDivElement>();
-	let pos = $state({ top: 0, left: 0 });
-
+	let triggerEl = $state<HTMLButtonElement>();
 	let viewY = $state(2000);
-	let viewM = $state(0); // 0-based
+	let viewM = $state(0);
 	let active = $state(''); // ISO of the keyboard-focused day
-
-	const EST_HEIGHT = 320;
 
 	function parse(v: string): { y: number; m: number; d: number } | null {
 		const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
@@ -44,24 +38,12 @@
 		return p ? `${MONTHS[p.m]} ${p.d}, ${p.y}` : '';
 	}
 
-	function place() {
-		if (!trigger) return;
-		const r = trigger.getBoundingClientRect();
-		const below = window.innerHeight - r.bottom;
-		placement = below < EST_HEIGHT && r.top > below ? 'above' : 'below';
-		pos = { top: placement === 'below' ? r.bottom + 4 : r.top - 4, left: r.left };
-	}
-	function openCal() {
+	function seedView() {
 		const p = parse(value);
 		const now = new Date();
 		viewY = p ? p.y : now.getFullYear();
 		viewM = p ? p.m : now.getMonth();
 		active = p ? value : iso(now.getFullYear(), now.getMonth(), now.getDate());
-		place();
-		open = true;
-	}
-	function close() {
-		open = false;
 	}
 	function prevMonth() {
 		if (viewM === 0) {
@@ -77,8 +59,8 @@
 	}
 	function pick(isoStr: string) {
 		value = isoStr;
-		close();
-		trigger?.focus();
+		open = false;
+		triggerEl?.focus();
 	}
 	function today() {
 		const n = new Date();
@@ -86,8 +68,8 @@
 	}
 	function clear() {
 		value = '';
-		close();
-		trigger?.focus();
+		open = false;
+		triggerEl?.focus();
 	}
 
 	// Grid of the visible month: leading blanks + each day.
@@ -107,18 +89,11 @@
 		viewY = dt.getFullYear();
 		viewM = dt.getMonth();
 	}
-	function onKey(e: KeyboardEvent) {
-		if (!open) {
-			if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				openCal();
-			}
-			return;
-		}
+	function onkeynav(e: KeyboardEvent) {
 		if (e.key === 'Escape') {
 			e.preventDefault();
-			close();
-			trigger?.focus();
+			open = false;
+			triggerEl?.focus();
 		} else if (e.key === 'ArrowLeft') {
 			e.preventDefault();
 			shiftActive(-1);
@@ -136,144 +111,82 @@
 			if (active) pick(active);
 		}
 	}
-
-	$effect(() => {
-		if (!open) return;
-		const onDown = (e: PointerEvent) => {
-			const t = e.target as Node;
-			if (trigger && !trigger.contains(t) && popEl && !popEl.contains(t)) close();
-		};
-		// Re-anchor on scroll/resize instead of closing; ignore scrolls inside the popup.
-		const onScroll = (e: Event) => {
-			const t = e.target as Node;
-			if (popEl && t && popEl.contains(t)) return;
-			place();
-		};
-		document.addEventListener('pointerdown', onDown, true);
-		window.addEventListener('scroll', onScroll, true);
-		window.addEventListener('resize', place);
-		return () => {
-			document.removeEventListener('pointerdown', onDown, true);
-			window.removeEventListener('scroll', onScroll, true);
-			window.removeEventListener('resize', place);
-		};
-	});
 </script>
 
-<button
+<Popup
+	bind:open
+	bind:triggerEl
 	{id}
-	bind:this={trigger}
-	type="button"
-	class="trigger"
-	aria-haspopup="dialog"
-	aria-expanded={open}
-	aria-label={ariaLabel}
-	onclick={() => (open ? close() : openCal())}
-	onkeydown={onKey}
+	{ariaLabel}
+	popupRole="dialog"
+	estHeight={320}
+	onopen={seedView}
+	{onkeynav}
 >
-	<span class="val" class:placeholder={!value}>{value ? display(value) : placeholder}</span>
-	<svg class="cal" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
-		<rect
-			x="2"
-			y="3"
-			width="12"
-			height="11"
-			rx="2"
-			fill="none"
-			stroke="currentColor"
-			stroke-width="1.3"
-		/>
-		<path d="M2 6h12M5 1.5v3M11 1.5v3" fill="none" stroke="currentColor" stroke-width="1.3" />
-	</svg>
-</button>
+	{#snippet trigger()}
+		<span class="val" class:placeholder={!value}>{value ? display(value) : placeholder}</span>
+		<svg class="cal" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+			<rect
+				x="2"
+				y="3"
+				width="12"
+				height="11"
+				rx="2"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.3"
+			/>
+			<path d="M2 6h12M5 1.5v3M11 1.5v3" fill="none" stroke="currentColor" stroke-width="1.3" />
+		</svg>
+	{/snippet}
 
-{#if open}
-	<div
-		bind:this={popEl}
-		class="cal-pop {placement}"
-		role="dialog"
-		aria-label="Choose date"
-		tabindex="-1"
-		style="top:{pos.top}px; left:{pos.left}px;"
-	>
-		<div class="cal-head">
-			<button type="button" class="nav" aria-label="Previous month" onclick={prevMonth}>‹</button>
-			<span class="mlabel">{MONTHS[viewM]} {viewY}</span>
-			<button type="button" class="nav" aria-label="Next month" onclick={nextMonth}>›</button>
+	{#snippet children()}
+		<div class="cal-pop" role="dialog" aria-label="Choose date" tabindex="-1">
+			<div class="cal-head">
+				<button type="button" class="nav" aria-label="Previous month" onclick={prevMonth}>‹</button>
+				<span class="mlabel">{MONTHS[viewM]} {viewY}</span>
+				<button type="button" class="nav" aria-label="Next month" onclick={nextMonth}>›</button>
+			</div>
+			<div class="dow">
+				{#each WEEKDAYS as w, i (i)}<span>{w}</span>{/each}
+			</div>
+			<div class="days" role="grid">
+				{#each grid as cell, i (i)}
+					{#if cell}
+						<button
+							type="button"
+							class="day"
+							class:sel={cell === value}
+							class:hl={cell === active}
+							aria-current={cell === value ? 'date' : undefined}
+							onpointerenter={() => (active = cell)}
+							onclick={() => pick(cell)}>{+cell.slice(8)}</button
+						>
+					{:else}
+						<span class="day empty"></span>
+					{/if}
+				{/each}
+			</div>
+			<div class="cal-foot">
+				<button type="button" class="btn-mini" onclick={today}>Today</button>
+				<button type="button" class="btn-mini" onclick={clear}>Clear</button>
+			</div>
 		</div>
-		<div class="dow">
-			{#each WEEKDAYS as w, i (i)}<span>{w}</span>{/each}
-		</div>
-		<div class="days" role="grid">
-			{#each grid as cell, i (i)}
-				{#if cell}
-					<button
-						type="button"
-						class="day"
-						class:sel={cell === value}
-						class:hl={cell === active}
-						aria-current={cell === value ? 'date' : undefined}
-						onpointerenter={() => (active = cell)}
-						onclick={() => pick(cell)}>{+cell.slice(8)}</button
-					>
-				{:else}
-					<span class="day empty"></span>
-				{/if}
-			{/each}
-		</div>
-		<div class="cal-foot">
-			<button type="button" class="mini" onclick={today}>Today</button>
-			<button type="button" class="mini" onclick={clear}>Clear</button>
-		</div>
-	</div>
-{/if}
+	{/snippet}
+</Popup>
 
 <style>
-	.trigger {
-		display: inline-flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 8px;
-		width: 100%;
-		background-color: var(--inset);
-		border: 1px solid var(--border);
-		color: var(--ink);
-		border-radius: 9px;
-		padding: 7px 12px;
-		font-size: 13px;
-		font-family: inherit;
-		cursor: pointer;
-		text-align: left;
-	}
-	.trigger:focus-visible {
-		outline: none;
-		border-color: var(--lav);
-		box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 30%, transparent);
-	}
-	.val {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.val.placeholder {
-		color: var(--ink-3);
-	}
 	.cal {
 		flex: 0 0 auto;
 		color: var(--ink-2);
 	}
 	.cal-pop {
-		position: fixed;
-		z-index: 70;
 		width: 248px;
 		padding: 12px;
 		background: var(--surface-2);
 		border: 1px solid var(--border);
 		border-radius: 12px;
 		box-shadow: var(--shadow);
-	}
-	.cal-pop.above {
-		transform: translateY(-100%);
 	}
 	.cal-head {
 		display: flex;
@@ -341,18 +254,5 @@
 		display: flex;
 		justify-content: space-between;
 		margin-top: 10px;
-	}
-	.mini {
-		background: none;
-		border: 1px solid var(--border);
-		color: var(--ink-2);
-		border-radius: 7px;
-		padding: 4px 10px;
-		cursor: pointer;
-		font-size: 11.5px;
-	}
-	.mini:hover {
-		border-color: var(--lav);
-		color: var(--ink);
 	}
 </style>

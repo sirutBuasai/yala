@@ -1,7 +1,7 @@
 // KPI derivations for the per-tab summary header.
 
 import type { DashboardData } from './types';
-import { MONTHS, money, pct, monthLabel } from './format';
+import { money, pct, monthLabel } from './format';
 
 export interface KpiTile {
 	label: string;
@@ -16,32 +16,31 @@ export function spendingKpis(data: DashboardData, year: number): KpiTile[] {
 
 	if (!yd) return [];
 
-	const monthly = yd.matrix.map((row) => Object.values(row.spent).reduce((a, b) => a + b, 0));
-	const activeMonths = monthly.filter((v) => v > 0).length || 1;
-	const biggestIdx = monthly.indexOf(Math.max(...monthly));
-	const cats = data.meta.categories.map((c) => ({
-		category: c,
-		amount: yd.matrix.reduce((s, r) => s + (r.spent[c] ?? 0), 0)
-	}));
-	const top = [...cats].sort((a, b) => b.amount - a.amount)[0];
+	const monthlySpent = yd.matrix.map((row) => Object.values(row.spent).reduce((a, b) => a + b, 0));
+	const activeSpendMonths = monthlySpent.filter((v) => v > 0).length || 1;
+	const activeIncomeMonths = yd.matrix.filter((row) => row.income > 0).length || 1;
+
+	const avgIncome = yd.total_income / activeIncomeMonths;
+	const avgSpending = yd.total_spent / activeSpendMonths;
+	const avgSavings = avgIncome - avgSpending;
 
 	return [
 		{ label: `Spent ${year}`, value: money(yd.total_spent), foot: 'across the year' },
 		{
-			label: 'Avg / month',
-			value: money(yd.total_spent / activeMonths),
-			foot: `${activeMonths} active months`
+			label: 'Avg income / month',
+			value: money(avgIncome),
+			foot: `${activeIncomeMonths} active months`
 		},
 		{
-			label: 'Biggest month',
-			value: MONTHS[biggestIdx] || '—',
-			delta: money(monthly[biggestIdx] || 0)
+			label: 'Avg spending / month',
+			value: money(avgSpending),
+			foot: `${activeSpendMonths} active months`
 		},
 		{
-			label: 'Top category',
-			value: top?.category || '—',
-			delta: top ? money(top.amount) : '',
-			foot: top ? `${pct(top.amount, yd.total_spent)} of spend` : ''
+			label: 'Avg savings / month',
+			value: money(avgSavings),
+			dir: avgSavings >= 0 ? 'up' : 'down',
+			foot: 'income − spending'
 		}
 	];
 }

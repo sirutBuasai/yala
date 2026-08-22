@@ -24,13 +24,6 @@ def test_income_ignores_spending_and_reads_paychecks():
     assert inc.gross(2025) == Decimal("3000.00")
 
 
-def test_income_categories_from_declared_accounts():
-    inc = _income()
-    # types are discovered from the opened accounts, not hardcoded
-    assert inc.deduction_categories() == ["Insurance", "Tax"]
-    assert inc.contribution_categories() == ["401k", "HSA"]
-
-
 def test_income_rollups_and_by_month():
     inc = _income()
     assert inc.contributions(2025) == {"HSA": Decimal("150.00"), "401k": Decimal("600.00")}

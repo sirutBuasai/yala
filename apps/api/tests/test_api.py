@@ -485,26 +485,3 @@ def test_update_across_year_moves_txn_between_month_pages(client: TestClient):
     old = data["months"].get("2026-02", {}).get("transactions", [])
     assert not [t for t in old if t["payee"] == "relocating"]
     assert any(t["payee"] == "relocating" for t in data["months"]["2027-05"]["transactions"])
-
-
-# --- layout persistence ---
-
-
-def test_layout_is_empty_when_absent(client: TestClient, tmp_path: Path, monkeypatch):
-    monkeypatch.setattr("yala.api._LAYOUTS_PATH", tmp_path / "layouts.json")
-    assert client.get("/api/layout").json() == {}
-
-
-def test_layout_round_trips_and_merges_per_page(client: TestClient, tmp_path: Path, monkeypatch):
-    monkeypatch.setattr("yala.api._LAYOUTS_PATH", tmp_path / "layouts.json")
-
-    client.post("/api/layout", json={"page": "overview", "layout": {"cols": 2}})
-    client.post("/api/layout", json={"page": "year", "layout": ["a", "b"]})
-
-    saved = client.get("/api/layout").json()
-    assert saved == {"overview": {"cols": 2}, "year": ["a", "b"]}
-
-    # posting the same page overwrites just that page, leaving others intact
-    client.post("/api/layout", json={"page": "overview", "layout": {"cols": 3}})
-    saved2 = client.get("/api/layout").json()
-    assert saved2 == {"overview": {"cols": 3}, "year": ["a", "b"]}

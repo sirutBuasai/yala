@@ -19,5 +19,11 @@ dist/
 *.csv
 !apps/api/tests/**/*.csv
 
-# Frontend build output (apps/web) and the generated data snapshot are gitignored artifacts
+# Frontend (apps/web) — generated artifacts and the data snapshot
+# (build/ and node_modules/ are already covered above)
 data.json
+.svelte-kit/
+package-lock.json
+
+# macOS
+.DS_Store

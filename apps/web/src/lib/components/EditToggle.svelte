@@ -21,28 +21,6 @@
 	}
 </script>
 
-<button class="tgl" class:on={$mode === 'edit'} onclick={toggle} disabled={busy}>
+<button class="pill" class:active={$mode === 'edit'} onclick={toggle} disabled={busy}>
 	{$mode === 'edit' ? '✎ Editing' : '✎ Edit'}
 </button>
-
-<style>
-	.tgl {
-		border: 1px solid var(--border);
-		background: var(--surface);
-		color: var(--ink-2);
-		border-radius: 999px;
-		padding: 8px 14px;
-		font-size: 12.5px;
-		cursor: pointer;
-		box-shadow: var(--shadow);
-	}
-	.tgl:hover {
-		color: var(--ink);
-		border-color: var(--lav);
-	}
-	.tgl.on {
-		background: color-mix(in srgb, var(--lav) 20%, transparent);
-		color: var(--ink);
-		border-color: var(--lav);
-	}
-</style>

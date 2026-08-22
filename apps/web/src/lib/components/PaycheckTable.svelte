@@ -40,27 +40,22 @@
 		<span class="num">Income</span>
 	</div>
 	{#each rows as r (r.locator)}
-		{#if edit}
-			<button type="button" class="pcrow clickable" onclick={() => onedit?.(r.locator)}>
-				<span>{r.date}</span>
-				<span class="num">{money(r.gross)}</span>
-				<span class="num">{money(r.tax)}</span>
-				<span class="num">{money(r.deductions)}</span>
-				<span class="num saved">{money(r.saved)}</span>
-				<span class="num">{money(r.takeHome)}</span>
-				<span class="num income">{money(r.income)}</span>
-			</button>
-		{:else}
-			<div class="pcrow">
-				<span>{r.date}</span>
-				<span class="num">{money(r.gross)}</span>
-				<span class="num">{money(r.tax)}</span>
-				<span class="num">{money(r.deductions)}</span>
-				<span class="num saved">{money(r.saved)}</span>
-				<span class="num">{money(r.takeHome)}</span>
-				<span class="num income">{money(r.income)}</span>
-			</div>
-		{/if}
+		<svelte:element
+			this={edit ? 'button' : 'div'}
+			class="pcrow"
+			class:clickable={edit}
+			type={edit ? 'button' : undefined}
+			role={edit ? 'button' : undefined}
+			onclick={edit ? () => onedit?.(r.locator) : undefined}
+		>
+			<span>{r.date}</span>
+			<span class="num">{money(r.gross)}</span>
+			<span class="num">{money(r.tax)}</span>
+			<span class="num">{money(r.deductions)}</span>
+			<span class="num saved">{money(r.saved)}</span>
+			<span class="num">{money(r.takeHome)}</span>
+			<span class="num income">{money(r.income)}</span>
+		</svelte:element>
 	{/each}
 </div>
 

@@ -4,7 +4,7 @@ import { fireEvent, waitFor } from '@testing-library/dom';
 import { get } from 'svelte/store';
 import type { AccountsInfo } from '$lib/data';
 import { lastFundingAccount } from '$lib/editPrefs';
-import AddTransaction from './AddTransaction.svelte';
+import TransactionForm from './TransactionForm.svelte';
 
 const accounts: AccountsInfo = {
 	spending_categories: ['Grocery', 'Takeouts'],
@@ -23,11 +23,11 @@ function okFetch(body: unknown = { ok: true, id: 'new-id' }) {
 beforeEach(() => lastFundingAccount.set('')); // isolate the session-sticky funding memory
 afterEach(() => vi.unstubAllGlobals());
 
-describe('AddTransaction', () => {
+describe('TransactionForm (add)', () => {
 	it('blocks submit and shows a message when required fields are empty', async () => {
 		const fetchSpy = okFetch();
 		vi.stubGlobal('fetch', fetchSpy);
-		render(AddTransaction, { props: { accounts, onsaved: vi.fn() } });
+		render(TransactionForm, { props: { accounts, onsaved: vi.fn() } });
 
 		await fireEvent.click(screen.getByText('+ Add'));
 
@@ -39,7 +39,7 @@ describe('AddTransaction', () => {
 		const fetchSpy = okFetch();
 		vi.stubGlobal('fetch', fetchSpy);
 		const onsaved = vi.fn();
-		render(AddTransaction, { props: { accounts, onsaved } });
+		render(TransactionForm, { props: { accounts, onsaved } });
 
 		await fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'coffee' } });
 		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '4.25' } });
@@ -67,7 +67,7 @@ describe('AddTransaction', () => {
 			})
 		);
 		const onsaved = vi.fn();
-		render(AddTransaction, { props: { accounts, onsaved } });
+		render(TransactionForm, { props: { accounts, onsaved } });
 
 		await fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'x' } });
 		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '5' } });
@@ -79,7 +79,7 @@ describe('AddTransaction', () => {
 
 	it('reflects credits in the "Your share" total', async () => {
 		vi.stubGlobal('fetch', okFetch());
-		render(AddTransaction, { props: { accounts, onsaved: vi.fn() } });
+		render(TransactionForm, { props: { accounts, onsaved: vi.fn() } });
 
 		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '300' } });
 		await fireEvent.click(screen.getByText('+ credit'));
@@ -98,7 +98,7 @@ describe('AddTransaction', () => {
 			json: async () => ({ ok: true, account: 'Expenses:Gifts' })
 		});
 		vi.stubGlobal('fetch', fetchSpy);
-		render(AddTransaction, { props: { accounts, onsaved: vi.fn() } });
+		render(TransactionForm, { props: { accounts, onsaved: vi.fn() } });
 
 		// The Category field's "＋ new" reveals an inline input.
 		await fireEvent.click(screen.getByTitle('Add a new category'));
@@ -114,7 +114,7 @@ describe('AddTransaction', () => {
 
 	it('remembers the chosen funding account for the next add this session', async () => {
 		vi.stubGlobal('fetch', okFetch());
-		const { unmount } = render(AddTransaction, { props: { accounts, onsaved: vi.fn() } });
+		const { unmount } = render(TransactionForm, { props: { accounts, onsaved: vi.fn() } });
 
 		// pick a non-default funding account via the custom Select, then submit
 		await fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'x' } });
@@ -126,7 +126,7 @@ describe('AddTransaction', () => {
 		unmount();
 
 		// a fresh add form pre-selects the remembered account, not the first option
-		render(AddTransaction, { props: { accounts, onsaved: vi.fn() } });
+		render(TransactionForm, { props: { accounts, onsaved: vi.fn() } });
 		expect(screen.getByLabelText('Account')).toHaveTextContent('Bank A');
 	});
 });
