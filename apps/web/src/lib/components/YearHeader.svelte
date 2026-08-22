@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { KpiTile } from '$lib/kpis';
+	import ViewHeader from './ViewHeader.svelte';
 	import KpiRow from './KpiRow.svelte';
 	import Select from './Select.svelte';
 
@@ -12,8 +13,7 @@
 	let { title, years, year = $bindable(), tiles }: Props = $props();
 </script>
 
-<div class="yhead">
-	<h2 class="serif">{title}</h2>
+<ViewHeader {title}>
 	<div class="yearnav">
 		<button class="navbtn" aria-label="Previous year" onclick={() => (year -= 1)}>‹</button>
 		<div class="yearsel">
@@ -26,22 +26,11 @@
 		</div>
 		<button class="navbtn" aria-label="Next year" onclick={() => (year += 1)}>›</button>
 	</div>
-</div>
+</ViewHeader>
 
 <KpiRow {tiles} />
 
 <style>
-	.yhead {
-		display: flex;
-		align-items: center;
-		gap: 14px;
-		margin-bottom: 16px;
-	}
-	.yhead h2 {
-		font-size: 22px;
-		font-weight: 600;
-		margin: 0;
-	}
 	.yearnav {
 		display: flex;
 		align-items: center;

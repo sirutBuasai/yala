@@ -5,6 +5,7 @@
 	import { monthlyKpis } from '$lib/kpis';
 	import { categorySlices, type Slice } from '$lib/charts/slices';
 	import Pane from './Pane.svelte';
+	import ViewHeader from './ViewHeader.svelte';
 	import KpiRow from './KpiRow.svelte';
 	import MonthNav from './MonthNav.svelte';
 	import Donut from './charts/Donut.svelte';
@@ -58,10 +59,9 @@
 	}
 </script>
 
-<div class="mhead">
-	<h2 class="serif">Monthly</h2>
+<ViewHeader title="Monthly">
 	<MonthNav value={monthKey} monthKeys={data.meta.month_keys} onchange={(k) => (monthKey = k)} />
-</div>
+</ViewHeader>
 
 <KpiRow tiles={monthlyKpis(data, monthKey)} />
 
@@ -136,18 +136,6 @@
 {/if}
 
 <style>
-	.mhead {
-		display: flex;
-		align-items: center;
-		gap: 14px;
-		margin-bottom: 16px;
-		flex-wrap: wrap;
-	}
-	.mhead h2 {
-		font-size: 22px;
-		font-weight: 600;
-		margin: 0;
-	}
 	.editpanel {
 		margin-bottom: 18px;
 		border-color: color-mix(in srgb, var(--lav) 30%, var(--border));

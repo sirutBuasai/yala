@@ -247,7 +247,7 @@
 	}
 	.day.sel {
 		background: var(--lav);
-		color: #1a1522;
+		color: var(--on-accent);
 		font-weight: 700;
 	}
 	.cal-foot {

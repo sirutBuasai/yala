@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PaycheckOut } from '$lib/types';
 	import { money } from '$lib/format';
+	import { sumValues } from '$lib/num';
 
 	interface Props {
 		paychecks: PaycheckOut[];
@@ -11,7 +12,6 @@
 	}
 	let { paychecks, edit = false, onedit }: Props = $props();
 
-	const sum = (m: Record<string, number>) => Object.values(m).reduce((a, b) => a + b, 0);
 	// Chronological order; no totals row (year aggregates live in the KPIs).
 	const rows = $derived(
 		[...paychecks]
@@ -21,8 +21,8 @@
 				date: p.date,
 				gross: p.gross,
 				tax: p.deductions['Tax'] ?? 0,
-				deductions: sum(p.deductions) - (p.deductions['Tax'] ?? 0),
-				saved: sum(p.contributions),
+				deductions: sumValues(p.deductions) - (p.deductions['Tax'] ?? 0),
+				saved: sumValues(p.contributions),
 				takeHome: p.take_home,
 				income: p.net
 			}))

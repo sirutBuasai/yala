@@ -2,6 +2,7 @@
 
 import type { DashboardData } from './types';
 import { money, pct, monthLabel } from './format';
+import { sumValues } from './num';
 
 export interface KpiTile {
 	label: string;
@@ -16,7 +17,7 @@ export function spendingKpis(data: DashboardData, year: number): KpiTile[] {
 	const yd = data.years[String(year)];
 	const matrix = yd?.matrix ?? [];
 
-	const monthlySpent = matrix.map((row) => Object.values(row.spent).reduce((a, b) => a + b, 0));
+	const monthlySpent = matrix.map((row) => sumValues(row.spent));
 	const activeSpendMonths = monthlySpent.filter((v) => v > 0).length || 1;
 	const activeIncomeMonths = matrix.filter((row) => row.income > 0).length || 1;
 	const activeMonths = matrix.filter((row, i) => row.income > 0 || monthlySpent[i] > 0).length || 1;

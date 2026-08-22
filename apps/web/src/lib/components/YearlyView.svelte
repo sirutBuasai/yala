@@ -4,6 +4,7 @@
 	import { MONTHS, money } from '$lib/format';
 	import { incomeKpis, spendingKpis } from '$lib/kpis';
 	import { SERIES_BY_ID, type Scope } from '$lib/series';
+	import { sumValues } from '$lib/num';
 	import YearHeader from './YearHeader.svelte';
 	import KpiRow from './KpiRow.svelte';
 	import Pane from './Pane.svelte';
@@ -37,9 +38,7 @@
 	const grouped = $derived.by(() => {
 		const yd = data.years[String(year)];
 		const income = MONTHS.map((_, m) => yd?.matrix[m]?.income ?? 0);
-		const spent = MONTHS.map((_, m) =>
-			Object.values(yd?.matrix[m]?.spent ?? {}).reduce((a, b) => a + b, 0)
-		);
+		const spent = MONTHS.map((_, m) => sumValues(yd?.matrix[m]?.spent ?? {}));
 		const saved = income.map((v, i) => v - spent[i]);
 		return [
 			{ name: 'Income', values: income, color: 'var(--lav)' },

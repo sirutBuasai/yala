@@ -6,6 +6,7 @@
 
 import type { DashboardData } from './types';
 import { MONTHS, monthLabel } from './format';
+import { sumValues } from './num';
 
 export type Shape = 'categorical' | 'time' | 'matrix' | 'table';
 export type ScopeLevel = 'all' | 'year' | 'month';
@@ -64,7 +65,7 @@ function yearMonthlySpent(data: DashboardData, year: number): number[] {
 
 	if (!yd) return new Array(12).fill(0);
 
-	return yd.matrix.map((row) => Object.values(row.spent).reduce((a, b) => a + b, 0));
+	return yd.matrix.map((row) => sumValues(row.spent));
 }
 
 // --- the catalog ---
@@ -199,8 +200,6 @@ const incomePaychecks: SeriesDef = {
 			const prefix = String(scopeYear(data, scope));
 			paychecks = paychecks.filter((p) => p.date.startsWith(prefix));
 		}
-		const sumValues = (m: Record<string, number>) => Object.values(m).reduce((a, b) => a + b, 0);
-
 		return {
 			shape: 'table',
 			columns: ['Date', 'Gross', 'Deductions', 'Contributions', 'Net', 'Take-home'],

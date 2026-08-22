@@ -3,6 +3,7 @@
 	import type { AccountsInfo } from '$lib/data';
 	import { MONTHS, money, moneyCompact } from '$lib/format';
 	import { categoryVar } from '$lib/theme';
+	import ViewHeader from './ViewHeader.svelte';
 	import MonthNav from './MonthNav.svelte';
 	import Overlay from './Overlay.svelte';
 	import TransactionList from './TransactionList.svelte';
@@ -106,10 +107,9 @@
 	}
 </script>
 
-<div class="chead">
-	<h2 class="serif">Calendar</h2>
+<ViewHeader title="Calendar">
 	<MonthNav value={key} monthKeys={data.meta.month_keys} onchange={(k) => (viewKey = k)} />
-</div>
+</ViewHeader>
 
 <div class="calwrap">
 	<section class="card">
@@ -238,18 +238,6 @@
 {/if}
 
 <style>
-	.chead {
-		display: flex;
-		align-items: center;
-		gap: 14px;
-		margin-bottom: 16px;
-		flex-wrap: wrap;
-	}
-	.chead h2 {
-		font-size: 22px;
-		font-weight: 600;
-		margin: 0;
-	}
 	.calwrap {
 		display: grid;
 		grid-template-columns: 1.7fr 1fr;

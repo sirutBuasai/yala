@@ -16,6 +16,7 @@
 
 import type { DashboardData } from '$lib/types';
 import { categoryVar } from '$lib/theme';
+import { sumValues } from '$lib/num';
 
 export interface SankeyNode {
 	id: string;
@@ -60,7 +61,7 @@ function distribute(
 	fallbackLabel: string
 ): Record<string, number> {
 	if (total <= 0) return {};
-	const sum = Object.values(shares).reduce((a, v) => a + v, 0);
+	const sum = sumValues(shares);
 	if (sum <= 0) return { [fallbackLabel]: total };
 	const out: Record<string, number> = {};
 	for (const [k, v] of Object.entries(shares)) out[k] = (v / sum) * total;

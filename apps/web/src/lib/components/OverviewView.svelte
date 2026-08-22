@@ -3,6 +3,7 @@
 	import { overviewKpis } from '$lib/kpis';
 	import { categorySlices, type Slice } from '$lib/charts/slices';
 	import { sankeyModel } from '$lib/charts/sankey';
+	import ViewHeader from './ViewHeader.svelte';
 	import KpiRow from './KpiRow.svelte';
 	import Pane from './Pane.svelte';
 	import Donut from './charts/Donut.svelte';
@@ -54,10 +55,9 @@
 	]);
 </script>
 
-<div class="ohead">
-	<h2 class="serif">Overview</h2>
+<ViewHeader title="Overview">
 	<span class="sub">Lifetime · {years[0]}–{years[years.length - 1]}</span>
-</div>
+</ViewHeader>
 
 <KpiRow tiles={overviewKpis(data)} cols={3} />
 
@@ -86,18 +86,7 @@
 </div>
 
 <style>
-	.ohead {
-		display: flex;
-		align-items: baseline;
-		gap: 12px;
-		margin-bottom: 16px;
-	}
-	.ohead h2 {
-		font-size: 22px;
-		font-weight: 600;
-		margin: 0;
-	}
-	.ohead .sub {
+	.sub {
 		color: var(--ink-3);
 		font-size: 12.5px;
 	}

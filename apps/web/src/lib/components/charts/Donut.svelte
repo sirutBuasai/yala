@@ -54,7 +54,7 @@
 							text-anchor="middle"
 							font-size="11"
 							font-weight="600"
-							fill="#1a1522">{pctOf(a.data.value)}%</text
+							fill="var(--on-accent)">{pctOf(a.data.value)}%</text
 						>
 					{/if}
 				{/each}
