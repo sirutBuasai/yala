@@ -8,8 +8,10 @@
 		/** Edit mode: rows become clickable to open the transaction editor. */
 		edit: boolean;
 		onedit: (locator: string) => void;
+		/** Hide the per-row date (e.g. when the surrounding pane already names the day). */
+		showDate?: boolean;
 	}
-	let { transactions, edit, onedit }: Props = $props();
+	let { transactions, edit, onedit, showDate = true }: Props = $props();
 
 	/** "2026-07-03" -> "7/3" */
 	function md(date: string): string {
@@ -24,11 +26,12 @@
 			this={edit ? 'button' : 'div'}
 			class="tx"
 			class:clickable={edit}
+			class:no-date={!showDate}
 			type={edit ? 'button' : undefined}
 			role={edit ? 'button' : undefined}
 			onclick={edit ? () => onedit(t.locator) : undefined}
 		>
-			<span class="date">{md(t.date)}</span>
+			{#if showDate}<span class="date">{md(t.date)}</span>{/if}
 			<span class="dot" style:background={categoryVar(t.category)}></span>
 			<span class="main">
 				<span class="title">
@@ -64,6 +67,9 @@
 		color: inherit;
 		font: inherit;
 		text-align: left;
+	}
+	.tx.no-date {
+		grid-template-columns: 10px 1fr auto 74px;
 	}
 	.main {
 		display: flex;

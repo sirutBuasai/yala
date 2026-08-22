@@ -12,22 +12,23 @@ export interface KpiTile {
 }
 
 export function spendingKpis(data: DashboardData, year: number): KpiTile[] {
+	// Tolerate a year with no data yet (navigated-to empty year): everything reads as zero.
 	const yd = data.years[String(year)];
+	const matrix = yd?.matrix ?? [];
 
-	if (!yd) return [];
-
-	const monthlySpent = yd.matrix.map((row) => Object.values(row.spent).reduce((a, b) => a + b, 0));
+	const monthlySpent = matrix.map((row) => Object.values(row.spent).reduce((a, b) => a + b, 0));
 	const activeSpendMonths = monthlySpent.filter((v) => v > 0).length || 1;
-	const activeIncomeMonths = yd.matrix.filter((row) => row.income > 0).length || 1;
-	const activeMonths =
-		yd.matrix.filter((row, i) => row.income > 0 || monthlySpent[i] > 0).length || 1;
+	const activeIncomeMonths = matrix.filter((row) => row.income > 0).length || 1;
+	const activeMonths = matrix.filter((row, i) => row.income > 0 || monthlySpent[i] > 0).length || 1;
 
-	const avgIncome = yd.total_income / activeIncomeMonths;
-	const avgSpending = yd.total_spent / activeSpendMonths;
+	const totalIncome = yd?.total_income ?? 0;
+	const totalSpent = yd?.total_spent ?? 0;
+	const avgIncome = totalIncome / activeIncomeMonths;
+	const avgSpending = totalSpent / activeSpendMonths;
 	const avgSavings = avgIncome - avgSpending;
 
 	return [
-		{ label: `Spent ${year}`, value: money(yd.total_spent), foot: 'across the year' },
+		{ label: `Spent ${year}`, value: money(totalSpent), foot: 'across the year' },
 		{
 			label: 'Avg income / month',
 			value: money(avgIncome),
@@ -78,12 +79,11 @@ export function overviewKpis(data: DashboardData): KpiTile[] {
 }
 
 export function monthlyKpis(data: DashboardData, monthKey: string): KpiTile[] {
+	// Tolerate an empty month (navigated-to month with no data yet): reads as zero.
 	const md = data.months[monthKey];
 
-	if (!md) return [];
-
-	const income = md.total_income;
-	const spent = md.total_spent;
+	const income = md?.total_income ?? 0;
+	const spent = md?.total_spent ?? 0;
 	const saved = income - spent;
 
 	return [
@@ -107,29 +107,25 @@ export function incomeKpis(data: DashboardData, year: number): KpiTile[] {
 	const iy = data.income.by_year.find((r) => r.year === year);
 	const ovy = data.overview.by_year.find((r) => r.year === year);
 
-	if (!iy) return [];
-
+	// Tolerate a year with no income rows yet (navigated-to empty year): reads as zero.
+	const gross = iy?.gross ?? 0;
+	const deductions = iy?.deductions ?? 0;
+	const contributions = iy?.contributions ?? 0;
+	const net = iy?.net ?? 0;
+	const takeHome = iy?.take_home ?? 0;
 	const saved = ovy?.saved ?? 0;
-	const income = ovy?.income ?? iy.net;
+	const income = ovy?.income ?? net;
 
 	return [
-		{ label: `Gross · ${year}`, value: money(iy.gross), foot: 'before tax & deductions' },
-		{
-			label: `Deductions · ${year}`,
-			value: money(iy.deductions),
-			foot: 'tax + benefits'
-		},
-		{
-			label: 'Contributions',
-			value: money(iy.contributions),
-			foot: 'HSA + 401k'
-		},
+		{ label: `Gross · ${year}`, value: money(gross), foot: 'before tax & deductions' },
+		{ label: `Deductions · ${year}`, value: money(deductions), foot: 'tax + benefits' },
+		{ label: 'Contributions', value: money(contributions), foot: 'HSA + 401k' },
 		{
 			label: `Net · ${year}`,
-			value: money(iy.net),
+			value: money(net),
 			delta: `${pct(saved, income)} savings rate`,
 			dir: saved >= 0 ? 'up' : 'down',
-			foot: `${money(iy.take_home)} take-home + ${money(iy.contributions)} saved`
+			foot: `${money(takeHome)} take-home + ${money(contributions)} saved`
 		}
 	];
 }

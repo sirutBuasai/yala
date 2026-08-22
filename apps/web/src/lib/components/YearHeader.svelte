@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { KpiTile } from '$lib/kpis';
-	import Kpi from './Kpi.svelte';
+	import KpiRow from './KpiRow.svelte';
 	import Select from './Select.svelte';
 
 	interface Props {
@@ -14,21 +14,21 @@
 
 <div class="yhead">
 	<h2 class="serif">{title}</h2>
-	<div class="yearsel">
-		<Select
-			ariaLabel="Year"
-			value={String(year)}
-			options={years.map(String)}
-			onchange={(v) => (year = Number(v))}
-		/>
+	<div class="yearnav">
+		<button class="navbtn" aria-label="Previous year" onclick={() => (year -= 1)}>‹</button>
+		<div class="yearsel">
+			<Select
+				ariaLabel="Year"
+				value={String(year)}
+				options={years.map(String)}
+				onchange={(v) => (year = Number(v))}
+			/>
+		</div>
+		<button class="navbtn" aria-label="Next year" onclick={() => (year += 1)}>›</button>
 	</div>
 </div>
 
-<div class="kpis">
-	{#each tiles as t (t.label)}
-		<Kpi label={t.label} value={t.value} delta={t.delta} dir={t.dir} foot={t.foot} />
-	{/each}
-</div>
+<KpiRow {tiles} />
 
 <style>
 	.yhead {
@@ -42,18 +42,12 @@
 		font-weight: 600;
 		margin: 0;
 	}
+	.yearnav {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
 	.yearsel {
 		width: 110px;
-	}
-	.kpis {
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
-		gap: 14px;
-		margin-bottom: 18px;
-	}
-	@media (max-width: 900px) {
-		.kpis {
-			grid-template-columns: repeat(2, 1fr);
-		}
 	}
 </style>

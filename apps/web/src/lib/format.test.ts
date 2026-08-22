@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MONTHS, esc, formatAccount, money, moneyK, monthLabel, pct } from './format';
+import { MONTHS, esc, formatAccount, money, moneyCompact, moneyK, monthLabel, pct } from './format';
 
 describe('money', () => {
 	it('rounds to whole dollars and adds thousands separators', () => {
@@ -34,6 +34,20 @@ describe('moneyK', () => {
 	it('handles negatives and nullish', () => {
 		expect(moneyK(-2500)).toBe('-$2.5k');
 		expect(moneyK(null)).toBe('$0.0k');
+	});
+});
+
+describe('moneyCompact', () => {
+	it('keeps sub-$1k amounts exact and abbreviates thousands', () => {
+		expect(moneyCompact(31)).toBe('$31');
+		expect(moneyCompact(999)).toBe('$999');
+		expect(moneyCompact(1000)).toBe('$1.0k');
+		expect(moneyCompact(3511)).toBe('$3.5k');
+	});
+
+	it('handles negatives and nullish', () => {
+		expect(moneyCompact(-1675)).toBe('-$1.7k');
+		expect(moneyCompact(null)).toBe('$0');
 	});
 });
 

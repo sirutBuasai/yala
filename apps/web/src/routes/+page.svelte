@@ -13,13 +13,14 @@
 	import OverviewView from '$lib/components/OverviewView.svelte';
 	import YearlyView from '$lib/components/YearlyView.svelte';
 	import MonthlyView from '$lib/components/MonthlyView.svelte';
+	import CalendarView from '$lib/components/CalendarView.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import EditToggle from '$lib/components/EditToggle.svelte';
 	import Tooltip from '$lib/components/Tooltip.svelte';
 
-	type Tab = 'overview' | 'yearly' | 'monthly';
+	type Tab = 'overview' | 'yearly' | 'monthly' | 'calendar';
 	let tab = $state<Tab>('overview');
-	let year = $state<number>(new Date().getFullYear());
+	let year = $state<number>(0); // 0 = unset; the default-scope effect fills it once data loads
 	let monthKey = $state<string>('');
 	let hint = $state('');
 
@@ -34,7 +35,7 @@
 			const raw = localStorage.getItem(VIEW_KEY);
 			if (raw) {
 				const s = JSON.parse(raw);
-				if (s.tab === 'overview' || s.tab === 'yearly' || s.tab === 'monthly') tab = s.tab;
+				if (['overview', 'yearly', 'monthly', 'calendar'].includes(s.tab)) tab = s.tab;
 				if (typeof s.year === 'number') year = s.year;
 				if (typeof s.monthKey === 'string') monthKey = s.monthKey;
 			}
@@ -60,13 +61,14 @@
 		}
 	});
 
-	// Default scope selectors to the newest available year / month.
+	// Initialize the scope selectors to the newest available period on first load only. We
+	// deliberately don't clamp afterwards, so Yearly/Monthly can step to empty (zero-data)
+	// periods via their prev/next arrows.
 	$effect(() => {
 		const d = $data;
 		if (!d) return;
-		if (!d.meta.years.includes(year)) year = d.meta.years[d.meta.years.length - 1];
-		if (!d.meta.month_keys.includes(monthKey))
-			monthKey = d.meta.month_keys[d.meta.month_keys.length - 1];
+		if (!year) year = d.meta.years[d.meta.years.length - 1];
+		if (!monthKey) monthKey = d.meta.month_keys[d.meta.month_keys.length - 1];
 	});
 
 	function showHint(msg: string) {
@@ -101,6 +103,9 @@
 				>
 				<button class:active={tab === 'yearly'} onclick={() => (tab = 'yearly')}>Yearly</button>
 				<button class:active={tab === 'monthly'} onclick={() => (tab = 'monthly')}>Monthly</button>
+				<button class:active={tab === 'calendar'} onclick={() => (tab = 'calendar')}
+					>Calendar</button
+				>
 			</nav>
 			<div class="tgls">
 				<EditToggle onhint={showHint} />
@@ -124,8 +129,10 @@
 			<OverviewView data={$data} />
 		{:else if tab === 'yearly'}
 			<YearlyView data={$data} bind:year />
-		{:else}
+		{:else if tab === 'monthly'}
 			<MonthlyView data={$data} bind:monthKey {edit} accounts={$accounts} {onsaved} />
+		{:else}
+			<CalendarView data={$data} {edit} accounts={$accounts} {onsaved} />
 		{/if}
 	{/if}
 </div>

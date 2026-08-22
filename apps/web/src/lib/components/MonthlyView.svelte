@@ -1,11 +1,12 @@
 <script lang="ts">
 	import type { DashboardData } from '$lib/types';
 	import type { AccountsInfo } from '$lib/data';
-	import { MONTHS, money, monthLabel } from '$lib/format';
+	import { money, monthLabel } from '$lib/format';
 	import { monthlyKpis } from '$lib/kpis';
 	import { categorySlices, type Slice } from '$lib/charts/slices';
-	import Kpi from './Kpi.svelte';
 	import Pane from './Pane.svelte';
+	import KpiRow from './KpiRow.svelte';
+	import MonthNav from './MonthNav.svelte';
 	import Donut from './charts/Donut.svelte';
 	import Overlay from './Overlay.svelte';
 	import TransactionList from './TransactionList.svelte';
@@ -13,7 +14,6 @@
 	import TransactionForm from './TransactionForm.svelte';
 	import PaycheckForm from './PaycheckForm.svelte';
 	import PendingList from './PendingList.svelte';
-	import Select from './Select.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -24,22 +24,7 @@
 	}
 	let { data, monthKey = $bindable(), edit, accounts, onsaved }: Props = $props();
 
-	const months = $derived([...data.meta.month_keys].sort());
 	const md = $derived(data.months[monthKey]);
-
-	// Split the "YYYY-MM" key across two selects: a year picker and a month picker whose options
-	// narrow to the months present in the chosen year.
-	const years = $derived([...new Set(months.map((k) => k.slice(0, 4)))].sort().reverse());
-	const selYear = $derived(monthKey.slice(0, 4));
-	const monthsInYear = $derived(months.filter((k) => k.startsWith(selYear + '-')));
-	const monthName = (k: string) => MONTHS[+k.slice(5, 7) - 1];
-
-	// Switching year keeps the same month when that year has it, else falls back to its latest.
-	function pickYear(y: string) {
-		const inYear = months.filter((k) => k.startsWith(y + '-'));
-		const sameMonth = `${y}-${monthKey.slice(5)}`;
-		monthKey = inYear.includes(sameMonth) ? sameMonth : inYear[inYear.length - 1];
-	}
 
 	const txns = $derived(
 		md ? [...md.transactions].sort((a, b) => b.date.localeCompare(a.date)) : []
@@ -75,26 +60,10 @@
 
 <div class="mhead">
 	<h2 class="serif">Monthly</h2>
-	<div class="selectors">
-		<div class="yearsel">
-			<Select ariaLabel="Year" value={selYear} options={years} onchange={pickYear} />
-		</div>
-		<div class="monthsel">
-			<Select
-				ariaLabel="Month"
-				bind:value={monthKey}
-				options={monthsInYear}
-				optionLabel={monthName}
-			/>
-		</div>
-	</div>
+	<MonthNav value={monthKey} monthKeys={data.meta.month_keys} onchange={(k) => (monthKey = k)} />
 </div>
 
-<div class="kpis">
-	{#each monthlyKpis(data, monthKey) as t (t.label)}
-		<Kpi label={t.label} value={t.value} delta={t.delta} dir={t.dir} foot={t.foot} />
-	{/each}
-</div>
+<KpiRow tiles={monthlyKpis(data, monthKey)} />
 
 {#if edit && accounts}
 	<div class="card editpanel">
@@ -179,22 +148,6 @@
 		font-weight: 600;
 		margin: 0;
 	}
-	.selectors {
-		display: flex;
-		gap: 8px;
-	}
-	.yearsel {
-		width: 100px;
-	}
-	.monthsel {
-		width: 130px;
-	}
-	.kpis {
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
-		gap: 14px;
-		margin-bottom: 18px;
-	}
 	.editpanel {
 		margin-bottom: 18px;
 		border-color: color-mix(in srgb, var(--lav) 30%, var(--border));
@@ -217,25 +170,8 @@
 		gap: 8px;
 		flex-wrap: wrap;
 	}
-	.panes {
-		display: grid;
-		gap: 14px;
-		margin-bottom: 14px;
-	}
-	.panes.two {
-		grid-template-columns: 1fr 1fr;
-		align-items: stretch; /* paired panes share the taller one's height */
-	}
 	.note {
 		color: var(--ink-3);
 		font-size: 12.5px;
-	}
-	@media (max-width: 900px) {
-		.kpis {
-			grid-template-columns: repeat(2, 1fr);
-		}
-		.panes.two {
-			grid-template-columns: 1fr;
-		}
 	}
 </style>

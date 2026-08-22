@@ -15,8 +15,11 @@ describe('spendingKpis', () => {
 		expect(label(tiles, 'Avg savings / month')!.dir).toBe('up');
 	});
 
-	it('returns [] for an unknown year', () => {
-		expect(spendingKpis(makeData(), 1999)).toEqual([]);
+	it('reports zeros for a year with no data (navigated-to empty year)', () => {
+		const tiles = spendingKpis(makeData(), 1999);
+		expect(label(tiles, 'Spent 1999')!.value).toBe('$0');
+		expect(label(tiles, 'Avg income / month')!.value).toBe('$0');
+		expect(label(tiles, 'Avg spending / month')!.value).toBe('$0');
 	});
 });
 
@@ -58,8 +61,10 @@ describe('monthlyKpis', () => {
 		expect(used.value).toBe('—');
 	});
 
-	it('returns [] for an unknown month', () => {
-		expect(monthlyKpis(makeData(), '1999-01')).toEqual([]);
+	it('reports zeros for a month with no data (navigated-to empty month)', () => {
+		const tiles = monthlyKpis(makeData(), '1999-01');
+		expect(label(tiles, 'Saved')!.value).toBe('$0');
+		expect(label(tiles, '% used')!.value).toBe('—');
 	});
 });
 
@@ -72,7 +77,9 @@ describe('incomeKpis', () => {
 		expect(label(tiles, 'Net')!.value).toBe('$2,300');
 	});
 
-	it('returns [] when the year has no income row', () => {
-		expect(incomeKpis(makeData(), 1999)).toEqual([]);
+	it('reports zeros when the year has no income row (empty year)', () => {
+		const tiles = incomeKpis(makeData(), 1999);
+		expect(label(tiles, 'Gross')!.value).toBe('$0');
+		expect(label(tiles, 'Net')!.value).toBe('$0');
 	});
 });

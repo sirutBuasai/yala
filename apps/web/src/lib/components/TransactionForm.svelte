@@ -21,10 +21,12 @@
 		accounts: AccountsInfo;
 		/** When set, edit that entry; when absent, add a new transaction. */
 		locator?: string;
+		/** Add mode only: pre-fill the date field (e.g. the day clicked in the calendar). */
+		presetDate?: string;
 		/** Called after a successful save or delete (parent refreshes data + closes the modal). */
 		onsaved: () => void;
 	}
-	let { accounts, locator, onsaved }: Props = $props();
+	let { accounts, locator, presetDate, onsaved }: Props = $props();
 
 	const editing = $derived(locator != null);
 
@@ -44,6 +46,7 @@
 			// Add mode: seed the selects once the account lists are available (so a later-loading list
 			// still populates them) without clobbering the user's pick. Funding defaults to the last
 			// account used this session, so repeated adds keep the same method.
+			if (!date && presetDate) date = presetDate;
 			if (!category) category = accounts.spending_categories[0] ?? '';
 			if (!funding_account) {
 				const remembered = get(lastFundingAccount);

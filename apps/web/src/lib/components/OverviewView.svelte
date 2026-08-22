@@ -3,7 +3,7 @@
 	import { overviewKpis } from '$lib/kpis';
 	import { categorySlices, type Slice } from '$lib/charts/slices';
 	import { sankeyModel } from '$lib/charts/sankey';
-	import Kpi from './Kpi.svelte';
+	import KpiRow from './KpiRow.svelte';
 	import Pane from './Pane.svelte';
 	import Donut from './charts/Donut.svelte';
 	import GroupedBarChart from './charts/GroupedBarChart.svelte';
@@ -59,11 +59,7 @@
 	<span class="sub">Lifetime · {years[0]}–{years[years.length - 1]}</span>
 </div>
 
-<div class="kpis">
-	{#each overviewKpis(data) as t (t.label)}
-		<Kpi label={t.label} value={t.value} delta={t.delta} dir={t.dir} foot={t.foot} />
-	{/each}
-</div>
+<KpiRow tiles={overviewKpis(data)} cols={3} />
 
 <div class="panes two">
 	<Pane title="Where it all went" cap="Lifetime">
@@ -104,28 +100,5 @@
 	.ohead .sub {
 		color: var(--ink-3);
 		font-size: 12.5px;
-	}
-	.kpis {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 14px;
-		margin-bottom: 18px;
-	}
-	.panes {
-		display: grid;
-		gap: 14px;
-		margin-bottom: 14px;
-	}
-	.panes.two {
-		grid-template-columns: 1fr 1fr;
-		align-items: stretch; /* paired panes share the taller one's height */
-	}
-	@media (max-width: 900px) {
-		.kpis {
-			grid-template-columns: repeat(2, 1fr);
-		}
-		.panes.two {
-			grid-template-columns: 1fr;
-		}
 	}
 </style>

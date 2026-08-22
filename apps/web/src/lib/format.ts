@@ -27,6 +27,11 @@ export function moneyK(n: number | null | undefined): string {
 	return (n < 0 ? '-$' : '$') + (Math.abs(n) / 1000).toFixed(Math.abs(n) < 10000 ? 1 : 0) + 'k';
 }
 
+/** Compact money for tight spaces: abbreviate thousands ($1.2k) but keep sub-$1k exact ($31). */
+export function moneyCompact(n: number | null | undefined): string {
+	return Math.abs(n || 0) >= 1000 ? moneyK(n) : money(n);
+}
+
 export function pct(part: number, whole: number): string {
 	return whole ? ((part / whole) * 100).toFixed(0) + '%' : '—';
 }

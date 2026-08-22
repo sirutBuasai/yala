@@ -15,10 +15,12 @@
 		accounts: AccountsInfo;
 		/** When set, edit that paycheck; when absent, add a new one. */
 		locator?: string;
+		/** Add mode only: pre-fill the date field (e.g. the day clicked in the calendar). */
+		presetDate?: string;
 		/** Called after a successful save or delete (parent refreshes data + closes the modal). */
 		onsaved: () => void;
 	}
-	let { accounts, locator, onsaved }: Props = $props();
+	let { accounts, locator, presetDate, onsaved }: Props = $props();
 
 	const editing = $derived(locator != null);
 
@@ -44,6 +46,7 @@
 		if (locator == null) {
 			// Add mode: seed the deposit account once accounts load (so a later-loading list still
 			// populates it), preferring the last one used this session, without clobbering a pick.
+			if (!date && presetDate) date = presetDate;
 			if (!deposit_account && accounts.cash_accounts.length) {
 				const remembered = get(lastDepositAccount);
 				deposit_account = accounts.cash_accounts.includes(remembered)

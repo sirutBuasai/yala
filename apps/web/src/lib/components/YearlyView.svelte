@@ -5,7 +5,7 @@
 	import { incomeKpis, spendingKpis } from '$lib/kpis';
 	import { SERIES_BY_ID, type Scope } from '$lib/series';
 	import YearHeader from './YearHeader.svelte';
-	import Kpi from './Kpi.svelte';
+	import KpiRow from './KpiRow.svelte';
 	import Pane from './Pane.svelte';
 	import VBarChart from './charts/VBarChart.svelte';
 	import HBarChart from './charts/HBarChart.svelte';
@@ -18,7 +18,14 @@
 	}
 	let { data, year = $bindable() }: Props = $props();
 
-	const years = $derived([...data.meta.years].sort((a, b) => b - a));
+	// Picker options: the tracked years, one empty year past the latest, and wherever we've
+	// navigated to — so stepping to a not-yet-populated year still shows a valid selection
+	// (its KPIs and charts read as zero).
+	const years = $derived.by(() => {
+		const ys = data.meta.years;
+		const latest = ys.length ? ys[ys.length - 1] : year;
+		return [...new Set([...ys, latest + 1, year])].sort((a, b) => b - a);
+	});
 
 	function extract(id: string, scope: Scope) {
 		return SERIES_BY_ID[id].extract(data, scope);
@@ -66,11 +73,7 @@
 
 <YearHeader title="Yearly" {years} bind:year tiles={incomeKpis(data, year)} />
 
-<div class="kpis">
-	{#each spendingKpis(data, year) as t (t.label)}
-		<Kpi label={t.label} value={t.value} delta={t.delta} dir={t.dir} foot={t.foot} />
-	{/each}
-</div>
+<KpiRow tiles={spendingKpis(data, year)} />
 
 <div class="panes">
 	<Pane title="Income vs Spending vs Savings" cap={`${year} · Per tracked month`}>
@@ -92,28 +95,3 @@
 		<CategoryByMonthTable rows={catMatrix.rows} cols={catMatrix.cols} values={catMatrix.values} />
 	</Pane>
 </div>
-
-<style>
-	.kpis {
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
-		gap: 14px;
-		margin-bottom: 18px;
-	}
-	.panes {
-		display: grid;
-		gap: 14px;
-		margin-bottom: 14px;
-	}
-	.panes.two {
-		grid-template-columns: 1fr 1fr;
-	}
-	@media (max-width: 900px) {
-		.kpis {
-			grid-template-columns: repeat(2, 1fr);
-		}
-		.panes.two {
-			grid-template-columns: 1fr;
-		}
-	}
-</style>
