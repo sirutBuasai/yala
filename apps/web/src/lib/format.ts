@@ -57,11 +57,16 @@ const ACCOUNT_ALIASES_OVERRIDE: Record<string, string> = {
 	BofA: 'BofA'
 };
 
+/** The leaf of an account path — the segment after the last ":", or the whole name if none. */
+export function accountLeaf(name: string | null | undefined): string {
+	return name ? (String(name).split(':').pop() ?? '') : '';
+}
+
 /** Format a funding account for display: the leaf name (after the last ":"), de-CamelCased, with alias overrides applied. */
 export function formatAccount(name: string | null | undefined): string {
 	if (!name) return '';
 
-	const leaf = String(name).split(':').pop() ?? '';
+	const leaf = accountLeaf(name);
 
 	if (ACCOUNT_ALIASES_OVERRIDE[leaf]) return ACCOUNT_ALIASES_OVERRIDE[leaf];
 
@@ -75,9 +80,21 @@ export function formatAccount(name: string | null | undefined): string {
 	);
 }
 
-/** Format a "YYYY-MM" key as a full month label. */
+/** Format a "YYYY-MM" key as a full month label, e.g. "2025-01" → "Jan 2025". */
 export function monthLabel(key: string): string {
 	const [y, m] = key.split('-');
 
 	return MONTHS[+m - 1] + ' ' + y;
+}
+
+/** Short month name for a "YYYY-MM" (or longer) key, e.g. "2026-07" → "Jul". */
+export function monthName(key: string): string {
+	return MONTHS[+key.slice(5, 7) - 1] ?? key;
+}
+
+/** Format a "YYYY-MM-DD" date as a compact "M/D", e.g. "2026-07-03" → "7/3". */
+export function monthDay(date: string): string {
+	const [, m, d] = date.split('-');
+
+	return `${+m}/${+d}`;
 }

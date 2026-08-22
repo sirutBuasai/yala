@@ -1,6 +1,5 @@
-// Month-key helpers shared by the Monthly and Calendar views. A month key is "YYYY-MM".
-
-import { MONTHS } from './format';
+// Month-key arithmetic shared by the Monthly and Calendar views. A month key is "YYYY-MM".
+// Pure string/date logic — display formatting of month keys lives in format.ts.
 
 /** Shift a month key by whole months. Numeric Date args handle year rollover and avoid the
  * UTC string-parse pitfall (`new Date("2026-07-01")` is parsed as UTC). */
@@ -8,11 +7,6 @@ export function addMonths(key: string, delta: number): string {
 	const [y, m] = key.split('-').map(Number);
 	const d = new Date(y, m - 1 + delta, 1);
 	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-/** Short month label for a key, e.g. "2026-07" → "Jul". */
-export function monthName(key: string): string {
-	return MONTHS[+key.slice(5, 7) - 1] ?? key;
 }
 
 /**

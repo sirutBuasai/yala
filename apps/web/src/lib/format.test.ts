@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { MONTHS, esc, formatAccount, money, moneyCompact, moneyK, monthLabel, pct } from './format';
+import {
+	MONTHS,
+	accountLeaf,
+	esc,
+	formatAccount,
+	money,
+	moneyCompact,
+	moneyK,
+	monthDay,
+	monthLabel,
+	monthName,
+	pct
+} from './format';
 
 describe('money', () => {
 	it('rounds to whole dollars and adds thousands separators', () => {
@@ -73,6 +85,15 @@ describe('esc', () => {
 	});
 });
 
+describe('accountLeaf', () => {
+	it('returns the segment after the last colon, or the whole name if none', () => {
+		expect(accountLeaf('Liabilities:CC:AmexGold')).toBe('AmexGold');
+		expect(accountLeaf('Cash')).toBe('Cash');
+		expect(accountLeaf(null)).toBe('');
+		expect(accountLeaf(undefined)).toBe('');
+	});
+});
+
 describe('formatAccount', () => {
 	it('takes the leaf and de-CamelCases it', () => {
 		expect(formatAccount('Liabilities:CC:AmexGold')).toBe('Amex Gold');
@@ -92,6 +113,16 @@ describe('formatAccount', () => {
 describe('month labels', () => {
 	it('formats a YYYY-MM key', () => {
 		expect(monthLabel('2025-01')).toBe('Jan 2025');
+	});
+
+	it('gives the short month name for a key', () => {
+		expect(monthName('2026-07')).toBe('Jul');
+		expect(monthName('2026-12')).toBe('Dec');
+	});
+
+	it('formats a YYYY-MM-DD date as M/D', () => {
+		expect(monthDay('2026-07-03')).toBe('7/3');
+		expect(monthDay('2026-12-25')).toBe('12/25');
 	});
 
 	it('has twelve month abbreviations', () => {

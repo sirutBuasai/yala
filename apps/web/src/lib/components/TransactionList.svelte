@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Txn } from '$lib/types';
-	import { money, formatAccount } from '$lib/format';
+	import { money, formatAccount, monthDay } from '$lib/format';
 	import { categoryVar } from '$lib/theme';
 
 	interface Props {
@@ -12,12 +12,6 @@
 		showDate?: boolean;
 	}
 	let { transactions, edit, onedit, showDate = true }: Props = $props();
-
-	/** "2026-07-03" -> "7/3" */
-	function md(date: string): string {
-		const [, m, d] = date.split('-');
-		return `${+m}/${+d}`;
-	}
 </script>
 
 <div class="txlist">
@@ -31,7 +25,7 @@
 			role={edit ? 'button' : undefined}
 			onclick={edit ? () => onedit(t.locator) : undefined}
 		>
-			{#if showDate}<span class="date">{md(t.date)}</span>{/if}
+			{#if showDate}<span class="date">{monthDay(t.date)}</span>{/if}
 			<span class="dot" style:background={categoryVar(t.category)}></span>
 			<span class="main">
 				<span class="title">

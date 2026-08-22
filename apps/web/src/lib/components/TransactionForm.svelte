@@ -4,14 +4,13 @@
 	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data';
 	import { deleteTransaction, postJson } from '$lib/data';
-	import { formatAccount, money } from '$lib/format';
+	import { accountLeaf, formatAccount, money } from '$lib/format';
 	import { lastFundingAccount } from '$lib/editPrefs';
 	import AccountField from './AccountField.svelte';
 	import Credits, { type Credit } from './Credits.svelte';
 	import DatePicker from './DatePicker.svelte';
 	import DeleteConfirm from './DeleteConfirm.svelte';
 
-	const leafOf = (a: string) => a.split(':').pop() ?? a;
 	const FUNDING_KINDS = [
 		{ value: 'funding_credit', label: 'Credit card' },
 		{ value: 'funding_cash', label: 'Cash / bank' }
@@ -154,7 +153,7 @@
 		bind:value={category}
 		options={accounts.spending_categories}
 		kinds={[{ value: 'category', label: 'Category' }]}
-		deriveValue={leafOf}
+		deriveValue={accountLeaf}
 	/>
 	<AccountField
 		id="tx-fund"

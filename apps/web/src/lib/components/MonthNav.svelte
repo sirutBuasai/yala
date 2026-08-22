@@ -3,7 +3,8 @@
 	// parent owns the value and applies changes via `onchange`. Shared by the Monthly and
 	// Calendar views.
 	import Select from './Select.svelte';
-	import { addMonths, monthName, monthForYear, pickableMonths } from '$lib/period';
+	import { monthName } from '$lib/format';
+	import { addMonths, monthForYear, pickableMonths } from '$lib/period';
 
 	interface Props {
 		/** Current month key, "YYYY-MM". */
