@@ -16,7 +16,7 @@
 <div class="legs">
 	<LineColumn
 		bind:rows={credits}
-		header="Credits — amounts reimbursed to you (netted off the bill)"
+		header="Credits — refunds or reimbursement."
 		addLabel="+ credit"
 		options={creditAccounts}
 		selectAriaLabel="credit account"

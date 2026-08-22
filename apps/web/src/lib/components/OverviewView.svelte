@@ -1,13 +1,14 @@
 <script lang="ts">
 	import type { DashboardData } from '$lib/types';
-	import { money } from '$lib/format';
 	import { overviewKpis } from '$lib/kpis';
 	import { categorySlices, type Slice } from '$lib/charts/slices';
+	import { sankeyModel } from '$lib/charts/sankey';
 	import Kpi from './Kpi.svelte';
 	import Pane from './Pane.svelte';
 	import Donut from './charts/Donut.svelte';
 	import GroupedBarChart from './charts/GroupedBarChart.svelte';
 	import LineChart from './charts/LineChart.svelte';
+	import Sankey from './charts/Sankey.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -36,52 +37,7 @@
 		{ name: 'Saved', values: byYear.map((r) => r.saved), color: 'var(--saved)' }
 	]);
 
-	// Projected year-end for the current (incomplete) year. Blends two estimates by how far
-	// into the year we are: the prior-years gain trend (weighted early) and this year's actual
-	// run-rate — annualized average-so-far (weighted more as months accrue).
-	const projection = $derived.by(() => {
-		const rows = byYear;
-		if (rows.length < 2) return [];
-		const last = rows.length - 1;
-		const yd = data.years[String(rows[last].year)];
-		if (!yd) return [];
-
-		let elapsed = 0;
-		yd.matrix.forEach((m, i) => {
-			const spent = Object.values(m.spent).reduce((a, b) => a + b, 0);
-			if (m.income > 0 || spent > 0) elapsed = i + 1;
-		});
-		if (elapsed === 0 || elapsed >= 12) return []; // no data, or the year is already complete
-
-		const w = elapsed / 12;
-		const project = (vals: number[]): number => {
-			const runRate = (vals[last] / elapsed) * 12; // annualized average so far
-			const prev = vals[last - 1];
-			const prev2 = last >= 2 ? vals[last - 2] : prev;
-			const priorGain = 2 * prev - prev2; // linear extrapolation from prior complete years
-			return (1 - w) * priorGain + w * runRate;
-		};
-
-		const income = rows.map((r) => r.income);
-		const spent = rows.map((r) => r.spent);
-		const pIncome = project(income);
-		const pSpent = project(spent);
-
-		// Dotted series: null except the last complete year (anchor) and the projected point.
-		const mk = (anchor: number, projected: number, color: string, name: string) => {
-			const values: (number | null)[] = rows.map(() => null);
-			values[last - 1] = anchor;
-			values[last] = projected;
-			return { name, values, color, dashed: true };
-		};
-		return [
-			mk(income[last - 1], pIncome, 'var(--lav)', 'Projected income'),
-			mk(spent[last - 1], pSpent, 'var(--salmon)', 'Projected spent'),
-			mk(rows[last - 1].saved, pIncome - pSpent, 'var(--saved)', 'Projected saved')
-		];
-	});
-
-	const trend = $derived([...incomeSpentSaved, ...projection]);
+	const flow = $derived(sankeyModel(data));
 
 	const cumulative = $derived.by(() => {
 		let run = 0;
@@ -110,20 +66,17 @@
 </div>
 
 <div class="panes two">
-	<Pane title="Where it all went" cap={`Lifetime · net income ${money(lifetimeIncome)}`}>
+	<Pane title="Where it all went" cap="Lifetime">
 		<Donut {slices} />
 	</Pane>
-	<Pane title="Income vs Spent vs Saved by year" cap="Per tracked year">
+	<Pane title="Income vs Spending vs Savings" cap="Per tracked year">
 		<GroupedBarChart labels={years} series={incomeSpentSaved} />
 	</Pane>
 </div>
 
 <div class="panes">
-	<Pane
-		title="Spending trend by year"
-		cap={`Income, spent, and saved over the years${projection.length ? ' · dotted = projected year-end' : ''}`}
-	>
-		<LineChart labels={years} series={trend} legend />
+	<Pane title="Money flow" cap="Lifetime · gross → deductions → spending → savings">
+		<Sankey nodes={flow.nodes} links={flow.links} />
 	</Pane>
 </div>
 
@@ -131,7 +84,7 @@
 	<Pane title="Cumulative savings" cap="Running total of yearly saved">
 		<LineChart labels={years} series={cumulative} />
 	</Pane>
-	<Pane title="Savings rate by year" cap="Saved ÷ income">
+	<Pane title="Savings rate by year" cap="Savings to income ratio">
 		<LineChart labels={years} series={savingsRate} percent />
 	</Pane>
 </div>

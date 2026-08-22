@@ -21,11 +21,13 @@ describe('spendingKpis', () => {
 });
 
 describe('overviewKpis', () => {
-	it('aggregates lifetime figures and year span', () => {
+	it('aggregates lifetime figures and per-year averages', () => {
 		const tiles = overviewKpis(makeData());
 		expect(label(tiles, 'Lifetime income')!.value).toBe('$4,600');
 		expect(label(tiles, 'Lifetime spent')!.value).toBe('$166'); // 120 + 45.5
-		expect(label(tiles, 'Years tracked')!.value).toBe('2024–2025');
+		expect(label(tiles, 'Avg income / year')!.value).toBe('$2,300'); // 4600 / 2 years
+		expect(label(tiles, 'Avg spending / year')!.value).toBe('$83'); // 165.5 / 2 -> 82.75
+		expect(label(tiles, 'Avg saving / year')!.value).toBe('$2,217'); // 4434.5 / 2 -> 2217.25
 	});
 
 	it('marks negative lifetime savings as down', () => {

@@ -19,6 +19,8 @@ export function spendingKpis(data: DashboardData, year: number): KpiTile[] {
 	const monthlySpent = yd.matrix.map((row) => Object.values(row.spent).reduce((a, b) => a + b, 0));
 	const activeSpendMonths = monthlySpent.filter((v) => v > 0).length || 1;
 	const activeIncomeMonths = yd.matrix.filter((row) => row.income > 0).length || 1;
+	const activeMonths =
+		yd.matrix.filter((row, i) => row.income > 0 || monthlySpent[i] > 0).length || 1;
 
 	const avgIncome = yd.total_income / activeIncomeMonths;
 	const avgSpending = yd.total_spent / activeSpendMonths;
@@ -40,7 +42,7 @@ export function spendingKpis(data: DashboardData, year: number): KpiTile[] {
 			label: 'Avg savings / month',
 			value: money(avgSavings),
 			dir: avgSavings >= 0 ? 'up' : 'down',
-			foot: 'income − spending'
+			foot: `${activeMonths} active months`
 		}
 	];
 }
@@ -53,21 +55,25 @@ export function overviewKpis(data: DashboardData): KpiTile[] {
 	const income = rows.reduce((a, r) => a + r.income, 0);
 	const spent = rows.reduce((a, r) => a + r.spent, 0);
 	const saved = rows.reduce((a, r) => a + r.saved, 0);
-	const first = rows[0].year;
-	const last = rows[rows.length - 1].year;
+	const nYears = rows.length;
 
 	return [
-		{ label: 'Lifetime income', value: money(income), foot: 'net, all years' },
-		{ label: 'Lifetime spent', value: money(spent), foot: 'all years' },
+		{ label: 'Lifetime income', value: money(income), foot: 'net income' },
+		{ label: 'Lifetime spent', value: money(spent), foot: 'net spending' },
 		{
 			label: 'Lifetime saved',
 			value: money(saved),
 			dir: saved >= 0 ? 'up' : 'down',
-			foot: 'income − spent'
+			foot: 'net savings'
 		},
-		{ label: 'Savings rate', value: pct(saved, income), foot: 'overall' },
-		{ label: 'Years tracked', value: `${first}–${last}`, foot: `${rows.length} years` },
-		{ label: 'Avg saved / year', value: money(saved / rows.length), foot: 'across tracked years' }
+		{ label: 'Avg income / year', value: money(income / nYears), foot: `${nYears} tracked years` },
+		{ label: 'Avg spending / year', value: money(spent / nYears), foot: `${nYears} tracked years` },
+		{
+			label: 'Avg saving / year',
+			value: money(saved / nYears),
+			dir: saved >= 0 ? 'up' : 'down',
+			foot: 'income − spending'
+		}
 	];
 }
 
@@ -87,7 +93,7 @@ export function monthlyKpis(data: DashboardData, monthKey: string): KpiTile[] {
 			label: 'Saved',
 			value: money(saved),
 			dir: saved >= 0 ? 'up' : 'down',
-			foot: 'income − spent'
+			foot: 'this month'
 		},
 		{
 			label: '% used',
@@ -111,12 +117,12 @@ export function incomeKpis(data: DashboardData, year: number): KpiTile[] {
 		{
 			label: `Deductions · ${year}`,
 			value: money(iy.deductions),
-			foot: 'tax + insurance'
+			foot: 'tax + benefits'
 		},
 		{
 			label: 'Contributions',
 			value: money(iy.contributions),
-			foot: '401k / HSA / Roth'
+			foot: 'HSA + 401k'
 		},
 		{
 			label: `Net · ${year}`,

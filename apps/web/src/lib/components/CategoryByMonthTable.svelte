@@ -19,12 +19,17 @@
 	// viewBox scales to the pane width, so the grid fills the pane.
 	const W = 1000;
 	const ML = 46; // left margin for month labels
-	const MT = 22; // top margin for category labels
+	const MT = 24; // top margin for category labels
 	const MR = 6;
 	const CELL_H = 30;
 	const iw = $derived(W - ML - MR);
 	const cw = $derived(iw / Math.max(1, cols.length));
 	const H = $derived(MT + rows.length * CELL_H + 4);
+
+	// Shrink the column-header font (never below 7px) so even the longest category
+	// name fits inside its cell in full — no truncation.
+	const longestCol = $derived(Math.max(1, ...cols.map((c) => c.length)));
+	const colFont = $derived(Math.max(7, Math.min(10, (cw - 6) / (0.58 * longestCol))));
 
 	/** Ramp index 0..5 by magnitude; anything <= 0 sits below the ramp (inset). */
 	function step(v: number): number {
@@ -43,14 +48,17 @@
 	function label(v: number): string {
 		return v >= 1000 ? (v / 1000).toFixed(1) + 'k' : String(Math.round(v));
 	}
-	function trunc(s: string): string {
-		return s.length > 9 ? s.slice(0, 8) + '…' : s;
-	}
 </script>
 
 <svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Category by month heatmap">
 	{#each cols as c, j (c)}
-		<text class="colh" x={ML + cw * j + cw / 2} y={MT - 7} text-anchor="middle">{trunc(c)}</text>
+		<text
+			class="colh"
+			x={ML + cw * j + cw / 2}
+			y={MT - 8}
+			text-anchor="middle"
+			style:font-size={`${colFont}px`}>{c}</text
+		>
 	{/each}
 	{#each rows as r, i (r)}
 		<text class="rowh" x={ML - 8} y={MT + CELL_H * i + CELL_H / 2 + 4} text-anchor="end">{r}</text>
@@ -86,7 +94,6 @@
 	}
 	.colh {
 		fill: var(--ink-3);
-		font-size: 10px;
 	}
 	.rowh {
 		fill: var(--ink-2);

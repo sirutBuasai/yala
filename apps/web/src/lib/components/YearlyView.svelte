@@ -73,10 +73,7 @@
 </div>
 
 <div class="panes">
-	<Pane
-		title="Income vs Spent vs Saved"
-		cap={`${year} · net income, spending, and what's left per month`}
-	>
+	<Pane title="Income vs Spending vs Savings" cap={`${year} · Per tracked month`}>
 		<GroupedBarChart labels={MONTHS} series={grouped} />
 	</Pane>
 </div>
@@ -91,7 +88,7 @@
 </div>
 
 <div class="panes">
-	<Pane title="Category by month" cap="Darker lavender = more spent. Values in $.">
+	<Pane title="Category by month" cap="Spending per category per month.">
 		<CategoryByMonthTable rows={catMatrix.rows} cols={catMatrix.cols} values={catMatrix.values} />
 	</Pane>
 </div>
