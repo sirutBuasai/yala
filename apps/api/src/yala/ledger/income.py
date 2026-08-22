@@ -1,19 +1,15 @@
 """Income domain: paycheck transactions.
 
-A paycheck is a transaction with an ``Income:*`` posting. Postings are classified by **prefix**
-(not hardcoded account names) so beancount is the source of truth — add
-``Expenses:Deductions:Vision`` or ``Assets:Investments:Brokerage`` and it's picked up
-automatically, exactly like ``Spending.categories()`` reads the declared ``Expenses:*`` accounts:
+A paycheck is a transaction with an ``Income:*`` posting. Postings are classified by **prefix**,
+not hardcoded names, so beancount stays the source of truth — adding
+``Expenses:Deductions:Vision`` or ``Assets:Investments:Brokerage`` is picked up automatically:
 
-    Income:*                 -gross     ; total in
-    Expenses:Deductions:*     ...        ; direct money out (tax, insurance) — truly gone
-    Assets:Investments:*      ...        ; indirect money out (HSA, 401k) — still yours, invested
-    (everything else)                    ; take-home cash — derived as the remainder
+* ``Expenses:Deductions:*`` — direct money out (tax, insurance): truly gone.
+* ``Assets:Investments:*``  — indirect money out (HSA, 401k): still yours, invested.
+* everything else           — take-home cash, the remainder.
 
-Two headline figures:
-
-* **net**       = gross − direct out — the money that stayed yours.
-* **take-home** = gross − all out     — the cash deposited to the bank (= net − indirect out).
+Two headline figures: **net** = gross − direct out (money that stayed yours); **take-home**
+= gross − all out (cash deposited to the bank, = net − indirect out).
 """
 
 from __future__ import annotations

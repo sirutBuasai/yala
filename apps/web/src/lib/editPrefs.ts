@@ -1,7 +1,6 @@
-// Sticky edit-form preferences: the last-used account carries over to the next add within
-// the session, so a user entering several transactions/paychecks in a row doesn't re-pick the
-// same payment/deposit account each time. Only the account persists — every other field resets
-// when the add form is reopened. In-memory (session-scoped); cleared on a full page reload.
+// Sticky edit-form preferences: only the last-used account carries over to the next add, so
+// entering several transactions/paychecks in a row doesn't re-pick the same account each time.
+// In-memory (session-scoped); every other field resets when the form reopens.
 
 import { writable } from 'svelte/store';
 

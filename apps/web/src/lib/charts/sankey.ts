@@ -1,18 +1,10 @@
-// Lifetime money-flow model for the Sankey diagram:
+// Lifetime money-flow model: Gross → deductions / contributions + take-home → spending
+// categories + Savings.
 //
-//   Gross ─┬─▶ Tax / Insurance …            (true deductions — leave the flow)
-//          ├─▶ HSA / 401k …  ─▶ Savings     (contributions — parked savings)
-//          └─▶ Take-home ─┬─▶ spending categories …
-//                         └─▶ Savings        (cash left over)
-//
-// Reconciliation of two data sources:
-//   • The authoritative TOTALS (gross, take-home, deduction & contribution sums) come from
-//     `income.by_year`. These conserve exactly: gross = deductions + contributions + take-home.
-//   • The BREAKDOWN of those deduction/contribution totals into named buckets (Tax, HSA,
-//     401k, …) only exists on individual paychecks, so we derive the split from paycheck
-//     proportions and scale it onto the authoritative total. That keeps the diagram
-//     reconciled with the KPIs even when paychecks are sparse, and `Savings` collapses to
-//     exactly the overview's lifetime "saved" (contributions + cash surplus = net − spent).
+// Totals come from the authoritative yearly rollup (and conserve: gross = deductions +
+// contributions + take-home), but their split into named buckets only exists per-paycheck —
+// so paycheck proportions are scaled onto the rollup totals. This keeps the diagram reconciled
+// with the KPIs even when paychecks are sparse.
 
 import type { DashboardData } from '$lib/types';
 import { categoryVar } from '$lib/theme';
@@ -36,25 +28,15 @@ export interface SankeyModel {
 	links: SankeyLink[];
 }
 
-/**
- * Collapse contribution account keys into a stable family so the flow doesn't fragment
- * as the ledger gets more granular. Today the ledger emits a flat `401k`; tomorrow it may
- * split into `Roth401k` / `Trad401k` / `AfterTax401k` — all of which roll up into one
- * `401k` band here. Any other key (e.g. `HSA`) passes through unchanged.
- *
- * This is the single place to change if we ever want to surface the 401k sub-buckets
- * individually instead of rolling them up.
- */
+/** Collapse 401k variants (`Roth401k`, `Trad401k`, …) into one `401k` family so the flow
+ * doesn't fragment as the ledger gets more granular; other keys pass through unchanged. */
 export function contributionFamily(key: string): string {
 	if (/401\s*\(?k\)?/i.test(key)) return '401k';
 	return key;
 }
 
-/**
- * Split `total` across named buckets using `shares` (raw paycheck sums) as proportions.
- * Falls back to a single `fallbackLabel` bucket when no breakdown is available, and returns
- * nothing when the total is zero — so a bucket is only shown when it carries value.
- */
+/** Split `total` across named buckets by their `shares` proportions. Returns nothing when the
+ * total is zero, and a single `fallbackLabel` bucket when there's no breakdown to split by. */
 function distribute(
 	shares: Record<string, number>,
 	total: number,
@@ -118,8 +100,8 @@ export function sankeyModel(data: DashboardData): SankeyModel {
 	nodes.push({ id: 'Take-home', label: 'Take-home', value: takeHome, color: 'var(--lav)', col: 1 });
 	links.push({ source: 'Gross', target: 'Take-home', value: takeHome });
 
-	// Last column: Savings on top (aligned with the contribution nodes that feed it, which
-	// keeps those ribbons from crossing the spending fan), then the spending categories.
+	// Savings sits atop the last column — aligned with the contribution nodes feeding it, so
+	// those ribbons don't cross the spending fan — then the categories below.
 	nodes.push({
 		id: 'Savings',
 		label: 'Savings',
@@ -137,9 +119,8 @@ export function sankeyModel(data: DashboardData): SankeyModel {
 		});
 	}
 
-	// Savings gathers every contribution plus the cash surplus (= net − spent). Push these
-	// links (and Take-home's Savings slice) before the category links so Savings stacks at
-	// the top of each source's outgoing fan.
+	// Push Savings' incoming links before the category links so it stacks at the top of each
+	// source's outgoing fan.
 	for (const [k, v] of Object.entries(con)) links.push({ source: k, target: 'Savings', value: v });
 	links.push({ source: 'Take-home', target: 'Savings', value: cashSavings });
 	for (const c of cats) links.push({ source: 'Take-home', target: c.category, value: c.amount });

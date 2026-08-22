@@ -10,7 +10,6 @@ import { sumValues } from './num';
 
 export type Shape = 'categorical' | 'time' | 'matrix' | 'table';
 export type ScopeLevel = 'all' | 'year' | 'month';
-export type Page = 'spending' | 'income';
 
 export interface Scope {
 	level: ScopeLevel;
