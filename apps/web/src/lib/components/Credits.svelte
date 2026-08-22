@@ -1,10 +1,12 @@
-<script lang="ts">
-	import { formatAccount } from '$lib/format';
-
+<script module lang="ts">
 	export interface Credit {
 		account: string;
 		amount: number | null;
 	}
+</script>
+
+<script lang="ts">
+	import { formatAccount } from '$lib/format';
 
 	interface Props {
 		credits: Credit[];

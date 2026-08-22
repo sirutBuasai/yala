@@ -193,6 +193,41 @@ def test_post_account_invalid_leaf_is_400(client: TestClient):
     assert r.status_code == 400
 
 
+def test_post_account_declares_spending_category(client: TestClient):
+    r = client.post("/api/account", json={"kind": "category", "leaf": "Gifts"})
+    assert r.status_code == 200
+    assert r.json()["account"] == "Expenses:Gifts"
+    cats = client.get("/api/accounts").json()["spending_categories"]
+    assert "Gifts" in cats
+
+
+def test_post_account_declares_funding_credit_and_cash(client: TestClient):
+    rc = client.post("/api/account", json={"kind": "funding_credit", "leaf": "CardZ"})
+    assert rc.json()["account"] == "Liabilities:CC:CardZ"
+    rk = client.post("/api/account", json={"kind": "funding_cash", "leaf": "BankZ"})
+    assert rk.json()["account"] == "Assets:Cash:BankZ"
+
+    funding = client.get("/api/accounts").json()["funding_accounts"]
+    assert "Liabilities:CC:CardZ" in funding
+    assert "Assets:Cash:BankZ" in funding
+
+
+def test_new_category_is_usable_by_a_transaction(client: TestClient):
+    client.post("/api/account", json={"kind": "category", "leaf": "Gifts"})
+    r = client.post(
+        "/api/transaction",
+        json={
+            # no date -> today; the category was opened today, so an earlier date would
+            # (correctly) be rejected by the active-on-date check.
+            "payee": "birthday",
+            "amount": 20.0,
+            "category": "Gifts",  # the just-created category
+            "funding_account": "Liabilities:CC:CardA",
+        },
+    )
+    assert r.status_code == 200
+
+
 def test_post_transaction_before_open_date_is_400_with_clear_detail(client: TestClient):
     r = client.post(
         "/api/transaction",

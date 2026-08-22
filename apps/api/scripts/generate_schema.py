@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Generate the committed contract artifacts the frontend builds against.
 
-Writes ``schemas/data.schema.json`` (JSON Schema → TS type codegen) and
-``schemas/data.example.json`` (a fake document → dev-run without the real ledger). Both are
-committed so the frontend never hand-maintains the contract shape.
+Writes ``packages/contract/data.schema.json`` (JSON Schema → TS type codegen) and
+``packages/contract/data.example.json`` (a fake document → dev-run without the real ledger).
+Both are committed so the frontend never hand-maintains the contract shape.
 """
 
 from __future__ import annotations
@@ -29,7 +29,9 @@ from yala.schema import (
     YearSpend,
 )
 
-OUT = Path(__file__).resolve().parent.parent / "schemas"
+# Shared contract lives in packages/contract. This file: apps/api/scripts/generate_schema.py,
+# so the repo root is parents[3].
+OUT = Path(__file__).resolve().parents[3] / "packages" / "contract"
 
 
 def example_data() -> DashboardData:

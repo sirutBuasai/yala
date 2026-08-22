@@ -1,3 +1,6 @@
+# Node
+node_modules/
+
 # Python
 .venv/
 __pycache__/
@@ -6,14 +9,15 @@ __pycache__/
 build/
 dist/
 .pytest_cache/
+.ruff_cache/
 
 # Never commit real data to the public repo
 *.beancount
-!tests/fixtures/*.beancount
-!tests/fixtures/**/*.beancount
+!apps/api/tests/fixtures/*.beancount
+!apps/api/tests/fixtures/**/*.beancount
 *.xlsx
 *.csv
-!tests/**/*.csv
+!apps/api/tests/**/*.csv
 
-# dashboard build output is a gitignored artifact
+# Frontend build output (apps/web) and the generated data snapshot are gitignored artifacts
 data.json

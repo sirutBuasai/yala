@@ -107,8 +107,17 @@ class TransactionDeleteIn(BaseModel):
 
 
 class AccountIn(BaseModel):
-    kind: Literal["contribution", "deduction"]
+    kind: Literal["contribution", "deduction", "category", "funding_credit", "funding_cash"]
     leaf: str
+
+
+_ACCOUNT_PREFIX: dict[str, str] = {
+    "contribution": INVESTMENTS,  # Assets:Investments:
+    "deduction": DEDUCTIONS,  # Expenses:Deductions:
+    "category": EXPENSES,  # Expenses:
+    "funding_credit": "Liabilities:CC:",
+    "funding_cash": "Assets:Cash:",
+}
 
 
 class PaycheckIn(BaseModel):
@@ -341,8 +350,7 @@ def post_account(body: AccountIn) -> dict:
     if not _LEAF_RE.match(body.leaf):
         raise HTTPException(status_code=400, detail=f"invalid account leaf: {body.leaf!r}")
 
-    prefix = INVESTMENTS if body.kind == "contribution" else DEDUCTIONS
-    account = f"{prefix}{body.leaf}"
+    account = f"{_ACCOUNT_PREFIX[body.kind]}{body.leaf}"
 
     try:
         _sink().open_account(account)
@@ -353,7 +361,7 @@ def post_account(body: AccountIn) -> dict:
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    return {"ok": True, "message": f"opened {account}"}
+    return {"ok": True, "account": account, "message": f"opened {account}"}
 
 
 @app.post("/api/paycheck")
@@ -404,9 +412,10 @@ def post_layout(body: LayoutIn) -> dict:
 
 
 # Static frontend (the SvelteKit static-adapter build output) is mounted LAST so /api/*
-# routes always win. Absence is tolerated (e.g. before `npm run build` in dashboard/).
-# Resolved relative to the package root so it works regardless of CWD.
-_WEB_DIR = Path(__file__).resolve().parents[2] / "dashboard" / "build"
+# routes always win. Absence is tolerated (e.g. before `npm run build` in apps/web/).
+# Resolved relative to this file: apps/api/src/yala/api.py -> repo root is parents[4],
+# and the web build lives at apps/web/build.
+_WEB_DIR = Path(__file__).resolve().parents[4] / "apps" / "web" / "build"
 if _WEB_DIR.is_dir():
     app.mount("/", StaticFiles(directory=_WEB_DIR, html=True), name="web")
 

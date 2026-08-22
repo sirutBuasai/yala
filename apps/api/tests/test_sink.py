@@ -358,6 +358,45 @@ def test_update_preserves_narration_tag_and_custom_meta(ledger_dir: Path):
     assert "src" not in entry.meta  # retired key is not carried forward
 
 
+def test_update_narration_only_entry_does_not_duplicate_into_payee(ledger_dir: Path):
+    """A beancount entry with only a narration (``* "boba"`` -> payee=None, narration="boba")
+    surfaces that narration as the UI title. Saving it back with payee="boba" must NOT leave a
+    duplicated ``"boba" "boba"``; the redundant narration is dropped."""
+    from beancount.core import data
+
+    target = ledger_dir / "spending" / "2026.beancount"
+    target.write_text(
+        target.read_text() + '\n2026-07-01 * "boba"\n'  # single string == narration, no payee
+        '  id: "narr-only"\n'
+        "  Expenses:Takeouts  6.50 USD\n"
+        "  Liabilities:CC:CardA  -6.50 USD\n"
+    )
+    original = [
+        e
+        for e in Ledger(ledger_dir / "main.beancount", strict=True).load().entries
+        if isinstance(e, data.Transaction) and e.meta.get("id") == "narr-only"
+    ][0]
+    assert original.payee is None and original.narration == "boba"  # narration-only, as written
+
+    FileLedgerSink(ledger_dir).update_transaction(
+        "id:narr-only",
+        payee="boba",  # the UI resends the title, which came from the narration
+        amount=Decimal("6.50"),
+        category="Takeouts",
+        funding_account="Liabilities:CC:CardA",
+    )
+
+    led = _loads_clean(ledger_dir)
+    entry = [
+        e
+        for e in led.entries
+        if isinstance(e, data.Transaction) and e.meta.get("id") == "narr-only"
+    ][0]
+    assert entry.payee == "boba"
+    assert not entry.narration  # dropped (empty/None), not duplicated to "boba"
+    assert '"boba" "boba"' not in target.read_text()
+
+
 def test_quantize_first_balances(ledger_dir: Path):
     """Fix #2: legs are quantized before deriving net/funding, so 10.005 + 10.005 balances
     exactly."""

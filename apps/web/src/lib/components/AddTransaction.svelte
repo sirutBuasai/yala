@@ -1,7 +1,14 @@
 <script lang="ts">
 	import type { AccountsInfo } from '$lib/data';
 	import { formatAccount, money } from '$lib/format';
+	import AccountField from './AccountField.svelte';
 	import Credits, { type Credit } from './Credits.svelte';
+
+	const leafOf = (a: string) => a.split(':').pop() ?? a;
+	const FUNDING_KINDS = [
+		{ value: 'funding_credit', label: 'Credit card' },
+		{ value: 'funding_cash', label: 'Cash / bank' }
+	] as const;
 
 	interface Props {
 		accounts: AccountsInfo;
@@ -88,18 +95,22 @@
 			bind:value={total}
 		/>
 	</div>
-	<div class="field">
-		<label for="tx-cat">Category</label>
-		<select id="tx-cat" bind:value={category}>
-			{#each accounts.spending_categories as c (c)}<option value={c}>{c}</option>{/each}
-		</select>
-	</div>
-	<div class="field">
-		<label for="tx-fund">Account</label>
-		<select id="tx-fund" bind:value={funding_account}>
-			{#each accounts.funding_accounts as a (a)}<option value={a}>{formatAccount(a)}</option>{/each}
-		</select>
-	</div>
+	<AccountField
+		id="tx-cat"
+		label="Category"
+		bind:value={category}
+		options={accounts.spending_categories}
+		kinds={[{ value: 'category', label: 'Category' }]}
+		deriveValue={leafOf}
+	/>
+	<AccountField
+		id="tx-fund"
+		label="Account"
+		bind:value={funding_account}
+		options={accounts.funding_accounts}
+		optionLabel={formatAccount}
+		kinds={[...FUNDING_KINDS]}
+	/>
 	<label class="chk"><input type="checkbox" bind:checked={pending} /> Pending</label>
 </div>
 

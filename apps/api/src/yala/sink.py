@@ -334,6 +334,8 @@ class FileLedgerSink(LedgerSink):
         resolved_date = date or entry.date
         credit_legs = [(a, Decimal(amt)) for a, amt in (credits or [])]
 
+        narration = entry.narration if entry.narration and entry.narration != payee else None
+
         self._assert_accounts_active(
             resolved_date, [f"Expenses:{category}", funding_account, *(a for a, _ in credit_legs)]
         )
@@ -346,7 +348,7 @@ class FileLedgerSink(LedgerSink):
             funding_account=funding_account,
             entry_id=entry_id,
             credits=credit_legs,
-            narration=entry.narration,
+            narration=narration,
             tags=entry.tags or (),
             links=entry.links or (),
             extra_meta=carried,

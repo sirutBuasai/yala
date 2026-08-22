@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { AccountsInfo } from '$lib/data';
 	import { refreshAccounts } from '$lib/data';
-	import { money } from '$lib/format';
+	import { formatAccount, money } from '$lib/format';
 
 	interface Props {
 		accounts: AccountsInfo;
@@ -132,8 +132,7 @@
 	<div class="field">
 		<label for="pc-dep">Deposit account</label>
 		<select id="pc-dep" bind:value={deposit_account}>
-			{#each accounts.cash_accounts as a (a)}<option value={a}>{a.replace('Assets:', '')}</option
-				>{/each}
+			{#each accounts.cash_accounts as a (a)}<option value={a}>{formatAccount(a)}</option>{/each}
 		</select>
 	</div>
 	<div class="field">
