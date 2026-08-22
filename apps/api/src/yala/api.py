@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+from collections.abc import Iterator
+from contextlib import contextmanager
 from decimal import Decimal
 from pathlib import Path
 from typing import Literal
@@ -19,7 +21,7 @@ from pydantic import BaseModel
 from yala import config
 from yala.builder import build_dict
 from yala.ledger import Ledger
-from yala.ledger.entities import DEDUCTIONS, EXPENSES, INCOME, INVESTMENTS
+from yala.ledger.entities import DEDUCTIONS, EXPENSES, INCOME, INVESTMENTS, leaf
 from yala.sink import FileLedgerSink, entry_locator, find_transaction
 
 app = FastAPI(title="Yala")
@@ -34,6 +36,33 @@ def _ledger() -> Ledger:
 
 def _sink() -> FileLedgerSink:
     return FileLedgerSink(config.LEDGER_DIR)
+
+
+@contextmanager
+def _api_errors() -> Iterator[None]:
+    """Translate exceptions from an endpoint body into HTTP errors: pass through explicit
+    ``HTTPException``\\ s, map ``KeyError`` (unknown locator) to 404, and any other failure to
+    400. Every write endpoint wraps its body in this so the mapping lives in one place."""
+    try:
+        yield
+
+    except HTTPException:
+        raise
+
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+def _dec(value: float) -> Decimal:
+    """Decimal from a request float, via str so 19.99 doesn't become 19.9900000001."""
+    return Decimal(str(value))
+
+
+def _dec_map(m: dict[str, float]) -> dict[str, Decimal]:
+    return {k: _dec(v) for k, v in m.items()}
 
 
 def _valid_name(value: str) -> str:
@@ -87,15 +116,10 @@ class TransactionIn(BaseModel):
     credits: list[CreditIn] = []
 
 
-class TransactionUpdateIn(BaseModel):
+class TransactionUpdateIn(TransactionIn):
+    """An add body plus the locator of the entry to replace."""
+
     locator: str
-    date: str | None = None
-    payee: str
-    amount: float
-    category: str
-    funding_account: str
-    pending: bool = False
-    credits: list[CreditIn] = []
 
 
 class TransactionDeleteIn(BaseModel):
@@ -125,14 +149,10 @@ class PaycheckIn(BaseModel):
     payee: str = "paycheck"
 
 
-class PaycheckUpdateIn(BaseModel):
+class PaycheckUpdateIn(PaycheckIn):
+    """An add body plus the locator of the paycheck to replace."""
+
     locator: str
-    date: str | None = None
-    gross: float
-    deductions: dict[str, float] = {}
-    contributions: dict[str, float] = {}
-    deposit_account: str
-    payee: str = "paycheck"
 
 
 # --- read endpoints ---
@@ -155,12 +175,8 @@ def get_accounts() -> dict:
             a for a in active if a.startswith("Liabilities:CC:") or a.startswith("Assets:Cash:")
         ],
         "income_accounts": [a for a in active if a.startswith("Income:")],
-        "deduction_categories": sorted(
-            a.split(":")[-1] for a in active if a.startswith(DEDUCTIONS)
-        ),
-        "contribution_categories": sorted(
-            a.split(":")[-1] for a in active if a.startswith(INVESTMENTS)
-        ),
+        "deduction_categories": sorted(leaf(a) for a in active if a.startswith(DEDUCTIONS)),
+        "contribution_categories": sorted(leaf(a) for a in active if a.startswith(INVESTMENTS)),
         "cash_accounts": cash,
         # Where reimbursement credits can land: a Venmo transfer,
         # a bank credit, or a credit-card refund/credit.
@@ -174,13 +190,18 @@ def get_accounts() -> dict:
     }
 
 
-def _txn_state(entry: data.Transaction) -> dict:
-    """Editable state of one spending transaction (total bill, net share, funding, credits)."""
-    postings: list[tuple[str, Decimal]] = [
+def _postings(entry: data.Transaction) -> list[tuple[str, Decimal]]:
+    """The entry's ``(account, number)`` legs, skipping any without a resolved USD amount."""
+    return [
         (p.account, p.units.number)
         for p in entry.postings
         if p.units is not None and p.units.number is not None
     ]
+
+
+def _txn_state(entry: data.Transaction) -> dict:
+    """Editable state of one spending transaction (total bill, net share, funding, credits)."""
+    postings = _postings(entry)
     expenses = [
         (a, n) for a, n in postings if a.startswith(EXPENSES) and not a.startswith(DEDUCTIONS)
     ]
@@ -225,22 +246,13 @@ def _txn_state(entry: data.Transaction) -> dict:
 
 @app.get("/api/transaction")
 def get_transaction(locator: str) -> dict:
-    try:
-        entry = find_transaction(_ledger().entries, locator)
-
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    return _txn_state(entry)
+    with _api_errors():
+        return _txn_state(find_transaction(_ledger().entries, locator))
 
 
 def _paycheck_state(entry: data.Transaction) -> dict:
     """Editable state of one paycheck: gross, deposit, and the deduction/contribution maps."""
-    postings: list[tuple[str, Decimal]] = [
-        (p.account, p.units.number)
-        for p in entry.postings
-        if p.units is not None and p.units.number is not None
-    ]
+    postings = _postings(entry)
     if not any(a.startswith(INCOME) for a, _ in postings):
         raise HTTPException(status_code=400, detail="not a paycheck")
 
@@ -254,10 +266,10 @@ def _paycheck_state(entry: data.Transaction) -> dict:
             continue
 
         elif a.startswith(DEDUCTIONS):
-            deductions[a.split(":")[-1]] = float(n)
+            deductions[leaf(a)] = float(n)
 
         elif a.startswith(INVESTMENTS):
-            contributions[a.split(":")[-1]] = float(n)
+            contributions[leaf(a)] = float(n)
 
         elif deposit is None or n > deposit[1]:
             deposit = (a, n)
@@ -275,13 +287,8 @@ def _paycheck_state(entry: data.Transaction) -> dict:
 
 @app.get("/api/paycheck")
 def get_paycheck(locator: str) -> dict:
-    try:
-        entry = find_transaction(_ledger().entries, locator)
-
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    return _paycheck_state(entry)
+    with _api_errors():
+        return _paycheck_state(find_transaction(_ledger().entries, locator))
 
 
 @app.get("/api/pending")
@@ -311,32 +318,35 @@ def _credits(credits: list[CreditIn]) -> list[tuple[str, Decimal]]:
 
     for s in credits:
         _valid_name(s.account)
-        credits_out.append((s.account, Decimal(str(s.amount))))
+        credits_out.append((s.account, _dec(s.amount)))
 
     return credits_out
 
 
+def _paycheck_legs(body: PaycheckIn) -> tuple[dict[str, Decimal], dict[str, Decimal]]:
+    """Validate a paycheck's deposit + line-item names and convert its maps to Decimal."""
+    _valid_name(body.deposit_account)
+    for name in (*body.deductions, *body.contributions):
+        _valid_name(name)
+
+    return _dec_map(body.deductions), _dec_map(body.contributions)
+
+
 @app.post("/api/transaction")
 def post_transaction(body: TransactionIn) -> dict:
-    try:
+    with _api_errors():
         _valid_name(body.category)
         _valid_name(body.funding_account)
 
         entry_id = _sink().append_transaction(
             date=_parse_date(body.date),
             payee=body.payee,
-            amount=Decimal(str(body.amount)),
+            amount=_dec(body.amount),
             category=body.category,
             funding_account=body.funding_account,
             pending=body.pending,
             credits=_credits(body.credits),
         )
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
     return {
         "ok": True,
@@ -347,7 +357,7 @@ def post_transaction(body: TransactionIn) -> dict:
 
 @app.post("/api/transaction/update")
 def post_transaction_update(body: TransactionUpdateIn) -> dict:
-    try:
+    with _api_errors():
         _valid_name(body.category)
         _valid_name(body.funding_account)
 
@@ -355,21 +365,12 @@ def post_transaction_update(body: TransactionUpdateIn) -> dict:
             body.locator,
             date=dt.date.fromisoformat(body.date) if body.date else None,
             payee=body.payee,
-            amount=Decimal(str(body.amount)),
+            amount=_dec(body.amount),
             category=body.category,
             funding_account=body.funding_account,
             pending=body.pending,
             credits=_credits(body.credits),
         )
-
-    except HTTPException:
-        raise
-
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
     return {
         "ok": True,
@@ -381,17 +382,8 @@ def post_transaction_update(body: TransactionUpdateIn) -> dict:
 @app.post("/api/transaction/delete")
 def post_transaction_delete(body: TransactionDeleteIn) -> dict:
     """Delete a located entry (spending transaction or paycheck) from the ledger."""
-    try:
+    with _api_errors():
         _sink().delete_transaction(body.locator)
-
-    except HTTPException:
-        raise
-
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
     return {"ok": True, "message": f"deleted entry {body.locator}"}
 
@@ -403,68 +395,43 @@ def post_account(body: AccountIn) -> dict:
 
     account = f"{_ACCOUNT_PREFIX[body.kind]}{body.leaf}"
 
-    try:
+    with _api_errors():
         _sink().open_account(account)
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
     return {"ok": True, "account": account, "message": f"opened {account}"}
 
 
 @app.post("/api/paycheck")
 def post_paycheck(body: PaycheckIn) -> dict:
-    try:
-        _valid_name(body.deposit_account)
-        for name in (*body.deductions, *body.contributions):
-            _valid_name(name)
+    with _api_errors():
+        deductions, contributions = _paycheck_legs(body)
 
         _sink().append_paycheck(
             date=_parse_date(body.date),
-            gross=Decimal(str(body.gross)),
-            deductions={k: Decimal(str(v)) for k, v in body.deductions.items()},
-            contributions={k: Decimal(str(v)) for k, v in body.contributions.items()},
+            gross=_dec(body.gross),
+            deductions=deductions,
+            contributions=contributions,
             deposit_account=body.deposit_account,
             payee=body.payee,
         )
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
     return {"ok": True, "message": f"appended paycheck dated {body.date or 'today'}"}
 
 
 @app.post("/api/paycheck/update")
 def post_paycheck_update(body: PaycheckUpdateIn) -> dict:
-    try:
-        _valid_name(body.deposit_account)
-        for name in (*body.deductions, *body.contributions):
-            _valid_name(name)
+    with _api_errors():
+        deductions, contributions = _paycheck_legs(body)
 
         entry_id = _sink().update_paycheck(
             body.locator,
             date=dt.date.fromisoformat(body.date) if body.date else None,
-            gross=Decimal(str(body.gross)),
-            deductions={k: Decimal(str(v)) for k, v in body.deductions.items()},
-            contributions={k: Decimal(str(v)) for k, v in body.contributions.items()},
+            gross=_dec(body.gross),
+            deductions=deductions,
+            contributions=contributions,
             deposit_account=body.deposit_account,
             payee=body.payee,
         )
-
-    except HTTPException:
-        raise
-
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
     return {"ok": True, "message": "updated paycheck", "id": entry_id}
 

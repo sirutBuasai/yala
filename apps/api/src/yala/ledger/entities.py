@@ -18,6 +18,23 @@ INCOME = "Income:"
 INVESTMENTS = "Assets:Investments:"
 
 
+def leaf(account: str) -> str:
+    """The last segment of an account path, e.g. ``Assets:Investments:HSA`` → ``HSA``."""
+    return account.split(":")[-1]
+
+
+def locator_of(meta: dict | None) -> str:
+    """Stable edit handle from an entry's meta: ``id:<uuid>`` if present, else
+    ``line:<path>:<lineno>``. Shared by the entity view and the raw-entry sink helpers."""
+    meta = meta or {}
+    uid = meta.get("id")
+
+    if uid:
+        return f"id:{uid}"
+
+    return f"line:{meta['filename']}:{meta['lineno']}"
+
+
 @dataclass
 class Posting:
     account: str
@@ -61,12 +78,7 @@ class Transaction:
     def locator(self) -> str:
         """Stable handle for edits: ``id:<uuid>`` if the entry has an id, else
         ``line:<path>:<n>``."""
-        uid = self.meta.get("id")
-
-        if uid:
-            return f"id:{uid}"
-
-        return f"line:{self.meta['filename']}:{self.meta['lineno']}"
+        return locator_of(self.meta)
 
     @property
     def pending(self) -> bool:

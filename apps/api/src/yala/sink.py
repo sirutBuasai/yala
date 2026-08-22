@@ -22,6 +22,7 @@ from beancount.parser import printer
 
 from yala import config
 from yala.ledger import Ledger
+from yala.ledger.entities import locator_of
 from yala.money import round_cents
 
 Credit = tuple[str, Decimal]
@@ -29,11 +30,8 @@ Credit = tuple[str, Decimal]
 _INTERNAL_META = {"filename", "lineno"}  # beancount-injected source location
 _RETIRED_META = {"src"}  # spreadsheet-import artifact, dropped on edit
 _MANAGED_META = {"id", "funding", "bill"}  # we always (re)compute these
-
-
-def _round_cents(value: Decimal) -> Decimal:
-    """Quantize to 2 decimal places (cents) — banker's rounding via :mod:`yala.money`."""
-    return round_cents(value)
+# Meta keys we never carry forward onto an edited entry (recomputed or internal).
+_DROPPED_META = _INTERNAL_META | _RETIRED_META | _MANAGED_META
 
 
 def _posting(account: str, number: Decimal) -> data.Posting:
@@ -77,13 +75,8 @@ def find_transaction(entries: list, locator: str) -> data.Transaction:
 
 
 def entry_locator(entry: data.Transaction) -> str:
-    """Stable handle for an entry: id-form if it carries an id, else line-form."""
-    uid = (entry.meta or {}).get("id")
-
-    if uid:
-        return f"id:{uid}"
-
-    return f"line:{entry.meta['filename']}:{entry.meta['lineno']}"
+    """Stable handle for a raw beancount entry: id-form if it carries an id, else line-form."""
+    return locator_of(entry.meta)
 
 
 class LedgerSink(ABC):
@@ -184,12 +177,12 @@ class FileLedgerSink(LedgerSink):
         """Build a balanced beancount ``Transaction`` for a spending directive."""
         meta: dict = {"id": entry_id, "funding": funding_account}
 
-        total = _round_cents(amount)
+        total = round_cents(amount)
         credit_postings = []
         credit_sum = Decimal(0)
 
         for account, amt in credits or []:
-            qamt = _round_cents(amt)
+            qamt = round_cents(amt)
             credit_postings.append(_posting(account, qamt))
             credit_sum += qamt
 
@@ -259,9 +252,9 @@ class FileLedgerSink(LedgerSink):
         extra_meta: dict | None = None,
     ) -> data.Transaction:
         """Build a balanced beancount paycheck ``Transaction`` (validates accounts + legs)."""
-        gross = _round_cents(gross)
-        deductions = {k: _round_cents(v) for k, v in deductions.items()}
-        contributions = {k: _round_cents(v) for k, v in contributions.items()}
+        gross = round_cents(gross)
+        deductions = {k: round_cents(v) for k, v in deductions.items()}
+        contributions = {k: round_cents(v) for k, v in contributions.items()}
 
         self._assert_accounts_active(
             date,
@@ -330,6 +323,21 @@ class FileLedgerSink(LedgerSink):
 
         return entry_id
 
+    def _locate_for_update(
+        self, locator: str, date: dt.date | None
+    ) -> tuple[data.Transaction, str, dict, dt.date]:
+        """Shared preamble for both updates: strict-load, resolve the locator, and derive the
+        target entry, its id (assigned if missing), the meta to carry forward, and the resolved
+        date (the edit's date, or the entry's own if unchanged)."""
+        entry = find_transaction(Ledger(self.main_ledger, strict=True).load().entries, locator)
+        entry_id = (entry.meta or {}).get("id") or str(uuid.uuid4())
+        carried = {
+            k: v
+            for k, v in (entry.meta or {}).items()
+            if k not in _DROPPED_META and not k.startswith("__")
+        }
+        return entry, entry_id, carried, (date or entry.date)
+
     def update_paycheck(
         self,
         locator: str,
@@ -342,16 +350,7 @@ class FileLedgerSink(LedgerSink):
         payee: str = "paycheck",
     ) -> str:
         """Replace the located paycheck in place (or relocate it if the year changes)."""
-        led = Ledger(self.main_ledger, strict=True).load()
-        entry = find_transaction(led.entries, locator)
-
-        entry_id = (entry.meta or {}).get("id") or str(uuid.uuid4())
-        carried = {
-            k: v
-            for k, v in (entry.meta or {}).items()
-            if k not in _INTERNAL_META | _RETIRED_META | _MANAGED_META and not k.startswith("__")
-        }
-        resolved_date = date or entry.date
+        entry, entry_id, carried, resolved_date = self._locate_for_update(locator, date)
 
         new_entry = self._paycheck_entry(
             date=resolved_date,
@@ -386,17 +385,7 @@ class FileLedgerSink(LedgerSink):
         credits: list[Credit] | None = None,
     ) -> str:
         """Replace the located transaction in place; assign an id if it lacked one."""
-        led = Ledger(self.main_ledger, strict=True).load()
-        entry = find_transaction(led.entries, locator)
-
-        entry_id = (entry.meta or {}).get("id") or str(uuid.uuid4())
-
-        carried = {
-            k: v
-            for k, v in (entry.meta or {}).items()
-            if k not in _INTERNAL_META | _RETIRED_META | _MANAGED_META and not k.startswith("__")
-        }
-        resolved_date = date or entry.date
+        entry, entry_id, carried, resolved_date = self._locate_for_update(locator, date)
         credit_legs = [(a, Decimal(amt)) for a, amt in (credits or [])]
 
         narration = entry.narration if entry.narration and entry.narration != payee else None
@@ -423,6 +412,45 @@ class FileLedgerSink(LedgerSink):
         )
         return entry_id
 
+    def _entry_span(
+        self, entry: data.Transaction, locator: str
+    ) -> tuple[Path, str, list[str], int, int]:
+        """Locate an entry's source block: ``(path, original_text, lines, begin, end)``.
+
+        Guards against a stale locator — the ``begin`` line must still be the entry's
+        ``<date> <flag>`` header, or we'd clobber the wrong entry — then consumes the entry's
+        indented meta/posting lines (a blank line ends the block) to find ``end``."""
+        path = Path(entry.meta["filename"])
+        start = int(entry.meta["lineno"])
+
+        original = path.read_text()
+        lines = original.splitlines(keepends=True)
+        begin = start - 1
+
+        header = lines[begin] if 0 <= begin < len(lines) else ""
+        if not header.startswith(f"{entry.date.isoformat()} {entry.flag}"):
+            raise ValueError(
+                f"stale locator {locator!r}: line {start} of {path.name} is not the resolved "
+                f"{entry.date.isoformat()} {entry.flag} entry"
+            )
+
+        end = begin + 1
+        while end < len(lines) and lines[end].startswith((" ", "\t")) and lines[end].strip():
+            end += 1
+
+        return path, original, lines, begin, end
+
+    def _commit(self, path: Path, content: str, original: str) -> None:
+        """Write ``content`` to ``path``, strict-reload, and roll ``path`` back to ``original``
+        (re-raising) if the reload fails — so a bad write never sticks."""
+        _atomic_write(path, content)
+        try:
+            Ledger(self.main_ledger, strict=True).load()
+
+        except Exception:
+            _atomic_write(path, original)
+            raise
+
     def _replace_located(
         self, entry: data.Transaction, resolved_date: dt.date, block: str, subdir: str, locator: str
     ) -> None:
@@ -430,80 +458,39 @@ class FileLedgerSink(LedgerSink):
 
         If ``resolved_date`` falls in a different year than the entry, relocate it to
         ``<subdir>/<year>.beancount`` instead of rewriting in place."""
-        path = Path(entry.meta["filename"])
-        start = int(entry.meta["lineno"])
-
-        original = path.read_text()
-        lines = original.splitlines(keepends=True)
-        begin = start - 1
-
-        # Guard against a stale locator: the line we're about to replace must still be the
-        # header of the resolved entry (matching its date + flag), or we'd clobber the wrong entry.
-        header = lines[begin] if 0 <= begin < len(lines) else ""
-        if not header.startswith(f"{entry.date.isoformat()} {entry.flag}"):
-            raise ValueError(
-                f"stale locator {locator!r}: line {start} of {path.name} is not the resolved "
-                f"{entry.date.isoformat()} {entry.flag} entry"
-            )
-
-        end = begin + 1
-        while end < len(lines) and lines[end].startswith((" ", "\t")) and lines[end].strip():
-            end += 1  # consume the entry's indented meta + posting lines (blank line ends it)
-
-        headers = {
-            "spending": f"; Spending transactions for {resolved_date.year}",
-            "income": f"; Income for {resolved_date.year}",
-        }
+        path, original, lines, begin, end = self._entry_span(entry, locator)
 
         # A date edit that crosses into a different year must relocate the entry to that year's
         # file, not leave it stranded in the original year's file.
         if resolved_date.year != entry.date.year:
+            headers = {
+                "spending": f"; Spending transactions for {resolved_date.year}",
+                "income": f"; Income for {resolved_date.year}",
+            }
             _atomic_write(path, "".join(lines[:begin] + lines[end:]))  # drop from the old file
+
             try:
                 self._append(subdir, resolved_date.year, headers[subdir], block)
+
             except Exception:
                 _atomic_write(path, original)  # restore old file; _append rolled back its own
                 raise
+
             return
 
-        _atomic_write(path, "".join(lines[:begin] + block.splitlines(keepends=True) + lines[end:]))
-        try:
-            Ledger(self.main_ledger, strict=True).load()
-        except Exception:
-            _atomic_write(path, original)
-            raise
+        rewritten = "".join(lines[:begin] + block.splitlines(keepends=True) + lines[end:])
+
+        self._commit(path, rewritten, original)
 
     def delete_transaction(self, locator: str) -> None:
         """Remove the located entry (spending or paycheck) from its file, then strict-reload."""
-        led = Ledger(self.main_ledger, strict=True).load()
-        entry = find_transaction(led.entries, locator)  # raises KeyError if unknown
+        entry = find_transaction(
+            Ledger(self.main_ledger, strict=True).load().entries, locator
+        )  # raises KeyError if unknown
 
-        path = Path(entry.meta["filename"])
-        start = int(entry.meta["lineno"])
+        path, original, lines, begin, end = self._entry_span(entry, locator)
 
-        original = path.read_text()
-        lines = original.splitlines(keepends=True)
-        begin = start - 1
-
-        header = lines[begin] if 0 <= begin < len(lines) else ""
-        if not header.startswith(f"{entry.date.isoformat()} {entry.flag}"):
-            raise ValueError(
-                f"stale locator {locator!r}: line {start} of {path.name} is not the resolved "
-                f"{entry.date.isoformat()} {entry.flag} entry"
-            )
-
-        end = begin + 1
-        while end < len(lines) and lines[end].startswith((" ", "\t")) and lines[end].strip():
-            end += 1  # consume the entry's indented meta + posting lines (blank line ends it)
-
-        _atomic_write(path, "".join(lines[:begin] + lines[end:]))
-
-        try:
-            Ledger(self.main_ledger, strict=True).load()
-
-        except Exception:
-            _atomic_write(path, original)
-            raise
+        self._commit(path, "".join(lines[:begin] + lines[end:]), original)
 
     def open_account(self, account: str, date: dt.date | None = None) -> None:
         """Append an ``open`` directive to the accounts file (e.g. a new contribution type)."""
@@ -513,14 +500,7 @@ class FileLedgerSink(LedgerSink):
         original = accounts_file.read_text()
         text = original if original.endswith("\n") else original + "\n"
 
-        _atomic_write(accounts_file, f"{text}{date.isoformat()} open {account} USD\n")
-
-        try:
-            Ledger(self.main_ledger, strict=True).load()
-
-        except Exception:
-            _atomic_write(accounts_file, original)
-            raise
+        self._commit(accounts_file, f"{text}{date.isoformat()} open {account} USD\n", original)
 
     # --- internals ---
 

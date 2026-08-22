@@ -6,7 +6,6 @@ from decimal import Decimal
 
 from yala.money import round_cents
 from yala.schema import money
-from yala.sink import _round_cents
 
 
 def test_round_cents_uses_bankers_rounding():
@@ -16,10 +15,11 @@ def test_round_cents_uses_bankers_rounding():
     assert round_cents(Decimal("-0.125")) == Decimal("-0.12")
 
 
-def test_schema_money_and_sink_round_cents_agree():
-    # Both delegate to the same helper, so the ledger write and the reported value never diverge.
+def test_schema_money_and_round_cents_agree():
+    # schema.money and the sink both quantize through round_cents, so the reported value and the
+    # ledger write never diverge.
     for v in ("0.125", "0.135", "2.005", "10.005", "-0.125"):
-        assert money(Decimal(v)) == float(_round_cents(Decimal(v)))
+        assert money(Decimal(v)) == float(round_cents(Decimal(v)))
         assert Decimal(str(money(Decimal(v)))) == round_cents(Decimal(v))
 
 

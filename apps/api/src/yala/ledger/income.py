@@ -24,14 +24,10 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from yala.ledger.entities import DEDUCTIONS, INCOME, INVESTMENTS
+from yala.ledger.entities import DEDUCTIONS, INCOME, INVESTMENTS, leaf
 
 if TYPE_CHECKING:
     from yala.ledger.core import Ledger
-
-
-def _leaf(account: str) -> str:
-    return account.split(":")[-1]
 
 
 @dataclass
@@ -85,10 +81,10 @@ class Income:
                     gross += -p.amount  # Income postings are credits (negative)
 
                 elif p.account.startswith(DEDUCTIONS):
-                    deductions[_leaf(p.account)] += p.amount
+                    deductions[leaf(p.account)] += p.amount
 
                 elif p.account.startswith(INVESTMENTS):
-                    contributions[_leaf(p.account)] += p.amount
+                    contributions[leaf(p.account)] += p.amount
 
             out.append(Paycheck(t.date, gross, dict(deductions), dict(contributions), t.locator))
 
@@ -103,25 +99,23 @@ class Income:
     def take_home(self, year: int | None = None, month: int | None = None) -> Decimal:
         return sum((p.take_home for p in self.paychecks(year, month)), Decimal(0))
 
-    def deductions(self, year: int | None = None, month: int | None = None) -> dict[str, Decimal]:
+    def _sum_by_key(self, attr: str, year: int | None, month: int | None) -> dict[str, Decimal]:
+        """Sum a per-paycheck ``{leaf: amount}`` map (``deductions``/``contributions``) by key."""
         totals: dict[str, Decimal] = defaultdict(lambda: Decimal(0))
 
         for p in self.paychecks(year, month):
-            for k, v in p.deductions.items():
+            for k, v in getattr(p, attr).items():
                 totals[k] += v
 
         return dict(totals)
+
+    def deductions(self, year: int | None = None, month: int | None = None) -> dict[str, Decimal]:
+        return self._sum_by_key("deductions", year, month)
 
     def contributions(
         self, year: int | None = None, month: int | None = None
     ) -> dict[str, Decimal]:
-        totals: dict[str, Decimal] = defaultdict(lambda: Decimal(0))
-
-        for p in self.paychecks(year, month):
-            for k, v in p.contributions.items():
-                totals[k] += v
-
-        return dict(totals)
+        return self._sum_by_key("contributions", year, month)
 
     def years(self) -> list[int]:
         return sorted({p.date.year for p in self.paychecks()})
