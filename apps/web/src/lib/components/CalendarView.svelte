@@ -129,9 +129,7 @@
 					title={c.pending ? 'Pending — click to reconcile' : undefined}
 					onclick={() => (selectedDay = c.day)}
 				>
-					<span class="dn"
-						>{c.day}{#if c.pending}<span class="pend">●</span>{/if}</span
-					>
+					<span class="dn">{c.day}</span>
 					{#if c.cats.length}
 						<span class="cdots">
 							{#each c.cats as cat (cat)}<i style:background={categoryVar(cat)}></i>{/each}
@@ -309,12 +307,6 @@
 		font-size: 12px;
 		color: var(--ink-2);
 		font-weight: 600;
-	}
-	.cell .pend {
-		color: var(--pend);
-		font-size: 8px;
-		margin-left: 5px;
-		vertical-align: middle;
 	}
 	.cell .cdots {
 		position: absolute;
