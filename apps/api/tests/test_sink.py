@@ -254,6 +254,88 @@ def test_paycheck_with_wrong_legs_raises(ledger_dir: Path):
         )
 
 
+def test_update_paycheck_edits_in_place(ledger_dir: Path):
+    sink = FileLedgerSink(ledger_dir)
+    entry_id = sink.append_paycheck(
+        date=dt.date(2026, 2, 15),
+        gross=Decimal("3000.00"),
+        deductions={"Tax": Decimal("600.00")},
+        contributions={"HSA": Decimal("150.00")},
+        deposit_account="Assets:Cash:BankB",
+    )
+    target = ledger_dir / "income" / "2026.beancount"
+    assert target.read_text().count('"paycheck"') == 2  # fixture's 2026-01 + this one
+
+    new_id = sink.update_paycheck(
+        f"id:{entry_id}",
+        gross=Decimal("3200.00"),
+        deductions={"Tax": Decimal("640.00")},
+        contributions={"HSA": Decimal("160.00")},
+        deposit_account="Assets:Cash:BankB",
+    )
+    assert new_id == entry_id  # id preserved
+    assert target.read_text().count('"paycheck"') == 2  # replaced, not duplicated
+
+    led = _loads_clean(ledger_dir)
+    pc = led.income.paychecks(2026, 2)[0]
+    assert pc.gross == Decimal("3200.00")
+    assert pc.deductions == {"Tax": Decimal("640.00")}
+    assert pc.contributions == {"HSA": Decimal("160.00")}
+
+
+def test_update_paycheck_across_year_moves_file(ledger_dir: Path):
+    sink = FileLedgerSink(ledger_dir)
+    entry_id = sink.append_paycheck(
+        date=dt.date(2026, 3, 15),
+        gross=Decimal("3000.00"),
+        deductions={"Tax": Decimal("600.00")},
+        contributions={},
+        deposit_account="Assets:Cash:BankB",
+    )
+    sink.update_paycheck(
+        f"id:{entry_id}",
+        date=dt.date(2027, 3, 15),  # crosses into 2027
+        gross=Decimal("3000.00"),
+        deductions={"Tax": Decimal("600.00")},
+        contributions={},
+        deposit_account="Assets:Cash:BankB",
+    )
+    assert '"paycheck"' not in "".join(
+        line
+        for line in (ledger_dir / "income" / "2026.beancount").read_text().splitlines()
+        if "2026-03" in line or "3000" in line
+    )
+    led = _loads_clean(ledger_dir)
+    moved = led.income.paychecks(2027, 3)
+    assert len(moved) == 1
+    assert moved[0].locator == f"id:{entry_id}"
+    assert 'include "income/2027.beancount"' in (ledger_dir / "main.beancount").read_text()
+
+
+def test_update_paycheck_to_unopened_account_rejected(ledger_dir: Path):
+    sink = FileLedgerSink(ledger_dir)
+    entry_id = sink.append_paycheck(
+        date=dt.date(2026, 2, 15),
+        gross=Decimal("1000.00"),
+        deductions={},
+        contributions={},
+        deposit_account="Assets:Cash:BankB",
+    )
+    target = ledger_dir / "income" / "2026.beancount"
+    before = target.read_bytes()
+
+    with pytest.raises(ValueError, match="does not exist"):
+        sink.update_paycheck(
+            f"id:{entry_id}",
+            gross=Decimal("1000.00"),
+            deductions={},
+            contributions={},
+            deposit_account="Assets:Cash:Nope",  # unopened
+        )
+    assert target.read_bytes() == before  # nothing clobbered
+    _loads_clean(ledger_dir)
+
+
 def test_new_year_file_creates_include(ledger_dir: Path):
     FileLedgerSink(ledger_dir).append_transaction(
         date=dt.date(2027, 1, 5),

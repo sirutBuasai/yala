@@ -14,6 +14,7 @@
 	import AddPaycheck from './AddPaycheck.svelte';
 	import PendingList from './PendingList.svelte';
 	import ReconcileEditor from './ReconcileEditor.svelte';
+	import ReconcilePaycheck from './ReconcilePaycheck.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -39,7 +40,7 @@
 		const s = categorySlices(md.by_category);
 		const saved = md.total_income - md.total_spent;
 		if (md.total_income > 0 && saved > 0) {
-			s.push({ name: 'Saved', value: saved, color: 'var(--green)' });
+			s.push({ name: 'Saved', value: saved, color: 'var(--saved)' });
 		}
 		return s;
 	});
@@ -49,12 +50,14 @@
 	let showAdd = $state(false);
 	let showPaycheck = $state(false);
 	let editingLocator = $state<string | null>(null);
+	let editingPaycheck = $state<string | null>(null);
 	let refreshKey = $state(0);
 
 	function afterSave() {
 		showAdd = false;
 		showPaycheck = false;
 		editingLocator = null;
+		editingPaycheck = null;
 		refreshKey += 1;
 		onsaved();
 	}
@@ -101,7 +104,7 @@
 		cap={md ? `${md.paychecks.length} in ${monthLabel(monthKey)}` : ''}
 	>
 		{#if md && md.paychecks.length}
-			<PaycheckTable paychecks={md.paychecks} editable={edit} onDeleted={afterSave} />
+			<PaycheckTable paychecks={md.paychecks} {edit} onedit={(l) => (editingPaycheck = l)} />
 		{:else}
 			<p class="note">No paychecks this month.</p>
 		{/if}
@@ -134,6 +137,12 @@
 {#if editingLocator && accounts}
 	<Drawer title="Reconcile transaction" onclose={() => (editingLocator = null)}>
 		<ReconcileEditor locator={editingLocator} {accounts} onsaved={afterSave} />
+	</Drawer>
+{/if}
+
+{#if editingPaycheck && accounts}
+	<Drawer title="Edit paycheck" onclose={() => (editingPaycheck = null)}>
+		<ReconcilePaycheck locator={editingPaycheck} {accounts} onsaved={afterSave} />
 	</Drawer>
 {/if}
 
@@ -198,7 +207,7 @@
 	}
 	.panes.two {
 		grid-template-columns: 1fr 1fr;
-		align-items: start;
+		align-items: stretch; /* paired panes share the taller one's height */
 	}
 	.note {
 		color: var(--ink-3);

@@ -21,6 +21,21 @@
 	--good: #9ece6a;
 	--warn: #e0af68;
 	--crit: #e46876;
+	/* Reserved color for the synthetic "Saved" slice/series so it never collides with a
+	   spending category. Shared across themes like the other data colors. */
+	--saved: #9ece69;
+	/* Category palette. */
+	--cat-housing: #f7768e;
+	--cat-grocery: #f295c5;
+	--cat-takeouts: #bb9af7;
+	--cat-travel: #6f8fe8;
+	--cat-utilities: #ff9e64;
+	--cat-transport: #ffd27f;
+	--cat-personal: #7dcfff;
+	--cat-health: #2bb673;
+	--cat-recreation: #4cc9b0;
+	--cat-subscription: #ffd5d2;
+	--cat-other: #6f6c5c;
 	--good-text: #9ece6a;
 	--crit-text: #e46876;
 	--gold-text: #e0af68;

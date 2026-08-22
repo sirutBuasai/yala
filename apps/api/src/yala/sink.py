@@ -243,15 +243,22 @@ class FileLedgerSink(LedgerSink):
 
         return entry_id
 
-    def append_paycheck(
+    def _paycheck_entry(
         self,
+        *,
         date: dt.date,
         gross: Decimal,
         deductions: dict[str, Decimal],
         contributions: dict[str, Decimal],
         deposit_account: str,
+        entry_id: str,
         payee: str = "paycheck",
-    ) -> str:
+        narration: str | None = None,
+        tags=(),
+        links=(),
+        extra_meta: dict | None = None,
+    ) -> data.Transaction:
+        """Build a balanced beancount paycheck ``Transaction`` (validates accounts + legs)."""
         gross = _round_cents(gross)
         deductions = {k: _round_cents(v) for k, v in deductions.items()}
         contributions = {k: _round_cents(v) for k, v in contributions.items()}
@@ -269,40 +276,100 @@ class FileLedgerSink(LedgerSink):
         take_home = (
             gross - sum(deductions.values(), Decimal(0)) - sum(contributions.values(), Decimal(0))
         )
-
         if take_home < 0:
             raise ValueError(
                 f"deductions and contributions exceed gross (take-home would be {take_home})"
             )
 
         legs: list[tuple[str, Decimal]] = [("Income:Salary", -gross)]
-
         for name, amt in deductions.items():
             legs.append((f"Expenses:Deductions:{name}", amt))
-
         for name, amt in contributions.items():
             legs.append((f"Assets:Investments:{name}", amt))
-
         legs.append((deposit_account, take_home))
 
         total = sum((amt for _, amt in legs), Decimal(0))
         if total != 0:
             raise ValueError(f"paycheck legs do not sum to zero (off by {total})")
 
-        entry_id = str(uuid.uuid4())
-        entry = data.Transaction(
-            {"id": entry_id},
+        meta: dict = {"id": entry_id}
+        if extra_meta:
+            meta.update(extra_meta)
+
+        return data.Transaction(
+            meta,
             date,
             "*",
             payee,
-            None,
-            frozenset(),
-            frozenset(),
+            narration,
+            frozenset(tags),
+            frozenset(links),
             [_posting(account, amt) for account, amt in legs],
         )
-        block = printer.format_entry(entry)
 
-        self._append("income", date.year, f"; Income for {date.year}", block)
+    def append_paycheck(
+        self,
+        date: dt.date,
+        gross: Decimal,
+        deductions: dict[str, Decimal],
+        contributions: dict[str, Decimal],
+        deposit_account: str,
+        payee: str = "paycheck",
+    ) -> str:
+        entry_id = str(uuid.uuid4())
+        entry = self._paycheck_entry(
+            date=date,
+            gross=gross,
+            deductions=deductions,
+            contributions=contributions,
+            deposit_account=deposit_account,
+            entry_id=entry_id,
+            payee=payee,
+        )
+        self._append("income", date.year, f"; Income for {date.year}", printer.format_entry(entry))
+
+        return entry_id
+
+    def update_paycheck(
+        self,
+        locator: str,
+        *,
+        gross: Decimal,
+        deductions: dict[str, Decimal],
+        contributions: dict[str, Decimal],
+        deposit_account: str,
+        date: dt.date | None = None,
+        payee: str = "paycheck",
+    ) -> str:
+        """Replace the located paycheck in place (or relocate it if the year changes)."""
+        led = Ledger(self.main_ledger, strict=True).load()
+        entry = find_transaction(led.entries, locator)
+
+        entry_id = (entry.meta or {}).get("id") or str(uuid.uuid4())
+        carried = {
+            k: v
+            for k, v in (entry.meta or {}).items()
+            if k not in _INTERNAL_META | _RETIRED_META | _MANAGED_META and not k.startswith("__")
+        }
+        resolved_date = date or entry.date
+
+        new_entry = self._paycheck_entry(
+            date=resolved_date,
+            gross=Decimal(gross),
+            deductions={k: Decimal(v) for k, v in deductions.items()},
+            contributions={k: Decimal(v) for k, v in contributions.items()},
+            deposit_account=deposit_account,
+            entry_id=entry_id,
+            payee=payee,
+            narration=entry.narration,
+            tags=entry.tags or (),
+            links=entry.links or (),
+            extra_meta=carried,
+        )
+
+        self._replace_located(
+            entry, resolved_date, printer.format_entry(new_entry), "income", locator
+        )
 
         return entry_id
 
@@ -322,8 +389,6 @@ class FileLedgerSink(LedgerSink):
         led = Ledger(self.main_ledger, strict=True).load()
         entry = find_transaction(led.entries, locator)
 
-        path = Path(entry.meta["filename"])
-        start = int(entry.meta["lineno"])
         entry_id = (entry.meta or {}).get("id") or str(uuid.uuid4())
 
         carried = {
@@ -353,14 +418,27 @@ class FileLedgerSink(LedgerSink):
             links=entry.links or (),
             extra_meta=carried,
         )
-        block = printer.format_entry(new_entry)
+        self._replace_located(
+            entry, resolved_date, printer.format_entry(new_entry), "spending", locator
+        )
+        return entry_id
+
+    def _replace_located(
+        self, entry: data.Transaction, resolved_date: dt.date, block: str, subdir: str, locator: str
+    ) -> None:
+        """Swap ``entry``'s source block for ``block``, then strict-reload with rollback.
+
+        If ``resolved_date`` falls in a different year than the entry, relocate it to
+        ``<subdir>/<year>.beancount`` instead of rewriting in place."""
+        path = Path(entry.meta["filename"])
+        start = int(entry.meta["lineno"])
 
         original = path.read_text()
         lines = original.splitlines(keepends=True)
         begin = start - 1
 
         # Guard against a stale locator: the line we're about to replace must still be the
-        # header of the resolved entry (matching its date + flag), or we'd clobber the wrong txn.
+        # header of the resolved entry (matching its date + flag), or we'd clobber the wrong entry.
         header = lines[begin] if 0 <= begin < len(lines) else ""
         if not header.startswith(f"{entry.date.isoformat()} {entry.flag}"):
             raise ValueError(
@@ -372,35 +450,28 @@ class FileLedgerSink(LedgerSink):
         while end < len(lines) and lines[end].startswith((" ", "\t")) and lines[end].strip():
             end += 1  # consume the entry's indented meta + posting lines (blank line ends it)
 
+        headers = {
+            "spending": f"; Spending transactions for {resolved_date.year}",
+            "income": f"; Income for {resolved_date.year}",
+        }
+
         # A date edit that crosses into a different year must relocate the entry to that year's
-        # file (spending/<year>.beancount), not leave it stranded in the original year's file.
+        # file, not leave it stranded in the original year's file.
         if resolved_date.year != entry.date.year:
             _atomic_write(path, "".join(lines[:begin] + lines[end:]))  # drop from the old file
-
             try:
-                self._append(
-                    "spending",
-                    resolved_date.year,
-                    f"; Spending transactions for {resolved_date.year}",
-                    block,
-                )
-
+                self._append(subdir, resolved_date.year, headers[subdir], block)
             except Exception:
-                _atomic_write(path, original)  # restore the old file; _append rolled back its own
+                _atomic_write(path, original)  # restore old file; _append rolled back its own
                 raise
-
-            return entry_id
+            return
 
         _atomic_write(path, "".join(lines[:begin] + block.splitlines(keepends=True) + lines[end:]))
-
         try:
             Ledger(self.main_ledger, strict=True).load()
-
         except Exception:
             _atomic_write(path, original)
             raise
-
-        return entry_id
 
     def delete_transaction(self, locator: str) -> None:
         """Remove the located entry (spending or paycheck) from its file, then strict-reload."""

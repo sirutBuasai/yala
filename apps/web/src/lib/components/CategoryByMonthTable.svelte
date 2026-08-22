@@ -1,16 +1,30 @@
 <script lang="ts">
-	import { compact } from '$lib/format';
+	import { money } from '$lib/format';
 	import { theme } from '$lib/theme';
+	import { showTip, hideTip } from '$lib/tooltip';
 
 	interface Props {
+		/** Row-axis labels (months). */
 		rows: string[];
+		/** Column-axis labels (categories). */
 		cols: string[];
+		/** Cell values indexed as values[rowIndex][colIndex]. */
 		values: number[][];
 	}
 	let { rows, cols, values }: Props = $props();
 
 	const max = $derived(Math.max(1, ...values.flat()));
 	const dark = $derived($theme !== 'light');
+
+	// viewBox scales to the pane width, so the grid fills the pane.
+	const W = 1000;
+	const ML = 46; // left margin for month labels
+	const MT = 22; // top margin for category labels
+	const MR = 6;
+	const CELL_H = 30;
+	const iw = $derived(W - ML - MR);
+	const cw = $derived(iw / Math.max(1, cols.length));
+	const H = $derived(MT + rows.length * CELL_H + 4);
 
 	/** Ramp index 0..5 by magnitude; anything <= 0 sits below the ramp (inset). */
 	function step(v: number): number {
@@ -20,66 +34,67 @@
 		const s = step(v);
 		return s < 0 ? 'var(--inset)' : `var(--s${s + 1})`;
 	}
-	// Ported contrast logic from the mock's heatmap: light text on the deep end.
+	// Light text on the deep end of the ramp (ported from the mock's heatmap).
 	function fg(v: number): string {
 		const s = step(v);
 		const lightText = s < 0 ? dark : dark ? s <= 3 : s >= 3;
 		return lightText ? '#f4efe4' : '#2b2621';
 	}
+	function label(v: number): string {
+		return v >= 1000 ? (v / 1000).toFixed(1) + 'k' : String(Math.round(v));
+	}
+	function trunc(s: string): string {
+		return s.length > 9 ? s.slice(0, 8) + '…' : s;
+	}
 </script>
 
-<div class="wrap">
-	<table>
-		<thead>
-			<tr>
-				<th class="rowhdr"></th>
-				{#each cols as c (c)}<th>{c}</th>{/each}
-			</tr>
-		</thead>
-		<tbody>
-			{#each rows as row, ri (row)}
-				<tr>
-					<th class="rowhdr">{row}</th>
-					{#each values[ri] as v, ci (ci)}
-						<td style:background={bg(v)} style:color={fg(v)}>{compact(v)}</td>
-					{/each}
-				</tr>
-			{/each}
-		</tbody>
-	</table>
-</div>
+<svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Category by month heatmap">
+	{#each cols as c, j (c)}
+		<text class="colh" x={ML + cw * j + cw / 2} y={MT - 7} text-anchor="middle">{trunc(c)}</text>
+	{/each}
+	{#each rows as r, i (r)}
+		<text class="rowh" x={ML - 8} y={MT + CELL_H * i + CELL_H / 2 + 4} text-anchor="end">{r}</text>
+		{#each cols as c, j (c)}
+			{@const v = values[i]?.[j] ?? 0}
+			<rect
+				x={ML + cw * j + 2}
+				y={MT + CELL_H * i + 2}
+				width={cw - 4}
+				height={CELL_H - 4}
+				rx="5"
+				fill={bg(v)}
+				role="presentation"
+				onmousemove={(e) => showTip(`<b>${c} · ${r}</b><br>${money(v)}`, e)}
+				onmouseleave={hideTip}
+			/>
+			<text
+				class="cellv"
+				x={ML + cw * j + cw / 2}
+				y={MT + CELL_H * i + CELL_H / 2 + 4}
+				text-anchor="middle"
+				fill={fg(v)}>{label(v)}</text
+			>
+		{/each}
+	{/each}
+</svg>
 
 <style>
-	.wrap {
-		overflow-x: auto;
-	}
-	table {
+	svg {
+		display: block;
 		width: 100%;
-		border-collapse: separate;
-		border-spacing: 3px;
-		font-size: 11.5px;
+		overflow: visible;
+	}
+	.colh {
+		fill: var(--ink-3);
+		font-size: 10px;
+	}
+	.rowh {
+		fill: var(--ink-2);
+		font-size: 11px;
+	}
+	.cellv {
+		font-size: 9.5px;
 		font-variant-numeric: tabular-nums;
-	}
-	th {
-		color: var(--ink-3);
-		font-weight: 600;
-		font-size: 10.5px;
-		text-transform: uppercase;
-		letter-spacing: 0.4px;
-		padding: 4px 6px;
-		text-align: center;
-	}
-	th.rowhdr {
-		text-align: right;
-		text-transform: none;
-		font-size: 11.5px;
-		color: var(--ink-2);
-		white-space: nowrap;
-	}
-	td {
-		text-align: center;
-		padding: 6px 8px;
-		border-radius: 6px;
-		min-width: 34px;
+		pointer-events: none;
 	}
 </style>

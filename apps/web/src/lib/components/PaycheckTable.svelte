@@ -1,16 +1,15 @@
 <script lang="ts">
 	import type { PaycheckOut } from '$lib/types';
 	import { money } from '$lib/format';
-	import { deleteTransaction } from '$lib/data';
 
 	interface Props {
 		paychecks: PaycheckOut[];
-		/** Edit mode: show a per-row delete affordance. */
-		editable?: boolean;
-		/** Called after a paycheck is deleted (parent reloads data). */
-		onDeleted?: () => void;
+		/** Edit mode: rows become clickable to open the paycheck editor. */
+		edit?: boolean;
+		/** Called with the paycheck's locator when a row is clicked (edit mode). */
+		onedit?: (locator: string) => void;
 	}
-	let { paychecks, editable = false, onDeleted }: Props = $props();
+	let { paychecks, edit = false, onedit }: Props = $props();
 
 	const sum = (m: Record<string, number>) => Object.values(m).reduce((a, b) => a + b, 0);
 	// Chronological order; no totals row (year aggregates live in the KPIs).
@@ -28,108 +27,93 @@
 				income: p.net
 			}))
 	);
-
-	async function del(locator: string, date: string) {
-		if (!confirm(`Delete the paycheck dated ${date}?`)) return;
-		const problem = await deleteTransaction(locator);
-		if (problem) {
-			alert(problem);
-			return;
-		}
-		onDeleted?.();
-	}
 </script>
 
-<div class="wrap">
-	<table>
-		<thead>
-			<tr>
-				<th>Date</th>
-				<th class="num">Gross</th>
-				<th class="num">Tax</th>
-				<th class="num">Deductions</th>
-				<th class="num">Saved</th>
-				<th class="num">Take-home</th>
-				<th class="num">Income</th>
-				{#if editable}<th class="del-col"></th>{/if}
-			</tr>
-		</thead>
-		<tbody>
-			{#each rows as r (r.locator)}
-				<tr>
-					<td>{r.date}</td>
-					<td class="num">{money(r.gross)}</td>
-					<td class="num">{money(r.tax)}</td>
-					<td class="num">{money(r.deductions)}</td>
-					<td class="num saved">{money(r.saved)}</td>
-					<td class="num">{money(r.takeHome)}</td>
-					<td class="num income">{money(r.income)}</td>
-					{#if editable}
-						<td class="del-col">
-							<button
-								type="button"
-								class="del"
-								title="Delete paycheck"
-								onclick={() => del(r.locator, r.date)}>✕</button
-							>
-						</td>
-					{/if}
-				</tr>
-			{/each}
-		</tbody>
-	</table>
+<div class="pctable">
+	<div class="pcrow head">
+		<span>Date</span>
+		<span class="num">Gross</span>
+		<span class="num">Tax</span>
+		<span class="num">Deductions</span>
+		<span class="num">Saved</span>
+		<span class="num">Take-home</span>
+		<span class="num">Income</span>
+	</div>
+	{#each rows as r (r.locator)}
+		{#if edit}
+			<button type="button" class="pcrow clickable" onclick={() => onedit?.(r.locator)}>
+				<span>{r.date}</span>
+				<span class="num">{money(r.gross)}</span>
+				<span class="num">{money(r.tax)}</span>
+				<span class="num">{money(r.deductions)}</span>
+				<span class="num saved">{money(r.saved)}</span>
+				<span class="num">{money(r.takeHome)}</span>
+				<span class="num income">{money(r.income)}</span>
+			</button>
+		{:else}
+			<div class="pcrow">
+				<span>{r.date}</span>
+				<span class="num">{money(r.gross)}</span>
+				<span class="num">{money(r.tax)}</span>
+				<span class="num">{money(r.deductions)}</span>
+				<span class="num saved">{money(r.saved)}</span>
+				<span class="num">{money(r.takeHome)}</span>
+				<span class="num income">{money(r.income)}</span>
+			</div>
+		{/if}
+	{/each}
 </div>
 
 <style>
-	.wrap {
+	.pctable {
+		display: flex;
+		flex-direction: column;
 		overflow-x: auto;
 	}
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 12.5px;
-	}
-	th,
-	td {
+	.pcrow {
+		display: grid;
+		grid-template-columns: minmax(88px, 1.1fr) repeat(6, 1fr);
+		align-items: center;
+		gap: 8px;
 		padding: 9px 8px;
 		border-bottom: 1px solid var(--border);
+		font-size: 12.5px;
+		/* reset button defaults for the clickable (edit-mode) variant */
+		width: 100%;
+		background: none;
+		border-left: 0;
+		border-right: 0;
+		border-top: 0;
+		color: inherit;
+		font-family: inherit;
 		text-align: left;
-		white-space: nowrap;
 	}
-	th.num,
-	td.num {
-		text-align: right;
-		font-variant-numeric: tabular-nums;
+	.pcrow:last-child {
+		border-bottom: 0;
 	}
-	th {
+	.pcrow.head span {
 		color: var(--ink-3);
 		font-weight: 600;
 		font-size: 10.5px;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
 	}
-	td.saved {
+	.pcrow .num {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+	}
+	.pcrow.clickable {
+		cursor: pointer;
+		border-radius: 8px;
+	}
+	.pcrow.clickable:hover {
+		background: color-mix(in srgb, var(--lav) 9%, transparent);
+	}
+	.saved {
 		color: var(--lav-text);
 	}
-	td.income {
+	.income {
 		color: var(--good-text);
 		font-weight: 600;
-	}
-	.del-col {
-		width: 28px;
-		text-align: center;
-	}
-	.del {
-		background: none;
-		border: 0;
-		color: var(--ink-3);
-		cursor: pointer;
-		font-size: 12px;
-		padding: 2px 4px;
-		border-radius: 6px;
-	}
-	.del:hover {
-		color: var(--crit-text);
-		background: color-mix(in srgb, var(--crit) 12%, transparent);
 	}
 </style>

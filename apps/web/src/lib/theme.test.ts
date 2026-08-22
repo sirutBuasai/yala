@@ -4,8 +4,8 @@ import { CATEGORY_TOKEN, categoryVar, setTheme, theme, toggleTheme } from './the
 
 describe('categoryVar', () => {
 	it('maps known categories to their token', () => {
-		expect(categoryVar('Grocery')).toBe('var(--green)');
-		expect(categoryVar('Takeouts')).toBe('var(--salmon)');
+		expect(categoryVar('Grocery')).toBe('var(--cat-grocery)');
+		expect(categoryVar('Takeouts')).toBe('var(--cat-takeouts)');
 	});
 
 	it('falls back to lavender for unknown categories', () => {
@@ -13,7 +13,7 @@ describe('categoryVar', () => {
 	});
 
 	it('has an Other token', () => {
-		expect(CATEGORY_TOKEN.Other).toBe('ink-3');
+		expect(CATEGORY_TOKEN.Other).toBe('cat-other');
 	});
 });
 

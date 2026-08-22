@@ -8,30 +8,38 @@ describe('categorySlices', () => {
 			{ category: 'Takeouts', amount: 70 }
 		]);
 		expect(slices.map((s) => s.name)).toEqual(['Takeouts', 'Grocery']);
-		expect(slices[0].color).toBe('var(--salmon)'); // Takeouts token
-		expect(slices[1].color).toBe('var(--green)'); // Grocery token
+		expect(slices[0].color).toBe('var(--cat-takeouts)'); // Takeouts token
+		expect(slices[1].color).toBe('var(--cat-grocery)'); // Grocery token
 	});
 
-	it('collapses everything past topN into a neutral Other slice', () => {
-		const items = Array.from({ length: 9 }, (_, i) => ({
-			category: `C${i}`,
-			amount: 100 - i
-		}));
-		const slices = categorySlices(items, 6);
-		expect(slices).toHaveLength(7); // 6 named + Other
-		const other = slices.find((s) => s.name === 'Other')!;
-		expect(other.color).toBe('var(--ink-3)');
-		// remainder = amounts of C6..C8 = 94 + 93 + 92
-		expect(other.value).toBe(94 + 93 + 92);
+	it('shows every category individually when at or under the limit', () => {
+		const items = Array.from({ length: 10 }, (_, i) => ({ category: `C${i}`, amount: 100 - i }));
+		const slices = categorySlices(items); // default limit 10
+		expect(slices).toHaveLength(10);
+		expect(slices.some((s) => s.name === 'etc.')).toBe(false);
 	});
 
-	it('merges the tail into an existing real "Other" category rather than duplicating', () => {
-		const items = [
-			{ category: 'Other', amount: 50 },
-			...Array.from({ length: 8 }, (_, i) => ({ category: `C${i}`, amount: 100 - i }))
-		];
-		const slices = categorySlices(items, 6);
-		expect(slices.filter((s) => s.name === 'Other')).toHaveLength(1);
+	it('caps at the limit, folding overflow into a combined "etc." slice', () => {
+		// 12 categories, default limit 10 -> 9 named + 1 "etc."
+		const items = Array.from({ length: 12 }, (_, i) => ({ category: `C${i}`, amount: 100 - i }));
+		const slices = categorySlices(items);
+		expect(slices).toHaveLength(10);
+		const etc = slices[slices.length - 1];
+		expect(etc.name).toBe('etc.');
+		expect(etc.color).toBe('var(--ink-3)');
+		// combined value = ranks 10..12 (amounts for C9, C10, C11 = 91 + 90 + 89)
+		expect(etc.value).toBe(91 + 90 + 89);
+		// the 9 named slices are the top 9 by amount
+		expect(slices.slice(0, 9).every((s) => s.name !== 'etc.')).toBe(true);
+	});
+
+	it('honors a custom limit', () => {
+		const items = Array.from({ length: 9 }, (_, i) => ({ category: `C${i}`, amount: 100 - i }));
+		const slices = categorySlices(items, 6); // 5 named + etc.
+		expect(slices).toHaveLength(6);
+		expect(slices[slices.length - 1].name).toBe('etc.');
+		// remainder = ranks 6..9 (amounts 95 + 94 + 93 + 92)
+		expect(slices[slices.length - 1].value).toBe(95 + 94 + 93 + 92);
 	});
 
 	it('drops non-positive categories entirely (documents the current behavior)', () => {

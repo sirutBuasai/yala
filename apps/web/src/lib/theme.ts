@@ -12,17 +12,17 @@ export type ThemeMode = 'dark' | 'light';
  * for both SVG chart fills and HTML category dots.
  */
 export const CATEGORY_TOKEN: Record<string, string> = {
-	Takeouts: 'salmon',
-	Grocery: 'green',
-	Housing: 'lav',
-	Utilities: 'teal',
-	Health: 'gold',
-	Travel: 'orange',
-	Personal: 'magenta',
-	Recreation: 'aqua',
-	Transport: 'blue',
-	Subscription: 'berry',
-	Other: 'ink-3'
+	Housing: 'cat-housing',
+	Grocery: 'cat-grocery',
+	Takeouts: 'cat-takeouts',
+	Travel: 'cat-travel',
+	Utilities: 'cat-utilities',
+	Transport: 'cat-transport',
+	Personal: 'cat-personal',
+	Health: 'cat-health',
+	Recreation: 'cat-recreation',
+	Subscription: 'cat-subscription',
+	Other: 'cat-other'
 };
 
 /** CSS variable reference for a category's accent color. */

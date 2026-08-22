@@ -317,6 +317,78 @@ def test_post_paycheck_is_visible_on_next_get(client: TestClient):
     assert any(p["gross"] == 3000.0 for p in paychecks)
 
 
+def test_get_and_update_paycheck_flow(client: TestClient):
+    r = client.post(
+        "/api/paycheck",
+        json={
+            "date": "2026-02-15",
+            "gross": 3000.0,
+            "deductions": {"Tax": 600.0},
+            "contributions": {"HSA": 150.0},
+            "deposit_account": "Assets:Cash:BankB",
+        },
+    )
+    assert r.status_code == 200
+    loc = client.get("/api/data").json()["months"]["2026-02"]["paychecks"][0]["locator"]
+
+    state = client.get("/api/paycheck", params={"locator": loc}).json()
+    assert state["gross"] == 3000.0
+    assert state["deductions"] == {"Tax": 600.0}
+    assert state["contributions"] == {"HSA": 150.0}
+    assert state["deposit_account"] == "Assets:Cash:BankB"
+
+    u = client.post(
+        "/api/paycheck/update",
+        json={
+            "locator": loc,
+            "date": "2026-02-15",
+            "gross": 3200.0,
+            "deductions": {"Tax": 640.0},
+            "contributions": {"HSA": 150.0},
+            "deposit_account": "Assets:Cash:BankB",
+        },
+    )
+    assert u.status_code == 200
+
+    state2 = client.get("/api/paycheck", params={"locator": loc}).json()
+    assert state2["gross"] == 3200.0
+    assert state2["deductions"]["Tax"] == 640.0
+
+
+def test_get_paycheck_unknown_is_404(client: TestClient):
+    r = client.get("/api/paycheck", params={"locator": "id:nope"})
+    assert r.status_code == 404
+
+
+def test_update_paycheck_unknown_is_404(client: TestClient):
+    r = client.post(
+        "/api/paycheck/update",
+        json={
+            "locator": "id:nope",
+            "gross": 100.0,
+            "deductions": {},
+            "contributions": {},
+            "deposit_account": "Assets:Cash:BankB",
+        },
+    )
+    assert r.status_code == 404
+
+
+def test_get_paycheck_on_spending_txn_is_400(client: TestClient):
+    r = client.post(
+        "/api/transaction",
+        json={
+            "payee": "not a paycheck",
+            "amount": 5.0,
+            "category": "Takeouts",
+            "funding_account": "Liabilities:CC:CardA",
+        },
+    )
+    loc = r.json()["id"]
+    resp = client.get("/api/paycheck", params={"locator": f"id:{loc}"})
+    assert resp.status_code == 400
+
+
 def test_post_paycheck_take_home_negative_is_400(client: TestClient):
     r = client.post(
         "/api/paycheck",

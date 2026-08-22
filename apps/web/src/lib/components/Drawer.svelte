@@ -41,7 +41,7 @@
 		top: 0;
 		right: 0;
 		height: 100%;
-		width: min(520px, 100%);
+		width: min(680px, 100%);
 		background: var(--surface);
 		border-left: 1px solid var(--border);
 		box-shadow: -18px 0 40px -20px rgba(0, 0, 0, 0.7);

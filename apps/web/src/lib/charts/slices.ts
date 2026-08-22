@@ -1,7 +1,3 @@
-// Declutter a category breakdown into ≤ topN named slices (theme category colors)
-// plus a single neutral "Other" slice for the remainder. Colors are CSS custom
-// properties so the donut themes with the :root[data-theme] swap (no JS colors).
-
 import { categoryVar } from '../theme';
 
 export interface Slice {
@@ -10,19 +6,18 @@ export interface Slice {
 	color: string;
 }
 
-export function categorySlices(items: { category: string; amount: number }[], topN = 6): Slice[] {
+export function categorySlices(items: { category: string; amount: number }[], limit = 10): Slice[] {
 	const sorted = items.filter((i) => i.amount > 0).sort((a, b) => b.amount - a.amount);
-	const slices: Slice[] = sorted
-		.slice(0, topN)
-		.map((i) => ({ name: i.category, value: i.amount, color: categoryVar(i.category) }));
-	const otherSum = sorted.slice(topN).reduce((a, i) => a + i.amount, 0);
+	const named = (list: typeof sorted): Slice[] =>
+		list.map((i) => ({ name: i.category, value: i.amount, color: categoryVar(i.category) }));
 
-	if (otherSum > 0) {
-		const existing = slices.find((s) => s.name === 'Other');
+	// Everything fits — show each category on its own.
+	if (sorted.length <= limit) return named(sorted);
 
-		if (existing) existing.value += otherSum;
-		else slices.push({ name: 'Other', value: otherSum, color: 'var(--ink-3)' });
-	}
+	// Overflow: top (limit - 1) individually, then one combined "etc." slice for the rest.
+	const slices = named(sorted.slice(0, limit - 1));
+	const etcSum = sorted.slice(limit - 1).reduce((a, i) => a + i.amount, 0);
+	slices.push({ name: 'etc.', value: etcSum, color: 'var(--ink-3)' });
 
 	return slices;
 }

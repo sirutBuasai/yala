@@ -6,10 +6,12 @@
 
 	interface Series {
 		name: string;
-		values: number[];
+		values: (number | null)[];
 		color: string;
 		/** Draw a gradient area under this series (single-series area charts). */
 		area?: boolean;
+		/** Render as a dotted line (e.g. a projection) and omit from the legend. */
+		dashed?: boolean;
 	}
 	interface Props {
 		labels: string[];
@@ -29,7 +31,7 @@
 	// Unique gradient id per instance so multiple area charts don't collide.
 	const gid = 'lg-' + Math.random().toString(36).slice(2, 9);
 
-	const flat = $derived(series.flatMap((s) => s.values));
+	const flat = $derived(series.flatMap((s) => s.values).filter((v): v is number => v != null));
 	const y = $derived(
 		scaleLinear()
 			.domain([Math.min(0, ...flat), Math.max(0, ...flat)])
@@ -44,13 +46,15 @@
 
 	const paths = $derived(
 		series.map((s) => {
-			const lineGen = line<number>()
+			const lineGen = line<number | null>()
+				.defined((v) => v != null)
 				.x((_, i) => xPos(i))
-				.y((v) => y(v));
-			const areaGen = area<number>()
+				.y((v) => y(v as number));
+			const areaGen = area<number | null>()
+				.defined((v) => v != null)
 				.x((_, i) => xPos(i))
 				.y0(y(0))
-				.y1((v) => y(v));
+				.y1((v) => y(v as number));
 			return { line: lineGen(s.values) ?? '', area: s.area ? (areaGen(s.values) ?? '') : '' };
 		})
 	);
@@ -64,7 +68,10 @@
 		let i = Math.round(((e.clientX - r.left) / r.width) * (n - 1));
 		i = Math.max(0, Math.min(n - 1, i));
 		hover = i;
-		const lines = series.map((s) => `${esc(s.name)}: ${fmt(s.values[i])}`).join('<br>');
+		const lines = series
+			.filter((s) => s.values[i] != null)
+			.map((s) => `${esc(s.name)}: ${fmt(s.values[i] as number)}`)
+			.join('<br>');
 		showTip(`<b>${esc(labels[i])}</b><br>${lines}`, e);
 	}
 	function onLeave() {
@@ -73,9 +80,9 @@
 	}
 </script>
 
-{#if legend && series.length > 1}
+{#if legend && series.filter((s) => !s.dashed).length > 1}
 	<div class="legend">
-		{#each series as s (s.name)}
+		{#each series.filter((s) => !s.dashed) as s (s.name)}
 			<span class="k"><span class="sw" style:background={s.color}></span>{s.name}</span>
 		{/each}
 	</div>
@@ -108,6 +115,8 @@
 				stroke={s.color}
 				stroke-width="2"
 				stroke-linejoin="round"
+				stroke-dasharray={s.dashed ? '5 5' : undefined}
+				opacity={s.dashed ? 0.85 : 1}
 			/>
 		{/each}
 
@@ -129,15 +138,17 @@
 				stroke="var(--ink-3)"
 				stroke-dasharray="3 3"
 			/>
-			{#each series as s, si (s.name)}
-				<circle
-					cx={xPos(hover)}
-					cy={y(s.values[hover])}
-					r="5"
-					fill="var(--surface)"
-					stroke={s.color}
-					stroke-width="2"
-				/>
+			{#each series as s (s.name)}
+				{#if s.values[hover] != null}
+					<circle
+						cx={xPos(hover)}
+						cy={y(s.values[hover] as number)}
+						r="5"
+						fill="var(--surface)"
+						stroke={s.color}
+						stroke-width="2"
+					/>
+				{/if}
 			{/each}
 		{/if}
 

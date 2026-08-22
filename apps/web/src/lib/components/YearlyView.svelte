@@ -37,7 +37,7 @@
 		return [
 			{ name: 'Income', values: income, color: 'var(--lav)' },
 			{ name: 'Spent', values: spent, color: 'var(--salmon)' },
-			{ name: 'Saved', values: saved, color: 'var(--green)' }
+			{ name: 'Saved', values: saved, color: 'var(--saved)' }
 		];
 	});
 
@@ -52,9 +52,15 @@
 		return rows.map((r) => ({ label: r.key, value: r.value, color: categoryVar(r.key) }));
 	});
 
+	// Heatmap with months on the row axis and categories on the column axis (axis flipped
+	// vs. the source matrix, which is categories × months).
 	const catMatrix = $derived.by(() => {
 		const n = extract('spending.category_by_month', { level: 'year', year });
-		return n.shape === 'matrix' ? n : { rows: [], cols: MONTHS, values: [] };
+		if (n.shape !== 'matrix')
+			return { rows: MONTHS, cols: [] as string[], values: [] as number[][] };
+		const cats = n.rows; // categories
+		const values = MONTHS.map((_, m) => cats.map((_, c) => n.values[c]?.[m] ?? 0));
+		return { rows: MONTHS, cols: cats, values };
 	});
 </script>
 

@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from yala import config
 from yala.builder import build_dict
 from yala.ledger import Ledger
-from yala.ledger.entities import DEDUCTIONS, EXPENSES, INVESTMENTS
+from yala.ledger.entities import DEDUCTIONS, EXPENSES, INCOME, INVESTMENTS
 from yala.sink import FileLedgerSink, entry_locator, find_transaction
 
 app = FastAPI(title="Yala")
@@ -121,6 +121,16 @@ _ACCOUNT_PREFIX: dict[str, str] = {
 
 
 class PaycheckIn(BaseModel):
+    date: str | None = None
+    gross: float
+    deductions: dict[str, float] = {}
+    contributions: dict[str, float] = {}
+    deposit_account: str
+    payee: str = "paycheck"
+
+
+class PaycheckUpdateIn(BaseModel):
+    locator: str
     date: str | None = None
     gross: float
     deductions: dict[str, float] = {}
@@ -231,6 +241,56 @@ def get_transaction(locator: str) -> dict:
         raise HTTPException(status_code=404, detail=str(e))
 
     return _txn_state(entry)
+
+
+def _paycheck_state(entry: data.Transaction) -> dict:
+    """Editable state of one paycheck: gross, deposit, and the deduction/contribution maps."""
+    postings: list[tuple[str, Decimal]] = [
+        (p.account, p.units.number)
+        for p in entry.postings
+        if p.units is not None and p.units.number is not None
+    ]
+    if not any(a.startswith(INCOME) for a, _ in postings):
+        raise HTTPException(status_code=400, detail="not a paycheck")
+
+    gross = -sum((n for a, n in postings if a.startswith(INCOME)), Decimal(0))
+    deductions: dict[str, float] = {}
+    contributions: dict[str, float] = {}
+    deposit: tuple[str, Decimal] | None = None
+
+    for a, n in postings:
+        if a.startswith(INCOME):
+            continue
+
+        elif a.startswith(DEDUCTIONS):
+            deductions[a.split(":")[-1]] = float(n)
+
+        elif a.startswith(INVESTMENTS):
+            contributions[a.split(":")[-1]] = float(n)
+
+        elif deposit is None or n > deposit[1]:
+            deposit = (a, n)
+
+    return {
+        "locator": entry_locator(entry),
+        "date": entry.date.isoformat(),
+        "payee": entry.payee or entry.narration or "paycheck",
+        "gross": float(gross),
+        "deposit_account": deposit[0] if deposit else "",
+        "deductions": deductions,
+        "contributions": contributions,
+    }
+
+
+@app.get("/api/paycheck")
+def get_paycheck(locator: str) -> dict:
+    try:
+        entry = find_transaction(_ledger().entries, locator)
+
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return _paycheck_state(entry)
 
 
 @app.get("/api/pending")
@@ -387,6 +447,35 @@ def post_paycheck(body: PaycheckIn) -> dict:
         raise HTTPException(status_code=400, detail=str(e))
 
     return {"ok": True, "message": f"appended paycheck dated {body.date or 'today'}"}
+
+
+@app.post("/api/paycheck/update")
+def post_paycheck_update(body: PaycheckUpdateIn) -> dict:
+    try:
+        _valid_name(body.deposit_account)
+        for name in (*body.deductions, *body.contributions):
+            _valid_name(name)
+
+        entry_id = _sink().update_paycheck(
+            body.locator,
+            date=dt.date.fromisoformat(body.date) if body.date else None,
+            gross=Decimal(str(body.gross)),
+            deductions={k: Decimal(str(v)) for k, v in body.deductions.items()},
+            contributions={k: Decimal(str(v)) for k, v in body.contributions.items()},
+            deposit_account=body.deposit_account,
+            payee=body.payee,
+        )
+
+    except HTTPException:
+        raise
+
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return {"ok": True, "message": "updated paycheck", "id": entry_id}
 
 
 # --- layout persistence (edit mode) ---
