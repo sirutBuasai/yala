@@ -16,7 +16,6 @@
 		amount: number | null;
 	}
 
-	let loaded = $state(false);
 	let date = $state('');
 	let gross = $state<number | null>(null);
 	let deposit_account = $state('');
@@ -34,7 +33,6 @@
 	// Prefill from the paycheck addressed by `locator`.
 	$effect(() => {
 		const l = locator;
-		loaded = false;
 		(async () => {
 			try {
 				const res = await fetch(`/api/paycheck?locator=${encodeURIComponent(l)}`, {
@@ -52,7 +50,6 @@
 				payee = s.payee ?? 'paycheck';
 				deductions = toRows(s.deductions ?? {});
 				contributions = toRows(s.contributions ?? {});
-				loaded = true;
 			} catch (e) {
 				msg = 'API unreachable: ' + (e as Error).message;
 				err = true;
@@ -156,10 +153,6 @@
 		onsaved();
 	}
 </script>
-
-{#if !loaded && !err}
-	<p class="note">Loading paycheck…</p>
-{/if}
 
 <div class="editrow">
 	<div class="field">
@@ -380,10 +373,6 @@
 	}
 	.edit-msg.err {
 		color: var(--crit-text);
-	}
-	.note {
-		color: var(--ink-3);
-		font-size: 12.5px;
 	}
 	.danger {
 		display: flex;

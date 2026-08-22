@@ -7,9 +7,8 @@ import { writable } from 'svelte/store';
 export type ThemeMode = 'dark' | 'light';
 
 /**
- * Per-category accent map ported verbatim from the mock (spec §8). Values are CSS
- * token suffixes; fallback is lavender. Consumed as `--<token>` custom properties
- * for both SVG chart fills and HTML category dots.
+ * Per-category accent map. Values are CSS token suffixes (fallback lavender),
+ * consumed as `--<token>` custom properties for SVG chart fills and HTML dots.
  */
 export const CATEGORY_TOKEN: Record<string, string> = {
 	Housing: 'cat-housing',

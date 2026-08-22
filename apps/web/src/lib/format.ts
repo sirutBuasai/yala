@@ -46,7 +46,7 @@ export function esc(s: unknown): string {
 	);
 }
 
-/** Compact money for dense cells/labels: 1700 -> "1.7k", 349 -> "349". */
+/** Compact money for dense cells/labels. */
 export function compact(n: number | null | undefined): string {
 	const v = Math.round(n || 0);
 	if (Math.abs(v) >= 1000) return (v / 1000).toFixed(1) + 'k';
@@ -54,17 +54,13 @@ export function compact(n: number | null | undefined): string {
 	return String(v);
 }
 
-/**
- * Format a funding account for display: take the leaf (after the last ":"),
- * split CamelCase into words, then apply acronym overrides for cases plain
- * de-CamelCasing gets wrong. "Liabilities:CC:AmexGold" -> "Amex Gold";
- * "Assets:Cash:WFAutograph" -> "WF Autograph"; "BofACash" -> "BofA Cash".
- */
+/** Display-name overrides for account leaves that plain de-CamelCasing gets wrong. */
 const ACCOUNT_ALIASES_OVERRIDE: Record<string, string> = {
 	BofACash: 'BofA Cash',
 	BofA: 'BofA'
 };
 
+/** Format a funding account for display: the leaf name (after the last ":"), de-CamelCased, with alias overrides applied. */
 export function formatAccount(name: string | null | undefined): string {
 	if (!name) return '';
 
@@ -74,22 +70,22 @@ export function formatAccount(name: string | null | undefined): string {
 
 	return (
 		leaf
-			// insert a space between a lowercase/digit and an uppercase ("AmexGold" -> "Amex Gold")
+			// space between a lowercase/digit and an uppercase
 			.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-			// split runs of caps followed by a capitalized word ("WFAutograph" -> "WF Autograph")
+			// split a run of caps before a capitalized word
 			.replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
 			.trim()
 	);
 }
 
-/** "2025-01" -> "Jan 2025" */
+/** Format a "YYYY-MM" key as a full month label. */
 export function monthLabel(key: string): string {
 	const [y, m] = key.split('-');
 
 	return MONTHS[+m - 1] + ' ' + y;
 }
 
-/** "2025-01" -> "Jan 25" */
+/** Format a "YYYY-MM" key as a short month label with a 2-digit year. */
 export function monthShort(key: string): string {
 	const [y, m] = key.split('-');
 

@@ -1,6 +1,6 @@
-// Shared fixed-position chart tooltip (ported from the mock's #tip singleton).
-// Chart components call showTip/hideTip from pointer handlers; Tooltip.svelte
-// (mounted once at the app root) renders the current content near the cursor.
+// Shared chart tooltip singleton. Chart components call showTip/hideTip from
+// pointer handlers; Tooltip.svelte (mounted once at the app root) renders the
+// current content near the cursor.
 
 import { writable } from 'svelte/store';
 

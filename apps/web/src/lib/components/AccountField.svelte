@@ -130,6 +130,7 @@
 	select,
 	input {
 		flex: 1;
+		min-width: 0; /* shrink to fit the popup width; no horizontal scroll */
 		background: var(--inset);
 		border: 1px solid var(--border);
 		color: var(--ink);

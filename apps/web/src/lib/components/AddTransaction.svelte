@@ -126,17 +126,17 @@
 
 <style>
 	.editrow {
-		display: flex;
-		gap: 10px;
-		flex-wrap: wrap;
-		align-items: flex-end;
+		/* Responsive grid: fields wrap onto multiple rows, each wide enough for longer account values. */
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+		gap: 12px;
+		align-items: end;
 	}
 	.field {
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
-		min-width: 130px;
-		flex: 1;
+		min-width: 0;
 	}
 	.field label {
 		font-size: 11px;

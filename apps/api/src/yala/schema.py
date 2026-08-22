@@ -1,8 +1,6 @@
-"""The versioned ``data.json`` contract
+"""The versioned ``data.json`` contract, validated by pydantic v2 with ``extra="forbid"``.
 
-Validated by **pydantic v2** with ``extra="forbid"``
-
-Additive-versioning rule (keep ``SCHEMA_VERSION`` stable vs. bump it):
+Additive changes keep ``SCHEMA_VERSION`` stable; breaking changes bump it.
 """
 
 from __future__ import annotations
@@ -39,7 +37,7 @@ class DateRange(_Base):
 
 
 class Domains(_Base):
-    """Which domains carry data flag."""
+    """Which domains carry data."""
 
     spending: bool
     income: bool

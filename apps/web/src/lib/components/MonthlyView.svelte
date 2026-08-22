@@ -7,7 +7,7 @@
 	import Kpi from './Kpi.svelte';
 	import Pane from './Pane.svelte';
 	import Donut from './charts/Donut.svelte';
-	import Drawer from './Drawer.svelte';
+	import Modal from './Modal.svelte';
 	import TransactionList from './TransactionList.svelte';
 	import PaycheckTable from './PaycheckTable.svelte';
 	import AddTransaction from './AddTransaction.svelte';
@@ -28,20 +28,18 @@
 	const months = $derived([...data.meta.month_keys].sort().reverse());
 	const md = $derived(data.months[monthKey]);
 
-	// Transaction history, latest date first.
 	const txns = $derived(
 		md ? [...md.transactions].sort((a, b) => b.date.localeCompare(a.date)) : []
 	);
 
-	// Donut: where the month's income went — top-6 categories + rolled-up "Other"
-	// + a green Saved slice. (A 100%-stacked bar is an easy alternative.)
+	// Donut: where the month's income went — top categories, a rolled-up "Other", and a green Saved slice.
 	const slices = $derived.by<Slice[]>(() => {
 		if (!md) return [];
-		const s = categorySlices(md.by_category);
 		const saved = md.total_income - md.total_spent;
-		if (md.total_income > 0 && saved > 0) {
-			s.push({ name: 'Saved', value: saved, color: 'var(--saved)' });
-		}
+		const savedShown = md.total_income > 0 && saved > 0;
+		// Cap the donut at 10 total slices; the Saved slice counts, so leave room for it.
+		const s = categorySlices(md.by_category, savedShown ? 9 : 10);
+		if (savedShown) s.push({ name: 'Saved', value: saved, color: 'var(--saved)' });
 		return s;
 	});
 	const noIncome = $derived(!!md && md.total_income <= 0);
@@ -123,27 +121,27 @@
 </div>
 
 {#if showAdd && accounts}
-	<Drawer title="Add transaction" onclose={() => (showAdd = false)}>
+	<Modal title="Add transaction" onclose={() => (showAdd = false)}>
 		<AddTransaction {accounts} onsaved={afterSave} />
-	</Drawer>
+	</Modal>
 {/if}
 
 {#if showPaycheck && accounts}
-	<Drawer title="Add paycheck" onclose={() => (showPaycheck = false)}>
+	<Modal title="Add paycheck" onclose={() => (showPaycheck = false)}>
 		<AddPaycheck {accounts} onsaved={afterSave} />
-	</Drawer>
+	</Modal>
 {/if}
 
 {#if editingLocator && accounts}
-	<Drawer title="Reconcile transaction" onclose={() => (editingLocator = null)}>
+	<Modal title="Edit transaction" onclose={() => (editingLocator = null)}>
 		<ReconcileEditor locator={editingLocator} {accounts} onsaved={afterSave} />
-	</Drawer>
+	</Modal>
 {/if}
 
 {#if editingPaycheck && accounts}
-	<Drawer title="Edit paycheck" onclose={() => (editingPaycheck = null)}>
+	<Modal title="Edit paycheck" onclose={() => (editingPaycheck = null)}>
 		<ReconcilePaycheck locator={editingPaycheck} {accounts} onsaved={afterSave} />
-	</Drawer>
+	</Modal>
 {/if}
 
 <style>

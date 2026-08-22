@@ -112,9 +112,9 @@ class AccountIn(BaseModel):
 
 
 _ACCOUNT_PREFIX: dict[str, str] = {
-    "contribution": INVESTMENTS,  # Assets:Investments:
-    "deduction": DEDUCTIONS,  # Expenses:Deductions:
-    "category": EXPENSES,  # Expenses:
+    "contribution": INVESTMENTS,
+    "deduction": DEDUCTIONS,
+    "category": EXPENSES,
     "funding_credit": "Liabilities:CC:",
     "funding_cash": "Assets:Cash:",
 }
@@ -502,8 +502,6 @@ def post_layout(body: LayoutIn) -> dict:
 
 # Static frontend (the SvelteKit static-adapter build output) is mounted LAST so /api/*
 # routes always win. Absence is tolerated (e.g. before `npm run build` in apps/web/).
-# Resolved relative to this file: apps/api/src/yala/api.py -> repo root is parents[4],
-# and the web build lives at apps/web/build.
 _WEB_DIR = Path(__file__).resolve().parents[4] / "apps" / "web" / "build"
 if _WEB_DIR.is_dir():
     app.mount("/", StaticFiles(directory=_WEB_DIR, html=True), name="web")

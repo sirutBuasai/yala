@@ -19,7 +19,6 @@
 	}
 	let { locator, accounts, onsaved }: Props = $props();
 
-	let loaded = $state(false);
 	let date = $state('');
 	let payee = $state('');
 	let total = $state<number | null>(null);
@@ -34,7 +33,6 @@
 	// Prefill from the ledger entry addressed by `locator` (its `amount` is the total bill).
 	$effect(() => {
 		const l = locator;
-		loaded = false;
 		(async () => {
 			try {
 				const res = await fetch(`/api/transaction?locator=${encodeURIComponent(l)}`, {
@@ -56,7 +54,6 @@
 					account: x.account,
 					amount: x.amount
 				}));
-				loaded = true;
 			} catch (e) {
 				msg = 'API unreachable: ' + (e as Error).message;
 				err = true;
@@ -118,10 +115,6 @@
 	}
 </script>
 
-{#if !loaded && !err}
-	<p class="cap">Loading entry…</p>
-{/if}
-
 <div class="editrow">
 	<div class="field">
 		<label for="rc-date">Date</label><input id="rc-date" type="date" bind:value={date} />
@@ -182,17 +175,17 @@
 
 <style>
 	.editrow {
-		display: flex;
-		gap: 10px;
-		flex-wrap: wrap;
-		align-items: flex-end;
+		/* Fields wrap onto multiple rows, each staying wide enough for longer account names. */
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+		gap: 12px;
+		align-items: end;
 	}
 	.field {
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
-		min-width: 130px;
-		flex: 1;
+		min-width: 0;
 	}
 	.field label {
 		font-size: 11px;

@@ -40,7 +40,7 @@
     },
     "Domains": {
       "additionalProperties": false,
-      "description": "Which domains carry data flag.",
+      "description": "Which domains carry data.",
       "properties": {
         "spending": {
           "title": "Spending",

@@ -34,7 +34,7 @@
 		const s = step(v);
 		return s < 0 ? 'var(--inset)' : `var(--s${s + 1})`;
 	}
-	// Light text on the deep end of the ramp (ported from the mock's heatmap).
+	// Light text on the deep end of the ramp.
 	function fg(v: number): string {
 		const s = step(v);
 		const lightText = s < 0 ? dark : dark ? s <= 3 : s >= 3;

@@ -1,13 +1,9 @@
 """Core ledger access: load the beancount file once and expose shared, domain-agnostic primitives.
 
-:class:`Ledger` is the single object the rest of the backend uses to interact with the
-beancount data. Domain-specific questions live in their own modules and hang off the
-ledger as uniform query namespaces.
-
-Aggregation is plain Python over the loaded directives — deliberate at this scale (single
-currency, a few thousand txns, precomputed once by the builder). Domains that need beancount's
-inventory / cost-basis / price semantics (investments, net worth) may use beanquery internally
-behind the same interface.
+:class:`Ledger` is the single object the backend uses to reach beancount data; domain-specific
+queries live in their own modules and hang off it as uniform namespaces. Aggregation is plain
+Python over the loaded directives, though domains needing cost-basis/price semantics
+(investments, net worth) may use beanquery behind the same interface.
 """
 
 from __future__ import annotations

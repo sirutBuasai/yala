@@ -29,8 +29,7 @@ from yala.schema import (
     YearSpend,
 )
 
-# Shared contract lives in packages/contract. This file: apps/api/scripts/generate_schema.py,
-# so the repo root is parents[3].
+# The shared contract lives in packages/contract at the repo root.
 OUT = Path(__file__).resolve().parents[3] / "packages" / "contract"
 
 

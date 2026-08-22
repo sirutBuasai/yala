@@ -22,11 +22,11 @@
 
 	// Lifetime "where it all went": top categories (capped) + a distinct Saved slice.
 	const slices = $derived.by<Slice[]>(() => {
-		const s = categorySlices(data.overview.all_time_by_category);
 		const saved = lifetimeIncome - lifetimeSpent;
-		if (lifetimeIncome > 0 && saved > 0) {
-			s.push({ name: 'Saved', value: saved, color: 'var(--saved)' });
-		}
+		const savedShown = lifetimeIncome > 0 && saved > 0;
+		// Cap the donut at 10 total slices; the Saved slice counts, so leave room for it.
+		const s = categorySlices(data.overview.all_time_by_category, savedShown ? 9 : 10);
+		if (savedShown) s.push({ name: 'Saved', value: saved, color: 'var(--saved)' });
 		return s;
 	});
 
