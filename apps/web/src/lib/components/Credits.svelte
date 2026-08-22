@@ -7,6 +7,7 @@
 
 <script lang="ts">
 	import { formatAccount } from '$lib/format';
+	import Select from './Select.svelte';
 
 	interface Props {
 		credits: Credit[];
@@ -29,10 +30,15 @@
 	</div>
 	{#each credits as credit, i (i)}
 		<div class="linerow">
-			<select bind:value={credit.account}>
-				{#each creditAccounts as a (a)}<option value={a}>{formatAccount(a)}</option>{/each}
-			</select>
-			<input type="number" step="0.01" bind:value={credit.amount} placeholder="amount" />
+			<div class="grow">
+				<Select
+					ariaLabel="credit account"
+					bind:value={credit.account}
+					options={creditAccounts}
+					optionLabel={formatAccount}
+				/>
+			</div>
+			<input type="number" step="0.01" bind:value={credit.amount} placeholder="0" />
 			<button type="button" class="mini rm" onclick={() => remove(i)}>✕</button>
 		</div>
 	{/each}
@@ -55,11 +61,14 @@
 		gap: 8px;
 		margin-bottom: 6px;
 	}
-	.linerow select,
+	.grow {
+		flex: 1;
+		min-width: 0;
+	}
 	.linerow input {
 		flex: 1;
 		min-width: 0; /* shrink to fit the popup width; no horizontal scroll */
-		background: var(--inset);
+		background-color: var(--inset);
 		border: 1px solid var(--border);
 		color: var(--ink);
 		border-radius: 8px;

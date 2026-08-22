@@ -1,7 +1,11 @@
 <script lang="ts">
+	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data';
 	import { refreshAccounts } from '$lib/data';
 	import { formatAccount, money } from '$lib/format';
+	import { lastDepositAccount } from '$lib/editPrefs';
+	import Select from './Select.svelte';
+	import DatePicker from './DatePicker.svelte';
 
 	interface Props {
 		accounts: AccountsInfo;
@@ -21,9 +25,13 @@
 
 	// Seed the default deposit account once accounts are available (not at init, so a
 	// later-loading accounts list still populates it) — without clobbering a user's pick.
+	// Prefer the last deposit account used this session so repeated adds stay pre-selected.
 	$effect(() => {
 		if (!deposit_account && accounts.cash_accounts.length) {
-			deposit_account = accounts.cash_accounts[0];
+			const remembered = get(lastDepositAccount);
+			deposit_account = accounts.cash_accounts.includes(remembered)
+				? remembered
+				: accounts.cash_accounts[0];
 		}
 	});
 	let deductions = $state<LineRow[]>([]);
@@ -106,6 +114,7 @@
 			}
 			msg = data.message || 'saved';
 			err = false;
+			lastDepositAccount.set(deposit_account); // remember for the next add this session
 			gross = null;
 			deductions = [];
 			contributions = [];
@@ -119,21 +128,27 @@
 
 <div class="editrow">
 	<div class="field">
-		<label for="pc-date">Date</label><input id="pc-date" type="date" bind:value={date} />
+		<label for="pc-date">Date</label>
+		<DatePicker id="pc-date" ariaLabel="Date" bind:value={date} />
 	</div>
 	<div class="field">
 		<label for="pc-gross">Gross</label><input
 			id="pc-gross"
 			type="number"
 			step="0.01"
+			placeholder="0"
 			bind:value={gross}
 		/>
 	</div>
 	<div class="field">
 		<label for="pc-dep">Deposit account</label>
-		<select id="pc-dep" bind:value={deposit_account}>
-			{#each accounts.cash_accounts as a (a)}<option value={a}>{formatAccount(a)}</option>{/each}
-		</select>
+		<Select
+			id="pc-dep"
+			ariaLabel="Deposit account"
+			bind:value={deposit_account}
+			options={accounts.cash_accounts}
+			optionLabel={formatAccount}
+		/>
 	</div>
 	<div class="field">
 		<label for="pc-payee">Payee</label><input id="pc-payee" bind:value={payee} />
@@ -148,9 +163,13 @@
 		</div>
 		{#each deductions as row, i (i)}
 			<div class="linerow">
-				<select bind:value={row.leaf}>
-					{#each accounts.deduction_categories as c (c)}<option value={c}>{c}</option>{/each}
-				</select>
+				<div class="grow">
+					<Select
+						ariaLabel="deduction type"
+						bind:value={row.leaf}
+						options={accounts.deduction_categories}
+					/>
+				</div>
 				<input type="number" step="0.01" bind:value={row.amount} placeholder="0" />
 			</div>
 		{/each}
@@ -168,9 +187,13 @@
 		</div>
 		{#each contributions as row, i (i)}
 			<div class="linerow">
-				<select bind:value={row.leaf}>
-					{#each accounts.contribution_categories as c (c)}<option value={c}>{c}</option>{/each}
-				</select>
+				<div class="grow">
+					<Select
+						ariaLabel="contribution type"
+						bind:value={row.leaf}
+						options={accounts.contribution_categories}
+					/>
+				</div>
 				<input type="number" step="0.01" bind:value={row.amount} placeholder="0" />
 			</div>
 		{/each}
@@ -228,11 +251,14 @@
 		gap: 8px;
 		margin-bottom: 6px;
 	}
-	.linerow select,
+	.linerow .grow {
+		flex: 1;
+		min-width: 0;
+	}
 	.linerow input {
 		flex: 1;
 		min-width: 0; /* allow shrinking so the two columns never overflow the drawer */
-		background: var(--inset);
+		background-color: var(--inset);
 		border: 1px solid var(--border);
 		color: var(--ink);
 		border-radius: 8px;

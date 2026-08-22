@@ -17,10 +17,6 @@ export function showTip(html: string, e: MouseEvent): void {
 	tip.set({ html, x: e.clientX, y: e.clientY, visible: true });
 }
 
-export function moveTip(e: MouseEvent): void {
-	tip.update((t) => ({ ...t, x: e.clientX, y: e.clientY }));
-}
-
 export function hideTip(): void {
 	tip.update((t) => ({ ...t, visible: false }));
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { KpiTile } from '$lib/kpis';
 	import Kpi from './Kpi.svelte';
+	import Select from './Select.svelte';
 
 	interface Props {
 		title: string;
@@ -13,9 +14,14 @@
 
 <div class="yhead">
 	<h2 class="serif">{title}</h2>
-	<select class="sel" bind:value={year}>
-		{#each years as y (y)}<option value={y}>{y}</option>{/each}
-	</select>
+	<div class="yearsel">
+		<Select
+			ariaLabel="Year"
+			value={String(year)}
+			options={years.map(String)}
+			onchange={(v) => (year = Number(v))}
+		/>
+	</div>
 </div>
 
 <div class="kpis">
@@ -35,6 +41,9 @@
 		font-size: 22px;
 		font-weight: 600;
 		margin: 0;
+	}
+	.yearsel {
+		width: 110px;
 	}
 	.kpis {
 		display: grid;

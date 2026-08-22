@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { refreshAccounts } from '$lib/data';
+	import Select from './Select.svelte';
 
 	export interface CreatableKind {
 		value: 'category' | 'deduction' | 'contribution' | 'funding_credit' | 'funding_cash';
@@ -32,9 +33,11 @@
 	let adding = $state(false);
 	let leaf = $state('');
 	// Placeholder; open() sets the real default from `kinds` before the picker renders.
-	let kind = $state<CreatableKind['value']>('category');
+	let kind = $state<string>('category');
 	let err = $state('');
 	let busy = $state(false);
+
+	const kindLabel = (v: string) => kinds.find((k) => k.value === v)?.label ?? v;
 
 	function open() {
 		adding = true;
@@ -79,9 +82,14 @@
 	{#if adding}
 		<div class="addrow">
 			{#if kinds.length > 1}
-				<select aria-label="new account type" bind:value={kind}>
-					{#each kinds as k (k.value)}<option value={k.value}>{k.label}</option>{/each}
-				</select>
+				<div class="kindsel">
+					<Select
+						ariaLabel="new account type"
+						bind:value={kind}
+						options={kinds.map((k) => k.value)}
+						optionLabel={kindLabel}
+					/>
+				</div>
 			{/if}
 			<input
 				aria-label={`new ${label.toLowerCase()} name`}
@@ -97,9 +105,7 @@
 		{#if err}<span class="err">{err}</span>{/if}
 	{:else}
 		<div class="selrow">
-			<select {id} bind:value>
-				{#each options as a (a)}<option value={a}>{optionLabel(a)}</option>{/each}
-			</select>
+			<div class="grow"><Select {id} ariaLabel={label} bind:value {options} {optionLabel} /></div>
 			<button type="button" class="mini" onclick={open} title={`Add a new ${label.toLowerCase()}`}
 				>＋ new</button
 			>
@@ -127,11 +133,19 @@
 		gap: 6px;
 		align-items: center;
 	}
-	select,
+	.grow,
+	.kindsel {
+		flex: 1;
+		min-width: 0;
+	}
+	.kindsel {
+		flex: 0 0 auto;
+		min-width: 120px;
+	}
 	input {
 		flex: 1;
 		min-width: 0; /* shrink to fit the popup width; no horizontal scroll */
-		background: var(--inset);
+		background-color: var(--inset);
 		border: 1px solid var(--border);
 		color: var(--ink);
 		border-radius: 8px;

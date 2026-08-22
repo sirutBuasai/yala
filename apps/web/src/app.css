@@ -123,16 +123,62 @@ a {
 	margin: 0 0 14px;
 }
 
-select.sel,
-.field input,
-.field select {
-	background: var(--inset);
+/* --- form controls: themed to the site, replacing the native OS chrome --- */
+.field input {
+	background-color: var(--inset);
 	border: 1px solid var(--border);
 	color: var(--ink);
 	border-radius: 9px;
 	padding: 7px 12px;
 	font-size: 13px;
 	font-family: inherit;
+}
+
+/* Focus ring in the brand accent instead of the OS blue glow. */
+input:focus-visible {
+	outline: none;
+	border-color: var(--lav);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 30%, transparent);
+}
+
+/* Strip the up/down spinner arrows on number inputs. */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+input[type='number'] {
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+
+/* Custom checkbox: a rounded inset box that fills with the accent + a checkmark when on. */
+input[type='checkbox'] {
+	appearance: none;
+	-webkit-appearance: none;
+	width: 16px;
+	height: 16px;
+	margin: 0;
+	border: 1px solid var(--border);
+	border-radius: 5px;
+	background-color: var(--inset);
+	background-position: center;
+	background-repeat: no-repeat;
+	background-size: 12px;
+	cursor: pointer;
+	vertical-align: -3px;
+	transition:
+		background-color 0.12s ease,
+		border-color 0.12s ease;
+}
+input[type='checkbox']:checked {
+	background-color: var(--lav);
+	border-color: var(--lav);
+	background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='12'%20height='12'%20viewBox='0%200%2012%2012'%20fill='none'%20stroke='%231a1522'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M2.5%206.5%205%209l4.5-5.5'/%3E%3C/svg%3E");
+}
+input[type='checkbox']:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 35%, transparent);
 }
 
 /* --- SVG chart primitives --- */

@@ -4,6 +4,7 @@
 	import { formatAccount, money } from '$lib/format';
 	import AccountField from './AccountField.svelte';
 	import Credits, { type Credit } from './Credits.svelte';
+	import DatePicker from './DatePicker.svelte';
 
 	const leafOf = (a: string) => a.split(':').pop() ?? a;
 	const FUNDING_KINDS = [
@@ -117,7 +118,8 @@
 
 <div class="editrow">
 	<div class="field">
-		<label for="rc-date">Date</label><input id="rc-date" type="date" bind:value={date} />
+		<label for="rc-date">Date</label>
+		<DatePicker id="rc-date" ariaLabel="Date" bind:value={date} />
 	</div>
 	<div class="field">
 		<label for="rc-payee">Title</label><input id="rc-payee" bind:value={payee} />
@@ -127,6 +129,7 @@
 			id="rc-amt"
 			type="number"
 			step="0.01"
+			placeholder="0"
 			bind:value={total}
 		/>
 	</div>
@@ -155,22 +158,23 @@
 	<span class="share">Your share: <b>{money(yourShare)}</b></span>
 	<div class="right">
 		{#if msg}<span class="edit-msg" class:err>{msg}</span>{/if}
-		<button class="addbtn" onclick={save}>Save changes</button>
+		<div class="actions">
+			<button class="addbtn" onclick={save}>Save changes</button>
+			{#if confirmingDelete}
+				<div class="confirm">
+					<span class="confirm-q">Delete this transaction?</span>
+					<button type="button" class="del-confirm" onclick={del}>Yes, delete</button>
+					<button type="button" class="del-cancel" onclick={() => (confirmingDelete = false)}
+						>Cancel</button
+					>
+				</div>
+			{:else}
+				<button type="button" class="delbtn" onclick={() => (confirmingDelete = true)}
+					>Delete transaction</button
+				>
+			{/if}
+		</div>
 	</div>
-</div>
-
-<div class="danger">
-	{#if confirmingDelete}
-		<span class="confirm-q">Delete this transaction?</span>
-		<button type="button" class="del-confirm" onclick={del}>Yes, delete</button>
-		<button type="button" class="del-cancel" onclick={() => (confirmingDelete = false)}
-			>Cancel</button
-		>
-	{:else}
-		<button type="button" class="del" onclick={() => (confirmingDelete = true)}
-			>Delete transaction</button
-		>
-	{/if}
 </div>
 
 <style>
@@ -204,14 +208,21 @@
 	.mfoot {
 		display: flex;
 		justify-content: space-between;
-		align-items: center;
+		align-items: flex-start;
 		gap: 14px;
 		margin-top: 16px;
 	}
 	.right {
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		gap: 14px;
+	}
+	/* Save changes and Delete stack, so Delete sits directly beneath Save (same width). */
+	.actions {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 8px;
 	}
 	.share {
 		color: var(--ink-2);
@@ -227,6 +238,7 @@
 		border: 0;
 		border-radius: 9px;
 		padding: 9px 16px;
+		font-size: 12px;
 		font-weight: 700;
 		cursor: pointer;
 	}
@@ -240,37 +252,38 @@
 	.edit-msg.err {
 		color: var(--crit-text);
 	}
-	/* Destructive action, set apart from Save so it isn't fat-fingered. */
-	.danger {
+	/* Destructive action — identical size/weight/shape to Save (bold, explicit 12px),
+	   directly beneath it; only the color differs. */
+	.delbtn {
+		background: var(--crit);
+		color: #1a1522;
+		border: 0;
+		border-radius: 9px;
+		padding: 9px 16px;
+		font-size: 12px;
+		font-weight: 700;
+		cursor: pointer;
+	}
+	.delbtn:hover {
+		filter: brightness(1.08);
+	}
+	.confirm {
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		margin-top: 22px;
-		padding-top: 14px;
-		border-top: 1px solid var(--border);
+		justify-content: flex-end;
+		flex-wrap: wrap;
+		gap: 8px;
 	}
 	.confirm-q {
 		font-size: 12.5px;
 		color: var(--crit-text);
 	}
-	.del {
-		background: none;
-		border: 1px solid color-mix(in srgb, var(--crit) 45%, var(--border));
-		color: var(--crit-text);
-		border-radius: 8px;
-		padding: 6px 12px;
-		font-size: 12px;
-		cursor: pointer;
-	}
-	.del:hover {
-		background: color-mix(in srgb, var(--crit) 12%, transparent);
-	}
 	.del-confirm {
 		background: var(--crit);
 		color: #1a1522;
 		border: 0;
-		border-radius: 8px;
-		padding: 6px 12px;
+		border-radius: 9px;
+		padding: 9px 16px;
 		font-size: 12px;
 		font-weight: 700;
 		cursor: pointer;
@@ -279,8 +292,8 @@
 		background: none;
 		border: 1px solid var(--border);
 		color: var(--ink-2);
-		border-radius: 8px;
-		padding: 6px 12px;
+		border-radius: 9px;
+		padding: 9px 16px;
 		font-size: 12px;
 		cursor: pointer;
 	}

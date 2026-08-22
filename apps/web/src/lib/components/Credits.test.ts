@@ -8,10 +8,10 @@ const accts = ['Assets:Venmo', 'Liabilities:CC:CardA'];
 describe('Credits', () => {
 	it('starts with no rows and adds one on "+ credit"', async () => {
 		render(Credits, { props: { credits: [], creditAccounts: accts } });
-		expect(screen.queryByPlaceholderText('amount')).not.toBeInTheDocument();
+		expect(screen.queryByPlaceholderText('0')).not.toBeInTheDocument();
 
 		await fireEvent.click(screen.getByText('+ credit'));
-		expect(screen.getByPlaceholderText('amount')).toBeInTheDocument();
+		expect(screen.getByPlaceholderText('0')).toBeInTheDocument();
 	});
 
 	it('renders one row per existing credit and removes on ✕', async () => {
@@ -24,17 +24,18 @@ describe('Credits', () => {
 				creditAccounts: accts
 			}
 		});
-		expect(screen.getAllByPlaceholderText('amount')).toHaveLength(2);
+		expect(screen.getAllByPlaceholderText('0')).toHaveLength(2);
 
 		await fireEvent.click(screen.getAllByText('✕')[0]);
-		expect(screen.getAllByPlaceholderText('amount')).toHaveLength(1);
+		expect(screen.getAllByPlaceholderText('0')).toHaveLength(1);
 	});
 
-	it('formats account options with the leaf de-CamelCaser', () => {
+	it('formats account options with the leaf de-CamelCaser', async () => {
 		render(Credits, {
 			props: { credits: [{ account: 'Liabilities:CC:CardA', amount: 1 }], creditAccounts: accts }
 		});
-		// "Liabilities:CC:CardA" -> "Card A"
+		// open the custom Select; "Liabilities:CC:CardA" -> "Card A"
+		await fireEvent.click(screen.getByLabelText('credit account'));
 		expect(screen.getByRole('option', { name: 'Card A' })).toBeInTheDocument();
 	});
 });

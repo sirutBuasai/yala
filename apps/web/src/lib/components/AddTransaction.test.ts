@@ -1,7 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
+import { get } from 'svelte/store';
 import type { AccountsInfo } from '$lib/data';
+import { lastFundingAccount } from '$lib/editPrefs';
 import AddTransaction from './AddTransaction.svelte';
 
 const accounts: AccountsInfo = {
@@ -18,6 +20,7 @@ function okFetch(body: unknown = { ok: true, id: 'new-id' }) {
 	return vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => body });
 }
 
+beforeEach(() => lastFundingAccount.set('')); // isolate the session-sticky funding memory
 afterEach(() => vi.unstubAllGlobals());
 
 describe('AddTransaction', () => {
@@ -80,7 +83,9 @@ describe('AddTransaction', () => {
 
 		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '300' } });
 		await fireEvent.click(screen.getByText('+ credit'));
-		await fireEvent.input(screen.getByPlaceholderText('amount'), { target: { value: '200' } });
+		// Total bill and the credit amount now share the "0" placeholder; the credit row is last.
+		const amounts = screen.getAllByPlaceholderText('0');
+		await fireEvent.input(amounts[amounts.length - 1], { target: { value: '200' } });
 
 		// 300 total − 200 payback = $100 your share
 		expect(screen.getByText('$100')).toBeInTheDocument();
@@ -105,5 +110,23 @@ describe('AddTransaction', () => {
 		const accountCall = fetchSpy.mock.calls.find((c) => c[0] === '/api/account');
 		expect(accountCall).toBeTruthy();
 		expect(JSON.parse(accountCall![1].body)).toEqual({ kind: 'category', leaf: 'Gifts' });
+	});
+
+	it('remembers the chosen funding account for the next add this session', async () => {
+		vi.stubGlobal('fetch', okFetch());
+		const { unmount } = render(AddTransaction, { props: { accounts, onsaved: vi.fn() } });
+
+		// pick a non-default funding account via the custom Select, then submit
+		await fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'x' } });
+		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '5' } });
+		await fireEvent.click(screen.getByLabelText('Account')); // open the listbox
+		await fireEvent.click(screen.getByRole('option', { name: 'Bank A' })); // Assets:Cash:BankA
+		await fireEvent.click(screen.getByText('+ Add'));
+		await waitFor(() => expect(get(lastFundingAccount)).toBe('Assets:Cash:BankA'));
+		unmount();
+
+		// a fresh add form pre-selects the remembered account, not the first option
+		render(AddTransaction, { props: { accounts, onsaved: vi.fn() } });
+		expect(screen.getByLabelText('Account')).toHaveTextContent('Bank A');
 	});
 });

@@ -2,6 +2,8 @@
 	import type { AccountsInfo } from '$lib/data';
 	import { deleteTransaction, refreshAccounts } from '$lib/data';
 	import { formatAccount, money } from '$lib/format';
+	import Select from './Select.svelte';
+	import DatePicker from './DatePicker.svelte';
 
 	interface Props {
 		locator: string;
@@ -156,21 +158,27 @@
 
 <div class="editrow">
 	<div class="field">
-		<label for="rp-date">Date</label><input id="rp-date" type="date" bind:value={date} />
+		<label for="rp-date">Date</label>
+		<DatePicker id="rp-date" ariaLabel="Date" bind:value={date} />
 	</div>
 	<div class="field">
 		<label for="rp-gross">Gross</label><input
 			id="rp-gross"
 			type="number"
 			step="0.01"
+			placeholder="0"
 			bind:value={gross}
 		/>
 	</div>
 	<div class="field">
 		<label for="rp-dep">Deposit account</label>
-		<select id="rp-dep" bind:value={deposit_account}>
-			{#each accounts.cash_accounts as a (a)}<option value={a}>{formatAccount(a)}</option>{/each}
-		</select>
+		<Select
+			id="rp-dep"
+			ariaLabel="Deposit account"
+			bind:value={deposit_account}
+			options={accounts.cash_accounts}
+			optionLabel={formatAccount}
+		/>
 	</div>
 	<div class="field">
 		<label for="rp-payee">Payee</label><input id="rp-payee" bind:value={payee} />
@@ -185,9 +193,13 @@
 		</div>
 		{#each deductions as row, i (i)}
 			<div class="linerow">
-				<select bind:value={row.leaf}>
-					{#each accounts.deduction_categories as c (c)}<option value={c}>{c}</option>{/each}
-				</select>
+				<div class="grow">
+					<Select
+						ariaLabel="deduction type"
+						bind:value={row.leaf}
+						options={accounts.deduction_categories}
+					/>
+				</div>
 				<input type="number" step="0.01" bind:value={row.amount} placeholder="0" />
 				<button type="button" class="mini rm" onclick={() => removeDeduction(i)}>✕</button>
 			</div>
@@ -206,9 +218,13 @@
 		</div>
 		{#each contributions as row, i (i)}
 			<div class="linerow">
-				<select bind:value={row.leaf}>
-					{#each accounts.contribution_categories as c (c)}<option value={c}>{c}</option>{/each}
-				</select>
+				<div class="grow">
+					<Select
+						ariaLabel="contribution type"
+						bind:value={row.leaf}
+						options={accounts.contribution_categories}
+					/>
+				</div>
 				<input type="number" step="0.01" bind:value={row.amount} placeholder="0" />
 				<button type="button" class="mini rm" onclick={() => removeContribution(i)}>✕</button>
 			</div>
@@ -226,22 +242,23 @@
 	<span class="takehome">Take-home: <b>{money(takeHome)}</b></span>
 	<div class="right">
 		{#if msg}<span class="edit-msg" class:err>{msg}</span>{/if}
-		<button class="addbtn" onclick={save}>Save changes</button>
+		<div class="actions">
+			<button class="addbtn" onclick={save}>Save changes</button>
+			{#if confirmingDelete}
+				<div class="confirm">
+					<span class="confirm-q">Delete this paycheck?</span>
+					<button type="button" class="del-confirm" onclick={del}>Yes, delete</button>
+					<button type="button" class="del-cancel" onclick={() => (confirmingDelete = false)}
+						>Cancel</button
+					>
+				</div>
+			{:else}
+				<button type="button" class="delbtn" onclick={() => (confirmingDelete = true)}
+					>Delete paycheck</button
+				>
+			{/if}
+		</div>
 	</div>
-</div>
-
-<div class="danger">
-	{#if confirmingDelete}
-		<span class="confirm-q">Delete this paycheck?</span>
-		<button type="button" class="del-confirm" onclick={del}>Yes, delete</button>
-		<button type="button" class="del-cancel" onclick={() => (confirmingDelete = false)}
-			>Cancel</button
-		>
-	{:else}
-		<button type="button" class="del" onclick={() => (confirmingDelete = true)}
-			>Delete paycheck</button
-		>
-	{/if}
 </div>
 
 <style>
@@ -283,11 +300,14 @@
 		gap: 8px;
 		margin-bottom: 6px;
 	}
-	.linerow select,
+	.linerow .grow {
+		flex: 1;
+		min-width: 0;
+	}
 	.linerow input {
 		flex: 1;
 		min-width: 0; /* allow shrinking so the two columns never overflow the drawer */
-		background: var(--inset);
+		background-color: var(--inset);
 		border: 1px solid var(--border);
 		color: var(--ink);
 		border-radius: 8px;
@@ -338,14 +358,21 @@
 	.foot {
 		display: flex;
 		justify-content: space-between;
-		align-items: center;
+		align-items: flex-start;
 		margin-top: 14px;
 		gap: 14px;
 	}
 	.right {
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		gap: 14px;
+	}
+	/* Save changes and Delete stack, so Delete sits directly beneath Save (same width). */
+	.actions {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 8px;
 	}
 	.takehome {
 		color: var(--ink-2);
@@ -361,6 +388,7 @@
 		border: 0;
 		border-radius: 9px;
 		padding: 9px 16px;
+		font-size: 12px;
 		font-weight: 700;
 		cursor: pointer;
 	}
@@ -374,36 +402,38 @@
 	.edit-msg.err {
 		color: var(--crit-text);
 	}
-	.danger {
+	/* Destructive action — identical size/weight/shape to Save (bold, explicit 12px),
+	   directly beneath it; only the color differs. */
+	.delbtn {
+		background: var(--crit);
+		color: #1a1522;
+		border: 0;
+		border-radius: 9px;
+		padding: 9px 16px;
+		font-size: 12px;
+		font-weight: 700;
+		cursor: pointer;
+	}
+	.delbtn:hover {
+		filter: brightness(1.08);
+	}
+	.confirm {
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		margin-top: 22px;
-		padding-top: 14px;
-		border-top: 1px solid var(--border);
+		justify-content: flex-end;
+		flex-wrap: wrap;
+		gap: 8px;
 	}
 	.confirm-q {
 		font-size: 12.5px;
 		color: var(--crit-text);
 	}
-	.del {
-		background: none;
-		border: 1px solid color-mix(in srgb, var(--crit) 45%, var(--border));
-		color: var(--crit-text);
-		border-radius: 8px;
-		padding: 6px 12px;
-		font-size: 12px;
-		cursor: pointer;
-	}
-	.del:hover {
-		background: color-mix(in srgb, var(--crit) 12%, transparent);
-	}
 	.del-confirm {
 		background: var(--crit);
 		color: #1a1522;
 		border: 0;
-		border-radius: 8px;
-		padding: 6px 12px;
+		border-radius: 9px;
+		padding: 9px 16px;
 		font-size: 12px;
 		font-weight: 700;
 		cursor: pointer;
@@ -412,8 +442,8 @@
 		background: none;
 		border: 1px solid var(--border);
 		color: var(--ink-2);
-		border-radius: 8px;
-		padding: 6px 12px;
+		border-radius: 9px;
+		padding: 9px 16px;
 		font-size: 12px;
 		cursor: pointer;
 	}

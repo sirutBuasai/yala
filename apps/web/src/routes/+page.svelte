@@ -25,10 +25,39 @@
 
 	const edit = $derived($mode === 'edit');
 
+	// Persist the current view (tab + selected year/month) so a refresh returns you to it.
+	const VIEW_KEY = 'yala-view';
+	let restored = false;
+
 	onMount(async () => {
+		try {
+			const raw = localStorage.getItem(VIEW_KEY);
+			if (raw) {
+				const s = JSON.parse(raw);
+				if (s.tab === 'overview' || s.tab === 'yearly' || s.tab === 'monthly') tab = s.tab;
+				if (typeof s.year === 'number') year = s.year;
+				if (typeof s.monthKey === 'string') monthKey = s.monthKey;
+			}
+		} catch {
+			/* corrupt/unavailable storage — fall back to defaults */
+		}
+		restored = true;
+
 		// Prefer edit mode when the local API is reachable; otherwise fall back to the
 		// read-only static snapshot (view mode).
 		if (!(await enableEditMode())) await loadViewData();
+	});
+
+	// Save on any change (after the initial restore). Reads the deps before the guard so the
+	// effect stays subscribed to tab/year/monthKey.
+	$effect(() => {
+		const snapshot = JSON.stringify({ tab, year, monthKey });
+		if (!restored) return;
+		try {
+			localStorage.setItem(VIEW_KEY, snapshot);
+		} catch {
+			/* storage unavailable — persistence is best-effort */
+		}
 	});
 
 	// Default scope selectors to the newest available year / month.

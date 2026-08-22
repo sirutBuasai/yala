@@ -15,6 +15,7 @@
 	import PendingList from './PendingList.svelte';
 	import ReconcileEditor from './ReconcileEditor.svelte';
 	import ReconcilePaycheck from './ReconcilePaycheck.svelte';
+	import Select from './Select.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -63,9 +64,9 @@
 
 <div class="mhead">
 	<h2 class="serif">Monthly</h2>
-	<select class="sel" bind:value={monthKey}>
-		{#each months as k (k)}<option value={k}>{monthLabel(k)}</option>{/each}
-	</select>
+	<div class="monthsel">
+		<Select ariaLabel="Month" bind:value={monthKey} options={months} optionLabel={monthLabel} />
+	</div>
 </div>
 
 <div class="kpis">
@@ -156,6 +157,9 @@
 		font-size: 22px;
 		font-weight: 600;
 		margin: 0;
+	}
+	.monthsel {
+		width: 160px;
 	}
 	.kpis {
 		display: grid;

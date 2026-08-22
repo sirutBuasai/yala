@@ -1,8 +1,11 @@
 <script lang="ts">
+	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data';
 	import { formatAccount, money } from '$lib/format';
+	import { lastFundingAccount } from '$lib/editPrefs';
 	import AccountField from './AccountField.svelte';
 	import Credits, { type Credit } from './Credits.svelte';
+	import DatePicker from './DatePicker.svelte';
 
 	const leafOf = (a: string) => a.split(':').pop() ?? a;
 	const FUNDING_KINDS = [
@@ -27,9 +30,16 @@
 
 	// Seed the selects from the account lists once available (in $effect so a
 	// later-loading list still populates them) without clobbering the user's pick.
+	// Funding defaults to the last account used this session (if still valid), so
+	// repeated adds keep the same payment method pre-selected.
 	$effect(() => {
 		if (!category) category = accounts.spending_categories[0] ?? '';
-		if (!funding_account) funding_account = accounts.funding_accounts[0] ?? '';
+		if (!funding_account) {
+			const remembered = get(lastFundingAccount);
+			funding_account = accounts.funding_accounts.includes(remembered)
+				? remembered
+				: (accounts.funding_accounts[0] ?? '');
+		}
 	});
 
 	// Your share = total bill − everything paid back / credited on the credits.
@@ -68,6 +78,7 @@
 				err = true;
 				return;
 			}
+			lastFundingAccount.set(funding_account); // remember for the next add this session
 			onsaved();
 		} catch (e) {
 			msg = 'API unreachable: ' + (e as Error).message;
@@ -78,7 +89,8 @@
 
 <div class="editrow">
 	<div class="field">
-		<label for="tx-date">Date</label><input id="tx-date" type="date" bind:value={date} />
+		<label for="tx-date">Date</label>
+		<DatePicker id="tx-date" ariaLabel="Date" bind:value={date} />
 	</div>
 	<div class="field">
 		<label for="tx-payee">Title</label><input
@@ -92,6 +104,7 @@
 			id="tx-amt"
 			type="number"
 			step="0.01"
+			placeholder="0"
 			bind:value={total}
 		/>
 	</div>
