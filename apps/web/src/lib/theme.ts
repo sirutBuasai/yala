@@ -21,7 +21,7 @@ export const CATEGORY_TOKEN: Record<string, string> = {
 	Health: 'cat-health',
 	Recreation: 'cat-recreation',
 	Subscription: 'cat-subscription',
-	Other: 'cat-other'
+	Misc: 'cat-misc'
 };
 
 /** CSS variable reference for a category's accent color. */

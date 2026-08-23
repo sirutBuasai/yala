@@ -24,8 +24,7 @@
 	/* Dark ink for text/icons sitting on a bright accent fill (primary button, donut labels).
 	   Shared across themes since the accent fills don't change between light and dark. */
 	--on-accent: #1a1522;
-	/* Reserved color for the synthetic "Saved" slice/series so it never collides with a
-	   spending category. Shared across themes like the other data colors. */
+	/* Reserved color for the synthetic "Saved" slice/series so it never collides with a spending category. */
 	--saved: #9ece69;
 	/* Category palette. */
 	--cat-housing: #f7768e;
@@ -38,7 +37,7 @@
 	--cat-health: #2bb673;
 	--cat-recreation: #4cc9b0;
 	--cat-subscription: #ffd5d2;
-	--cat-other: #6f6c5c;
+	--cat-misc: #c0794f;
 	--good-text: #9ece6a;
 	--crit-text: #e46876;
 	--gold-text: #e0af68;

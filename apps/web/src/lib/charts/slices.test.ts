@@ -16,28 +16,28 @@ describe('categorySlices', () => {
 		const items = Array.from({ length: 10 }, (_, i) => ({ category: `C${i}`, amount: 100 - i }));
 		const slices = categorySlices(items); // default limit 10
 		expect(slices).toHaveLength(10);
-		expect(slices.some((s) => s.name === 'etc.')).toBe(false);
+		expect(slices.some((s) => s.name === 'Other')).toBe(false);
 	});
 
-	it('caps at the limit, folding overflow into a combined "etc." slice', () => {
-		// 12 categories, default limit 10 -> 9 named + 1 "etc."
+	it('caps at the limit, folding overflow into a combined "Other" slice', () => {
+		// 12 categories, default limit 10 -> 9 named + 1 "Other"
 		const items = Array.from({ length: 12 }, (_, i) => ({ category: `C${i}`, amount: 100 - i }));
 		const slices = categorySlices(items);
 		expect(slices).toHaveLength(10);
-		const etc = slices[slices.length - 1];
-		expect(etc.name).toBe('etc.');
-		expect(etc.color).toBe('var(--ink-3)');
+		const rest = slices[slices.length - 1];
+		expect(rest.name).toBe('Other');
+		expect(rest.color).toBe('var(--ink-3)');
 		// combined value = ranks 10..12 (amounts for C9, C10, C11 = 91 + 90 + 89)
-		expect(etc.value).toBe(91 + 90 + 89);
+		expect(rest.value).toBe(91 + 90 + 89);
 		// the 9 named slices are the top 9 by amount
-		expect(slices.slice(0, 9).every((s) => s.name !== 'etc.')).toBe(true);
+		expect(slices.slice(0, 9).every((s) => s.name !== 'Other')).toBe(true);
 	});
 
 	it('honors a custom limit', () => {
 		const items = Array.from({ length: 9 }, (_, i) => ({ category: `C${i}`, amount: 100 - i }));
-		const slices = categorySlices(items, 6); // 5 named + etc.
+		const slices = categorySlices(items, 6); // 5 named + Other
 		expect(slices).toHaveLength(6);
-		expect(slices[slices.length - 1].name).toBe('etc.');
+		expect(slices[slices.length - 1].name).toBe('Other');
 		// remainder = ranks 6..9 (amounts 95 + 94 + 93 + 92)
 		expect(slices[slices.length - 1].value).toBe(95 + 94 + 93 + 92);
 	});

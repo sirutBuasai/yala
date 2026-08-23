@@ -12,8 +12,8 @@ describe('categoryVar', () => {
 		expect(categoryVar('Nonsense')).toBe('var(--lav)');
 	});
 
-	it('has an Other token', () => {
-		expect(CATEGORY_TOKEN.Other).toBe('cat-other');
+	it('has a Misc token', () => {
+		expect(CATEGORY_TOKEN.Misc).toBe('cat-misc');
 	});
 });
 
