@@ -50,7 +50,132 @@
 	--s5: #957fdc;
 	--s6: #bb9af7;
 	--shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 14px 34px -18px rgba(0, 0, 0, 0.7);
-	--radius: 16px;
+
+	/* ══════════════════════════════════════════════════════════════════════════
+	   DESIGN TOKENS
+	   Two tiers: PRIMITIVES (a rationalized numeric scale — the raw allowed values)
+	   and SEMANTIC ALIASES (named by role + data importance). Components only ever
+	   reference the semantic aliases, never a raw px value. Two roles that happen to
+	   share a size (e.g. a subtitle and a column title at 12px) each get their own
+	   alias, so the intent stays explicit and either can move independently later.
+	   ══════════════════════════════════════════════════════════════════════════ */
+
+	/* ── Font family ──────────────────────────────────────────────────────────
+	   Two families, one trend: a fancy serif for titles, a modern sans for
+	   everything else. `--font-display` is applied via the .serif class on
+	   titles/brand/stat value; `--font-body` is the document default. */
+	--font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+	--font-sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--font-display: var(--font-serif); /* titles, brand, panel titles, stat value */
+	--font-body: var(--font-sans); /* body, controls, labels, lists, tables, meta */
+
+	/* ── Font-size primitives ─────────────────────────────────────────────────
+	   Collapses the old 18 ad-hoc sizes (9→27px, with 10/10.5, 11/11.5, 12/12.5/13,
+	   15/15.5 near-duplicates) down to a coherent 10-step ramp. */
+	--fs-100: 10px;
+	--fs-200: 11px;
+	--fs-300: 12px;
+	--fs-400: 13px;
+	--fs-500: 14px;
+	--fs-600: 16px;
+	--fs-700: 18px;
+	--fs-800: 22px;
+	--fs-900: 26px;
+	--fs-1000: 28px;
+
+	/* ── Font-size semantic aliases (by data importance) ──────────────────────
+	   HERO / TITLES — the loudest type, one clear step apart. */
+	--text-display: var(--fs-1000); /* hero stat number (StatTile value) */
+	--text-brand: var(--fs-900); /* app wordmark "Yala" */
+	--text-title: var(--fs-800); /* per-view / section title (ViewHeader) */
+	--text-dialog: var(--fs-700); /* modal, sidebar & overlay titles */
+	--text-panel: var(--fs-600); /* sub-panel titles (edit panel, day panel, card h2) */
+	--text-amount: var(--fs-600); /* emphasized inline amount (take-home, your-share) */
+	/* BODY / CONTROLS — the reading + interaction layer. */
+	--text-body: var(--fs-500); /* default body copy */
+	--text-control: var(--fs-400); /* inputs, selects, buttons, table base */
+	--text-row: var(--fs-400); /* list-row primary text (payee) + trailing amount */
+	--text-subtitle: var(--fs-300); /* view subtitle ("Lifetime · 2020–2025") */
+	--text-secondary: var(--fs-300); /* secondary body: stat delta, empty-state notes */
+	/* META / LABELS — supporting text; several share 11px but read as distinct roles. */
+	--text-caption: var(--fs-200); /* figure-column labels, helper text */
+	--text-label: var(--fs-200); /* UPPERCASE form field label */
+	--text-column: var(--fs-200); /* table header / column title */
+	--text-axis: var(--fs-200); /* chart axis ticks + group labels */
+	--text-meta: var(--fs-200); /* row dates, secondary chart labels */
+	--text-badge: var(--fs-100); /* pending badge, tiny category tag */
+	--text-micro: var(--fs-100); /* in-chart value labels, calendar day amounts, "+N" */
+
+	/* ── Font weight ──────────────────────────────────────────────────────────
+	   Was an ad-hoc {500, 600, 700}; named by role. */
+	--fw-regular: 400;
+	--fw-medium: 500; /* tab labels, nav items, row payee, sankey node label */
+	--fw-semibold: 600; /* titles, values, table headers */
+	--fw-bold: 700; /* primary/danger buttons, selected states */
+
+	/* ── Letter spacing ──────────────────────────────────────────────────────
+	   Was -0.5/-0.3/-0.2/0.5/0.6/0.9px; snapped to a 5-step set. */
+	--ls-tighter: -0.5px; /* hero stat number */
+	--ls-tight: -0.3px; /* large headings (brand, sidebar title) */
+	--ls-snug: -0.2px; /* card / panel titles */
+	--ls-wide: 0.6px; /* uppercase field labels + table headers */
+	--ls-wider: 0.9px; /* small-caps section labels */
+
+	/* ── Line height ──────────────────────────────────────────────────────────*/
+	--lh-tight: 1.2; /* headings / numbers */
+	--lh-body: 1.45; /* body copy */
+	--lh-relaxed: 1.5; /* tooltips */
+
+	/* ── Spacing primitives ───────────────────────────────────────────────────
+	   Collapses the old 1..22px gap zoo onto a coherent ramp. */
+	--space-1: 2px;
+	--space-2: 4px;
+	--space-3: 6px;
+	--space-4: 8px;
+	--space-5: 10px;
+	--space-6: 12px;
+	--space-7: 14px;
+	--space-8: 16px;
+	--space-9: 18px;
+	--space-10: 20px;
+	--space-11: 24px;
+
+	/* ── Spacing semantic aliases (gaps) ──────────────────────────────────────*/
+	--gap-inline: var(--space-3); /* 6px — chips, dots, button pairs, inline clusters */
+	--gap-row: var(--space-4); /* 8px — row internals, selectors, toggle groups */
+	--gap-field: var(--space-6); /* 12px — form field rows */
+	--gap-grid: var(--space-7); /* 14px — pane / board / dashboard grid, view header */
+	--gap-section: var(--space-9); /* 18px — control sections, two-column form blocks */
+
+	/* ── Padding semantic aliases (compound) ──────────────────────────────────
+	   Standardizes the ~30 one-off paddings into a handful of reusable pairs.
+	   Card padding is split so its horizontal half doubles as the bleed anchor:
+	   --pad-card-x is BOTH the card's h-padding AND the offset a full-width child
+	   pulls out by (see .bleed-x) to run its hover edge-to-edge. Anything keyed to
+	   it — the card, the list rows, their dividers — moves together and can't drift. */
+	--pad-card-y: var(--space-9); /* 18 — card v-padding */
+	--pad-card-x: var(--space-10); /* 20 — card h-padding + edge-to-edge bleed offset */
+	--pad-card: var(--pad-card-y) var(--pad-card-x); /* 18×20 — cards / panels */
+	--pad-control: var(--space-4) var(--space-6); /* 8×12 — inputs, selects, triggers */
+	--pad-btn: var(--space-4) var(--space-8); /* 8×16 — primary / danger buttons */
+	--pad-btn-sm: var(--space-2) var(--space-3); /* 4×6 — mini inline buttons */
+	--pad-pill: var(--space-4) var(--space-7); /* 8×14 — pill toggles */
+	--pad-cell: var(--space-4); /* 8 — calendar / table cells */
+	--pad-listrow: var(--space-4) var(--pad-card-x); /* 8×20 — list rows, inset to the card edge */
+
+	/* ── Radius ───────────────────────────────────────────────────────────────
+	   Collapses 3/5/6/7/8/9/10/12/16px into 5 steps + a pill. */
+	--radius-xs: 3px; /* color swatches */
+	--radius-sm: 6px; /* chips, tags, mini buttons */
+	--radius-md: 9px; /* inputs, buttons, triggers */
+	--radius-lg: 12px; /* popups, day cells */
+	--radius-xl: 16px; /* cards / panes */
+	--radius-pill: 999px; /* pills, round nav buttons, dots */
+	/* Back-compat alias: existing markup references var(--radius) for the card radius. */
+	--radius: var(--radius-xl);
+
+	/* ── Elevation ────────────────────────────────────────────────────────────*/
+	--shadow-pop: 0 10px 30px -10px #000; /* tooltips / popovers */
 }
 :root[data-theme='light'] {
 	/* Light mode overrides ONLY the neutral chrome (backgrounds, text, borders). */
@@ -84,18 +209,13 @@ body {
 	margin: 0;
 	background: var(--bg);
 	color: var(--ink);
-	font-family:
-		ui-sans-serif,
-		-apple-system,
-		'Segoe UI',
-		Roboto,
-		sans-serif;
-	font-size: 14px;
-	line-height: 1.45;
+	font-family: var(--font-body);
+	font-size: var(--text-body);
+	line-height: var(--lh-body);
 	-webkit-font-smoothing: antialiased;
 }
 .serif {
-	font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+	font-family: var(--font-display);
 }
 a {
 	color: inherit;
@@ -117,20 +237,29 @@ a {
 .card {
 	background: var(--surface);
 	border: 1px solid var(--border);
-	border-radius: var(--radius);
-	padding: 18px 20px;
+	border-radius: var(--radius-xl);
+	padding: var(--pad-card);
 	box-shadow: var(--shadow);
 }
 .card h2 {
-	font-size: 15.5px;
-	font-weight: 600;
-	margin: 0 0 2px;
-	letter-spacing: -0.2px;
+	font-size: var(--text-panel);
+	font-weight: var(--fw-semibold);
+	margin: 0 0 var(--space-1);
+	letter-spacing: var(--ls-snug);
 }
 .card .cap {
 	color: var(--ink-3);
-	font-size: 12px;
-	margin: 0 0 14px;
+	font-size: var(--text-secondary);
+	margin: 0 0 var(--space-7);
+}
+
+/* Reusable edge-to-edge bleed. A child of a .card (or any box padded by --pad-card-x)
+   pulls out to the box's horizontal edges, so its own hover/background runs edge-to-edge.
+   The child's rows restore the content inset with their own --pad-card-x padding, and any
+   inset divider references the same token — so hover bleeds while content + rules stay
+   aligned to the card. Used by the transaction / paycheck lists. */
+.bleed-x {
+	margin-inline: calc(-1 * var(--pad-card-x));
 }
 
 /* --- form controls: themed to the site, replacing the native OS chrome --- */
@@ -138,9 +267,9 @@ a {
 	background-color: var(--inset);
 	border: 1px solid var(--border);
 	color: var(--ink);
-	border-radius: 9px;
-	padding: 7px 12px;
-	font-size: 13px;
+	border-radius: var(--radius-md);
+	padding: var(--pad-control);
+	font-size: var(--text-control);
 	font-family: inherit;
 }
 
@@ -170,7 +299,7 @@ input[type='checkbox'] {
 	height: 16px;
 	margin: 0;
 	border: 1px solid var(--border);
-	border-radius: 5px;
+	border-radius: var(--radius-sm);
 	background-color: var(--inset);
 	background-position: center;
 	background-repeat: no-repeat;
@@ -195,10 +324,10 @@ input[type='checkbox']:focus-visible {
 .btn-primary,
 .btn-danger {
 	border: 0;
-	border-radius: 9px;
-	padding: 9px 16px;
-	font-size: 13px;
-	font-weight: 700;
+	border-radius: var(--radius-md);
+	padding: var(--pad-btn);
+	font-size: var(--text-control);
+	font-weight: var(--fw-bold);
 	color: var(--on-accent);
 	cursor: pointer;
 }
@@ -216,18 +345,18 @@ input[type='checkbox']:focus-visible {
 	background: var(--inset);
 	border: 1px solid var(--border);
 	color: var(--ink-2);
-	border-radius: 9px;
-	padding: 7px 14px;
-	font-size: 12.5px;
+	border-radius: var(--radius-md);
+	padding: var(--pad-control);
+	font-size: var(--text-control);
 	cursor: pointer;
 }
 .btn-cancel {
 	background: none;
 	border: 1px solid var(--border);
 	color: var(--ink-2);
-	border-radius: 9px;
-	padding: 9px 16px;
-	font-size: 12px;
+	border-radius: var(--radius-md);
+	padding: var(--pad-btn);
+	font-size: var(--text-control);
 	cursor: pointer;
 }
 .btn-ghost:hover,
@@ -240,9 +369,9 @@ input[type='checkbox']:focus-visible {
 	background: none;
 	border: 1px solid var(--border);
 	color: var(--ink-2);
-	border-radius: 7px;
-	padding: 4px 9px;
-	font-size: 11.5px;
+	border-radius: var(--radius-sm);
+	padding: var(--pad-btn-sm);
+	font-size: var(--text-caption);
 	cursor: pointer;
 	white-space: nowrap;
 }
@@ -255,9 +384,9 @@ input[type='checkbox']:focus-visible {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	padding: 2px;
+	padding: var(--space-1);
 	border: 0;
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	background: none;
 	color: var(--ink-3);
 	cursor: pointer;
@@ -275,8 +404,8 @@ input[type='checkbox']:focus-visible {
    for a pair of side-by-side panes that share the taller one's height */
 .panes {
 	display: grid;
-	gap: 14px;
-	margin-bottom: 14px;
+	gap: var(--gap-grid);
+	margin-bottom: var(--gap-grid);
 }
 .panes.two {
 	grid-template-columns: 1fr 1fr;
@@ -295,11 +424,11 @@ input[type='checkbox']:focus-visible {
 	background: var(--surface);
 	border: 1px solid var(--border);
 	color: var(--ink-2);
-	border-radius: 999px;
+	border-radius: var(--radius-pill);
 	width: 32px;
 	height: 32px;
 	padding: 0;
-	font-size: 18px;
+	font-size: var(--text-dialog);
 	line-height: 1;
 	cursor: pointer;
 	box-shadow: var(--shadow);
@@ -313,9 +442,9 @@ input[type='checkbox']:focus-visible {
 	border: 1px solid var(--border);
 	background: var(--surface);
 	color: var(--ink-2);
-	border-radius: 999px;
-	padding: 8px 14px;
-	font-size: 12.5px;
+	border-radius: var(--radius-pill);
+	padding: var(--pad-pill);
+	font-size: var(--text-subtitle);
 	cursor: pointer;
 	box-shadow: var(--shadow);
 }
@@ -333,18 +462,18 @@ input[type='checkbox']:focus-visible {
 .field {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--space-2);
 	min-width: 0;
 	flex: 1;
 }
 .field label {
-	font-size: 11px;
+	font-size: var(--text-label);
 	color: var(--ink-3);
 	text-transform: uppercase;
-	letter-spacing: 0.6px;
+	letter-spacing: var(--ls-wide);
 }
 .edit-msg {
-	font-size: 12px;
+	font-size: var(--text-secondary);
 	color: var(--good-text);
 }
 .edit-msg.err {
@@ -356,14 +485,14 @@ input[type='checkbox']:focus-visible {
 	display: inline-flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 8px;
+	gap: var(--gap-row);
 	width: 100%;
 	background-color: var(--inset);
 	border: 1px solid var(--border);
 	color: var(--ink);
-	border-radius: 9px;
-	padding: 7px 12px;
-	font-size: 13px;
+	border-radius: var(--radius-md);
+	padding: var(--pad-control);
+	font-size: var(--text-control);
 	font-family: inherit;
 	cursor: pointer;
 	text-align: left;
@@ -390,16 +519,16 @@ svg.chart {
 }
 .chart .axis text {
 	fill: var(--ink-3);
-	font-size: 11px;
+	font-size: var(--text-axis);
 }
 .chart .glabel {
 	fill: var(--ink-2);
-	font-size: 11.5px;
+	font-size: var(--text-axis);
 }
 .chart .vlabel {
 	fill: var(--ink);
-	font-size: 11.5px;
-	font-weight: 600;
+	font-size: var(--text-axis);
+	font-weight: var(--fw-semibold);
 }
 .chart .gridline {
 	stroke: var(--grid);
@@ -407,22 +536,22 @@ svg.chart {
 }
 .legend {
 	display: flex;
-	gap: 16px;
+	gap: var(--space-8);
 	align-items: center;
-	font-size: 12px;
+	font-size: var(--text-caption);
 	color: var(--ink-2);
-	margin-bottom: 6px;
+	margin-bottom: var(--space-3);
 	flex-wrap: wrap;
 }
 .legend .k {
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	gap: var(--gap-inline);
 }
 .legend .sw {
 	width: 11px;
 	height: 11px;
-	border-radius: 3px;
+	border-radius: var(--radius-xs);
 }
 .tooltip {
 	position: fixed;
@@ -431,11 +560,11 @@ svg.chart {
 	background: #0e0e16;
 	border: 1px solid var(--border);
 	color: var(--ink);
-	padding: 8px 11px;
-	border-radius: 9px;
-	font-size: 12px;
-	line-height: 1.5;
-	box-shadow: 0 10px 30px -10px #000;
+	padding: var(--space-4) var(--space-6);
+	border-radius: var(--radius-md);
+	font-size: var(--text-caption);
+	line-height: var(--lh-relaxed);
+	box-shadow: var(--shadow-pop);
 	white-space: nowrap;
 }
 .tooltip b {
@@ -454,10 +583,10 @@ svg.chart {
 	background: color-mix(in srgb, var(--warn) 14%, transparent);
 	border: 1px solid var(--border);
 	color: var(--ink-2);
-	border-radius: 12px;
-	padding: 12px 16px;
-	margin-bottom: 16px;
-	font-size: 13px;
+	border-radius: var(--radius-lg);
+	padding: var(--space-6) var(--space-8);
+	margin-bottom: var(--space-8);
+	font-size: var(--text-control);
 }
 .banner code {
 	color: var(--ink);

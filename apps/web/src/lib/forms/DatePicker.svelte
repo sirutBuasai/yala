@@ -8,8 +8,8 @@
 	// "YYYY-MM-DD" string (empty = unset). Keyboard: arrows move the day, Enter selects, Esc closes.
 	import { untrack } from 'svelte';
 	import { MONTHS } from '$lib/utils/format';
-	import Popup from '$lib/ui/Popup.svelte';
-	import Chevron from '$lib/ui/Chevron.svelte';
+	import Popup from '$lib/ui/overlay/Popup.svelte';
+	import Chevron from '$lib/ui/nav/Chevron.svelte';
 
 	interface Props {
 		/** ISO date "YYYY-MM-DD" or '' (bindable). */
@@ -200,21 +200,21 @@
 	}
 	.cal-pop {
 		width: 248px;
-		padding: 12px;
+		padding: var(--space-6);
 		background: var(--surface-2);
 		border: 1px solid var(--border);
-		border-radius: 12px;
+		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow);
 	}
 	.cal-head {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		margin-bottom: 8px;
+		margin-bottom: var(--gap-row);
 	}
 	.mlabel {
-		font-size: 13px;
-		font-weight: 600;
+		font-size: var(--text-control);
+		font-weight: var(--fw-semibold);
 		color: var(--ink);
 	}
 	.nav {
@@ -224,12 +224,12 @@
 		background: none;
 		border: 1px solid var(--border);
 		color: var(--ink-2);
-		border-radius: 7px;
+		border-radius: var(--radius-sm);
 		width: 26px;
 		height: 26px;
 		padding: 0;
 		cursor: pointer;
-		font-size: 15px;
+		font-size: var(--text-panel);
 		line-height: 1;
 	}
 	.nav:hover {
@@ -240,13 +240,13 @@
 	.days {
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
-		gap: 2px;
+		gap: var(--space-1);
 	}
 	.dow span {
 		text-align: center;
-		font-size: 10.5px;
+		font-size: var(--text-meta);
 		color: var(--ink-3);
-		padding: 2px 0;
+		padding: var(--space-1) 0;
 	}
 	.day {
 		aspect-ratio: 1;
@@ -255,9 +255,9 @@
 		justify-content: center;
 		background: none;
 		border: 0;
-		border-radius: 7px;
+		border-radius: var(--radius-sm);
 		color: var(--ink);
-		font-size: 12.5px;
+		font-size: var(--text-secondary);
 		font-family: inherit;
 		cursor: pointer;
 	}
@@ -270,11 +270,11 @@
 	.day.sel {
 		background: var(--lav);
 		color: var(--on-accent);
-		font-weight: 700;
+		font-weight: var(--fw-bold);
 	}
 	.cal-foot {
 		display: flex;
 		justify-content: space-between;
-		margin-top: 10px;
+		margin-top: var(--space-5);
 	}
 </style>

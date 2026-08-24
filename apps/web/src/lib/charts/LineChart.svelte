@@ -119,8 +119,12 @@
 
 		{#each labels as lb, i (lb)}
 			{#if i % stride === 0 || i === n - 1}
-				<text x={xPos(i)} y={ih + 20} text-anchor="middle" fill="var(--ink-3)" font-size="11"
-					>{lb}</text
+				<text
+					x={xPos(i)}
+					y={ih + 20}
+					text-anchor="middle"
+					fill="var(--ink-3)"
+					style="font-size: var(--text-axis)">{lb}</text
 				>
 			{/if}
 		{/each}

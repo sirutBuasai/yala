@@ -26,6 +26,6 @@
 
 <style>
 	.legs {
-		margin-top: 10px;
+		margin-top: var(--space-5);
 	}
 </style>

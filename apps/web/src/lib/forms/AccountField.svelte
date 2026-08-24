@@ -113,7 +113,7 @@
 	.selrow,
 	.addrow {
 		display: flex;
-		gap: 6px;
+		gap: var(--gap-inline);
 		align-items: center;
 	}
 	.grow,
@@ -131,13 +131,13 @@
 		background-color: var(--inset);
 		border: 1px solid var(--border);
 		color: var(--ink);
-		border-radius: 8px;
-		padding: 6px 9px;
-		font-size: 12.5px;
+		border-radius: var(--radius-md);
+		padding: var(--pad-control);
+		font-size: var(--text-control);
 		font-family: inherit;
 	}
 	.err {
-		font-size: 11px;
+		font-size: var(--text-caption);
 		color: var(--crit-text);
 	}
 </style>

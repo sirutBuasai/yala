@@ -218,18 +218,18 @@
 	}
 	.lbl {
 		fill: var(--ink);
-		font-size: 11.5px;
-		font-weight: 500;
+		font-size: var(--text-caption);
+		font-weight: var(--fw-medium);
 	}
 	.val {
 		fill: var(--ink-3);
-		font-size: 10px;
+		font-size: var(--text-micro);
 		font-variant-numeric: tabular-nums;
 	}
 	.pct {
 		fill: var(--lav-text);
-		font-size: 10px;
-		font-weight: 600;
+		font-size: var(--text-micro);
+		font-weight: var(--fw-semibold);
 		font-variant-numeric: tabular-nums;
 	}
 	.leader {

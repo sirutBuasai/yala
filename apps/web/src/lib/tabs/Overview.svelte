@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
-	import ViewHeader from '$lib/ui/ViewHeader.svelte';
-	import Board from '$lib/ui/Board.svelte';
+	import ViewHeader from '$lib/ui/layout/ViewHeader.svelte';
+	import Board from '$lib/ui/layout/Board.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -73,6 +73,6 @@
 <style>
 	.sub {
 		color: var(--ink-3);
-		font-size: 12.5px;
+		font-size: var(--text-subtitle);
 	}
 </style>

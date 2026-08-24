@@ -201,42 +201,42 @@
 		/* Responsive grid: fields wrap onto multiple rows, each wide enough for longer account values. */
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-		gap: 12px;
+		gap: var(--gap-field);
 		align-items: end;
 	}
 	.chk {
-		font-size: 12px;
+		font-size: var(--text-secondary);
 		color: var(--ink-2);
 		display: flex;
 		align-items: center;
-		gap: 6px;
-		padding-bottom: 8px;
+		gap: var(--gap-inline);
+		padding-bottom: var(--gap-row);
 	}
 	.mfoot {
 		display: flex;
 		justify-content: space-between;
 		align-items: flex-start;
-		gap: 14px;
-		margin-top: 16px;
+		gap: var(--gap-grid);
+		margin-top: var(--space-8);
 	}
 	.right {
 		display: flex;
 		align-items: flex-start;
-		gap: 14px;
+		gap: var(--gap-grid);
 	}
 	/* Save changes and Delete stack, so Delete sits directly beneath Save (same width). */
 	.actions {
 		display: flex;
 		flex-direction: column;
 		align-items: stretch;
-		gap: 8px;
+		gap: var(--gap-row);
 	}
 	.share {
 		color: var(--ink-2);
-		font-size: 13px;
+		font-size: var(--text-control);
 	}
 	.share b {
 		color: var(--ink);
-		font-size: 16px;
+		font-size: var(--text-amount);
 	}
 </style>

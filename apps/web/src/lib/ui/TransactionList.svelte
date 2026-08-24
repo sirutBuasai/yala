@@ -127,8 +127,8 @@
 		display: flex;
 		align-items: baseline;
 		min-width: 0;
-		font-size: 13px;
-		font-weight: 500;
+		font-size: var(--text-row);
+		font-weight: var(--fw-medium);
 	}
 	.payee {
 		overflow: hidden;
@@ -139,25 +139,25 @@
 	.pending {
 		flex: none;
 		color: var(--gold-text);
-		font-size: 10.5px;
-		font-weight: 600;
-		margin-left: 6px;
+		font-size: var(--text-badge);
+		font-weight: var(--fw-semibold);
+		margin-left: var(--space-3);
 		white-space: nowrap;
 	}
 	.cat {
 		color: var(--ink-3);
-		font-size: 10.5px;
+		font-size: var(--text-badge);
 	}
 	.col {
 		color: var(--ink-2);
-		font-size: 11.5px;
+		font-size: var(--text-caption);
 		white-space: nowrap;
 	}
 	.amt {
 		text-align: right;
 		font-variant-numeric: tabular-nums;
-		font-weight: 600;
-		font-size: 13px;
+		font-weight: var(--fw-semibold);
+		font-size: var(--text-row);
 	}
 	.amt.refund {
 		color: var(--good-text);

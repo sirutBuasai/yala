@@ -34,6 +34,6 @@
 <style>
 	.empty {
 		color: var(--ink-3);
-		font-size: 12.5px;
+		font-size: var(--text-secondary);
 	}
 </style>

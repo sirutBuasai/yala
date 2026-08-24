@@ -3,10 +3,10 @@
 	import type { AccountsInfo } from '$lib/data/load';
 	import { MONTHS, money, moneyCompact } from '$lib/utils/format';
 	import { categoryVar } from '$lib/utils/theme';
-	import ViewHeader from '$lib/ui/ViewHeader.svelte';
-	import MonthNav from '$lib/ui/MonthNav.svelte';
-	import TransactionList from '$lib/ui/TransactionList.svelte';
-	import PaycheckList from '$lib/ui/PaycheckList.svelte';
+	import ViewHeader from '$lib/ui/layout/ViewHeader.svelte';
+	import MonthNav from '$lib/ui/nav/MonthNav.svelte';
+	import TransactionList from '$lib/ui/lists/TransactionList.svelte';
+	import PaycheckList from '$lib/ui/lists/PaycheckList.svelte';
 	import EditModals from '$lib/forms/EditModals.svelte';
 
 	interface Props {
@@ -192,18 +192,18 @@
 	.calwrap {
 		display: grid;
 		grid-template-columns: 1.7fr 1fr;
-		gap: 14px;
+		gap: var(--gap-grid);
 		align-items: start;
 	}
 	.cal-head {
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
-		gap: 8px;
-		margin-bottom: 8px;
+		gap: var(--gap-row);
+		margin-bottom: var(--gap-row);
 		color: var(--ink-3);
-		font-size: 11px;
+		font-size: var(--text-column);
 		text-transform: uppercase;
-		letter-spacing: 0.6px;
+		letter-spacing: var(--ls-wide);
 		text-align: center;
 	}
 	.cal {
@@ -213,7 +213,7 @@
 		--pend: var(--gold);
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
-		gap: 8px;
+		gap: var(--gap-row);
 	}
 	:global(:root[data-theme='light']) .cal {
 		--sel: var(--gold);
@@ -222,9 +222,9 @@
 	.cell {
 		background: var(--surface-2);
 		border: 1px solid var(--border);
-		border-radius: 12px;
+		border-radius: var(--radius-lg);
 		min-height: 90px;
-		padding: 8px;
+		padding: var(--pad-cell);
 		cursor: pointer;
 		position: relative;
 		text-align: left;
@@ -257,9 +257,9 @@
 		position: absolute;
 		top: 8px;
 		left: 8px;
-		font-size: 12px;
+		font-size: var(--text-secondary);
 		color: var(--ink-2);
-		font-weight: 600;
+		font-weight: var(--fw-semibold);
 	}
 	.cell .cdots {
 		position: absolute;
@@ -267,7 +267,7 @@
 		right: 8px;
 		display: flex;
 		align-items: center;
-		gap: 2px;
+		gap: var(--space-1);
 		flex-wrap: wrap;
 		max-width: 46px;
 		justify-content: flex-end;
@@ -275,12 +275,12 @@
 	.cell .cdots i {
 		width: 6px;
 		height: 6px;
-		border-radius: 50%;
+		border-radius: var(--radius-pill);
 		display: block;
 	}
 	.cell .cdots .more {
-		font-size: 9px;
-		font-weight: 700;
+		font-size: var(--text-micro);
+		font-weight: var(--fw-bold);
 		line-height: 1;
 		color: var(--ink-3);
 	}
@@ -294,13 +294,13 @@
 		flex-direction: column;
 		align-items: flex-end;
 		gap: 1px;
-		line-height: 1.2;
+		line-height: var(--lh-tight);
 	}
 	/* Income and spending render identically — same size and weight — so the only signal is
 	   the color: income is green, spending inherits the default ink. */
 	.cell .camounts span {
-		font-size: 10px;
-		font-weight: 600;
+		font-size: var(--text-micro);
+		font-weight: var(--fw-semibold);
 		font-variant-numeric: tabular-nums;
 	}
 	.cell .inc {
@@ -309,31 +309,31 @@
 	.side {
 		background: var(--surface);
 		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 18px 20px;
+		border-radius: var(--radius-xl);
+		padding: var(--pad-card);
 		box-shadow: var(--shadow);
 	}
 	.dphead {
 		display: flex;
 		justify-content: space-between;
 		align-items: flex-start;
-		gap: 12px;
-		margin-bottom: 12px;
+		gap: var(--gap-field);
+		margin-bottom: var(--gap-field);
 		flex-wrap: wrap;
 	}
 	.dphead h3 {
-		margin: 0 0 2px;
-		font-size: 16px;
-		font-weight: 600;
+		margin: 0 0 var(--space-1);
+		font-size: var(--text-panel);
+		font-weight: var(--fw-semibold);
 	}
 	.dphead .cap {
 		color: var(--ink-3);
-		font-size: 12px;
+		font-size: var(--text-secondary);
 		margin: 0;
 	}
 	.dpactions {
 		display: flex;
-		gap: 6px;
+		gap: var(--gap-inline);
 		flex-wrap: wrap;
 	}
 	.pos {
@@ -343,11 +343,11 @@
 	.daydiv {
 		height: 1px;
 		background: var(--border);
-		margin: 2px 0 8px;
+		margin: var(--space-1) 0 var(--space-4);
 	}
 	.note {
 		color: var(--ink-3);
-		font-size: 12.5px;
+		font-size: var(--text-secondary);
 	}
 	@media (max-width: 900px) {
 		.calwrap {

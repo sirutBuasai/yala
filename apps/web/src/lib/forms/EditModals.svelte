@@ -3,7 +3,7 @@
 	// the four overlays and their open/close + after-save orchestration live in one place. The
 	// parent opens them imperatively (bind:this) and refreshes its data via `onsaved`.
 	import type { AccountsInfo } from '$lib/data/load';
-	import Overlay from '$lib/ui/Overlay.svelte';
+	import Overlay from '$lib/ui/overlay/Overlay.svelte';
 	import TransactionForm from '$lib/forms/TransactionForm.svelte';
 	import PaycheckForm from '$lib/forms/PaycheckForm.svelte';
 

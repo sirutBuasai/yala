@@ -42,20 +42,20 @@
 	table {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: 13px;
+		font-size: var(--text-control);
 	}
 	th,
 	td {
-		padding: 8px 10px;
+		padding: var(--space-4) var(--space-5);
 		border-bottom: 1px solid var(--border);
 		text-align: left;
 	}
 	th {
 		color: var(--ink-3);
-		font-size: 11px;
+		font-size: var(--text-column);
 		text-transform: uppercase;
-		letter-spacing: 0.6px;
-		font-weight: 600;
+		letter-spacing: var(--ls-wide);
+		font-weight: var(--fw-semibold);
 	}
 	td {
 		color: var(--ink-2);

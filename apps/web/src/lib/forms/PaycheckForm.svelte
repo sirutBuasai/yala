@@ -194,10 +194,10 @@
 <style>
 	.editrow {
 		display: flex;
-		gap: 10px;
+		gap: var(--space-5);
 		flex-wrap: wrap;
 		align-items: flex-end;
-		margin-bottom: 12px;
+		margin-bottom: var(--gap-field);
 	}
 	.editrow .field {
 		min-width: 130px;
@@ -205,34 +205,34 @@
 	.lines {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: 18px;
+		gap: var(--gap-section);
 	}
 	.foot {
 		display: flex;
 		justify-content: space-between;
 		align-items: flex-start;
-		margin-top: 14px;
-		gap: 14px;
+		margin-top: var(--gap-grid);
+		gap: var(--gap-grid);
 	}
 	.right {
 		display: flex;
 		align-items: flex-start;
-		gap: 14px;
+		gap: var(--gap-grid);
 	}
 	/* Save changes and Delete stack, so Delete sits directly beneath Save (same width). */
 	.actions {
 		display: flex;
 		flex-direction: column;
 		align-items: stretch;
-		gap: 8px;
+		gap: var(--gap-row);
 	}
 	.takehome {
 		color: var(--ink-2);
-		font-size: 13px;
+		font-size: var(--text-control);
 	}
 	.takehome b {
 		color: var(--good-text);
-		font-size: 16px;
+		font-size: var(--text-amount);
 	}
 	@media (max-width: 640px) {
 		.lines {

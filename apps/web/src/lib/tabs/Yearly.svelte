@@ -2,9 +2,9 @@
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
 	import { money } from '$lib/utils/format';
-	import ViewHeader from '$lib/ui/ViewHeader.svelte';
-	import YearNav from '$lib/ui/YearNav.svelte';
-	import Board from '$lib/ui/Board.svelte';
+	import ViewHeader from '$lib/ui/layout/ViewHeader.svelte';
+	import YearNav from '$lib/ui/nav/YearNav.svelte';
+	import Board from '$lib/ui/layout/Board.svelte';
 
 	interface Props {
 		data: DashboardData;

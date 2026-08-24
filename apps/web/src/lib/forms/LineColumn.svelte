@@ -83,14 +83,14 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		font-size: 12px;
+		font-size: var(--text-secondary);
 		color: var(--ink-2);
-		margin-bottom: 6px;
+		margin-bottom: var(--gap-inline);
 	}
 	.linerow {
 		display: flex;
-		gap: 8px;
-		margin-bottom: 6px;
+		gap: var(--gap-row);
+		margin-bottom: var(--gap-inline);
 	}
 	.grow {
 		flex: 1;
@@ -102,9 +102,9 @@
 		background-color: var(--inset);
 		border: 1px solid var(--border);
 		color: var(--ink);
-		border-radius: 8px;
-		padding: 6px 9px;
-		font-size: 12.5px;
+		border-radius: var(--radius-md);
+		padding: var(--pad-control);
+		font-size: var(--text-control);
 		font-family: inherit;
 	}
 	.rm {
@@ -116,8 +116,8 @@
 	}
 	.newtype {
 		display: flex;
-		gap: 8px;
-		margin-top: 8px;
+		gap: var(--gap-row);
+		margin-top: var(--gap-row);
 	}
 	.newtype input {
 		flex: 1;
@@ -125,9 +125,9 @@
 		background: var(--inset);
 		border: 1px dashed var(--border);
 		color: var(--ink);
-		border-radius: 8px;
-		padding: 6px 9px;
-		font-size: 12px;
+		border-radius: var(--radius-md);
+		padding: var(--pad-control);
+		font-size: var(--text-control);
 		font-family: inherit;
 	}
 	.newtype .btn-mini {

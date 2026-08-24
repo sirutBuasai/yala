@@ -97,10 +97,10 @@
 	}
 	.rowh {
 		fill: var(--ink-2);
-		font-size: 11px;
+		font-size: var(--text-axis);
 	}
 	.cellv {
-		font-size: 9.5px;
+		font-size: var(--text-micro);
 		font-variant-numeric: tabular-nums;
 		pointer-events: none;
 	}

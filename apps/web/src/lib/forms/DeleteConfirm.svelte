@@ -27,10 +27,10 @@
 		align-items: center;
 		justify-content: flex-end;
 		flex-wrap: wrap;
-		gap: 8px;
+		gap: var(--gap-row);
 	}
 	.confirm-q {
-		font-size: 12.5px;
+		font-size: var(--text-secondary);
 		color: var(--crit-text);
 	}
 </style>

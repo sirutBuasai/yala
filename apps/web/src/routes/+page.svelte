@@ -16,8 +16,8 @@
 	import CalendarView from '$lib/tabs/Calendar.svelte';
 	import ThemeToggle from '$lib/forms/ThemeToggle.svelte';
 	import EditToggle from '$lib/forms/EditToggle.svelte';
-	import Tooltip from '$lib/ui/Tooltip.svelte';
-	import NavMenu from '$lib/ui/NavMenu.svelte';
+	import Tooltip from '$lib/ui/overlay/Tooltip.svelte';
+	import NavMenu from '$lib/ui/nav/NavMenu.svelte';
 
 	type Tab = 'overview' | 'yearly' | 'monthly' | 'calendar';
 	let tab = $state<Tab>('overview');
@@ -169,20 +169,20 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		margin-bottom: 20px;
-		gap: 16px;
+		margin-bottom: var(--space-10);
+		gap: var(--space-8);
 		flex-wrap: wrap;
 	}
 	.left {
 		display: flex;
 		align-items: center;
-		gap: 12px;
+		gap: var(--gap-field);
 		flex-wrap: wrap;
 	}
 	.brand {
 		display: flex;
 		align-items: baseline;
-		gap: 12px;
+		gap: var(--gap-field);
 		text-decoration: none;
 		color: inherit;
 		cursor: pointer;
@@ -191,47 +191,47 @@
 		color: var(--lav-text);
 	}
 	.brand h1 {
-		font-size: 26px;
+		font-size: var(--text-brand);
 		margin: 0;
-		font-weight: 600;
-		letter-spacing: -0.3px;
+		font-weight: var(--fw-semibold);
+		letter-spacing: var(--ls-tight);
 	}
 	.brand .dot {
 		width: 9px;
 		height: 9px;
-		border-radius: 50%;
+		border-radius: var(--radius-pill);
 		background: var(--lav);
 		box-shadow: 0 0 0 4px color-mix(in srgb, var(--lav) 20%, transparent);
 		align-self: center;
 	}
 	.sub {
 		color: var(--ink-3);
-		font-size: 12.5px;
+		font-size: var(--text-subtitle);
 	}
 	.controls {
 		display: flex;
-		gap: 10px;
+		gap: var(--space-5);
 		align-items: center;
 		flex-wrap: wrap;
 	}
 	nav.views {
 		display: flex;
-		gap: 4px;
+		gap: var(--space-2);
 		background: var(--surface);
 		border: 1px solid var(--border);
-		border-radius: 999px;
-		padding: 4px;
+		border-radius: var(--radius-pill);
+		padding: var(--space-2);
 		box-shadow: var(--shadow);
 	}
 	nav.views button {
 		border: 0;
 		background: none;
 		color: var(--ink-2);
-		padding: 8px 15px;
-		border-radius: 999px;
-		font-size: 13px;
+		padding: var(--space-4) var(--space-8);
+		border-radius: var(--radius-pill);
+		font-size: var(--text-control);
 		cursor: pointer;
-		font-weight: 500;
+		font-weight: var(--fw-medium);
 	}
 	nav.views button.active {
 		background: color-mix(in srgb, var(--lav) 20%, transparent);
@@ -242,6 +242,6 @@
 	}
 	.tgls {
 		display: flex;
-		gap: 8px;
+		gap: var(--gap-row);
 	}
 </style>

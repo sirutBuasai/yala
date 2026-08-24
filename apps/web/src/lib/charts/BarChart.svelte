@@ -94,7 +94,7 @@
 					y={ih + 20}
 					text-anchor="middle"
 					fill="var(--ink-3)"
-					font-size="11">{lb}</text
+					style="font-size: var(--text-axis)">{lb}</text
 				>
 			{/each}
 		</g>
@@ -119,7 +119,7 @@
 	}
 	.vlabel {
 		fill: var(--ink-3);
-		font-size: 10px;
+		font-size: var(--text-micro);
 		font-variant-numeric: tabular-nums;
 	}
 </style>

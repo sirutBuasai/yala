@@ -4,15 +4,15 @@
 	import type { Scope } from '$lib/data/scope';
 	import { money, monthLabel } from '$lib/utils/format';
 	import { build } from '$lib/data/catalog';
-	import Pane from '$lib/ui/Pane.svelte';
-	import ViewHeader from '$lib/ui/ViewHeader.svelte';
-	import Board from '$lib/ui/Board.svelte';
-	import MonthNav from '$lib/ui/MonthNav.svelte';
+	import Pane from '$lib/ui/layout/Pane.svelte';
+	import ViewHeader from '$lib/ui/layout/ViewHeader.svelte';
+	import Board from '$lib/ui/layout/Board.svelte';
+	import MonthNav from '$lib/ui/nav/MonthNav.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
-	import TransactionList, { TXN_SORTS, type TxnSort } from '$lib/ui/TransactionList.svelte';
-	import SortMenu from '$lib/ui/SortMenu.svelte';
-	import PaycheckList from '$lib/ui/PaycheckList.svelte';
-	import PendingQueue from '$lib/ui/PendingQueue.svelte';
+	import TransactionList, { TXN_SORTS, type TxnSort } from '$lib/ui/lists/TransactionList.svelte';
+	import SortMenu from '$lib/ui/lists/SortMenu.svelte';
+	import PaycheckList from '$lib/ui/lists/PaycheckList.svelte';
+	import PendingQueue from '$lib/ui/lists/PendingQueue.svelte';
 	import EditModals from '$lib/forms/EditModals.svelte';
 
 	interface Props {
@@ -126,29 +126,29 @@
 
 <style>
 	.editpanel {
-		margin-bottom: 18px;
+		margin-bottom: var(--space-9);
 		border-color: color-mix(in srgb, var(--lav) 30%, var(--border));
 	}
 	.ephead {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 12px;
-		margin-bottom: 12px;
+		gap: var(--gap-field);
+		margin-bottom: var(--gap-field);
 		flex-wrap: wrap;
 	}
 	.ephead h2 {
-		font-size: 15.5px;
-		font-weight: 600;
+		font-size: var(--text-panel);
+		font-weight: var(--fw-semibold);
 		margin: 0;
 	}
 	.epactions {
 		display: flex;
-		gap: 8px;
+		gap: var(--gap-row);
 		flex-wrap: wrap;
 	}
 	.note {
 		color: var(--ink-3);
-		font-size: 12.5px;
+		font-size: var(--text-secondary);
 	}
 </style>

@@ -8,7 +8,7 @@
 	// On-brand replacement for a native <select>: a Popup-hosted listbox.
 	// Keyboard: Up/Down move, Enter/Space select, Esc close, Home/End jump.
 	import { untrack, type Snippet } from 'svelte';
-	import Popup from '$lib/ui/Popup.svelte';
+	import Popup from '$lib/ui/overlay/Popup.svelte';
 
 	interface Props {
 		/** Selected value (bindable). */
@@ -142,22 +142,22 @@
 	}
 	.listbox {
 		margin: 0;
-		padding: 5px;
+		padding: var(--space-2);
 		list-style: none;
 		max-height: 248px;
 		overflow-y: auto;
 		background: var(--surface-2);
 		border: 1px solid var(--border);
-		border-radius: 10px;
+		border-radius: var(--radius-md);
 		box-shadow: var(--shadow);
 	}
 	li {
 		display: flex;
 		align-items: center;
-		gap: 6px;
-		padding: 7px 9px;
-		border-radius: 7px;
-		font-size: 13px;
+		gap: var(--gap-inline);
+		padding: var(--space-4) var(--space-3);
+		border-radius: var(--radius-sm);
+		font-size: var(--text-control);
 		color: var(--ink);
 		cursor: pointer;
 		white-space: nowrap;
@@ -172,7 +172,7 @@
 		width: 12px;
 		flex: 0 0 auto;
 		color: var(--lav-text);
-		font-size: 11px;
+		font-size: var(--text-caption);
 	}
 	.olabel {
 		overflow: hidden;

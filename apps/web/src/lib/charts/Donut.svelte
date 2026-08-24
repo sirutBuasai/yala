@@ -52,8 +52,7 @@
 							x={c[0]}
 							y={c[1] + 4}
 							text-anchor="middle"
-							font-size="11"
-							font-weight="600"
+							style="font-size: var(--text-caption); font-weight: var(--fw-semibold)"
 							fill="var(--on-accent)">{pctOf(a.data.value)}%</text
 						>
 					{/if}
@@ -77,7 +76,7 @@
 <style>
 	.donut {
 		display: flex;
-		gap: 22px;
+		gap: var(--space-11);
 		align-items: center;
 		flex-wrap: wrap;
 	}
@@ -94,14 +93,14 @@
 	.legend-list li {
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		padding: 4px 0;
-		font-size: 12.5px;
+		gap: var(--gap-row);
+		padding: var(--space-2) 0;
+		font-size: var(--text-secondary);
 	}
 	.legend-list .sw {
 		width: 11px;
 		height: 11px;
-		border-radius: 3px;
+		border-radius: var(--radius-xs);
 		flex: 0 0 auto;
 	}
 	.legend-list .nm {

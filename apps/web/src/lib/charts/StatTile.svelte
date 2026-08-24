@@ -38,13 +38,13 @@
 		flex-direction: column;
 	}
 	.num {
-		font-size: 27px;
-		font-weight: 600;
-		letter-spacing: -0.5px;
+		font-size: var(--text-display);
+		font-weight: var(--fw-semibold);
+		letter-spacing: var(--ls-tighter);
 		margin-top: auto;
 	}
 	.delta {
-		font-size: 12px;
+		font-size: var(--text-secondary);
 	}
 	.up {
 		color: var(--good-text);
