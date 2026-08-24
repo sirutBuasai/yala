@@ -105,6 +105,14 @@ a {
 	margin: 0 auto;
 	padding: 26px 24px 90px;
 }
+/* The hamburger is fixed to the page's left edge. Wide viewports leave a gutter that holds it,
+   but once that gutter shrinks, indent the whole column so the content (header + cards, together,
+   so they stay aligned) can never slide underneath the hamburger. */
+@media (max-width: 1260px) {
+	.wrap {
+		padding-left: 56px;
+	}
+}
 
 .card {
 	background: var(--surface);

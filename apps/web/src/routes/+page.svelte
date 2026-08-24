@@ -17,6 +17,7 @@
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import EditToggle from '$lib/components/EditToggle.svelte';
 	import Tooltip from '$lib/components/Tooltip.svelte';
+	import NavMenu from '$lib/components/NavMenu.svelte';
 
 	type Tab = 'overview' | 'yearly' | 'monthly' | 'calendar';
 	let tab = $state<Tab>('overview');
@@ -82,10 +83,13 @@
 </script>
 
 <div class="wrap">
+	<NavMenu />
 	<header class="top">
-		<div class="brand">
-			<span class="dot"></span>
-			<h1 class="serif">Yala</h1>
+		<div class="left">
+			<a href="/" class="brand">
+				<span class="dot"></span>
+				<h1 class="serif">Yala</h1>
+			</a>
 			<span class="sub">
 				{#if $data}
 					{edit ? 'live · editing' : 'personal finance'} ·
@@ -148,10 +152,22 @@
 		gap: 16px;
 		flex-wrap: wrap;
 	}
+	.left {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		flex-wrap: wrap;
+	}
 	.brand {
 		display: flex;
 		align-items: baseline;
 		gap: 12px;
+		text-decoration: none;
+		color: inherit;
+		cursor: pointer;
+	}
+	.brand:hover h1 {
+		color: var(--lav-text);
 	}
 	.brand h1 {
 		font-size: 26px;
@@ -167,7 +183,7 @@
 		box-shadow: 0 0 0 4px color-mix(in srgb, var(--lav) 20%, transparent);
 		align-self: center;
 	}
-	.brand .sub {
+	.sub {
 		color: var(--ink-3);
 		font-size: 12.5px;
 	}
