@@ -5,7 +5,7 @@
 	import type { AccountsInfo } from '$lib/data';
 	import { deleteTransaction, postJson } from '$lib/data';
 	import { accountLeaf, formatAccount, money } from '$lib/format';
-	import { lastFundingAccount } from '$lib/editPrefs';
+	import { lastCategory, lastFundingAccount } from '$lib/editPrefs';
 	import AccountField from './AccountField.svelte';
 	import Credits, { type Credit } from './Credits.svelte';
 	import DatePicker from './DatePicker.svelte';
@@ -43,10 +43,15 @@
 	$effect(() => {
 		if (locator == null) {
 			// Add mode: seed the selects once the account lists are available (so a later-loading list
-			// still populates them) without clobbering the user's pick. Funding defaults to the last
-			// account used this session, so repeated adds keep the same method.
+			// still populates them) without clobbering the user's pick. Category and funding both
+			// default to the last one used this session, so repeated adds keep the same picks.
 			if (!date && presetDate) date = presetDate;
-			if (!category) category = accounts.spending_categories[0] ?? '';
+			if (!category) {
+				const rememberedCat = get(lastCategory);
+				category = accounts.spending_categories.includes(rememberedCat)
+					? rememberedCat
+					: (accounts.spending_categories[0] ?? '');
+			}
 			if (!funding_account) {
 				const remembered = get(lastFundingAccount);
 				funding_account = accounts.funding_accounts.includes(remembered)
@@ -111,7 +116,10 @@
 			err = true;
 			return;
 		}
-		if (!editing) lastFundingAccount.set(funding_account);
+		if (!editing) {
+			lastCategory.set(category);
+			lastFundingAccount.set(funding_account);
+		}
 		onsaved();
 	}
 

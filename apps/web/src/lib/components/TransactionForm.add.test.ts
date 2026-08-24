@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
 import { get } from 'svelte/store';
 import type { AccountsInfo } from '$lib/data';
-import { lastFundingAccount } from '$lib/editPrefs';
+import { lastCategory, lastFundingAccount } from '$lib/editPrefs';
 import TransactionForm from './TransactionForm.svelte';
 
 const accounts: AccountsInfo = {
@@ -20,7 +20,11 @@ function okFetch(body: unknown = { ok: true, id: 'new-id' }) {
 	return vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => body });
 }
 
-beforeEach(() => lastFundingAccount.set('')); // isolate the session-sticky funding memory
+beforeEach(() => {
+	// isolate the session-sticky add-form memory between tests
+	lastFundingAccount.set('');
+	lastCategory.set('');
+});
 afterEach(() => vi.unstubAllGlobals());
 
 describe('TransactionForm (add)', () => {
@@ -127,5 +131,23 @@ describe('TransactionForm (add)', () => {
 		// a fresh add form pre-selects the remembered account, not the first option
 		render(TransactionForm, { props: { accounts, onsaved: vi.fn() } });
 		expect(screen.getByLabelText('Account')).toHaveTextContent('Bank A');
+	});
+
+	it('remembers the chosen category for the next add this session', async () => {
+		vi.stubGlobal('fetch', okFetch());
+		const { unmount } = render(TransactionForm, { props: { accounts, onsaved: vi.fn() } });
+
+		// pick a non-default category (default is the first, 'Grocery'), then submit
+		await fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'x' } });
+		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '5' } });
+		await fireEvent.click(screen.getByLabelText('Category')); // open the listbox
+		await fireEvent.click(screen.getByRole('option', { name: 'Takeouts' }));
+		await fireEvent.click(screen.getByText('+ Add'));
+		await waitFor(() => expect(get(lastCategory)).toBe('Takeouts'));
+		unmount();
+
+		// a fresh add form pre-selects the remembered category, not the first option
+		render(TransactionForm, { props: { accounts, onsaved: vi.fn() } });
+		expect(screen.getByLabelText('Category')).toHaveTextContent('Takeouts');
 	});
 });
