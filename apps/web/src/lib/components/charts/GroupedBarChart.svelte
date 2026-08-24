@@ -85,12 +85,18 @@
 
 <style>
 	.chartbox {
+		position: relative;
 		flex: 1 1 auto;
 		min-height: 240px;
 		max-height: 720px; /* fill a stretched pane, but never run away */
 		width: 100%;
 	}
+	/* Absolutely positioned so the SVG's viewBox-derived intrinsic size can't feed back into
+	   the flex/grid auto-height. Without this the box ratchets down on resize and never grows
+	   back (measured height -> viewBox -> intrinsic height -> row height -> measured height). */
 	svg.chart {
+		position: absolute;
+		inset: 0;
 		height: 100%;
 	}
 </style>
