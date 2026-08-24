@@ -27,7 +27,7 @@
 	let date = $state('');
 	let gross = $state<number | null>(null);
 	let deposit_account = $state('');
-	let payee = $state('paycheck');
+	let payee = $state('Paycheck');
 	let deductions = $state<AmountRow[]>([]);
 	let contributions = $state<AmountRow[]>([]);
 
@@ -71,7 +71,7 @@
 			date = s.date ?? '';
 			gross = s.gross ?? null;
 			deposit_account = s.deposit_account ?? '';
-			payee = s.payee ?? 'paycheck';
+			payee = s.payee ?? 'Paycheck';
 			deductions = toRows(s.deductions ?? {});
 			contributions = toRows(s.contributions ?? {});
 		})();
@@ -103,7 +103,7 @@
 			deductions: toMap(deductions),
 			contributions: toMap(contributions),
 			deposit_account,
-			payee: payee.trim() || 'paycheck'
+			payee: payee.trim() || 'Paycheck'
 		};
 		const { ok, error } = await postJson(editing ? '/api/paycheck/update' : '/api/paycheck', body);
 		if (!ok) {

@@ -6,6 +6,7 @@
 	import ViewHeader from '$lib/ui/ViewHeader.svelte';
 	import MonthNav from '$lib/ui/MonthNav.svelte';
 	import TransactionList from '$lib/ui/TransactionList.svelte';
+	import PaycheckList from '$lib/ui/PaycheckList.svelte';
 	import EditModals from '$lib/forms/EditModals.svelte';
 
 	interface Props {
@@ -153,25 +154,12 @@
 			</div>
 
 			{#if selected.pays.length}
-				<div class="paylist">
-					{#each selected.pays as p (p.locator)}
-						<svelte:element
-							this={edit ? 'button' : 'div'}
-							class="payrow"
-							class:clickable={edit}
-							type={edit ? 'button' : undefined}
-							role={edit ? 'button' : undefined}
-							onclick={edit ? () => modals.editPaycheck(p.locator) : undefined}
-						>
-							<span class="dot pay"></span>
-							<span class="main">
-								<span class="title">Paycheck</span>
-								<span class="cat">gross {money(p.gross)} · take-home {money(p.take_home)}</span>
-							</span>
-							<span class="amt pos">+{money(p.net)}</span>
-						</svelte:element>
-					{/each}
-				</div>
+				<PaycheckList
+					paychecks={selected.pays}
+					{edit}
+					onedit={(l) => modals.editPaycheck(l)}
+					showDate={false}
+				/>
 			{/if}
 
 			{#if selectedTxns.length}
@@ -351,74 +339,11 @@
 	.pos {
 		color: var(--good-text);
 	}
-	.paylist {
-		display: flex;
-		flex-direction: column;
-		/* bleed to the day panel's edges (.side has 20px h-padding); +20px row padding holds the text */
-		margin: 0 -20px 6px;
-	}
 	/* separates the paycheck block from the transaction block; inset like the row dividers */
 	.daydiv {
 		height: 1px;
 		background: var(--border);
 		margin: 2px 0 8px;
-	}
-	.payrow {
-		position: relative;
-		display: grid;
-		grid-template-columns: 10px 1fr auto;
-		align-items: center;
-		gap: 10px;
-		padding: 8px 24px;
-		width: 100%;
-		background: none;
-		border: 0;
-		color: inherit;
-		font: inherit;
-		text-align: left;
-	}
-	/* divider stays inset to the content while the row hover is full-bleed */
-	.payrow:not(:last-child)::after {
-		content: '';
-		position: absolute;
-		left: 20px;
-		right: 20px;
-		bottom: 0;
-		height: 1px;
-		background: var(--border);
-	}
-	.payrow.clickable {
-		cursor: pointer;
-	}
-	.payrow.clickable:hover {
-		background: color-mix(in srgb, var(--lav) 9%, transparent);
-	}
-	.payrow .dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-	}
-	.payrow .dot.pay {
-		background: var(--saved);
-	}
-	.payrow .main {
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-	}
-	.payrow .title {
-		font-size: 13px;
-		font-weight: 500;
-	}
-	.payrow .cat {
-		color: var(--ink-3);
-		font-size: 10.5px;
-	}
-	.payrow .amt {
-		text-align: right;
-		font-variant-numeric: tabular-nums;
-		font-weight: 600;
-		font-size: 13px;
 	}
 	.note {
 		color: var(--ink-3);

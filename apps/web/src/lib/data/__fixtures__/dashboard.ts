@@ -85,6 +85,7 @@ export function makeData(): DashboardData {
 				paychecks: [
 					{
 						date: '2025-01-15',
+						payee: 'paycheck',
 						gross: 3000,
 						deductions: { Tax: 600, Benefits: 100 },
 						contributions: { HSA: 150, Roth401k: 600 },
@@ -111,6 +112,7 @@ export function makeData(): DashboardData {
 			recent_paychecks: [
 				{
 					date: '2025-01-15',
+					payee: 'paycheck',
 					gross: 3000,
 					deductions: { Tax: 600, Benefits: 100 },
 					contributions: { HSA: 150, Roth401k: 600 },

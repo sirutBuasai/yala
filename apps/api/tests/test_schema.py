@@ -100,6 +100,7 @@ def example_data() -> DashboardData:
                 paychecks=[
                     PaycheckOut(
                         date="2025-01-15",
+                        payee="paycheck",
                         gross=3000.00,
                         deductions={"Tax": 600.00, "Insurance": 100.00},
                         contributions={"HSA": 150.00, "401k": 600.00},
@@ -135,6 +136,7 @@ def example_data() -> DashboardData:
             recent_paychecks=[
                 PaycheckOut(
                     date="2025-01-15",
+                    payee="paycheck",
                     gross=3000.00,
                     deductions={"Tax": 600.00, "Insurance": 100.00},
                     contributions={"HSA": 150.00, "401k": 600.00},

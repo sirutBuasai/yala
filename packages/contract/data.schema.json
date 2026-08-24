@@ -317,6 +317,10 @@
           "title": "Date",
           "type": "string"
         },
+        "payee": {
+          "title": "Payee",
+          "type": "string"
+        },
         "gross": {
           "title": "Gross",
           "type": "number"
@@ -350,6 +354,7 @@
       },
       "required": [
         "date",
+        "payee",
         "gross",
         "deductions",
         "contributions",

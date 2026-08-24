@@ -33,6 +33,7 @@ class Paycheck:
     deductions: dict[str, Decimal]
     contributions: dict[str, Decimal]
     locator: str = ""
+    payee: str = "paycheck"
 
     @property
     def direct_out(self) -> Decimal:
@@ -82,7 +83,16 @@ class Income:
                 elif p.account.startswith(INVESTMENTS):
                     contributions[leaf(p.account)] += p.amount
 
-            out.append(Paycheck(t.date, gross, dict(deductions), dict(contributions), t.locator))
+            out.append(
+                Paycheck(
+                    t.date,
+                    gross,
+                    dict(deductions),
+                    dict(contributions),
+                    t.locator,
+                    t.payee or "paycheck",
+                )
+            )
 
         return out
 

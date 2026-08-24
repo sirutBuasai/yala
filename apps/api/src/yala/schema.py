@@ -97,6 +97,7 @@ class Txn(_Base):
 
 class PaycheckOut(_Base):
     date: str
+    payee: str
     gross: float
     deductions: dict[str, float]
     contributions: dict[str, float]

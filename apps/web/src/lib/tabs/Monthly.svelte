@@ -10,7 +10,7 @@
 	import MonthNav from '$lib/ui/MonthNav.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
 	import TransactionList from '$lib/ui/TransactionList.svelte';
-	import PaycheckTable from '$lib/ui/PaycheckTable.svelte';
+	import PaycheckList from '$lib/ui/PaycheckList.svelte';
 	import PendingList from '$lib/ui/PendingList.svelte';
 	import EditModals from '$lib/forms/EditModals.svelte';
 
@@ -27,6 +27,10 @@
 
 	const txns = $derived(
 		md ? [...md.transactions].sort((a, b) => b.date.localeCompare(a.date)) : []
+	);
+
+	const paychecks = $derived(
+		md ? [...md.paychecks].sort((a, b) => a.date.localeCompare(b.date)) : []
 	);
 
 	// Donut: where the month's income went — top categories, a rolled-up "Other", and a green
@@ -78,7 +82,12 @@
 		cap={md ? `${md.paychecks.length} in ${monthLabel(monthKey)}` : ''}
 	>
 		{#if md && md.paychecks.length}
-			<PaycheckTable paychecks={md.paychecks} {edit} onedit={(l) => modals.editPaycheck(l)} />
+			<PaycheckList
+				{paychecks}
+				fields={['gross', 'tax', 'benefits', 'saved', 'takehome']}
+				{edit}
+				onedit={(l) => modals.editPaycheck(l)}
+			/>
 		{:else}
 			<p class="note">No paychecks this month.</p>
 		{/if}
