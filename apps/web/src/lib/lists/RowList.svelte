@@ -16,6 +16,8 @@
 		dotColor: (item: T) => string;
 		/** ISO date for the leading date cell; omit the accessor to hide the date column. */
 		dateOf?: (item: T) => string;
+		/** Row spacing: 'compact' (default, dense lists) or 'comfortable' (roomier). */
+		density?: 'compact' | 'comfortable';
 		main: Snippet<[T]>;
 		columns: Snippet<[T]>;
 		amount: Snippet<[T]>;
@@ -27,13 +29,14 @@
 		cols,
 		dotColor,
 		dateOf,
+		density = 'compact',
 		main,
 		columns,
 		amount
 	}: Props = $props();
 </script>
 
-<div class="list bleed-x">
+<div class="list bleed-x" class:comfortable={density === 'comfortable'}>
 	{#each items as item (item.locator)}
 		<svelte:element
 			this={edit ? 'button' : 'div'}
@@ -67,12 +70,16 @@
 		gap: var(--space-5);
 		padding: var(--pad-listrow);
 		/* reset button defaults for the clickable (edit-mode) variant */
+		/* comfortable density (--pad-listrow-comfortable) applied via .comfortable below */
 		width: 100%;
 		background: none;
 		border: 0;
 		color: inherit;
 		font: inherit;
 		text-align: left;
+	}
+	.comfortable .row {
+		padding: var(--pad-listrow-comfortable);
 	}
 	/* divider stays inset to the content (same anchor as the bleed) while the row hover is full-bleed */
 	.row:not(:last-child)::after {

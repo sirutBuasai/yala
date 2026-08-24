@@ -161,7 +161,8 @@
 	--pad-btn-sm: var(--space-2) var(--space-3); /* 4×6 — mini inline buttons */
 	--pad-pill: var(--space-4) var(--space-7); /* 8×14 — pill toggles */
 	--pad-cell: var(--space-4); /* 8 — calendar / table cells */
-	--pad-listrow: var(--space-4) var(--pad-card-x); /* 8×20 — list rows, inset to the card edge */
+	--pad-listrow: var(--space-4) var(--pad-card-x); /* 8×20 — compact list rows, inset to card edge */
+	--pad-listrow-comfortable: var(--space-6) var(--pad-card-x); /* 12×20 — roomier row density */
 
 	/* ── Radius ───────────────────────────────────────────────────────────────
 	   Collapses 3/5/6/7/8/9/10/12/16px into 5 steps + a pill. */
@@ -397,6 +398,27 @@ input[type='checkbox']:focus-visible {
 	background: var(--inset);
 }
 .iconbtn:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 30%, transparent);
+}
+/* inline text button: keeps the surrounding text's size/family/colour (inherit) and only
+   adds a hover highlight box, e.g. a clickable "Sorted by X" label that opens a menu. */
+.chipbtn {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-1) var(--space-2);
+	border: 0;
+	border-radius: var(--radius-sm);
+	background: none;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+.chipbtn:hover {
+	background: var(--inset);
+}
+.chipbtn:focus-visible {
 	outline: none;
 	box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 30%, transparent);
 }

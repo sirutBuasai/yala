@@ -70,6 +70,7 @@
 	{edit}
 	{onedit}
 	{cols}
+	density="comfortable"
 	dotColor={() => 'var(--saved)'}
 	dateOf={showDate ? (p) => p.date : undefined}
 >
