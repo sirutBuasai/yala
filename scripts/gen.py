@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Regenerate the committed contract from the pydantic models:
 
-schema.py -> packages/contract/data.schema.json -> apps/web/src/lib/types.ts
+schema.py -> packages/contract/data.schema.json -> apps/web/src/lib/data/types.ts
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ def main() -> None:
     # json2ts emits space-indented output; prettier reformats it to the repo style (tabs) so the
     # generated file is deterministic and matches what's committed (keeps the freshness gate sane).
     run("npm", "run", "gen:types", cwd=WEB)
-    run("npx", "prettier", "--write", "src/lib/types.ts", cwd=WEB)
+    run("npx", "prettier", "--write", "src/lib/data/types.ts", cwd=WEB)
 
 
 if __name__ == "__main__":

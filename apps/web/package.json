@@ -11,7 +11,7 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"format": "prettier --write .",
-		"gen:types": "json2ts -i ../../packages/contract/data.schema.json -o src/lib/types.ts --no-additionalProperties --unreachableDefinitions"
+		"gen:types": "json2ts -i ../../packages/contract/data.schema.json -o src/lib/data/types.ts --no-additionalProperties --unreachableDefinitions"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-static": "^3.0.6",

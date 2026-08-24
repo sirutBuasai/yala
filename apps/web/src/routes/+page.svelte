@@ -9,15 +9,15 @@
 		loadViewData,
 		enableEditMode,
 		refreshEditData
-	} from '$lib/data';
-	import OverviewView from '$lib/components/OverviewView.svelte';
-	import YearlyView from '$lib/components/YearlyView.svelte';
-	import MonthlyView from '$lib/components/MonthlyView.svelte';
-	import CalendarView from '$lib/components/CalendarView.svelte';
-	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
-	import EditToggle from '$lib/components/EditToggle.svelte';
-	import Tooltip from '$lib/components/Tooltip.svelte';
-	import NavMenu from '$lib/components/NavMenu.svelte';
+	} from '$lib/data/load';
+	import OverviewView from '$lib/tabs/Overview.svelte';
+	import YearlyView from '$lib/tabs/Yearly.svelte';
+	import MonthlyView from '$lib/tabs/Monthly.svelte';
+	import CalendarView from '$lib/tabs/Calendar.svelte';
+	import ThemeToggle from '$lib/forms/ThemeToggle.svelte';
+	import EditToggle from '$lib/forms/EditToggle.svelte';
+	import Tooltip from '$lib/ui/Tooltip.svelte';
+	import NavMenu from '$lib/ui/NavMenu.svelte';
 
 	type Tab = 'overview' | 'yearly' | 'monthly' | 'calendar';
 	let tab = $state<Tab>('overview');
