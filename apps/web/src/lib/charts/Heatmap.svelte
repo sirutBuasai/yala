@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { money } from '$lib/utils/format';
+	import { money, esc } from '$lib/utils/format';
 	import { theme } from '$lib/utils/theme';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 
@@ -72,7 +72,7 @@
 				rx="5"
 				fill={bg(v)}
 				role="presentation"
-				onmousemove={(e) => showTip(`<b>${c} · ${r}</b><br>${money(v)}`, e)}
+				onmousemove={(e) => showTip(`<b>${esc(c)} · ${esc(r)}</b><br>${money(v)}`, e)}
 				onmouseleave={hideTip}
 			/>
 			<text
