@@ -26,9 +26,33 @@
 	const H = 540;
 	const NODE_W = 13;
 	const GAP = 20; // minimum vertical gap between nodes within a column
-	const M = { t: 12, b: 12, l: 92, r: 150 };
+	const LABEL_MIN_GAP = 15; // minimum vertical spacing between de-collided right labels
+	// Top margin leaves room for the middle columns' above-labels; right margin holds the
+	// last column's de-collided labels + their leader lines.
+	const M = { t: 28, b: 12, l: 92, r: 150 };
 	const iw = W - M.l - M.r;
 	const ih = H - M.t - M.b;
+
+	/** Push overlapping label anchors apart in one pass down then clamp up from the bottom. */
+	function declutter(items: { cy: number }[], minGap: number, top: number, bottom: number) {
+		const order = items.map((it, i) => ({ i, cy: it.cy, ly: it.cy })).sort((a, b) => a.cy - b.cy);
+		let last = -Infinity;
+		for (const o of order) {
+			o.ly = Math.max(o.cy, last + minGap, top);
+			last = o.ly;
+		}
+		const bottommost = order[order.length - 1];
+		if (bottommost && bottommost.ly > bottom) {
+			last = bottom;
+			for (let k = order.length - 1; k >= 0; k--) {
+				order[k]!.ly = Math.min(order[k]!.ly, last);
+				last = order[k]!.ly - minGap;
+			}
+		}
+		const out = new Array<number>(items.length);
+		for (const o of order) out[o.i] = o.ly;
+		return out;
+	}
 
 	const layout = $derived.by(() => {
 		const cols = [...new Set(nodes.map((n) => n.col))].sort((a, b) => a - b);
@@ -85,32 +109,46 @@
 
 		const maxCol = cols[cols.length - 1];
 		const minCol = cols[0];
-		const hasOut = (id: string) => links.some((l) => l.source === id);
 
-		// Label side: right for terminal / last-column nodes, left for the first column,
-		// above for interior nodes that still branch onward (avoids overlapping ribbons).
+		// Label side is purely column-position based: the first column reads on the left, the
+		// last on the right, every middle column above its ribbon. This keeps interior labels
+		// off the ribbons and out of each other's way as columns get denser.
 		const nodeViews = [...placed.values()].map((p) => {
 			const { node } = p;
-			let side: 'left' | 'right' | 'above';
-			if (node.col === maxCol || (!hasOut(node.id) && node.col !== minCol)) side = 'right';
-			else if (node.col === minCol) side = 'left';
-			else side = 'above';
+			const side: 'left' | 'right' | 'above' =
+				node.col === minCol ? 'left' : node.col === maxCol ? 'right' : 'above';
 			// Each node's share of its own column's throughput. The first column is the root
-			// (trivially 100%), so it's skipped. This is purely structural — no domain meaning
-			// baked in — yet reads naturally: column 1 sums to the source, later columns to
-			// whatever flowed onward.
+			// (trivially 100%), so it's skipped.
 			const colTot = colTotal(node.col);
 			const pct =
 				node.col !== minCol && colTot > 0 ? Math.round((node.value / colTot) * 100) : null;
-			return { ...p, side, pct };
+			return { ...p, side, pct, cy: p.y + p.h / 2 };
 		});
 
-		return { nodeViews, ribbons };
+		// De-collide the last column's labels (the crowded category fan): spread their anchor
+		// y apart, then a leader line reconnects each to its node.
+		const rightViews = nodeViews.filter((v) => v.side === 'right');
+		const lys = declutter(
+			rightViews.map((v) => ({ cy: v.cy })),
+			LABEL_MIN_GAP,
+			M.t + 6,
+			H - M.b - 6
+		);
+		const labelY = new Map<string, number>();
+		rightViews.forEach((v, i) => labelY.set(v.node.id, lys[i]!));
+
+		return { nodeViews, ribbons, labelY };
 	});
 
 	function ribbonPath(sx: number, sy: number, tx: number, ty: number): string {
 		const mx = (sx + tx) / 2;
 		return `M${sx},${sy} C${mx},${sy} ${mx},${ty} ${tx},${ty}`;
+	}
+
+	// Elbow leader from a node's right edge to its de-collided label anchor.
+	function leaderPath(sx: number, sy: number, tx: number, ty: number): string {
+		const bend = sx + Math.min(14, (tx - sx) / 2);
+		return `M${sx},${sy} L${bend},${sy} L${bend},${ty} L${tx},${ty}`;
 	}
 </script>
 
@@ -145,19 +183,28 @@
 				)}
 			onmouseleave={hideTip}
 		/>
-		{#if nv.side === 'right'}
-			<text class="lbl" x={nv.x + NODE_W + 7} y={nv.y + nv.h / 2 + 4} text-anchor="start">
-				{nv.node.label}<tspan class="val" dx="6">{money(nv.node.value)}</tspan
-				>{#if nv.pct != null}<tspan class="pct" dx="5">{nv.pct}%</tspan>{/if}
-			</text>
-		{:else if nv.side === 'left'}
-			<text class="lbl" x={nv.x - 8} y={nv.y + nv.h / 2 + 4} text-anchor="end">
+		{#if nv.side === 'left'}
+			<text class="lbl" x={nv.x - 8} y={nv.cy + 4} text-anchor="end">
 				{nv.node.label}<tspan class="val" dx="6">{money(nv.node.value)}</tspan>
 			</text>
-		{:else}
+		{:else if nv.side === 'above'}
 			<text class="lbl" x={nv.x + NODE_W / 2} y={nv.y - 6} text-anchor="middle">
 				{nv.node.label}<tspan class="val" dx="6">{money(nv.node.value)}</tspan
 				>{#if nv.pct != null}<tspan class="pct" dx="5">{nv.pct}%</tspan>{/if}
+			</text>
+		{:else}
+			{@const ly = layout.labelY.get(nv.node.id) ?? nv.cy}
+			<path
+				class="leader"
+				d={leaderPath(nv.x + NODE_W, nv.cy, nv.x + NODE_W + 20, ly)}
+				fill="none"
+			/>
+			<text class="lbl" x={nv.x + NODE_W + 24} y={ly} text-anchor="start">
+				<tspan x={nv.x + NODE_W + 24} dy="-1">{nv.node.label}</tspan>
+				<tspan class="val" x={nv.x + NODE_W + 24} dy="12"
+					>{money(nv.node.value)}{#if nv.pct != null}<tspan class="pct" dx="5">{nv.pct}%</tspan
+						>{/if}</tspan
+				>
 			</text>
 		{/if}
 	{/each}
@@ -184,5 +231,9 @@
 		font-size: 10px;
 		font-weight: 600;
 		font-variant-numeric: tabular-nums;
+	}
+	.leader {
+		stroke: var(--border);
+		stroke-width: 1;
 	}
 </style>
