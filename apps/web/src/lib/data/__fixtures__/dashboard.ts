@@ -86,7 +86,7 @@ export function makeData(): DashboardData {
 					{
 						date: '2025-01-15',
 						gross: 3000,
-						deductions: { Tax: 600, Insurance: 100 },
+						deductions: { Tax: 600, Benefits: 100 },
 						contributions: { HSA: 150, Roth401k: 600 },
 						net: 2300,
 						take_home: 1550,
@@ -112,7 +112,7 @@ export function makeData(): DashboardData {
 				{
 					date: '2025-01-15',
 					gross: 3000,
-					deductions: { Tax: 600, Insurance: 100 },
+					deductions: { Tax: 600, Benefits: 100 },
 					contributions: { HSA: 150, Roth401k: 600 },
 					net: 2300,
 					take_home: 1550,
