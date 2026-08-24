@@ -89,8 +89,8 @@
 	$effect(() => {
 		const d = $data;
 		if (!d) return;
-		if (!year) year = d.meta.years[d.meta.years.length - 1];
-		if (!monthKey) monthKey = d.meta.month_keys[d.meta.month_keys.length - 1];
+		if (!year) year = d.meta.years[d.meta.years.length - 1] ?? year;
+		if (!monthKey) monthKey = d.meta.month_keys[d.meta.month_keys.length - 1] ?? monthKey;
 	});
 
 	function showHint(msg: string) {

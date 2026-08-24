@@ -56,7 +56,7 @@ describe('moneyFlow', () => {
 	it('falls back to a single Contributions bucket when no paycheck breakdown exists', () => {
 		const d = makeData();
 		// Strip the only paycheck's breakdown source but keep the yearly contribution totals.
-		d.months['2025-01'].paychecks = [];
+		d.months['2025-01']!.paychecks = [];
 		const m = moneyFlow(d);
 		expect(node(m, 'Contributions')!.value).toBeCloseTo(1500);
 		expect(node(m, 'HSA')).toBeUndefined();

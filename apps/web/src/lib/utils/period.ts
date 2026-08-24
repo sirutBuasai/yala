@@ -4,7 +4,7 @@
 /** Shift a month key by whole months. Numeric Date args handle year rollover and avoid the
  * UTC string-parse pitfall (`new Date("2026-07-01")` is parsed as UTC). */
 export function addMonths(key: string, delta: number): string {
-	const [y, m] = key.split('-').map(Number);
+	const [y = 0, m = 1] = key.split('-').map(Number);
 	const d = new Date(y, m - 1 + delta, 1);
 	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
@@ -28,5 +28,5 @@ export function pickableMonths(monthKeys: string[], current: string): string[] {
 export function monthForYear(pickable: string[], year: string, current: string): string {
 	const inYear = pickable.filter((k) => k.startsWith(year + '-'));
 	const same = `${year}-${current.slice(5)}`;
-	return inYear.includes(same) ? same : inYear[inYear.length - 1];
+	return inYear.includes(same) ? same : (inYear[inYear.length - 1] ?? current);
 }

@@ -83,8 +83,9 @@ export function formatAccount(name: string | null | undefined): string {
 /** Format a "YYYY-MM" key as a full month label. */
 export function monthLabel(key: string): string {
 	const [y, m] = key.split('-');
+	if (!y || !m) return key;
 
-	return MONTHS[+m - 1] + ' ' + y;
+	return (MONTHS[+m - 1] ?? key) + ' ' + y;
 }
 
 /** Short month name for a "YYYY-MM" (or longer) key. */
@@ -95,6 +96,7 @@ export function monthName(key: string): string {
 /** Format a "YYYY-MM-DD" date as a compact "M/D". */
 export function monthDay(date: string): string {
 	const [, m, d] = date.split('-');
+	if (!m || !d) return date;
 
 	return `${+m}/${+d}`;
 }

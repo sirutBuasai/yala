@@ -19,7 +19,7 @@ describe('moneyYScale', () => {
 
 	it('maps the top of the range to y=0', () => {
 		const { y } = moneyYScale([100], 300);
-		expect(y(y.domain()[1])).toBe(0);
+		expect(y(y.domain()[1]!)).toBe(0);
 	});
 
 	it('produces a handful of nice ticks', () => {

@@ -50,7 +50,7 @@ describe('TransactionForm (add)', () => {
 		await fireEvent.click(screen.getByText('+ Add'));
 
 		await waitFor(() => expect(onsaved).toHaveBeenCalledOnce());
-		const [url, opts] = fetchSpy.mock.calls[0];
+		const [url, opts] = fetchSpy.mock.calls[0]!;
 		expect(url).toBe('/api/transaction');
 		const sent = JSON.parse(opts.body);
 		expect(sent).toMatchObject({
@@ -89,7 +89,7 @@ describe('TransactionForm (add)', () => {
 		await fireEvent.click(screen.getByText('+ credit'));
 		// Total bill and the credit amount now share the "0" placeholder; the credit row is last.
 		const amounts = screen.getAllByPlaceholderText('0');
-		await fireEvent.input(amounts[amounts.length - 1], { target: { value: '200' } });
+		await fireEvent.input(amounts[amounts.length - 1]!, { target: { value: '200' } });
 
 		// 300 total − 200 payback = $100 your share
 		expect(screen.getByText('$100')).toBeInTheDocument();

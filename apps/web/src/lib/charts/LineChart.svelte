@@ -102,11 +102,12 @@
 		{/each}
 
 		{#each series as s, si (s.name)}
+			{@const pth = paths[si]!}
 			{#if s.area}
-				<path d={paths[si].area} fill="url(#{gid}-{si})" />
+				<path d={pth.area} fill="url(#{gid}-{si})" />
 			{/if}
 			<path
-				d={paths[si].line}
+				d={pth.line}
 				fill="none"
 				stroke={s.color}
 				stroke-width="2"

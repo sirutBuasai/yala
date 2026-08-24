@@ -27,7 +27,7 @@ describe('Credits', () => {
 		});
 		expect(screen.getAllByPlaceholderText('0')).toHaveLength(2);
 
-		await fireEvent.click(screen.getAllByText('✕')[0]);
+		await fireEvent.click(screen.getAllByText('✕')[0]!);
 		expect(screen.getAllByPlaceholderText('0')).toHaveLength(1);
 	});
 

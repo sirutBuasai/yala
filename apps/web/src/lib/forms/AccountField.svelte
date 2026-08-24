@@ -43,7 +43,7 @@
 		adding = true;
 		leaf = '';
 		err = '';
-		kind = kinds[0].value;
+		kind = kinds[0]!.value;
 	}
 
 	async function commit() {

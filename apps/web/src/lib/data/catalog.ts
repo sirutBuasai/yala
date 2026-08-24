@@ -41,7 +41,7 @@ export interface DataDef {
 
 function latestYear(data: DashboardData): number {
 	const ys = data.meta.years;
-	return ys.length ? ys[ys.length - 1] : new Date().getFullYear();
+	return ys[ys.length - 1] ?? new Date().getFullYear();
 }
 
 function scopeYear(data: DashboardData, scope: Scope): number {
@@ -185,5 +185,7 @@ export function dataOfKind(kind: PrimitiveKind): DataDef[] {
 
 /** Convenience: build a primitive by catalog id. */
 export function build(data: DashboardData, id: string, scope: Scope): Primitive {
-	return CATALOG_BY_ID[id].build(data, scope);
+	const def = CATALOG_BY_ID[id];
+	if (!def) throw new Error(`unknown catalog id: ${id}`);
+	return def.build(data, scope);
 }

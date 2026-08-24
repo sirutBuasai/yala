@@ -61,7 +61,7 @@ describe('monthlyScalars', () => {
 		expect(used.value).toBeCloseTo((45.5 / 2300) * 100);
 
 		const d = makeData();
-		d.months['2025-01'].total_income = 0;
+		d.months['2025-01']!.total_income = 0;
 		expect(find(monthlyScalars(d, '2025-01'), '% used')!.value).toBeNull();
 	});
 

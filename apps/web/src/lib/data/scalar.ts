@@ -17,7 +17,8 @@ export function spendingScalars(data: DashboardData, year: number): Scalar[] {
 	const monthlySpent = matrix.map((row) => sumValues(row.spent));
 	const activeSpendMonths = monthlySpent.filter((v) => v > 0).length || 1;
 	const activeIncomeMonths = matrix.filter((row) => row.income > 0).length || 1;
-	const activeMonths = matrix.filter((row, i) => row.income > 0 || monthlySpent[i] > 0).length || 1;
+	const activeMonths =
+		matrix.filter((row, i) => row.income > 0 || monthlySpent[i]! > 0).length || 1;
 
 	const totalIncome = yd?.total_income ?? 0;
 	const totalSpent = yd?.total_spent ?? 0;

@@ -28,7 +28,7 @@ describe('rollup', () => {
 		const pts = Array.from({ length: 12 }, (_, i) => ({ key: `C${i}`, value: 100 - i }));
 		const out = rollup(pts);
 		expect(out).toHaveLength(10);
-		const rest = out[out.length - 1];
+		const rest = out[out.length - 1]!;
 		expect(rest.key).toBe('Other');
 		// combined value = ranks 10..12 (values for C9, C10, C11 = 91 + 90 + 89)
 		expect(rest.value).toBe(91 + 90 + 89);
@@ -39,8 +39,8 @@ describe('rollup', () => {
 		const pts = Array.from({ length: 9 }, (_, i) => ({ key: `C${i}`, value: 100 - i }));
 		const out = rollup(pts, 6); // 5 named + Other
 		expect(out).toHaveLength(6);
-		expect(out[out.length - 1].key).toBe('Other');
-		expect(out[out.length - 1].value).toBe(95 + 94 + 93 + 92);
+		expect(out[out.length - 1]!.key).toBe('Other');
+		expect(out[out.length - 1]!.value).toBe(95 + 94 + 93 + 92);
 	});
 
 	it('returns an empty array when nothing is positive', () => {
@@ -61,7 +61,7 @@ describe('whereItWent', () => {
 		const saved = c.points.find((p) => p.key === 'Saved');
 		expect(saved?.value).toBe(50);
 		// Saved is the last slice.
-		expect(c.points[c.points.length - 1].key).toBe('Saved');
+		expect(c.points[c.points.length - 1]!.key).toBe('Saved');
 	});
 
 	it('omits Saved when spending met or exceeded income', () => {
@@ -74,6 +74,6 @@ describe('whereItWent', () => {
 		const c = whereItWent(items, 10000, 1000);
 		expect(c.points).toHaveLength(10);
 		expect(c.points.filter((p) => p.key === 'Other')).toHaveLength(1);
-		expect(c.points[c.points.length - 1].key).toBe('Saved');
+		expect(c.points[c.points.length - 1]!.key).toBe('Saved');
 	});
 });

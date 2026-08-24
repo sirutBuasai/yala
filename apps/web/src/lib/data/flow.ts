@@ -51,8 +51,8 @@ export function moneyFlow(data: DashboardData): Flow {
 	// Breakdown proportions from the individual paychecks.
 	const dedShares: Record<string, number> = {};
 	const conShares: Record<string, number> = {};
-	for (const key of Object.keys(data.months)) {
-		for (const p of data.months[key].paychecks) {
+	for (const month of Object.values(data.months)) {
+		for (const p of month.paychecks) {
 			for (const [k, v] of Object.entries(p.deductions)) dedShares[k] = (dedShares[k] ?? 0) + v;
 			for (const [k, v] of Object.entries(p.contributions)) {
 				const fam = contributionFamily(k);
