@@ -34,19 +34,19 @@
 	/* Title/cap on the left, optional controls on the right. Title/cap element margins are left
 	   untouched so every pane keeps its original spacing; flex-end plus an actions bottom margin
 	   matching the last line's trailing margin lifts the actions onto that line's baseline —
-	   the cap's 14px when a cap is present, else the title's 2px. */
+	   the cap's --space-7 when a cap is present, else the title's --space-1. */
 	.head {
 		display: flex;
 		align-items: flex-end;
 		justify-content: space-between;
-		gap: 12px;
+		gap: var(--gap-field);
 	}
 	.actions {
 		flex: none;
-		margin-bottom: 2px;
+		margin-bottom: var(--space-1);
 	}
 	.head.has-cap .actions {
-		margin-bottom: 14px;
+		margin-bottom: var(--space-7);
 	}
 	.body {
 		flex: 1 1 auto;

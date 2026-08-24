@@ -10,7 +10,7 @@
 	import type { PaycheckOut } from '$lib/data/types';
 	import { money } from '$lib/utils/format';
 	import { sumValues } from '$lib/utils/num';
-	import RowList from '$lib/ui/RowList.svelte';
+	import RowList from '$lib/lists/RowList.svelte';
 
 	interface Props {
 		paychecks: PaycheckOut[];
@@ -91,8 +91,8 @@
 
 <style>
 	.title {
-		font-size: 13px;
-		font-weight: 500;
+		font-size: var(--text-row);
+		font-weight: var(--fw-medium);
 		min-width: 0;
 	}
 	/* one figure column: title-case label over its value, right-aligned to line up with the amount */
@@ -103,18 +103,18 @@
 	}
 	.flabel {
 		color: var(--ink-2);
-		font-size: 11.5px;
+		font-size: var(--text-caption);
 		text-transform: capitalize;
 	}
 	.fval {
-		font-size: 11.5px;
+		font-size: var(--text-caption);
 		font-variant-numeric: tabular-nums;
 	}
 	.amt {
 		text-align: right;
 		font-variant-numeric: tabular-nums;
-		font-weight: 600;
-		font-size: 13px;
+		font-weight: var(--fw-semibold);
+		font-size: var(--text-row);
 	}
 	.pos {
 		color: var(--good-text);

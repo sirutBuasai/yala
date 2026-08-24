@@ -8,8 +8,8 @@
 	// "YYYY-MM-DD" string (empty = unset). Keyboard: arrows move the day, Enter selects, Esc closes.
 	import { untrack } from 'svelte';
 	import { MONTHS } from '$lib/utils/format';
-	import Popup from '$lib/ui/overlay/Popup.svelte';
-	import Chevron from '$lib/ui/nav/Chevron.svelte';
+	import Popup from '$lib/overlay/Popup.svelte';
+	import Chevron from '$lib/icons/Chevron.svelte';
 
 	interface Props {
 		/** ISO date "YYYY-MM-DD" or '' (bindable). */

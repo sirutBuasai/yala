@@ -98,9 +98,9 @@
 		width: 264px;
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: var(--gap-row);
 		/* no horizontal padding: children set their own so the full-width square hover reaches the edges */
-		padding: 16px 0;
+		padding: var(--space-8) 0;
 		background: var(--surface);
 		border-right: 1px solid var(--border);
 		box-shadow: var(--shadow);
@@ -109,20 +109,20 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 4px 18px 12px;
-		margin-bottom: 6px;
+		padding: var(--space-2) var(--space-9) var(--space-6);
+		margin-bottom: var(--space-3);
 		border-bottom: 1px solid var(--border);
 	}
 	.head .title {
-		font-size: 20px;
-		font-weight: 600;
-		letter-spacing: -0.3px;
+		font-size: var(--text-dialog);
+		font-weight: var(--fw-semibold);
+		letter-spacing: var(--ls-tight);
 	}
 	.close {
 		border: 0;
 		background: none;
 		color: var(--ink-2);
-		font-size: 15px;
+		font-size: var(--text-panel);
 		cursor: pointer;
 	}
 	.close:hover {
@@ -134,11 +134,11 @@
 	}
 	/* full-width square hover — the app's standard for vertically stacked items */
 	.links a {
-		padding: 10px 18px;
+		padding: var(--space-5) var(--space-9);
 		border-radius: 0;
 		color: var(--ink-2);
-		font-size: 14px;
-		font-weight: 500;
+		font-size: var(--text-body);
+		font-weight: var(--fw-medium);
 		text-decoration: none;
 	}
 	.links a:hover {

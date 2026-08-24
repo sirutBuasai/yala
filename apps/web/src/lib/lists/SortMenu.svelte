@@ -1,7 +1,7 @@
 <script lang="ts" generics="K extends string">
 	// Reusable sort control for any list: a "Sorted by X" label, an order-direction arrow, and a
 	// dots menu to pick the field. Owns no data — binds sortKey/sortDir for the caller to consume.
-	import Arrow from '$lib/ui/Arrow.svelte';
+	import Arrow from '$lib/icons/Arrow.svelte';
 	import Select from '$lib/forms/Select.svelte';
 
 	interface Props {
@@ -55,16 +55,16 @@
 	.sortmenu {
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: var(--gap-row);
 	}
 	.orderctl {
 		display: inline-flex;
 		align-items: center;
-		gap: 5px;
+		gap: var(--space-2);
 	}
 	.sortlabel,
 	.sep {
 		color: var(--ink-3);
-		font-size: 11.5px;
+		font-size: var(--text-caption);
 	}
 </style>

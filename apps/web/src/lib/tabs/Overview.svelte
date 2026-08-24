@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
-	import ViewHeader from '$lib/ui/layout/ViewHeader.svelte';
-	import Board from '$lib/ui/layout/Board.svelte';
+	import ViewHeader from '$lib/layout/ViewHeader.svelte';
+	import Board from '$lib/layout/Board.svelte';
 
 	interface Props {
 		data: DashboardData;

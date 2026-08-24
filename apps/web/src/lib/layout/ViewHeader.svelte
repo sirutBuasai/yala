@@ -20,13 +20,13 @@
 	.viewhead {
 		display: flex;
 		align-items: center;
-		gap: 14px;
-		margin-bottom: 16px;
+		gap: var(--gap-grid);
+		margin-bottom: var(--space-8);
 		flex-wrap: wrap;
 	}
 	.viewhead h2 {
-		font-size: 22px;
-		font-weight: 600;
+		font-size: var(--text-title);
+		font-weight: var(--fw-semibold);
 		margin: 0;
 	}
 </style>

@@ -8,7 +8,7 @@
 	// On-brand replacement for a native <select>: a Popup-hosted listbox.
 	// Keyboard: Up/Down move, Enter/Space select, Esc close, Home/End jump.
 	import { untrack, type Snippet } from 'svelte';
-	import Popup from '$lib/ui/overlay/Popup.svelte';
+	import Popup from '$lib/overlay/Popup.svelte';
 
 	interface Props {
 		/** Selected value (bindable). */

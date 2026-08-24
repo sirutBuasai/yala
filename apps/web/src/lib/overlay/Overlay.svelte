@@ -56,11 +56,11 @@
 		display: flex;
 		flex-direction: column;
 		overflow-y: auto;
-		padding: 22px 24px;
+		padding: var(--space-10) var(--space-11);
 	}
 	/* Shrinks to fit narrow screens; content shrinks with it, so it never needs a horizontal scroll. */
 	.modal {
-		border-radius: var(--radius);
+		border-radius: var(--radius-xl);
 		box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.6);
 		width: min(760px, 100%);
 		max-height: 88vh;
@@ -78,18 +78,18 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 16px;
+		margin-bottom: var(--space-8);
 	}
 	.head h2 {
 		margin: 0;
-		font-size: 18px;
+		font-size: var(--text-dialog);
 	}
 	.x {
 		background: none;
 		border: 1px solid var(--border);
 		color: var(--ink-2);
-		border-radius: 7px;
-		padding: 3px 9px;
+		border-radius: var(--radius-sm);
+		padding: var(--pad-btn-sm);
 		cursor: pointer;
 	}
 	.x:hover {

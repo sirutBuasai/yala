@@ -3,10 +3,10 @@
 	import type { AccountsInfo } from '$lib/data/load';
 	import { MONTHS, money, moneyCompact } from '$lib/utils/format';
 	import { categoryVar } from '$lib/utils/theme';
-	import ViewHeader from '$lib/ui/layout/ViewHeader.svelte';
-	import MonthNav from '$lib/ui/nav/MonthNav.svelte';
-	import TransactionList from '$lib/ui/lists/TransactionList.svelte';
-	import PaycheckList from '$lib/ui/lists/PaycheckList.svelte';
+	import ViewHeader from '$lib/layout/ViewHeader.svelte';
+	import MonthNav from '$lib/nav/MonthNav.svelte';
+	import TransactionList from '$lib/lists/TransactionList.svelte';
+	import PaycheckList from '$lib/lists/PaycheckList.svelte';
 	import EditModals from '$lib/forms/EditModals.svelte';
 
 	interface Props {

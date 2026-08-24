@@ -2,7 +2,7 @@
 	// Prev/next stepper scaffold for the period navs: a ‹ button, the caller's selects, and a ›
 	// button. Shared by MonthNav and YearNav so the arrows, layout, and aria live in one place.
 	import type { Snippet } from 'svelte';
-	import Chevron from '$lib/ui/Chevron.svelte';
+	import Chevron from '$lib/icons/Chevron.svelte';
 
 	interface Props {
 		prevLabel: string;
@@ -29,6 +29,6 @@
 	.rangenav {
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: var(--gap-row);
 	}
 </style>

@@ -6,8 +6,8 @@
 	// collapsed onto one ramp, and roles that legitimately share a value (subtitle vs
 	// column title) still get their own named token so intent stays explicit.
 	import '../../app.css';
-	import NavMenu from '$lib/ui/nav/NavMenu.svelte';
-	import Pane from '$lib/ui/layout/Pane.svelte';
+	import NavMenu from '$lib/nav/NavMenu.svelte';
+	import Pane from '$lib/layout/Pane.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
 	import { makeData } from '$lib/data/__fixtures__/dashboard';
 	import { build } from '$lib/data/catalog';

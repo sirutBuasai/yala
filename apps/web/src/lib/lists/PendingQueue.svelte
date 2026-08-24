@@ -1,5 +1,5 @@
 <script lang="ts">
-	import TransactionList, { type TxnRow } from '$lib/ui/TransactionList.svelte';
+	import TransactionList, { type TxnRow } from '$lib/lists/TransactionList.svelte';
 
 	interface PendingTxn {
 		locator: string;

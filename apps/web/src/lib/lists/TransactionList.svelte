@@ -29,7 +29,7 @@
 <script lang="ts">
 	import { money, formatAccount } from '$lib/utils/format';
 	import { categoryVar } from '$lib/utils/theme';
-	import RowList from '$lib/ui/RowList.svelte';
+	import RowList from '$lib/lists/RowList.svelte';
 
 	interface Props {
 		transactions: TxnRow[];

@@ -3,7 +3,7 @@
 	// parent owns the value and applies changes via `onchange`. Shared by the Monthly and
 	// Calendar views.
 	import Select from '$lib/forms/Select.svelte';
-	import RangeNav from '$lib/ui/RangeNav.svelte';
+	import RangeNav from '$lib/nav/RangeNav.svelte';
 	import { monthName } from '$lib/utils/format';
 	import { addMonths, monthForYear, pickableMonths } from '$lib/utils/period';
 
@@ -46,7 +46,7 @@
 <style>
 	.selectors {
 		display: flex;
-		gap: 8px;
+		gap: var(--gap-row);
 	}
 	.monthsel {
 		width: 90px;

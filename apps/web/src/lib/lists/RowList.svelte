@@ -33,7 +33,7 @@
 	}: Props = $props();
 </script>
 
-<div class="list">
+<div class="list bleed-x">
 	{#each items as item (item.locator)}
 		<svelte:element
 			this={edit ? 'button' : 'div'}
@@ -57,16 +57,15 @@
 	.list {
 		display: flex;
 		flex-direction: column;
-		/* bleed to the enclosing card's edges (20px h-padding) so the row hover runs edge-to-edge;
-		   the +20px in the row padding below keeps the content where it was. */
-		margin: 0 -20px;
+		/* .bleed-x pulls the list to the card's edges so the row hover runs edge-to-edge;
+		   each row's --pad-card-x padding restores the content inset. */
 	}
 	.row {
 		position: relative;
 		display: grid;
 		align-items: center;
-		gap: 10px;
-		padding: 8px 24px;
+		gap: var(--space-5);
+		padding: var(--pad-listrow);
 		/* reset button defaults for the clickable (edit-mode) variant */
 		width: 100%;
 		background: none;
@@ -75,12 +74,12 @@
 		font: inherit;
 		text-align: left;
 	}
-	/* divider stays inset to the content while the row hover is full-bleed */
+	/* divider stays inset to the content (same anchor as the bleed) while the row hover is full-bleed */
 	.row:not(:last-child)::after {
 		content: '';
 		position: absolute;
-		left: 20px;
-		right: 20px;
+		left: var(--pad-card-x);
+		right: var(--pad-card-x);
 		bottom: 0;
 		height: 1px;
 		background: var(--border);
@@ -93,12 +92,12 @@
 	}
 	.date {
 		color: var(--ink-3);
-		font-size: 11.5px;
+		font-size: var(--text-meta);
 		font-variant-numeric: tabular-nums;
 	}
 	.dot {
 		width: 8px;
 		height: 8px;
-		border-radius: 50%;
+		border-radius: var(--radius-pill);
 	}
 </style>

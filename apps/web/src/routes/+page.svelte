@@ -16,8 +16,8 @@
 	import CalendarView from '$lib/tabs/Calendar.svelte';
 	import ThemeToggle from '$lib/forms/ThemeToggle.svelte';
 	import EditToggle from '$lib/forms/EditToggle.svelte';
-	import Tooltip from '$lib/ui/overlay/Tooltip.svelte';
-	import NavMenu from '$lib/ui/nav/NavMenu.svelte';
+	import Tooltip from '$lib/overlay/Tooltip.svelte';
+	import NavMenu from '$lib/nav/NavMenu.svelte';
 
 	type Tab = 'overview' | 'yearly' | 'monthly' | 'calendar';
 	let tab = $state<Tab>('overview');

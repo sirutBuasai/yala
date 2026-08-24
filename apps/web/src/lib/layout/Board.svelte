@@ -5,7 +5,7 @@
 	import type { Primitive } from '$lib/data/primitives';
 	import { build } from '$lib/data/catalog';
 	import type { Scope } from '$lib/data/scope';
-	import Pane from '$lib/ui/Pane.svelte';
+	import Pane from '$lib/layout/Pane.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
 
 	interface Cell {
@@ -52,9 +52,9 @@
 	.board {
 		display: grid;
 		grid-template-columns: repeat(var(--cols), 1fr);
-		gap: 14px;
+		gap: var(--gap-grid);
 		align-items: stretch;
-		margin-bottom: 18px;
+		margin-bottom: var(--space-9);
 	}
 	.cell {
 		display: flex;

@@ -4,15 +4,15 @@
 	import type { Scope } from '$lib/data/scope';
 	import { money, monthLabel } from '$lib/utils/format';
 	import { build } from '$lib/data/catalog';
-	import Pane from '$lib/ui/layout/Pane.svelte';
-	import ViewHeader from '$lib/ui/layout/ViewHeader.svelte';
-	import Board from '$lib/ui/layout/Board.svelte';
-	import MonthNav from '$lib/ui/nav/MonthNav.svelte';
+	import Pane from '$lib/layout/Pane.svelte';
+	import ViewHeader from '$lib/layout/ViewHeader.svelte';
+	import Board from '$lib/layout/Board.svelte';
+	import MonthNav from '$lib/nav/MonthNav.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
-	import TransactionList, { TXN_SORTS, type TxnSort } from '$lib/ui/lists/TransactionList.svelte';
-	import SortMenu from '$lib/ui/lists/SortMenu.svelte';
-	import PaycheckList from '$lib/ui/lists/PaycheckList.svelte';
-	import PendingQueue from '$lib/ui/lists/PendingQueue.svelte';
+	import TransactionList, { TXN_SORTS, type TxnSort } from '$lib/lists/TransactionList.svelte';
+	import SortMenu from '$lib/lists/SortMenu.svelte';
+	import PaycheckList from '$lib/lists/PaycheckList.svelte';
+	import PendingQueue from '$lib/lists/PendingQueue.svelte';
 	import EditModals from '$lib/forms/EditModals.svelte';
 
 	interface Props {
