@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { build, CATALOG_BY_ID, dataOfKind } from '$lib/data/catalog';
+import {
+	build,
+	categoryMetricDefs,
+	componentMetricDefs,
+	CATALOG_BY_ID,
+	dataOfKind
+} from '$lib/data/catalog';
 import { makeData } from '$lib/data/__fixtures__/dashboard';
 
 describe('dataOfKind', () => {
@@ -98,6 +104,51 @@ describe('overview.income_spent_saved', () => {
 		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
 		expect(p.series.map((s) => s.name)).toEqual(['Income', 'Spent', 'Saved']);
 		expect(p.labels).toEqual(['2024', '2025']);
+	});
+});
+
+describe('scalar metrics', () => {
+	it('registers scalar metric entries alongside chart primitives', () => {
+		const ids = dataOfKind('scalar').map((d) => d.id);
+		expect(ids).toContain('income.total');
+		expect(ids).toContain('ratio.savings_rate');
+		expect(dataOfKind('scalar').every((d) => d.kind === 'scalar')).toBe(true);
+	});
+
+	it('builds a savings-rate percent scalar', () => {
+		const p = build(makeData(), 'ratio.savings_rate', { level: 'all' });
+		if (p.kind !== 'scalar') throw new Error('expected scalar');
+		expect(p.unit).toEqual({ kind: 'percent' });
+		expect(p.value).toBeCloseTo((4434.5 / 4600) * 100, 6);
+	});
+
+	it('signs the Saved tile by value', () => {
+		const p = build(makeData(), 'saved.total', { level: 'all' });
+		if (p.kind !== 'scalar') throw new Error('expected scalar');
+		expect(p.value).toBe(4434.5);
+		expect(p.dir).toBe('up');
+	});
+});
+
+describe('data-dependent metric defs', () => {
+	it('generates per-category amount + share defs', () => {
+		const d = makeData();
+		const defs = categoryMetricDefs(d);
+		const grocery = defs.find((x) => x.id === 'category.Grocery.amount');
+		if (!grocery) throw new Error('expected a Grocery amount def');
+		const p = grocery.build(d, { level: 'all' });
+		if (p.kind !== 'scalar') throw new Error('expected scalar');
+		expect(p.value).toBe(100);
+	});
+
+	it('enumerates paycheck line-items present in a scope', () => {
+		const d = makeData();
+		const defs = componentMetricDefs(d, { level: 'month', monthKey: '2025-01' });
+		const tax = defs.find((x) => x.id === 'paycheck.deductions.Tax');
+		if (!tax) throw new Error('expected a Tax def');
+		const p = tax.build(d, { level: 'month', monthKey: '2025-01' });
+		if (p.kind !== 'scalar') throw new Error('expected scalar');
+		expect(p.value).toBe(600);
 	});
 });
 

@@ -1,6 +1,8 @@
 <script lang="ts">
-	// Visualization for a Scalar primitive: one KPI-style tile. Formatting comes from
-	// the unit, so the data layer only supplies raw numbers.
+	// Visualization for a Scalar primitive: the body of a stat tile (value + delta). Chrome-less
+	// by design — it always lives inside a Pane, which supplies the card, the title (label) and
+	// the subtitle (note), so a stat reads title → subtitle → value just like a chart pane.
+	// Formatting comes from the unit, so data supplies raw numbers.
 	import type { Scalar } from '$lib/data/primitives';
 	import { formatUnit } from '$lib/data/primitives';
 
@@ -19,50 +21,35 @@
 	}
 </script>
 
-<div class="tile">
-	<div class="label">{scalar.label}</div>
-	<div class="num serif">{value}</div>
+<div class="stat">
 	{#if scalar.delta}
 		<div class="delta {dir ?? ''}">{deltaText()}</div>
 	{/if}
-	{#if scalar.note}
-		<div class="foot">{scalar.note}</div>
-	{/if}
+	<div class="num serif">{value}</div>
 </div>
 
 <style>
-	.tile {
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 16px 18px;
-		box-shadow: var(--shadow);
-	}
-	.label {
-		color: var(--ink-3);
-		font-size: 11px;
-		text-transform: uppercase;
-		letter-spacing: 0.9px;
+	/* Fill the pane body so the number can pin to the bottom: across a row, every tile's
+	   main number aligns on one baseline regardless of subtitle length or a delta. Secondary
+	   metrics (the delta) sit at the top under the subtitle and take the flexible space. */
+	.stat {
+		flex: 1 1 auto;
+		display: flex;
+		flex-direction: column;
 	}
 	.num {
 		font-size: 27px;
 		font-weight: 600;
-		margin-top: 7px;
 		letter-spacing: -0.5px;
+		margin-top: auto;
 	}
 	.delta {
 		font-size: 12px;
-		margin-top: 5px;
 	}
 	.up {
 		color: var(--good-text);
 	}
 	.down {
 		color: var(--crit-text);
-	}
-	.foot {
-		color: var(--ink-3);
-		font-size: 11.5px;
-		margin-top: 3px;
 	}
 </style>

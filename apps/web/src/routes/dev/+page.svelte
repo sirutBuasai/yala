@@ -9,8 +9,9 @@
 	import '../../app.css';
 	import NavMenu from '$lib/ui/NavMenu.svelte';
 	import { makeData } from '$lib/data/__fixtures__/dashboard';
-	import { CATALOG, build, type DataDef, type Scope } from '$lib/data/catalog';
-	import { compatible, type Series } from '$lib/data/primitives';
+	import { CATALOG, build, type DataDef } from '$lib/data/catalog';
+	import { type Scope } from '$lib/data/scope';
+	import { compatible, type Series, type Primitive } from '$lib/data/primitives';
 	import { chartsForKind } from '$lib/charts/registry';
 	import Figure from '$lib/charts/Figure.svelte';
 	import Pane from '$lib/ui/Pane.svelte';
@@ -72,7 +73,80 @@
 	function toggleLayer(id: string) {
 		layerIds = layerIds.includes(id) ? layerIds.filter((x) => x !== id) : [...layerIds, id];
 	}
+
+	// ── Dashboard grid prototype ─────────────────────────────────────────────
+	// One Figure renders every cell: a scalar primitive → stat tile, anything else →
+	// its chart — a stat is just a small-span cell. The layout (span per cell) is plain
+	// data, which is what makes it user-editable. This mirrors the tabs' <Board>.
+	type CellCfg = {
+		title?: string;
+		cap?: string;
+		dataId: string;
+		chart?: string;
+		scope: Scope;
+		area?: boolean;
+		span: number;
+	};
+
+	let view = $state<'composer' | 'dashboard'>('composer');
+	let editLayout = $state(false);
+
+	let layout = $state<CellCfg[]>([
+		{ dataId: 'income.total', scope: { level: 'all' }, title: 'Lifetime income', span: 2 },
+		{ dataId: 'spending.total', scope: { level: 'all' }, title: 'Lifetime spent', span: 2 },
+		{ dataId: 'saved.total', scope: { level: 'all' }, title: 'Lifetime saved', span: 2 },
+		{
+			title: 'Where it all went',
+			cap: 'Lifetime',
+			dataId: 'spending.where_it_went',
+			chart: 'donut',
+			scope: { level: 'all' },
+			span: 3
+		},
+		{
+			title: 'Income vs Spending vs Savings',
+			dataId: 'overview.income_spent_saved',
+			chart: 'bar',
+			scope: { level: 'all' },
+			span: 3
+		},
+		{
+			title: 'Money flow',
+			dataId: 'money.flow',
+			chart: 'sankey',
+			scope: { level: 'all' },
+			span: 6
+		},
+		{
+			title: 'Cumulative savings',
+			dataId: 'overview.cumulative_saved',
+			chart: 'line',
+			scope: { level: 'all' },
+			area: true,
+			span: 3
+		},
+		{
+			title: 'Savings rate by year',
+			dataId: 'overview.savings_rate',
+			chart: 'line',
+			scope: { level: 'all' },
+			span: 3
+		}
+	]);
+
+	/** A cell's primitive, built from the catalog. */
+	function primitiveOf(c: CellCfg): Primitive {
+		return build(data, c.dataId, c.scope);
+	}
 </script>
+
+<!-- Universal building block: every cell is a Pane wrapping a Figure. The registry maps the
+     primitive's kind to a component (stat vs chart); the page never branches on kind. -->
+{#snippet cell(c: CellCfg)}
+	<Pane title={c.title ?? ''} cap={c.cap}>
+		<Figure primitive={primitiveOf(c)} chart={c.chart} area={c.area} />
+	</Pane>
+{/snippet}
 
 <div class="wrap">
 	<NavMenu />
@@ -84,75 +158,108 @@
 			</a>
 			<span class="sub">data ↔ visualization sandbox</span>
 		</div>
+		<div class="modes">
+			<button class:on={view === 'composer'} onclick={() => (view = 'composer')}>Composer</button>
+			<button class:on={view === 'dashboard'} onclick={() => (view = 'dashboard')}>Dashboard</button
+			>
+			{#if view === 'dashboard'}
+				<button class="edit" class:on={editLayout} onclick={() => (editLayout = !editLayout)}>
+					{editLayout ? '✓ Editing layout' : 'Edit layout'}
+				</button>
+			{/if}
+		</div>
 	</header>
 
-	<div class="grid">
-		<aside class="controls">
-			<section>
-				<h2>1 · Data</h2>
-				<p class="hint">Pick a data primitive from the catalog.</p>
-				<div class="opts">
-					{#each CATALOG as d (d.id)}
-						<button class:active={d.id === dataId} onclick={() => (dataId = d.id)}>
-							<span class="nm">{d.label}</span>
-							<span class="kind">{d.kind}</span>
-						</button>
-					{/each}
-				</div>
-			</section>
-
-			<section>
-				<h2>2 · Chart</h2>
-				<p class="hint">
-					Only charts that accept <code>{primitive.kind}</code> data are offered.
-				</p>
-				<div class="chips">
-					{#each charts as c (c.id)}
-						<button class="chip" class:active={c.id === chart?.id} onclick={() => (chartId = c.id)}>
-							{c.label}{#if c.layerable}<span class="tag">layerable</span>{/if}
-						</button>
-					{/each}
-				</div>
-			</section>
-
-			{#if chart?.layerable && baseSeries}
+	{#if view === 'composer'}
+		<div class="grid">
+			<aside class="controls">
 				<section>
-					<h2>3 · Layer</h2>
+					<h2>1 · Data</h2>
+					<p class="hint">Pick a data primitive from the catalog.</p>
+					<div class="opts">
+						{#each CATALOG as d (d.id)}
+							<button class:active={d.id === dataId} onclick={() => (dataId = d.id)}>
+								<span class="nm">{d.label}</span>
+								<span class="kind">{d.kind}</span>
+							</button>
+						{/each}
+					</div>
+				</section>
+
+				<section>
+					<h2>2 · Chart</h2>
 					<p class="hint">
-						Compatible series only — same unit &amp; axis, so they overlay. Add any number.
+						Only charts that accept <code>{primitive.kind}</code> data are offered.
 					</p>
-					{#if layerable.length}
-						<div class="chips">
-							{#each layerable as l (l.id)}
-								<button
-									class="chip"
-									class:active={layerIds.includes(l.id)}
-									onclick={() => toggleLayer(l.id)}
-								>
-									{layerIds.includes(l.id) ? '✓ ' : '+ '}{l.label}
-								</button>
+					<div class="chips">
+						{#each charts as c (c.id)}
+							<button
+								class="chip"
+								class:active={c.id === chart?.id}
+								onclick={() => (chartId = c.id)}
+							>
+								{c.label}{#if c.layerable}<span class="tag">layerable</span>{/if}
+							</button>
+						{/each}
+					</div>
+				</section>
+
+				{#if chart?.layerable && baseSeries}
+					<section>
+						<h2>3 · Layer</h2>
+						<p class="hint">
+							Compatible series only — same unit &amp; axis, so they overlay. Add any number.
+						</p>
+						{#if layerable.length}
+							<div class="chips">
+								{#each layerable as l (l.id)}
+									<button
+										class="chip"
+										class:active={layerIds.includes(l.id)}
+										onclick={() => toggleLayer(l.id)}
+									>
+										{layerIds.includes(l.id) ? '✓ ' : '+ '}{l.label}
+									</button>
+								{/each}
+							</div>
+						{:else}
+							<p class="hint">No other catalog series is compatible with this one.</p>
+						{/if}
+					</section>
+				{/if}
+			</aside>
+
+			<div class="stage">
+				<Pane title={def.label} cap={`${primitive.kind} → ${chart?.label ?? '—'}`}>
+					{#key `${dataId}:${chart?.id}:${layerIds.join(',')}`}
+						<Figure
+							{primitive}
+							chart={chart?.id}
+							{layers}
+							area={chart?.id === 'line' && !layers.length}
+						/>
+					{/key}
+				</Pane>
+			</div>
+		</div>
+	{:else}
+		<!-- Dashboard grid prototype: one Figure renders every cell (stat or chart);
+		     layout is pure data (span per cell), so it's serializable + user-editable. -->
+		<div class="dash">
+			{#each layout as c, i (i)}
+				<div class="dcell" style:grid-column={`span ${c.span}`}>
+					{#if editLayout}
+						<div class="spanctl">
+							{#each [1, 2, 3, 6] as s (s)}
+								<button class:on={c.span === s} onclick={() => (c.span = s)}>{s}</button>
 							{/each}
 						</div>
-					{:else}
-						<p class="hint">No other catalog series is compatible with this one.</p>
 					{/if}
-				</section>
-			{/if}
-		</aside>
-
-		<div class="stage">
-			<Pane title={def.label} cap={`${primitive.kind} → ${chart?.label ?? '—'}`}>
-				{#key `${dataId}:${chart?.id}:${layerIds.join(',')}`}
-					<Figure
-						{primitive}
-						chart={chart?.id}
-						{layers}
-						area={chart?.id === 'line' && !layers.length}
-					/>
-				{/key}
-			</Pane>
+					{@render cell(c)}
+				</div>
+			{/each}
 		</div>
-	</div>
+	{/if}
 </div>
 
 <style>
@@ -291,5 +398,77 @@
 		border-radius: 5px;
 		padding: 1px 5px;
 		font-size: 11.5px;
+	}
+	.modes {
+		display: inline-flex;
+		gap: 6px;
+		margin-left: auto;
+		flex-wrap: wrap;
+	}
+	.modes button {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		padding: 6px 14px;
+		color: var(--ink-2);
+		cursor: pointer;
+		font-size: 12.5px;
+	}
+	.modes button.on {
+		border-color: color-mix(in srgb, var(--lav) 55%, var(--border));
+		background: color-mix(in srgb, var(--lav) 18%, transparent);
+		color: var(--ink);
+	}
+	/* Dashboard grid prototype: a 6-column grid; each cell spans 1..6 columns. */
+	.dash {
+		display: grid;
+		grid-template-columns: repeat(6, 1fr);
+		gap: 14px;
+		align-items: stretch;
+	}
+	.dcell {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+		min-height: 130px;
+	}
+	/* Let the pane fill its cell so charts grow to the row height. */
+	.dcell :global(.card) {
+		flex: 1 1 auto;
+	}
+	.spanctl {
+		position: absolute;
+		top: 6px;
+		right: 6px;
+		z-index: 2;
+		display: inline-flex;
+		gap: 2px;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 2px;
+		box-shadow: var(--shadow);
+	}
+	.spanctl button {
+		border: 0;
+		background: none;
+		color: var(--ink-3);
+		cursor: pointer;
+		font-size: 11px;
+		border-radius: 6px;
+		padding: 2px 7px;
+	}
+	.spanctl button.on {
+		background: color-mix(in srgb, var(--lav) 18%, transparent);
+		color: var(--ink);
+	}
+	@media (max-width: 860px) {
+		.dash {
+			grid-template-columns: repeat(2, 1fr);
+		}
+		.dcell {
+			grid-column: span 2 !important;
+		}
 	}
 </style>

@@ -1,13 +1,10 @@
 <script lang="ts">
 	import type { DashboardData } from '$lib/data/types';
+	import type { Scope } from '$lib/data/scope';
 	import { money } from '$lib/utils/format';
-	import { incomeScalars, spendingScalars } from '$lib/data/scalar';
-	import { build } from '$lib/data/catalog';
 	import ViewHeader from '$lib/ui/ViewHeader.svelte';
 	import YearNav from '$lib/ui/YearNav.svelte';
-	import KpiRow from '$lib/ui/KpiRow.svelte';
-	import Pane from '$lib/ui/Pane.svelte';
-	import Figure from '$lib/charts/Figure.svelte';
+	import Board from '$lib/ui/Board.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -25,39 +22,67 @@
 	});
 
 	const yearSpent = $derived(data.years[String(year)]?.total_spent ?? 0);
+	const yr = $derived<Scope>({ level: 'year', year });
 
-	const incomeSpentSaved = $derived(
-		build(data, 'overview.income_spent_saved', { level: 'year', year })
-	);
-	const byMonth = $derived(build(data, 'spending.by_month', { level: 'year', year }));
-	const catSplit = $derived(build(data, 'spending.by_category', { level: 'year', year }));
-	const catMatrix = $derived(build(data, 'spending.category_by_month', { level: 'year', year }));
+	// Income breakdown KPIs. The savings rate is its own tile rather than a delta on Net.
+	const incomeCells = $derived([
+		{ id: 'income.gross', scope: yr, cap: 'before tax & deductions' },
+		{ id: 'income.deductions', scope: yr, cap: 'tax + benefits' },
+		{ id: 'income.contributions', scope: yr, cap: 'HSA + 401k' },
+		{ id: 'income.net', scope: yr, cap: 'take-home + saved' },
+		{ id: 'ratio.savings_rate', scope: yr }
+	]);
+
+	// Spending / cash-flow KPIs (averages carry their own active-month note).
+	const spendingCells = $derived([
+		{ id: 'spending.total', scope: yr, title: `Spent ${year}`, cap: 'across the year' },
+		{ id: 'avg.income_per_month', scope: yr },
+		{ id: 'avg.spending_per_month', scope: yr },
+		{ id: 'avg.saved_per_month', scope: yr }
+	]);
+
+	const chartCells = $derived([
+		{
+			id: 'overview.income_spent_saved',
+			scope: yr,
+			chart: 'bar',
+			title: 'Income vs Spending vs Savings',
+			cap: `${year} · Per tracked month`,
+			span: 6
+		},
+		{
+			id: 'spending.by_month',
+			scope: yr,
+			chart: 'bar',
+			color: 'var(--salmon)',
+			title: 'Spending by month',
+			cap: `${year} · total ${money(yearSpent)}`,
+			span: 3
+		},
+		{
+			id: 'spending.by_category',
+			scope: yr,
+			chart: 'ranked-bars',
+			total: yearSpent,
+			title: 'Category split',
+			cap: `${year}`,
+			span: 3
+		},
+		{
+			id: 'spending.category_by_month',
+			scope: yr,
+			chart: 'heatmap',
+			title: 'Category by month',
+			cap: 'Spending per category per month.',
+			span: 6
+		}
+	]);
 </script>
 
 <ViewHeader title="Yearly">
 	<YearNav value={year} {years} onchange={(y) => (year = y)} />
 </ViewHeader>
 
-<KpiRow tiles={incomeScalars(data, year)} />
-<KpiRow tiles={spendingScalars(data, year)} />
-
-<div class="panes">
-	<Pane title="Income vs Spending vs Savings" cap={`${year} · Per tracked month`}>
-		<Figure primitive={incomeSpentSaved} chart="bar" />
-	</Pane>
-</div>
-
-<div class="panes two">
-	<Pane title="Spending by month" cap={`${year} · total ${money(yearSpent)}`}>
-		<Figure primitive={byMonth} chart="bar" color="var(--salmon)" />
-	</Pane>
-	<Pane title="Category split" cap={`${year}`}>
-		<Figure primitive={catSplit} chart="ranked-bars" total={yearSpent} />
-	</Pane>
-</div>
-
-<div class="panes">
-	<Pane title="Category by month" cap="Spending per category per month.">
-		<Figure primitive={catMatrix} chart="heatmap" />
-	</Pane>
-</div>
+<Board {data} cells={incomeCells} cols={5} />
+<Board {data} cells={spendingCells} cols={4} />
+<Board {data} cells={chartCells} />

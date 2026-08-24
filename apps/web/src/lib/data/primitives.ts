@@ -185,29 +185,3 @@ export function compatible(a: Primitive, b: Primitive): boolean {
 
 	return a.kind === b.kind;
 }
-
-/** From a pool, the subset that can layer onto `base` (excluding `base` itself). */
-export function compatibleWith(base: Series, pool: Series[]): Series[] {
-	return pool.filter((s) => s !== base && compatible(base, s));
-}
-
-/**
- * Fold a base series plus any number of additional series into one MultiSeries.
- * Incompatible candidates are silently dropped, so callers can layer freely and
- * keep adding — the result always overlays cleanly.
- */
-export function layer(base: Series, ...more: Series[]): MultiSeries {
-	const series = [base, ...more.filter((s) => compatible(base, s))];
-	return {
-		kind: 'multiseries',
-		unit: base.unit,
-		axis: base.axis,
-		labels: base.points.map((p) => p.label),
-		series
-	};
-}
-
-/** Normalize a Series or MultiSeries to a MultiSeries so charts handle one shape. */
-export function asMultiSeries(p: Series | MultiSeries): MultiSeries {
-	return p.kind === 'multiseries' ? p : layer(p);
-}

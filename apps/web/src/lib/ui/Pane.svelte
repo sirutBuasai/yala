@@ -1,7 +1,9 @@
 <script lang="ts">
+	// The universal dashboard card: title + subtitle + a body slot for any Figure. What
+	// differs between a stat and a chart lives in the body, not the card.
 	import type { Snippet } from 'svelte';
 	interface Props {
-		title: string;
+		title?: string;
 		cap?: string;
 		children: Snippet;
 	}
@@ -9,7 +11,7 @@
 </script>
 
 <section class="card">
-	<h2 class="serif">{title}</h2>
+	{#if title}<h2 class="serif">{title}</h2>{/if}
 	{#if cap}<p class="cap">{cap}</p>{/if}
 	<div class="body">{@render children()}</div>
 </section>

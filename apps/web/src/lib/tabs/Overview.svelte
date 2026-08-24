@@ -1,11 +1,8 @@
 <script lang="ts">
 	import type { DashboardData } from '$lib/data/types';
-	import { overviewScalars } from '$lib/data/scalar';
-	import { build } from '$lib/data/catalog';
+	import type { Scope } from '$lib/data/scope';
 	import ViewHeader from '$lib/ui/ViewHeader.svelte';
-	import KpiRow from '$lib/ui/KpiRow.svelte';
-	import Pane from '$lib/ui/Pane.svelte';
-	import Figure from '$lib/charts/Figure.svelte';
+	import Board from '$lib/ui/Board.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -14,43 +11,64 @@
 
 	const years = $derived(data.overview.by_year.map((r) => String(r.year)));
 
-	// Every panel just binds a catalog primitive to a chart — no colour/series assembly here.
-	const donut = $derived(build(data, 'spending.where_it_went', { level: 'all' }));
-	const incomeSpentSaved = $derived(build(data, 'overview.income_spent_saved', { level: 'all' }));
-	const flow = $derived(build(data, 'money.flow', { level: 'all' }));
-	const cumulative = $derived(build(data, 'overview.cumulative_saved', { level: 'all' }));
-	const savingsRate = $derived(build(data, 'overview.savings_rate', { level: 'all' }));
+	const all: Scope = { level: 'all' };
+
+	const cells = $derived([
+		{ id: 'income.total', scope: all, title: 'Lifetime income', span: 2 },
+		{ id: 'spending.total', scope: all, title: 'Lifetime spent', span: 2 },
+		{ id: 'saved.total', scope: all, title: 'Lifetime saved', span: 2 },
+		{ id: 'avg.income_per_year', scope: all, span: 2 },
+		{ id: 'avg.spending_per_year', scope: all, span: 2 },
+		{ id: 'avg.saved_per_year', scope: all, span: 2 },
+		{
+			id: 'spending.where_it_went',
+			scope: all,
+			chart: 'donut',
+			title: 'Where it all went',
+			cap: 'Lifetime',
+			span: 3
+		},
+		{
+			id: 'overview.income_spent_saved',
+			scope: all,
+			chart: 'bar',
+			title: 'Income vs Spending vs Savings',
+			cap: 'Per tracked year',
+			span: 3
+		},
+		{
+			id: 'money.flow',
+			scope: all,
+			chart: 'sankey',
+			title: 'Money flow',
+			cap: 'gross → deductions → spending → savings',
+			span: 6
+		},
+		{
+			id: 'overview.cumulative_saved',
+			scope: all,
+			chart: 'line',
+			area: true,
+			title: 'Cumulative savings',
+			cap: 'Running total of yearly saved',
+			span: 3
+		},
+		{
+			id: 'overview.savings_rate',
+			scope: all,
+			chart: 'line',
+			title: 'Savings rate by year',
+			cap: 'Savings to income ratio',
+			span: 3
+		}
+	]);
 </script>
 
 <ViewHeader title="Overview">
 	<span class="sub">Lifetime · {years[0]}–{years[years.length - 1]}</span>
 </ViewHeader>
 
-<KpiRow tiles={overviewScalars(data)} cols={3} />
-
-<div class="panes two">
-	<Pane title="Where it all went" cap="Lifetime">
-		<Figure primitive={donut} chart="donut" />
-	</Pane>
-	<Pane title="Income vs Spending vs Savings" cap="Per tracked year">
-		<Figure primitive={incomeSpentSaved} chart="bar" />
-	</Pane>
-</div>
-
-<div class="panes">
-	<Pane title="Money flow" cap="Lifetime · gross → deductions → spending → savings">
-		<Figure primitive={flow} chart="sankey" />
-	</Pane>
-</div>
-
-<div class="panes two">
-	<Pane title="Cumulative savings" cap="Running total of yearly saved">
-		<Figure primitive={cumulative} chart="line" area />
-	</Pane>
-	<Pane title="Savings rate by year" cap="Savings to income ratio">
-		<Figure primitive={savingsRate} chart="line" />
-	</Pane>
-</div>
+<Board {data} {cells} />
 
 <style>
 	.sub {

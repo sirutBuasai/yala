@@ -1,12 +1,12 @@
 <script lang="ts">
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
+	import type { Scope } from '$lib/data/scope';
 	import { money, monthLabel } from '$lib/utils/format';
-	import { monthlyScalars } from '$lib/data/scalar';
 	import { build } from '$lib/data/catalog';
 	import Pane from '$lib/ui/Pane.svelte';
 	import ViewHeader from '$lib/ui/ViewHeader.svelte';
-	import KpiRow from '$lib/ui/KpiRow.svelte';
+	import Board from '$lib/ui/Board.svelte';
 	import MonthNav from '$lib/ui/MonthNav.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
 	import TransactionList from '$lib/ui/TransactionList.svelte';
@@ -38,6 +38,14 @@
 	const donut = $derived(build(data, 'spending.where_it_went', { level: 'month', monthKey }));
 	const noIncome = $derived(!!md && md.total_income <= 0);
 
+	const mo = $derived<Scope>({ level: 'month', monthKey });
+	const kpiCells = $derived([
+		{ id: 'income.total', scope: mo, cap: 'take-home + saved' },
+		{ id: 'spending.total', scope: mo, title: 'Spent', cap: 'this month' },
+		{ id: 'saved.total', scope: mo, cap: 'this month' },
+		{ id: 'ratio.percent_used', scope: mo, title: '% used', cap: 'of income spent' }
+	]);
+
 	let modals: ReturnType<typeof EditModals>;
 	let refreshKey = $state(0);
 
@@ -52,7 +60,7 @@
 	<MonthNav value={monthKey} monthKeys={data.meta.month_keys} onchange={(k) => (monthKey = k)} />
 </ViewHeader>
 
-<KpiRow tiles={monthlyScalars(data, monthKey)} />
+<Board {data} cells={kpiCells} cols={4} />
 
 {#if edit && accounts}
 	<div class="card editpanel">

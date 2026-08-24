@@ -19,14 +19,24 @@ import {
 import { moneyFlow } from './flow';
 import { categoryByMonth } from './matrix';
 import { paychecks } from './table';
+import { type Scope, type ScopeLevel, scopeYear } from './scope';
+import {
+	amount,
+	average,
+	categoryAmount,
+	categoryShare,
+	change,
+	componentKeys,
+	count,
+	extremum,
+	ratio,
+	signed,
+	type Countable,
+	type ExtremumOf,
+	type Measure
+} from './metric';
 
-export type ScopeLevel = 'all' | 'year' | 'month';
-
-export interface Scope {
-	level: ScopeLevel;
-	year?: number;
-	monthKey?: string;
-}
+export type { Scope, ScopeLevel } from './scope';
 
 export interface DataDef {
 	id: string;
@@ -37,20 +47,9 @@ export interface DataDef {
 	build(data: DashboardData, scope: Scope): Primitive;
 }
 
-// --- scope helpers ---
+// --- chart definitions: multi-value data (categorical, series, flow, matrix, table) ---
 
-function latestYear(data: DashboardData): number {
-	const ys = data.meta.years;
-	return ys[ys.length - 1] ?? new Date().getFullYear();
-}
-
-function scopeYear(data: DashboardData, scope: Scope): number {
-	return scope.year ?? latestYear(data);
-}
-
-// --- the catalog ---
-
-export const CATALOG: DataDef[] = [
+const CHART_DEFS: DataDef[] = [
 	{
 		id: 'spending.by_category',
 		label: 'Spending by category',
@@ -174,6 +173,144 @@ export const CATALOG: DataDef[] = [
 	}
 ];
 
+// --- stat definitions: single-figure data (scalar metrics) ---
+//
+// Named instances of the metric builders. Kept data-config-driven (small tables →
+// generated entries) rather than one hand-written entry per metric.
+
+const ALL_SCOPES: ScopeLevel[] = ['all', 'year', 'month'];
+
+function scalarDef(
+	id: string,
+	label: string,
+	scopes: ScopeLevel[],
+	build: (data: DashboardData, scope: Scope) => Primitive
+): DataDef {
+	return { id, label, kind: 'scalar', scopes, build };
+}
+
+const AMOUNTS: { id: string; label: string; field: Measure; signed?: boolean }[] = [
+	{ id: 'income.total', label: 'Income', field: 'income' },
+	{ id: 'spending.total', label: 'Spending', field: 'spending' },
+	{ id: 'saved.total', label: 'Saved', field: 'saved', signed: true },
+	{ id: 'income.gross', label: 'Gross', field: 'gross' },
+	{ id: 'income.deductions', label: 'Deductions', field: 'deductions' },
+	{ id: 'income.contributions', label: 'Contributions', field: 'contributions' },
+	{ id: 'income.net', label: 'Net', field: 'net' },
+	{ id: 'income.takehome', label: 'Take-home', field: 'takehome' }
+];
+
+const RATIOS: { id: string; label: string; num: Measure; den: Measure }[] = [
+	{ id: 'ratio.savings_rate', label: 'Savings rate', num: 'saved', den: 'income' },
+	{ id: 'ratio.percent_used', label: '% of income used', num: 'spending', den: 'income' },
+	{ id: 'ratio.deduction_rate', label: 'Deduction rate', num: 'deductions', den: 'gross' }
+];
+
+const PER_MONTH: { id: string; label: string; field: Measure; signed?: boolean }[] = [
+	{ id: 'avg.income_per_month', label: 'Avg income / month', field: 'income' },
+	{ id: 'avg.spending_per_month', label: 'Avg spending / month', field: 'spending' },
+	{ id: 'avg.saved_per_month', label: 'Avg saved / month', field: 'saved', signed: true }
+];
+
+const PER_YEAR: { id: string; label: string; field: Measure; signed?: boolean }[] = [
+	{ id: 'avg.income_per_year', label: 'Avg income / year', field: 'income' },
+	{ id: 'avg.spending_per_year', label: 'Avg spending / year', field: 'spending' },
+	{ id: 'avg.saved_per_year', label: 'Avg saved / year', field: 'saved', signed: true }
+];
+
+const COUNTS: { id: string; label: string; of: Countable }[] = [
+	{ id: 'count.transactions', label: 'Transactions', of: 'transactions' },
+	{ id: 'count.paychecks', label: 'Paychecks', of: 'paychecks' },
+	{ id: 'count.active_months', label: 'Active months', of: 'active_months' },
+	{ id: 'count.categories', label: 'Categories', of: 'categories' }
+];
+
+const EXTREMA: { id: string; label: string; of: ExtremumOf; scopes: ScopeLevel[] }[] = [
+	{ id: 'max.category', label: 'Biggest category', of: 'category', scopes: ALL_SCOPES },
+	{ id: 'max.transaction', label: 'Biggest transaction', of: 'transaction', scopes: ALL_SCOPES },
+	{ id: 'max.month', label: 'Biggest month', of: 'month', scopes: ['all', 'year'] }
+];
+
+const CHANGES: {
+	id: string;
+	label: string;
+	field: Measure;
+	period: 'year' | 'month';
+	scopes: ScopeLevel[];
+}[] = [
+	{
+		id: 'change.income_yoy',
+		label: 'Income (YoY)',
+		field: 'income',
+		period: 'year',
+		scopes: ['year']
+	},
+	{
+		id: 'change.spending_yoy',
+		label: 'Spending (YoY)',
+		field: 'spending',
+		period: 'year',
+		scopes: ['year']
+	},
+	{
+		id: 'change.income_mom',
+		label: 'Income (MoM)',
+		field: 'income',
+		period: 'month',
+		scopes: ['month']
+	},
+	{
+		id: 'change.spending_mom',
+		label: 'Spending (MoM)',
+		field: 'spending',
+		period: 'month',
+		scopes: ['month']
+	}
+];
+
+const STAT_DEFS: DataDef[] = [
+	...AMOUNTS.map((a) =>
+		scalarDef(a.id, a.label, ALL_SCOPES, (data, scope) => {
+			const s = amount(data, scope, a.field, { label: a.label });
+			return a.signed ? signed(s) : s;
+		})
+	),
+	...RATIOS.map((r) =>
+		scalarDef(r.id, r.label, ALL_SCOPES, (data, scope) =>
+			ratio(data, scope, r.num, r.den, { label: r.label })
+		)
+	),
+	...PER_MONTH.map((m) =>
+		scalarDef(m.id, m.label, ['year'], (data, scope) => {
+			const s = average(data, m.field, 'month', scope.year, { label: m.label });
+			return m.signed ? signed(s) : s;
+		})
+	),
+	...PER_YEAR.map((m) =>
+		scalarDef(m.id, m.label, ['all'], (data) => {
+			const s = average(data, m.field, 'year', undefined, { label: m.label });
+			return m.signed ? signed(s) : s;
+		})
+	),
+	...COUNTS.map((c) =>
+		scalarDef(c.id, c.label, ALL_SCOPES, (data, scope) => count(data, scope, c.of))
+	),
+	...EXTREMA.map((e) =>
+		scalarDef(e.id, e.label, e.scopes, (data, scope) =>
+			extremum(data, scope, e.of, 'max', { label: e.label })
+		)
+	),
+	...CHANGES.map((c) =>
+		scalarDef(c.id, c.label, c.scopes, (data, scope) =>
+			change(data, c.field, c.period, c.period === 'year' ? scope.year : scope.monthKey, {
+				label: c.label
+			})
+		)
+	)
+];
+
+export const CATALOG: DataDef[] = [...CHART_DEFS, ...STAT_DEFS];
+
 export const CATALOG_BY_ID: Record<string, DataDef> = Object.fromEntries(
 	CATALOG.map((d) => [d.id, d])
 );
@@ -188,4 +325,29 @@ export function build(data: DashboardData, id: string, scope: Scope): Primitive 
 	const def = CATALOG_BY_ID[id];
 	if (!def) throw new Error(`unknown catalog id: ${id}`);
 	return def.build(data, scope);
+}
+
+// --- data-dependent metric defs ---
+// These can't be static: their instances come from the loaded document (which categories
+// exist, which paycheck line-items appear). A picker enumerates them per document/scope.
+
+/** Per-category scalar metrics (spend + share of spending) over the tracked categories. */
+export function categoryMetricDefs(data: DashboardData): DataDef[] {
+	return data.meta.categories.flatMap((c) => [
+		scalarDef(`category.${c}.amount`, `${c} spend`, ALL_SCOPES, (d, s) => categoryAmount(d, s, c)),
+		scalarDef(`category.${c}.share`, `${c} share`, ALL_SCOPES, (d, s) =>
+			categoryShare(d, s, c, 'spending')
+		)
+	]);
+}
+
+/** Per-line-item paycheck scalar metrics (Tax, 401k, …) present in a scope's paychecks. */
+export function componentMetricDefs(data: DashboardData, scope: Scope): DataDef[] {
+	const { deductions, contributions } = componentKeys(data, scope);
+	const mk = (group: 'deductions' | 'contributions', key: string) =>
+		scalarDef(`paycheck.${group}.${key}`, key, ALL_SCOPES, (d, s) => amount(d, s, { group, key }));
+	return [
+		...deductions.map((k) => mk('deductions', k)),
+		...contributions.map((k) => mk('contributions', k))
+	];
 }
