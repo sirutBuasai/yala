@@ -445,8 +445,10 @@ class SPAStaticFiles(StaticFiles):
     static adapter emits prerendered pages as ``build/dev.html``, so a *direct* URL visit (rather
     than in-app navigation) 404s. This resolves web page navigation by falling back, in order, to
     the prerendered ``<path>.html`` and then the SPA shell (``200.html``) so the client router can
-    take over. ``/api/*`` is left strictly alone: those requests never reach here (the API routes
-    are registered first), and any that do get a real 404 rather than an HTML shell.
+    take over. The ``/api`` prefix is a reserved namespace: those requests never reach here (the
+    API routes are registered first), and any that do get a real 404 rather than an HTML shell —
+    so ``/api`` is never a usable page, but ``/api``-*prefixed* page names (e.g. ``/apiary``) still
+    route normally.
     """
 
     async def get_response(self, path: str, scope: Scope):  # type: ignore[override]
@@ -454,8 +456,9 @@ class SPAStaticFiles(StaticFiles):
             return await super().get_response(path, scope)
 
         except StarletteHTTPException as e:
-            # Only web navigation gets the SPA treatment; data paths stay a hard 404.
-            if e.status_code != 404 or path.startswith("api"):
+            # Only web navigation gets the SPA treatment; the reserved /api namespace (the "api"
+            # segment itself, not merely an "api"-prefixed name) stays a hard 404.
+            if e.status_code != 404 or path == "api" or path.startswith("api/"):
                 raise
 
             # A route like /dev is prerendered to dev.html; try that before the shell.
