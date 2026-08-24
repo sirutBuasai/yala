@@ -15,6 +15,10 @@
 		estHeight?: number;
 		/** Panel min-width tracks the trigger width (Select); off for the fixed-size calendar. */
 		matchWidth?: boolean;
+		/** Anchor the panel's left or right edge to the trigger (right avoids clipping a right-aligned trigger). */
+		align?: 'left' | 'right';
+		/** Class on the trigger button; defaults to the boxed Select/DatePicker chrome. */
+		triggerClass?: string;
 		/** The trigger element, exposed so consumers can refocus it after choosing. */
 		triggerEl?: HTMLButtonElement;
 		/** id of the popup panel the trigger controls (aria-controls). */
@@ -35,6 +39,8 @@
 		popupRole = 'listbox',
 		estHeight = 260,
 		matchWidth = false,
+		align = 'left',
+		triggerClass = 'trigger',
 		triggerEl = $bindable(),
 		controls,
 		activeDescendant,
@@ -46,7 +52,7 @@
 
 	let placement = $state<'below' | 'above'>('below');
 	let popEl = $state<HTMLDivElement>();
-	let pos = $state({ top: 0, left: 0, width: 0 });
+	let pos = $state({ top: 0, left: 0, right: 0, width: 0 });
 
 	function place() {
 		if (!triggerEl) return;
@@ -56,6 +62,7 @@
 		pos = {
 			top: placement === 'below' ? r.bottom + 4 : r.top - 4,
 			left: r.left,
+			right: window.innerWidth - r.right,
 			width: r.width
 		};
 	}
@@ -103,7 +110,7 @@
 	{id}
 	bind:this={triggerEl}
 	type="button"
-	class="trigger"
+	class={triggerClass}
 	role="combobox"
 	aria-haspopup={popupRole}
 	aria-expanded={open}
@@ -121,7 +128,9 @@
 		bind:this={popEl}
 		id={controls}
 		class="popup {placement}"
-		style="top:{pos.top}px; left:{pos.left}px;{matchWidth ? ` min-width:${pos.width}px;` : ''}"
+		style="top:{pos.top}px; {align === 'right'
+			? `right:${pos.right}px`
+			: `left:${pos.left}px`};{matchWidth ? ` min-width:${pos.width}px;` : ''}"
 	>
 		{@render children({ placement })}
 	</div>

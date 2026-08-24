@@ -7,7 +7,7 @@
 <script lang="ts">
 	// On-brand replacement for a native <select>: a Popup-hosted listbox.
 	// Keyboard: Up/Down move, Enter/Space select, Esc close, Home/End jump.
-	import { untrack } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import Popup from '$lib/ui/Popup.svelte';
 
 	interface Props {
@@ -21,6 +21,12 @@
 		placeholder?: string;
 		/** Called with the chosen value (useful when the parent stores a non-string, e.g. a year). */
 		onchange?: (v: string) => void;
+		/** Class on the trigger button (passed through to Popup). */
+		triggerClass?: string;
+		/** Anchor edge for the dropdown (passed through to Popup). */
+		align?: 'left' | 'right';
+		/** Custom trigger content, replacing the default value + chevron (e.g. an icon button). */
+		customTrigger?: Snippet;
 	}
 	let {
 		value = $bindable(),
@@ -29,7 +35,10 @@
 		ariaLabel,
 		optionLabel = (v) => v,
 		placeholder = 'Select…',
-		onchange
+		onchange,
+		triggerClass,
+		align,
+		customTrigger
 	}: Props = $props();
 
 	let open = $state(false);
@@ -77,24 +86,30 @@
 	{id}
 	{ariaLabel}
 	popupRole="listbox"
-	matchWidth
+	matchWidth={!customTrigger}
+	{triggerClass}
+	{align}
 	controls={listboxId}
 	activeDescendant={active >= 0 ? optionId(active) : undefined}
 	onopen={() => (active = Math.max(0, options.indexOf(value)))}
 	{onkeynav}
 >
 	{#snippet trigger()}
-		<span class="val" class:placeholder={!value}>{value ? optionLabel(value) : placeholder}</span>
-		<svg class="chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-			<path
-				d="M2.5 4.5 6 8l3.5-3.5"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.6"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			/>
-		</svg>
+		{#if customTrigger}
+			{@render customTrigger()}
+		{:else}
+			<span class="val" class:placeholder={!value}>{value ? optionLabel(value) : placeholder}</span>
+			<svg class="chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+				<path
+					d="M2.5 4.5 6 8l3.5-3.5"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.6"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+			</svg>
+		{/if}
 	{/snippet}
 
 	{#snippet children()}

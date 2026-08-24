@@ -15,8 +15,17 @@
 	import { chartsForKind } from '$lib/charts/registry';
 	import Figure from '$lib/charts/Figure.svelte';
 	import Pane from '$lib/ui/Pane.svelte';
+	import SortMenu from '$lib/ui/SortMenu.svelte';
 
 	const data = makeData();
+
+	// Pane header demo: one SortMenu drives every case so alignment is easy to compare.
+	const demoFields = [
+		{ key: 'name', label: 'Name' },
+		{ key: 'date', label: 'Date' }
+	];
+	let demoKey = $state<'name' | 'date'>('date');
+	let demoDir = $state<'asc' | 'desc'>('desc');
 
 	/** Prefer the broadest scope a data definition supports. */
 	function scopeFor(def: DataDef): Scope {
@@ -88,7 +97,7 @@
 		span: number;
 	};
 
-	let view = $state<'composer' | 'dashboard'>('composer');
+	let view = $state<'composer' | 'dashboard' | 'headers'>('composer');
 	let editLayout = $state(false);
 
 	let layout = $state<CellCfg[]>([
@@ -148,6 +157,11 @@
 	</Pane>
 {/snippet}
 
+<!-- Shared action content for the header-alignment demo. -->
+{#snippet demoActions()}
+	<SortMenu fields={demoFields} bind:sortKey={demoKey} bind:sortDir={demoDir} />
+{/snippet}
+
 <div class="wrap">
 	<NavMenu />
 	<header class="top">
@@ -162,6 +176,7 @@
 			<button class:on={view === 'composer'} onclick={() => (view = 'composer')}>Composer</button>
 			<button class:on={view === 'dashboard'} onclick={() => (view = 'dashboard')}>Dashboard</button
 			>
+			<button class:on={view === 'headers'} onclick={() => (view = 'headers')}>Headers</button>
 			{#if view === 'dashboard'}
 				<button class="edit" class:on={editLayout} onclick={() => (editLayout = !editLayout)}>
 					{editLayout ? '✓ Editing layout' : 'Edit layout'}
@@ -239,6 +254,35 @@
 							area={chart?.id === 'line' && !layers.length}
 						/>
 					{/key}
+				</Pane>
+			</div>
+		</div>
+	{:else if view === 'headers'}
+		<!-- Pane header alignment across the four title/cap/actions combinations. The actions
+		     (a SortMenu) should sit level with the last text line — cap if present, else title. -->
+		<div class="hdemo">
+			<div class="case">
+				<span class="clabel">title + action</span>
+				<Pane title="Transaction history" actions={demoActions}>
+					<p class="demobody">pane body</p>
+				</Pane>
+			</div>
+			<div class="case">
+				<span class="clabel">title + cap + action</span>
+				<Pane title="Transaction history" cap="47 transactions · Jul 2026" actions={demoActions}>
+					<p class="demobody">pane body</p>
+				</Pane>
+			</div>
+			<div class="case">
+				<span class="clabel">cap + action</span>
+				<Pane cap="47 transactions · Jul 2026" actions={demoActions}>
+					<p class="demobody">pane body</p>
+				</Pane>
+			</div>
+			<div class="case">
+				<span class="clabel">action only</span>
+				<Pane actions={demoActions}>
+					<p class="demobody">pane body</p>
 				</Pane>
 			</div>
 		</div>
@@ -418,6 +462,26 @@
 		border-color: color-mix(in srgb, var(--lav) 55%, var(--border));
 		background: color-mix(in srgb, var(--lav) 18%, transparent);
 		color: var(--ink);
+	}
+	/* Pane header demo: stacked cases, each labelled with its title/cap/actions combination. */
+	.hdemo {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+		max-width: 640px;
+	}
+	.clabel {
+		display: block;
+		margin-bottom: 6px;
+		font-size: 11px;
+		text-transform: uppercase;
+		letter-spacing: 0.9px;
+		color: var(--ink-3);
+	}
+	.demobody {
+		margin: 0;
+		color: var(--ink-3);
+		font-size: 12px;
 	}
 	/* Dashboard grid prototype: a 6-column grid; each cell spans 1..6 columns. */
 	.dash {

@@ -250,6 +250,27 @@ input[type='checkbox']:focus-visible {
 	border-color: var(--lav);
 	color: var(--ink);
 }
+/* borderless icon button that hugs its glyph (e.g. a kebab menu trigger in a pane header) */
+.iconbtn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2px;
+	border: 0;
+	border-radius: 6px;
+	background: none;
+	color: var(--ink-3);
+	cursor: pointer;
+	line-height: 0;
+}
+.iconbtn:hover {
+	color: var(--ink);
+	background: var(--inset);
+}
+.iconbtn:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 30%, transparent);
+}
 /* pane grid shared by the Overview / Yearly / Monthly tabs: full-width rows, or `.two`
    for a pair of side-by-side panes that share the taller one's height */
 .panes {

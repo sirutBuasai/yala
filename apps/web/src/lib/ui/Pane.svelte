@@ -5,14 +5,23 @@
 	interface Props {
 		title?: string;
 		cap?: string;
+		/** Controls rendered at the top-right of the header, level with the title/cap. */
+		actions?: Snippet;
 		children: Snippet;
 	}
-	let { title, cap, children }: Props = $props();
+	let { title, cap, actions, children }: Props = $props();
 </script>
 
 <section class="card">
-	{#if title}<h2 class="serif">{title}</h2>{/if}
-	{#if cap}<p class="cap">{cap}</p>{/if}
+	{#if title || cap || actions}
+		<header class="head" class:has-cap={!!cap}>
+			<div class="titles">
+				{#if title}<h2 class="serif">{title}</h2>{/if}
+				{#if cap}<p class="cap">{cap}</p>{/if}
+			</div>
+			{#if actions}<div class="actions">{@render actions()}</div>{/if}
+		</header>
+	{/if}
 	<div class="body">{@render children()}</div>
 </section>
 
@@ -21,6 +30,23 @@
 	.card {
 		display: flex;
 		flex-direction: column;
+	}
+	/* Title/cap on the left, optional controls on the right. Title/cap element margins are left
+	   untouched so every pane keeps its original spacing; flex-end plus an actions bottom margin
+	   matching the last line's trailing margin lifts the actions onto that line's baseline —
+	   the cap's 14px when a cap is present, else the title's 2px. */
+	.head {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 12px;
+	}
+	.actions {
+		flex: none;
+		margin-bottom: 2px;
+	}
+	.head.has-cap .actions {
+		margin-bottom: 14px;
 	}
 	.body {
 		flex: 1 1 auto;
