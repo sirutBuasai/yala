@@ -143,9 +143,31 @@
 	{#snippet children()}
 		<div class="cal-pop" role="dialog" aria-label="Choose date" tabindex="-1">
 			<div class="cal-head">
-				<button type="button" class="nav" aria-label="Previous month" onclick={prevMonth}>‹</button>
+				<button type="button" class="nav" aria-label="Previous month" onclick={prevMonth}>
+					<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
+						<path
+							d="M10 3.5 5.5 8 10 12.5"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.7"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+				</button>
 				<span class="mlabel">{MONTHS[viewM]} {viewY}</span>
-				<button type="button" class="nav" aria-label="Next month" onclick={nextMonth}>›</button>
+				<button type="button" class="nav" aria-label="Next month" onclick={nextMonth}>
+					<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
+						<path
+							d="M6 3.5 10.5 8 6 12.5"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.7"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+				</button>
 			</div>
 			<div class="dow">
 				{#each WEEKDAYS as w, i (i)}<span>{w}</span>{/each}
@@ -200,12 +222,16 @@
 		color: var(--ink);
 	}
 	.nav {
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		background: none;
 		border: 1px solid var(--border);
 		color: var(--ink-2);
 		border-radius: 7px;
 		width: 26px;
 		height: 26px;
+		padding: 0;
 		cursor: pointer;
 		font-size: 15px;
 		line-height: 1;
