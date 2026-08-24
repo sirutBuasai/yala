@@ -69,6 +69,6 @@ repos:
     hooks:
       - id: schema-freshness
         name: "📐 schema · Validate schema freshness"
-        entry: bash -c 'make gen && if ! git diff --exit-code -- packages/contract/ apps/web/src/lib/types.ts; then echo "contract is stale — run \"make gen\" then \"git add packages/contract/ apps/web/src/lib/types.ts\" and commit"; exit 1; fi'
+        entry: bash -c 'make gen && if ! git diff --exit-code -- packages/contract/ apps/web/src/lib/data/types.ts; then echo "contract is stale — run \"make gen\" then \"git add packages/contract/ apps/web/src/lib/data/types.ts\" and commit"; exit 1; fi'
         language: system
         pass_filenames: false
