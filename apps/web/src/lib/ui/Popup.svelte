@@ -17,6 +17,10 @@
 		matchWidth?: boolean;
 		/** The trigger element, exposed so consumers can refocus it after choosing. */
 		triggerEl?: HTMLButtonElement;
+		/** id of the popup panel the trigger controls (aria-controls). */
+		controls?: string;
+		/** id of the active option/day while open (aria-activedescendant). */
+		activeDescendant?: string;
 		/** Fired just before opening, to seed panel state (active option / calendar month). */
 		onopen?: () => void;
 		/** Key handling while open (arrows, Enter, Esc); the closed→open keys are handled here. */
@@ -32,6 +36,8 @@
 		estHeight = 260,
 		matchWidth = false,
 		triggerEl = $bindable(),
+		controls,
+		activeDescendant,
 		onopen,
 		onkeynav,
 		trigger,
@@ -98,8 +104,11 @@
 	bind:this={triggerEl}
 	type="button"
 	class="trigger"
+	role="combobox"
 	aria-haspopup={popupRole}
 	aria-expanded={open}
+	aria-controls={open ? controls : undefined}
+	aria-activedescendant={open ? activeDescendant : undefined}
 	aria-label={ariaLabel}
 	onclick={() => (open ? (open = false) : openPopup())}
 	onkeydown={onKey}
@@ -110,6 +119,7 @@
 {#if open}
 	<div
 		bind:this={popEl}
+		id={controls}
 		class="popup {placement}"
 		style="top:{pos.top}px; left:{pos.left}px;{matchWidth ? ` min-width:${pos.width}px;` : ''}"
 	>

@@ -3,6 +3,7 @@
 	// 'modal' floats near the top-center; 'drawer' slides in from the right edge.
 	import type { Snippet } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
+	import { focusTrap } from '$lib/utils/focusTrap';
 
 	interface Props {
 		title: string;
@@ -19,6 +20,7 @@
 		role="dialog"
 		aria-modal="true"
 		tabindex="-1"
+		use:focusTrap
 		onclick={(e) => e.stopPropagation()}
 		onkeydown={(e) => e.key === 'Escape' && onclose()}
 		transition:fly={variant === 'drawer' ? { x: 480, duration: 220 } : { y: 10, duration: 170 }}

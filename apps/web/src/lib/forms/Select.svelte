@@ -1,6 +1,13 @@
+<script module lang="ts">
+	// Process-wide counter so every Select gets a unique id base for its option ids
+	// (needed for aria-activedescendant), even when the consumer passes no `id`.
+	let seq = 0;
+</script>
+
 <script lang="ts">
 	// On-brand replacement for a native <select>: a Popup-hosted listbox.
 	// Keyboard: Up/Down move, Enter/Space select, Esc close, Home/End jump.
+	import { untrack } from 'svelte';
 	import Popup from '$lib/ui/Popup.svelte';
 
 	interface Props {
@@ -29,6 +36,10 @@
 	let active = $state(-1);
 	let triggerEl = $state<HTMLButtonElement>();
 
+	const uid = untrack(() => id) ?? `sel-${++seq}`;
+	const listboxId = `${uid}-listbox`;
+	const optionId = (i: number) => `${uid}-opt-${i}`;
+
 	function choose(opt: string) {
 		value = opt;
 		onchange?.(opt);
@@ -54,7 +65,8 @@
 			active = options.length - 1;
 		} else if (e.key === 'Enter' || e.key === ' ') {
 			e.preventDefault();
-			if (options[active] !== undefined) choose(options[active]);
+			const opt = options[active];
+			if (opt !== undefined) choose(opt);
 		}
 	}
 </script>
@@ -66,6 +78,8 @@
 	{ariaLabel}
 	popupRole="listbox"
 	matchWidth
+	controls={listboxId}
+	activeDescendant={active >= 0 ? optionId(active) : undefined}
 	onopen={() => (active = Math.max(0, options.indexOf(value)))}
 	{onkeynav}
 >
@@ -84,11 +98,12 @@
 	{/snippet}
 
 	{#snippet children()}
-		<ul class="listbox" role="listbox" tabindex="-1">
+		<ul id={listboxId} class="listbox" role="listbox" tabindex="-1">
 			{#each options as opt, i (opt)}
 				<!-- Keyboard selection is handled on the trigger (arrows/Enter/Esc), which keeps focus. -->
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<li
+					id={optionId(i)}
 					role="option"
 					aria-selected={opt === value}
 					class:hl={i === active}

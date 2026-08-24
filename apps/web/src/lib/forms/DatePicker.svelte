@@ -1,8 +1,15 @@
+<script module lang="ts">
+	// Process-wide counter for unique day-cell id bases (aria-activedescendant).
+	let seq = 0;
+</script>
+
 <script lang="ts">
 	// On-brand replacement for <input type="date">: a Popup-hosted calendar. Value is an ISO
 	// "YYYY-MM-DD" string (empty = unset). Keyboard: arrows move the day, Enter selects, Esc closes.
+	import { untrack } from 'svelte';
 	import { MONTHS } from '$lib/utils/format';
 	import Popup from '$lib/ui/Popup.svelte';
+	import Chevron from '$lib/ui/Chevron.svelte';
 
 	interface Props {
 		/** ISO date "YYYY-MM-DD" or '' (bindable). */
@@ -26,9 +33,13 @@
 	let viewM = $state(0);
 	let active = $state(''); // ISO of the keyboard-focused day
 
+	const uid = untrack(() => id) ?? `date-${++seq}`;
+	const gridId = `${uid}-grid`;
+	const dayId = (isoStr: string) => `${uid}-day-${isoStr}`;
+
 	function parse(v: string): { y: number; m: number; d: number } | null {
 		const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
-		return m ? { y: +m[1], m: +m[2] - 1, d: +m[3] } : null;
+		return m ? { y: +m[1]!, m: +m[2]! - 1, d: +m[3]! } : null;
 	}
 	function iso(y: number, m: number, d: number) {
 		return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -120,6 +131,8 @@
 	{ariaLabel}
 	popupRole="dialog"
 	estHeight={320}
+	controls={gridId}
+	activeDescendant={active ? dayId(active) : undefined}
 	onopen={seedView}
 	{onkeynav}
 >
@@ -144,29 +157,11 @@
 		<div class="cal-pop" role="dialog" aria-label="Choose date" tabindex="-1">
 			<div class="cal-head">
 				<button type="button" class="nav" aria-label="Previous month" onclick={prevMonth}>
-					<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
-						<path
-							d="M10 3.5 5.5 8 10 12.5"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.7"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/>
-					</svg>
+					<Chevron dir="left" size={13} />
 				</button>
 				<span class="mlabel">{MONTHS[viewM]} {viewY}</span>
 				<button type="button" class="nav" aria-label="Next month" onclick={nextMonth}>
-					<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
-						<path
-							d="M6 3.5 10.5 8 6 12.5"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.7"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/>
-					</svg>
+					<Chevron dir="right" size={13} />
 				</button>
 			</div>
 			<div class="dow">
@@ -177,6 +172,7 @@
 					{#if cell}
 						<button
 							type="button"
+							id={dayId(cell)}
 							class="day"
 							class:sel={cell === value}
 							class:hl={cell === active}
