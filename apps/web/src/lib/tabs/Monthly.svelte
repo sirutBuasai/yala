@@ -11,7 +11,7 @@
 	import Figure from '$lib/charts/Figure.svelte';
 	import TransactionList from '$lib/ui/TransactionList.svelte';
 	import PaycheckList from '$lib/ui/PaycheckList.svelte';
-	import PendingList from '$lib/ui/PendingList.svelte';
+	import PendingQueue from '$lib/ui/PendingQueue.svelte';
 	import EditModals from '$lib/forms/EditModals.svelte';
 
 	interface Props {
@@ -63,7 +63,7 @@
 				<button class="btn-ghost" onclick={() => modals.addPaycheck()}>+ Add paycheck</button>
 			</div>
 		</div>
-		<PendingList {refreshKey} onedit={(l) => modals.editTransaction(l)} />
+		<PendingQueue {refreshKey} onedit={(l) => modals.editTransaction(l)} />
 	</div>
 {/if}
 
