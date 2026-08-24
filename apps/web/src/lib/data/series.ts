@@ -20,11 +20,6 @@ export function series(
 	return { kind: 'series', unit, axis, name, points };
 }
 
-function latestYear(data: DashboardData): number {
-	const ys = data.meta.years;
-	return ys.length ? ys[ys.length - 1] : new Date().getFullYear();
-}
-
 /** Total spent per calendar month (index 0..11) for a year. */
 function yearMonthlySpent(data: DashboardData, year: number): number[] {
 	const yd = data.years[String(year)];
@@ -131,7 +126,7 @@ export function incomeSpentSaved(data: DashboardData, year?: number): MultiSerie
 	const yd = data.years[String(year)];
 	const income = MONTHS.map((_, m) => yd?.matrix[m]?.income ?? 0);
 	const spent = MONTHS.map((_, m) => sumValues(yd?.matrix[m]?.spent ?? {}));
-	const saved = income.map((v, i) => v - spent[i]);
+	const saved = income.map((v, i) => v - spent[i]!);
 
 	return {
 		kind: 'multiseries',

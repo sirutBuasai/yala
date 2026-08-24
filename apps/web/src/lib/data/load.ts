@@ -58,6 +58,20 @@ export interface PostResult<T> {
 	error: string | null;
 }
 
+/** GET + parse JSON, normalizing errors into a `PostResult` (used to prefill edit forms). */
+export async function getJson<T = Record<string, unknown>>(url: string): Promise<PostResult<T>> {
+	try {
+		const res = await fetch(url, { cache: 'no-store' });
+		const data = (await res.json().catch(() => ({}))) as T & { detail?: string };
+
+		return res.ok
+			? { ok: true, data, error: null }
+			: { ok: false, data, error: data.detail || `error ${res.status}` };
+	} catch (e) {
+		return { ok: false, data: {} as T, error: 'API unreachable: ' + (e as Error).message };
+	}
+}
+
 /** POST a JSON body and parse the response, normalizing errors into a `PostResult`. */
 export async function postJson<T = Record<string, unknown>>(
 	url: string,

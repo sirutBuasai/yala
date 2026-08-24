@@ -5,10 +5,8 @@
 	import { categoryVar } from '$lib/utils/theme';
 	import ViewHeader from '$lib/ui/ViewHeader.svelte';
 	import MonthNav from '$lib/ui/MonthNav.svelte';
-	import Overlay from '$lib/ui/Overlay.svelte';
 	import TransactionList from '$lib/ui/TransactionList.svelte';
-	import TransactionForm from '$lib/forms/TransactionForm.svelte';
-	import PaycheckForm from '$lib/forms/PaycheckForm.svelte';
+	import EditModals from '$lib/forms/EditModals.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -18,9 +16,7 @@
 	}
 	let { data, edit, accounts, onsaved }: Props = $props();
 
-	const latestData = $derived(
-		data.meta.month_keys.length ? [...data.meta.month_keys].sort().at(-1)! : ''
-	);
+	const latestData = $derived([...data.meta.month_keys].sort().at(-1) ?? '');
 
 	// The month on screen. Empty `viewKey` means "follow the latest transaction month"; once the
 	// user navigates or picks, `viewKey` pins the choice. Recreating the tab resets to latest.
@@ -93,18 +89,7 @@
 		selected ? [...selected.txns].sort((a, b) => b.date.localeCompare(a.date)) : []
 	);
 
-	let showAdd = $state(false);
-	let showPaycheck = $state(false);
-	let editingLocator = $state<string | null>(null);
-	let editingPaycheck = $state<string | null>(null);
-
-	function afterSave() {
-		showAdd = false;
-		showPaycheck = false;
-		editingLocator = null;
-		editingPaycheck = null;
-		onsaved();
-	}
+	let modals: ReturnType<typeof EditModals>;
 </script>
 
 <ViewHeader title="Calendar">
@@ -161,8 +146,8 @@
 				</div>
 				{#if edit}
 					<div class="dpactions">
-						<button class="btn-ghost" onclick={() => (showAdd = true)}>+ Transaction</button>
-						<button class="btn-ghost" onclick={() => (showPaycheck = true)}>+ Paycheck</button>
+						<button class="btn-ghost" onclick={() => modals.addTransaction()}>+ Transaction</button>
+						<button class="btn-ghost" onclick={() => modals.addPaycheck()}>+ Paycheck</button>
 					</div>
 				{/if}
 			</div>
@@ -176,7 +161,7 @@
 							class:clickable={edit}
 							type={edit ? 'button' : undefined}
 							role={edit ? 'button' : undefined}
-							onclick={edit ? () => (editingPaycheck = p.locator) : undefined}
+							onclick={edit ? () => modals.editPaycheck(p.locator) : undefined}
 						>
 							<span class="dot pay"></span>
 							<span class="main">
@@ -194,7 +179,7 @@
 				<TransactionList
 					transactions={selectedTxns}
 					{edit}
-					onedit={(l) => (editingLocator = l)}
+					onedit={(l) => modals.editTransaction(l)}
 					showDate={false}
 				/>
 			{:else if !selected.pays.length}
@@ -206,35 +191,14 @@
 	</aside>
 </div>
 
-{#if showAdd && accounts && selected}
-	<Overlay
-		title="Add transaction · {MONTHS[mm - 1]} {selected.day}"
-		onclose={() => (showAdd = false)}
-	>
-		<TransactionForm {accounts} presetDate={selected.iso} onsaved={afterSave} />
-	</Overlay>
-{/if}
-
-{#if showPaycheck && accounts && selected}
-	<Overlay
-		title="Add paycheck · {MONTHS[mm - 1]} {selected.day}"
-		onclose={() => (showPaycheck = false)}
-	>
-		<PaycheckForm {accounts} presetDate={selected.iso} onsaved={afterSave} />
-	</Overlay>
-{/if}
-
-{#if editingLocator && accounts}
-	<Overlay title="Edit transaction" onclose={() => (editingLocator = null)}>
-		<TransactionForm locator={editingLocator} {accounts} onsaved={afterSave} />
-	</Overlay>
-{/if}
-
-{#if editingPaycheck && accounts}
-	<Overlay title="Edit paycheck" onclose={() => (editingPaycheck = null)}>
-		<PaycheckForm locator={editingPaycheck} {accounts} onsaved={afterSave} />
-	</Overlay>
-{/if}
+<EditModals
+	bind:this={modals}
+	{accounts}
+	{onsaved}
+	presetDate={selected?.iso}
+	addTxnTitle={selected ? `Add transaction · ${MONTHS[mm - 1]} ${selected.day}` : 'Add transaction'}
+	addPayTitle={selected ? `Add paycheck · ${MONTHS[mm - 1]} ${selected.day}` : 'Add paycheck'}
+/>
 
 <style>
 	.calwrap {

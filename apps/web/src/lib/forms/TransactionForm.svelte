@@ -3,7 +3,7 @@
 	// prefills from that entry and saves an update (POST /api/transaction/update) or deletes it.
 	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data/load';
-	import { deleteTransaction, postJson } from '$lib/data/load';
+	import { deleteTransaction, getJson, postJson } from '$lib/data/load';
 	import { accountLeaf, formatAccount, money } from '$lib/utils/format';
 	import { lastCategory, lastFundingAccount } from '$lib/utils/editPrefs';
 	import AccountField from '$lib/forms/AccountField.svelte';
@@ -63,12 +63,13 @@
 		// Edit mode: prefill from the ledger entry (its `amount` is the total bill).
 		const l = locator;
 		(async () => {
-			const res = await fetch(`/api/transaction?locator=${encodeURIComponent(l)}`, {
-				cache: 'no-store'
-			});
-			const s = await res.json();
-			if (!res.ok) {
-				msg = s.detail || `error ${res.status}`;
+			const {
+				ok,
+				data: s,
+				error
+			} = await getJson<Record<string, any>>(`/api/transaction?locator=${encodeURIComponent(l)}`);
+			if (!ok) {
+				msg = error ?? 'load failed';
 				err = true;
 				return;
 			}

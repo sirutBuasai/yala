@@ -9,12 +9,10 @@
 	import KpiRow from '$lib/ui/KpiRow.svelte';
 	import MonthNav from '$lib/ui/MonthNav.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
-	import Overlay from '$lib/ui/Overlay.svelte';
 	import TransactionList from '$lib/ui/TransactionList.svelte';
 	import PaycheckTable from '$lib/ui/PaycheckTable.svelte';
-	import TransactionForm from '$lib/forms/TransactionForm.svelte';
-	import PaycheckForm from '$lib/forms/PaycheckForm.svelte';
 	import PendingList from '$lib/ui/PendingList.svelte';
+	import EditModals from '$lib/forms/EditModals.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -36,17 +34,11 @@
 	const donut = $derived(build(data, 'spending.where_it_went', { level: 'month', monthKey }));
 	const noIncome = $derived(!!md && md.total_income <= 0);
 
-	let showAdd = $state(false);
-	let showPaycheck = $state(false);
-	let editingLocator = $state<string | null>(null);
-	let editingPaycheck = $state<string | null>(null);
+	let modals: ReturnType<typeof EditModals>;
 	let refreshKey = $state(0);
 
-	function afterSave() {
-		showAdd = false;
-		showPaycheck = false;
-		editingLocator = null;
-		editingPaycheck = null;
+	// A save also refreshes the pending list (via refreshKey) on top of the page-level refresh.
+	function onSaved() {
 		refreshKey += 1;
 		onsaved();
 	}
@@ -63,11 +55,11 @@
 		<div class="ephead">
 			<h2 class="serif">Edit · {monthLabel(monthKey)}</h2>
 			<div class="epactions">
-				<button class="btn-ghost" onclick={() => (showAdd = true)}>+ Add transaction</button>
-				<button class="btn-ghost" onclick={() => (showPaycheck = true)}>+ Add paycheck</button>
+				<button class="btn-ghost" onclick={() => modals.addTransaction()}>+ Add transaction</button>
+				<button class="btn-ghost" onclick={() => modals.addPaycheck()}>+ Add paycheck</button>
 			</div>
 		</div>
-		<PendingList {refreshKey} onedit={(l) => (editingLocator = l)} />
+		<PendingList {refreshKey} onedit={(l) => modals.editTransaction(l)} />
 	</div>
 {/if}
 
@@ -86,7 +78,7 @@
 		cap={md ? `${md.paychecks.length} in ${monthLabel(monthKey)}` : ''}
 	>
 		{#if md && md.paychecks.length}
-			<PaycheckTable paychecks={md.paychecks} {edit} onedit={(l) => (editingPaycheck = l)} />
+			<PaycheckTable paychecks={md.paychecks} {edit} onedit={(l) => modals.editPaycheck(l)} />
 		{:else}
 			<p class="note">No paychecks this month.</p>
 		{/if}
@@ -99,34 +91,12 @@
 		cap={md ? `${md.transactions.length} transactions · ${monthLabel(monthKey)}` : ''}
 	>
 		{#if md}
-			<TransactionList transactions={txns} {edit} onedit={(l) => (editingLocator = l)} />
+			<TransactionList transactions={txns} {edit} onedit={(l) => modals.editTransaction(l)} />
 		{/if}
 	</Pane>
 </div>
 
-{#if showAdd && accounts}
-	<Overlay title="Add transaction" onclose={() => (showAdd = false)}>
-		<TransactionForm {accounts} onsaved={afterSave} />
-	</Overlay>
-{/if}
-
-{#if showPaycheck && accounts}
-	<Overlay title="Add paycheck" onclose={() => (showPaycheck = false)}>
-		<PaycheckForm {accounts} onsaved={afterSave} />
-	</Overlay>
-{/if}
-
-{#if editingLocator && accounts}
-	<Overlay title="Edit transaction" onclose={() => (editingLocator = null)}>
-		<TransactionForm locator={editingLocator} {accounts} onsaved={afterSave} />
-	</Overlay>
-{/if}
-
-{#if editingPaycheck && accounts}
-	<Overlay title="Edit paycheck" onclose={() => (editingPaycheck = null)}>
-		<PaycheckForm locator={editingPaycheck} {accounts} onsaved={afterSave} />
-	</Overlay>
-{/if}
+<EditModals bind:this={modals} {accounts} onsaved={onSaved} />
 
 <style>
 	.editpanel {

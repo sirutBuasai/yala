@@ -3,7 +3,7 @@
 	// from that entry and saves an update (POST /api/paycheck/update) or deletes it.
 	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data/load';
-	import { deleteTransaction, postJson, refreshAccounts } from '$lib/data/load';
+	import { deleteTransaction, getJson, postJson, refreshAccounts } from '$lib/data/load';
 	import { formatAccount, money } from '$lib/utils/format';
 	import { lastDepositAccount } from '$lib/utils/editPrefs';
 	import Select from '$lib/forms/Select.svelte';
@@ -51,19 +51,20 @@
 				const remembered = get(lastDepositAccount);
 				deposit_account = accounts.cash_accounts.includes(remembered)
 					? remembered
-					: accounts.cash_accounts[0];
+					: accounts.cash_accounts[0]!;
 			}
 			return;
 		}
 		// Edit mode: prefill from the paycheck addressed by `locator`.
 		const l = locator;
 		(async () => {
-			const res = await fetch(`/api/paycheck?locator=${encodeURIComponent(l)}`, {
-				cache: 'no-store'
-			});
-			const s = await res.json();
-			if (!res.ok) {
-				msg = s.detail || `error ${res.status}`;
+			const {
+				ok,
+				data: s,
+				error
+			} = await getJson<Record<string, any>>(`/api/paycheck?locator=${encodeURIComponent(l)}`);
+			if (!ok) {
+				msg = error ?? 'load failed';
 				err = true;
 				return;
 			}
@@ -156,7 +157,7 @@
 
 <div class="lines">
 	<LineColumn
-		header="Deductions (Tax, Insurance…)"
+		header="Deductions (Tax, Benefits…)"
 		addLabel="+ row"
 		bind:rows={deductions}
 		options={accounts.deduction_categories}
