@@ -95,7 +95,14 @@
 			if (node.col === maxCol || (!hasOut(node.id) && node.col !== minCol)) side = 'right';
 			else if (node.col === minCol) side = 'left';
 			else side = 'above';
-			return { ...p, side };
+			// Each node's share of its own column's throughput. The first column is the root
+			// (trivially 100%), so it's skipped. This is purely structural — no domain meaning
+			// baked in — yet reads naturally: column 1 sums to the source, later columns to
+			// whatever flowed onward.
+			const colTot = colTotal(node.col);
+			const pct =
+				node.col !== minCol && colTot > 0 ? Math.round((node.value / colTot) * 100) : null;
+			return { ...p, side, pct };
 		});
 
 		return { nodeViews, ribbons };
@@ -131,12 +138,17 @@
 			rx="3"
 			fill={nv.node.color}
 			role="presentation"
-			onmousemove={(e) => showTip(`<b>${esc(nv.node.label)}</b><br>${money(nv.node.value)}`, e)}
+			onmousemove={(e) =>
+				showTip(
+					`<b>${esc(nv.node.label)}</b><br>${money(nv.node.value)}${nv.pct != null ? ` · ${nv.pct}%` : ''}`,
+					e
+				)}
 			onmouseleave={hideTip}
 		/>
 		{#if nv.side === 'right'}
 			<text class="lbl" x={nv.x + NODE_W + 7} y={nv.y + nv.h / 2 + 4} text-anchor="start">
-				{nv.node.label}<tspan class="val" dx="6">{money(nv.node.value)}</tspan>
+				{nv.node.label}<tspan class="val" dx="6">{money(nv.node.value)}</tspan
+				>{#if nv.pct != null}<tspan class="pct" dx="5">{nv.pct}%</tspan>{/if}
 			</text>
 		{:else if nv.side === 'left'}
 			<text class="lbl" x={nv.x - 8} y={nv.y + nv.h / 2 + 4} text-anchor="end">
@@ -144,7 +156,8 @@
 			</text>
 		{:else}
 			<text class="lbl" x={nv.x + NODE_W / 2} y={nv.y - 6} text-anchor="middle">
-				{nv.node.label}<tspan class="val" dx="6">{money(nv.node.value)}</tspan>
+				{nv.node.label}<tspan class="val" dx="6">{money(nv.node.value)}</tspan
+				>{#if nv.pct != null}<tspan class="pct" dx="5">{nv.pct}%</tspan>{/if}
 			</text>
 		{/if}
 	{/each}
@@ -164,6 +177,12 @@
 	.val {
 		fill: var(--ink-3);
 		font-size: 10px;
+		font-variant-numeric: tabular-nums;
+	}
+	.pct {
+		fill: var(--lav-text);
+		font-size: 10px;
+		font-weight: 600;
 		font-variant-numeric: tabular-nums;
 	}
 </style>
