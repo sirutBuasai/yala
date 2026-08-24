@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { scaleLinear } from 'd3-scale';
 	import { line, area } from 'd3-shape';
+	import { moneyYScale } from '$lib/charts/axis';
 	import { money, esc } from '$lib/format';
 	import { showTip, hideTip } from '$lib/tooltip';
 
@@ -32,13 +32,9 @@
 	const gid = 'lg-' + Math.random().toString(36).slice(2, 9);
 
 	const flat = $derived(series.flatMap((s) => s.values).filter((v): v is number => v != null));
-	const y = $derived(
-		scaleLinear()
-			.domain([Math.min(0, ...flat), Math.max(0, ...flat)])
-			.nice()
-			.range([ih, 0])
-	);
-	const ticks = $derived(y.ticks(4));
+	const axis = $derived(moneyYScale(flat, ih));
+	const y = $derived(axis.y);
+	const ticks = $derived(axis.ticks);
 	const xPos = (i: number) => (n > 1 ? (iw * i) / (n - 1) : iw / 2);
 
 	const fmt = (v: number) => (percent ? `${Math.round(v)}%` : money(v));

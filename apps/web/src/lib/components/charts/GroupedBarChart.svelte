@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { scaleBand, scaleLinear } from 'd3-scale';
+	import { scaleBand } from 'd3-scale';
+	import { moneyYScale } from '$lib/charts/axis';
 	import { money, moneyK, esc } from '$lib/format';
 	import { showTip, hideTip } from '$lib/tooltip';
 
@@ -32,13 +33,9 @@
 			.range([0, outer.bandwidth()])
 			.padding(0.12)
 	);
-	const y = $derived(
-		scaleLinear()
-			.domain([Math.min(0, ...flat), Math.max(0, ...flat)])
-			.nice()
-			.range([ih, 0])
-	);
-	const ticks = $derived(y.ticks(4));
+	const axis = $derived(moneyYScale(flat, ih));
+	const y = $derived(axis.y);
+	const ticks = $derived(axis.ticks);
 	const base = $derived(y(0));
 </script>
 
