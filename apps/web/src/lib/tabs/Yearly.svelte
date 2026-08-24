@@ -19,7 +19,7 @@
 	// (its KPIs and charts read as zero).
 	const years = $derived.by(() => {
 		const ys = data.meta.years;
-		const latest = ys.length ? ys[ys.length - 1] : year;
+		const latest = ys[ys.length - 1] ?? year;
 		return [...new Set([...ys, latest + 1, year])].sort((a, b) => b - a);
 	});
 
@@ -39,16 +39,16 @@
 
 <div class="panes">
 	<Pane title="Income vs Spending vs Savings" cap={`${year} · Per tracked month`}>
-		<Figure primitive={incomeSpentSaved} chart="grouped-bars" />
+		<Figure primitive={incomeSpentSaved} chart="bar" />
 	</Pane>
 </div>
 
 <div class="panes two">
 	<Pane title="Spending by month" cap={`${year} · total ${money(yearSpent)}`}>
-		<Figure primitive={byMonth} chart="column" color="var(--salmon)" />
+		<Figure primitive={byMonth} chart="bar" color="var(--salmon)" />
 	</Pane>
 	<Pane title="Category split" cap={`${year}`}>
-		<Figure primitive={catSplit} chart="bars" total={yearSpent} />
+		<Figure primitive={catSplit} chart="ranked-bars" total={yearSpent} />
 	</Pane>
 </div>
 

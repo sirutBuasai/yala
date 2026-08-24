@@ -22,9 +22,8 @@ import { categoryVar } from '$lib/utils/theme';
 
 import Donut from '$lib/charts/Donut.svelte';
 import HBarChart from '$lib/charts/HBarChart.svelte';
-import VBarChart from '$lib/charts/VBarChart.svelte';
 import LineChart from '$lib/charts/LineChart.svelte';
-import GroupedBarChart from '$lib/charts/GroupedBarChart.svelte';
+import BarChart from '$lib/charts/BarChart.svelte';
 import Sankey from '$lib/charts/Sankey.svelte';
 import Heatmap from './Heatmap.svelte';
 import DataTable from './Table.svelte';
@@ -44,14 +43,35 @@ export interface AdaptOpts {
 	total?: number;
 }
 
-export interface ChartDef {
+export interface ChartDef<P extends Record<string, unknown> = Record<string, unknown>> {
 	id: string;
 	label: string;
 	accepts: PrimitiveKind[];
 	/** Whether additional compatible series can be layered on. */
 	layerable: boolean;
-	component: Component<Record<string, unknown>>;
-	adapt(primitive: Primitive, opts?: AdaptOpts): Record<string, unknown>;
+	component: Component<P>;
+	adapt(primitive: Primitive, opts?: AdaptOpts): P;
+}
+
+/** The props a Svelte component accepts. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type PropsOf<C> = C extends Component<infer P, any, any> ? P : never;
+
+/**
+ * Register one chart. The props type is inferred from the `component`, and `adapt` is required
+ * to return exactly those props — so renaming a chart's prop is caught here at compile time —
+ * then the type is erased so the registry array can hold heterogeneous charts.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function def<C extends Component<any, any, any>>(d: {
+	id: string;
+	label: string;
+	accepts: PrimitiveKind[];
+	layerable: boolean;
+	component: C;
+	adapt(primitive: Primitive, opts?: AdaptOpts): PropsOf<C>;
+}): ChartDef {
+	return d as unknown as ChartDef;
 }
 
 // --- colour assignment (visualization concern) ---
@@ -74,7 +94,7 @@ const PALETTE = [
 ];
 
 function seriesColor(name: string, index: number): string {
-	return SERIES_ACCENT[name] ?? PALETTE[index % PALETTE.length];
+	return SERIES_ACCENT[name] ?? PALETTE[index % PALETTE.length]!;
 }
 
 function categoryColor(key: string): string {
@@ -99,6 +119,7 @@ function seriesOf(
 ): { labels: string[]; list: Series[] } {
 	const list = p.kind === 'series' ? [p] : [...p.series];
 	const base = list[0];
+	if (!base) return { labels: [], list };
 	const labels = base.points.map((pt) => pt.label);
 	// Dynamic layering: any number of compatible series can be added.
 	for (const l of layers) if (compatible(base, l)) list.push(l);
@@ -118,12 +139,12 @@ function toChartSeries(list: Series[], opts: AdaptOpts) {
 // --- the registry ---
 
 export const CHARTS: ChartDef[] = [
-	{
+	def({
 		id: 'donut',
 		label: 'Donut',
 		accepts: ['categorical'],
 		layerable: false,
-		component: Donut as unknown as Component<Record<string, unknown>>,
+		component: Donut,
 		adapt(p) {
 			const c = p as Categorical;
 			return {
@@ -134,13 +155,13 @@ export const CHARTS: ChartDef[] = [
 				}))
 			};
 		}
-	},
-	{
-		id: 'bars',
+	}),
+	def({
+		id: 'ranked-bars',
 		label: 'Ranked bars',
 		accepts: ['categorical'],
 		layerable: false,
-		component: HBarChart as unknown as Component<Record<string, unknown>>,
+		component: HBarChart,
 		adapt(p, opts = {}) {
 			const c = p as Categorical;
 			return {
@@ -152,28 +173,33 @@ export const CHARTS: ChartDef[] = [
 				total: opts.total
 			};
 		}
-	},
-	{
-		id: 'column',
-		label: 'Column',
-		accepts: ['series'],
-		layerable: false,
-		component: VBarChart as unknown as Component<Record<string, unknown>>,
+	}),
+	def({
+		id: 'bar',
+		label: 'Bar',
+		accepts: ['series', 'multiseries'],
+		layerable: true,
+		component: BarChart,
 		adapt(p, opts = {}) {
-			const s = p as Series;
+			const { labels, list } = seriesOf(p as Series | MultiSeries, opts.layers);
 			return {
-				labels: s.points.map((pt) => pt.label),
-				values: s.points.map((pt) => pt.value ?? 0),
-				color: opts.color ?? seriesColor(s.name, 0)
+				labels,
+				series: list.map((s, i) => ({
+					name: s.name,
+					values: s.points.map((pt) => pt.value ?? 0),
+					// A single series may take an explicit fill; multiple use the series palette.
+					color: list.length === 1 && opts.color ? opts.color : seriesColor(s.name, i)
+				})),
+				legend: opts.legend
 			};
 		}
-	},
-	{
+	}),
+	def({
 		id: 'line',
 		label: 'Line',
 		accepts: ['series', 'multiseries'],
 		layerable: true,
-		component: LineChart as unknown as Component<Record<string, unknown>>,
+		component: LineChart,
 		adapt(p, opts = {}) {
 			const { labels, list } = seriesOf(p as Series | MultiSeries, opts.layers);
 			const percent = (p as Series | MultiSeries).unit.kind === 'percent';
@@ -184,32 +210,13 @@ export const CHARTS: ChartDef[] = [
 				legend: opts.legend ?? list.length > 1
 			};
 		}
-	},
-	{
-		id: 'grouped-bars',
-		label: 'Grouped bars',
-		accepts: ['series', 'multiseries'],
-		layerable: true,
-		component: GroupedBarChart as unknown as Component<Record<string, unknown>>,
-		adapt(p, opts = {}) {
-			const { labels, list } = seriesOf(p as Series | MultiSeries, opts.layers);
-			return {
-				labels,
-				series: list.map((s, i) => ({
-					name: s.name,
-					values: s.points.map((pt) => pt.value ?? 0),
-					color: seriesColor(s.name, i)
-				})),
-				legend: opts.legend ?? true
-			};
-		}
-	},
-	{
+	}),
+	def({
 		id: 'sankey',
 		label: 'Sankey',
 		accepts: ['flow'],
 		layerable: false,
-		component: Sankey as unknown as Component<Record<string, unknown>>,
+		component: Sankey,
 		adapt(p) {
 			const f = p as Flow;
 			return {
@@ -220,38 +227,38 @@ export const CHARTS: ChartDef[] = [
 				links: f.links
 			};
 		}
-	},
-	{
+	}),
+	def({
 		id: 'heatmap',
 		label: 'Heatmap',
 		accepts: ['matrix'],
 		layerable: false,
-		component: Heatmap as unknown as Component<Record<string, unknown>>,
+		component: Heatmap,
 		adapt(p) {
 			const m = p as Matrix;
 			return { rows: m.rows, cols: m.cols, values: m.values };
 		}
-	},
-	{
+	}),
+	def({
 		id: 'table',
 		label: 'Table',
 		accepts: ['table'],
 		layerable: false,
-		component: DataTable as unknown as Component<Record<string, unknown>>,
+		component: DataTable,
 		adapt(p) {
 			return { table: p as Table };
 		}
-	},
-	{
+	}),
+	def({
 		id: 'stat',
 		label: 'Stat tile',
 		accepts: ['scalar'],
 		layerable: false,
-		component: StatTile as unknown as Component<Record<string, unknown>>,
+		component: StatTile,
 		adapt(p) {
 			return { scalar: p as Scalar };
 		}
-	}
+	})
 ];
 
 export const CHARTS_BY_ID: Record<string, ChartDef> = Object.fromEntries(

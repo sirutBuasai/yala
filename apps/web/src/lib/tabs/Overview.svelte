@@ -33,7 +33,7 @@
 		<Figure primitive={donut} chart="donut" />
 	</Pane>
 	<Pane title="Income vs Spending vs Savings" cap="Per tracked year">
-		<Figure primitive={incomeSpentSaved} chart="grouped-bars" />
+		<Figure primitive={incomeSpentSaved} chart="bar" />
 	</Pane>
 </div>
 

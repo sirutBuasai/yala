@@ -1,4 +1,7 @@
 <script lang="ts">
+	// One bar chart for 1..n series. A single series renders as plain columns (with value
+	// labels); two or more render as grouped bars (with a legend). The user picks "Bar" and
+	// adds one or more data — they never choose between "column" and "grouped bars".
 	import { scaleBand } from 'd3-scale';
 	import { moneyYScale } from '$lib/charts/axis';
 	import { money, moneyK, esc } from '$lib/utils/format';
@@ -12,16 +15,23 @@
 	interface Props {
 		labels: string[];
 		series: Series[];
+		/** Force the legend; defaults on for multi-series, off for a single series. */
 		legend?: boolean;
+		/** Draw value labels atop bars; defaults on for a single series only. */
+		valueLabels?: boolean;
 	}
-	let { labels, series, legend = true }: Props = $props();
+	let { labels, series, legend, valueLabels }: Props = $props();
+
+	const single = $derived(series.length <= 1);
+	const showLegend = $derived(legend ?? !single);
+	const showValues = $derived(valueLabels ?? single);
 
 	// Render at the measured pixel size so the chart fills (and grows with) its pane.
 	let boxW = $state(0);
 	let boxH = $state(0);
 	const W = $derived(boxW || 1100);
 	const H = $derived(boxH || 300);
-	const m = { t: 16, r: 14, b: 30, l: 56 };
+	const m = { t: 22, r: 14, b: 30, l: 56 };
 	const iw = $derived(W - m.l - m.r);
 	const ih = $derived(H - m.t - m.b);
 
@@ -39,7 +49,7 @@
 	const base = $derived(y(0));
 </script>
 
-{#if legend}
+{#if showLegend}
 	<div class="legend">
 		{#each series as s (s.name)}
 			<span class="k"><span class="sw" style:background={s.color}></span>{s.name}</span>
@@ -57,19 +67,27 @@
 			{#each labels as lb, i (lb)}
 				{@const gx = outer(lb) ?? 0}
 				{#each series as s, j (s.name)}
-					{@const v = s.values[i]}
+					{@const v = s.values[i]!}
 					{@const yv = y(v)}
+					{@const bx = gx + (inner(String(j)) ?? 0)}
+					{@const bw = inner.bandwidth()}
 					<rect
-						x={gx + (inner(String(j)) ?? 0)}
+						x={bx}
 						y={Math.min(yv, base)}
-						width={inner.bandwidth()}
+						width={bw}
 						height={Math.abs(yv - base)}
 						rx="3"
 						fill={s.color}
 						role="presentation"
-						onmousemove={(e) => showTip(`<b>${esc(lb)}</b><br>${esc(s.name)}: ${money(v)}`, e)}
+						onmousemove={(e) =>
+							showTip(`<b>${esc(lb)}</b><br>${single ? '' : esc(s.name) + ': '}${money(v)}`, e)}
 						onmouseleave={hideTip}
 					/>
+					{#if showValues && v !== 0}
+						<text class="vlabel" x={bx + bw / 2} y={Math.min(yv, base) - 6} text-anchor="middle"
+							>{moneyK(v)}</text
+						>
+					{/if}
 				{/each}
 				<text
 					x={gx + outer.bandwidth() / 2}
@@ -98,5 +116,10 @@
 		position: absolute;
 		inset: 0;
 		height: 100%;
+	}
+	.vlabel {
+		fill: var(--ink-3);
+		font-size: 10px;
+		font-variant-numeric: tabular-nums;
 	}
 </style>
