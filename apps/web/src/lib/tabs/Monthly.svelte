@@ -9,7 +9,8 @@
 	import Board from '$lib/ui/Board.svelte';
 	import MonthNav from '$lib/ui/MonthNav.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
-	import TransactionList from '$lib/ui/TransactionList.svelte';
+	import TransactionList, { TXN_SORTS, type TxnSort } from '$lib/ui/TransactionList.svelte';
+	import SortMenu from '$lib/ui/SortMenu.svelte';
 	import PaycheckList from '$lib/ui/PaycheckList.svelte';
 	import PendingQueue from '$lib/ui/PendingQueue.svelte';
 	import EditModals from '$lib/forms/EditModals.svelte';
@@ -24,10 +25,6 @@
 	let { data, monthKey = $bindable(), edit, accounts, onsaved }: Props = $props();
 
 	const md = $derived(data.months[monthKey]);
-
-	const txns = $derived(
-		md ? [...md.transactions].sort((a, b) => b.date.localeCompare(a.date)) : []
-	);
 
 	const paychecks = $derived(
 		md ? [...md.paychecks].sort((a, b) => a.date.localeCompare(b.date)) : []
@@ -48,6 +45,9 @@
 
 	let modals: ReturnType<typeof EditModals>;
 	let refreshKey = $state(0);
+
+	let sortKey = $state<TxnSort>('date');
+	let sortDir = $state<'asc' | 'desc'>('desc');
 
 	// A save also refreshes the pending list (via refreshKey) on top of the page-level refresh.
 	function onSaved() {
@@ -107,8 +107,17 @@
 		title="Transaction history"
 		cap={md ? `${md.transactions.length} transactions · ${monthLabel(monthKey)}` : ''}
 	>
+		{#snippet actions()}
+			{#if md}<SortMenu fields={TXN_SORTS} bind:sortKey bind:sortDir />{/if}
+		{/snippet}
 		{#if md}
-			<TransactionList transactions={txns} {edit} onedit={(l) => modals.editTransaction(l)} />
+			<TransactionList
+				transactions={md.transactions}
+				{sortKey}
+				{sortDir}
+				{edit}
+				onedit={(l) => modals.editTransaction(l)}
+			/>
 		{/if}
 	</Pane>
 </div>

@@ -13,6 +13,17 @@
 
 	/** A middle column between the payee and the amount. Extend the union to add more. */
 	export type TxnField = 'source' | 'category' | 'bill';
+
+	/** A field the list can be ordered by via the `sortKey` prop. */
+	export type TxnSort = 'date' | 'category' | 'amount' | 'source';
+
+	/** Sortable fields with display labels, for driving a SortMenu. */
+	export const TXN_SORTS: { key: TxnSort; label: string }[] = [
+		{ key: 'date', label: 'Date' },
+		{ key: 'category', label: 'Category' },
+		{ key: 'amount', label: 'Amount' },
+		{ key: 'source', label: 'Source' }
+	];
 </script>
 
 <script lang="ts">
@@ -29,8 +40,19 @@
 		showDate?: boolean;
 		/** Which columns to render between the payee and the amount, in order. */
 		fields?: TxnField[];
+		/** Field to order rows by; omit to keep the given order. Pair with TransactionSortMenu. */
+		sortKey?: TxnSort;
+		sortDir?: 'asc' | 'desc';
 	}
-	let { transactions, edit, onedit, showDate = true, fields = ['source'] }: Props = $props();
+	let {
+		transactions,
+		edit,
+		onedit,
+		showDate = true,
+		fields = ['source'],
+		sortKey,
+		sortDir = 'desc'
+	}: Props = $props();
 
 	function column(t: TxnRow, f: TxnField): string {
 		switch (f) {
@@ -43,11 +65,35 @@
 		}
 	}
 
+	function compare(a: TxnRow, b: TxnRow, key: TxnSort): number {
+		switch (key) {
+			case 'amount':
+				return a.amount - b.amount;
+			case 'category':
+				return a.category.localeCompare(b.category);
+			case 'source':
+				return formatAccount(a.source).localeCompare(formatAccount(b.source));
+			case 'date':
+				return a.date.localeCompare(b.date);
+		}
+	}
+
+	const rows = $derived.by(() => {
+		if (!sortKey) return transactions;
+		const key = sortKey;
+		const dir = sortDir === 'asc' ? 1 : -1;
+		return [...transactions].sort((a, b) => {
+			const cmp = compare(a, b, key);
+			// Break ties by recency so equal keys keep a stable, sensible order.
+			return (cmp || b.date.localeCompare(a.date)) * dir;
+		});
+	});
+
 	const cols = $derived(`${showDate ? '34px ' : ''}10px 1fr ${'auto '.repeat(fields.length)}74px`);
 </script>
 
 <RowList
-	items={transactions}
+	items={rows}
 	{edit}
 	{onedit}
 	{cols}
