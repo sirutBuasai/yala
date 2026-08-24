@@ -155,6 +155,33 @@ def test_update_by_line_locator_assigns_id(ledger_dir: Path):
     assert updated.amount == Decimal("109.95")
 
 
+def test_line_locator_is_ledger_relative(ledger_dir: Path, monkeypatch):
+    """A line-locator must stay ledger-relative so no private absolute path leaks into data.json,
+    and must still round-trip through the sink."""
+    import yala.config as config_mod
+
+    monkeypatch.setattr(config_mod, "LEDGER_DIR", ledger_dir)
+
+    led = Ledger(ledger_dir / "main.beancount", strict=True).load()
+    fitness = [t for t in led.spending.transactions() if t.payee == "Example Gym"][0]
+
+    assert fitness.locator.startswith("line:")
+    assert str(ledger_dir) not in fitness.locator
+
+    rel, _, _ = fitness.locator[len("line:") :].rpartition(":")
+    assert not rel.startswith("/")
+    assert (ledger_dir / rel).exists()
+
+    new_id = FileLedgerSink(ledger_dir).update_transaction(
+        fitness.locator,
+        payee="Example Gym",
+        amount=Decimal("109.95"),
+        category="Subscription",
+        funding_account="Liabilities:CC:CardB",
+    )
+    assert new_id
+
+
 def test_update_rolls_back_on_broken_ledger(ledger_dir: Path):
     sink = FileLedgerSink(ledger_dir)
     entry_id = sink.append_transaction(

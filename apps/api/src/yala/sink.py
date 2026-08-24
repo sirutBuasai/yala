@@ -55,8 +55,19 @@ def _atomic_write(path: Path, content: str) -> None:
         raise
 
 
+def _resolve_ledger_path(path: str) -> str:
+    """Canonical absolute path for a ``line:`` locator path (accepts relative or absolute), so a
+    ledger-relative locator round-trips against beancount's ``filename`` meta even across symlinks
+    (e.g. macOS /var vs /private/var)."""
+    absolute = path if os.path.isabs(path) else os.path.join(config.LEDGER_DIR, path)
+    return os.path.realpath(absolute)
+
+
 def find_transaction(entries: list, locator: str) -> data.Transaction:
-    """Resolve a locator (``id:<uuid>`` or ``line:<path>:<lineno>``) to a beancount transaction."""
+    """Resolve a locator (``id:<uuid>`` or ``line:<path>:<lineno>``) to a beancount transaction.
+
+    ``line:`` paths are ledger-relative (see :func:`~yala.ledger.entities.locator_of`); legacy
+    absolute paths still resolve too."""
     kind, _, rest = locator.partition(":")
     txns = [e for e in entries if isinstance(e, data.Transaction)]
 
@@ -67,8 +78,14 @@ def find_transaction(entries: list, locator: str) -> data.Transaction:
 
     elif kind == "line":
         path, _, lineno = rest.rpartition(":")
+        target = _resolve_ledger_path(path)
         for e in txns:
-            if e.meta.get("filename") == path and e.meta.get("lineno") == int(lineno):
+            filename = e.meta.get("filename")
+            if (
+                filename is not None
+                and os.path.realpath(filename) == target
+                and e.meta.get("lineno") == int(lineno)
+            ):
                 return e
 
     raise KeyError(f"no transaction found for locator {locator!r}")
