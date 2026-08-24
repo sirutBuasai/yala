@@ -3,12 +3,15 @@
 Querying the ledger and constructing the pydantic contract:
 the builder emits a fully-validated :class:`~yala.schema.DashboardData`.
 
-Run ``python -m yala.builder`` to write ``build/data.json``.
+Run ``python -m yala.builder [OUT]`` to write the snapshot (default:
+``apps/web/static/data.json``; overridable via arg or ``$YALA_DATA_OUT``).
 """
 
 from __future__ import annotations
 
 import datetime as dt
+import os
+import sys
 from decimal import Decimal
 from pathlib import Path
 
@@ -200,9 +203,16 @@ def build_dict() -> dict:
     return build(Ledger().load()).model_dump(mode="json")
 
 
-def main() -> None:
+# The frontend reads its data snapshot from apps/web/static/data.json, which the vite build
+# copies into apps/web/build/. Writing straight there means no intermediate build/ dir to copy.
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+_DEFAULT_OUT = _REPO_ROOT / "apps" / "web" / "static" / "data.json"
+
+
+def main(argv: list[str] | None = None) -> None:
+    argv = sys.argv[1:] if argv is None else argv
+    out = Path(argv[0]) if argv else Path(os.environ.get("YALA_DATA_OUT", _DEFAULT_OUT))
     data = build(Ledger().load())
-    out = Path("build") / "data.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(data.model_dump_json(indent=2))
     print(f"wrote {out} ({len(data.months)} months, {len(data.years)} years)")

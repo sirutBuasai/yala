@@ -19,31 +19,17 @@ only code and fake fixtures — never real data.
 - Python ≥ 3.10 and [`uv`](https://docs.astral.sh/uv/)
 - Node ≥ 20 and npm
 
-## Backend (`apps/api`)
+## Workflows (`make`)
+
+The `Makefile` is the single entrypoint; the actual recipes live in `scripts/`.
 
 ```bash
-uv venv && source .venv/bin/activate      # venv at repo root
-uv pip install -e "apps/api[dev]"
-cd apps/api
-pytest                                     # tests over a fake fixture ledger
-python -m yala.builder                     # write build/data.json from the ledger
-python -m yala.api                         # local edit API at http://127.0.0.1:8000
+make bootstrap   # install backend + frontend deps (first run)
+make gen         # regenerate the contract: data.schema.json + types.ts
+make serve       # clean → generate data.json → build → serve view-only site (localhost:4173)
+make serve-api   # clean → generate data.json → build → serve site + edit API (127.0.0.1:8000)
+make test        # backend + frontend test suites
+make test-api    # backend only (pytest)
+make test-web    # frontend only (vitest)
+make clean       # remove build artifacts
 ```
-
-The ledger location is read from `$YALA_LEDGER_DIR` (default:
-`~/personal_dev/yala-project/yala-private-data/ledger`). `python scripts/generate_schema.py`
-regenerates `packages/contract` from the pydantic models.
-
-## Frontend (`apps/web`)
-
-```bash
-cd apps/web
-npm install
-npm run gen:types    # regenerate src/lib/types.ts from packages/contract
-npm run dev          # dev server
-npm run test         # Vitest
-npm run build        # static build -> apps/web/build (served by the API)
-```
-
-With the API running, the built site gets live data and edit mode. Opened standalone it falls back
-to the static `data.json` snapshot (read-only).

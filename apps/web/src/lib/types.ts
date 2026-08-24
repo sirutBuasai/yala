@@ -94,7 +94,7 @@ export interface DateRange {
 	end: End;
 }
 /**
- * Which domains carry data flag.
+ * Which domains carry data.
  *
  * This interface was referenced by `DashboardData`'s JSON-Schema
  * via the `definition` "Domains".
