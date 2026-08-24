@@ -17,6 +17,8 @@ from beancount.core import data
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.types import Scope
 
 from yala import config
 from yala.builder import build_dict
@@ -436,14 +438,49 @@ def post_paycheck_update(body: PaycheckUpdateIn) -> dict:
     return {"ok": True, "message": "updated paycheck", "id": entry_id}
 
 
+class SPAStaticFiles(StaticFiles):
+    """Serve the SvelteKit static build with client-side-routing awareness.
+
+    Plain ``StaticFiles`` maps ``/dev`` to ``build/dev`` or ``build/dev/index.html`` — but the
+    static adapter emits prerendered pages as ``build/dev.html``, so a *direct* URL visit (rather
+    than in-app navigation) 404s. This resolves web page navigation by falling back, in order, to
+    the prerendered ``<path>.html`` and then the SPA shell (``200.html``) so the client router can
+    take over. ``/api/*`` is left strictly alone: those requests never reach here (the API routes
+    are registered first), and any that do get a real 404 rather than an HTML shell.
+    """
+
+    async def get_response(self, path: str, scope: Scope):  # type: ignore[override]
+        try:
+            return await super().get_response(path, scope)
+
+        except StarletteHTTPException as e:
+            # Only web navigation gets the SPA treatment; data paths stay a hard 404.
+            if e.status_code != 404 or path.startswith("api"):
+                raise
+
+            # A route like /dev is prerendered to dev.html; try that before the shell.
+            if path not in ("", ".") and not path.endswith(".html"):
+                try:
+                    return await super().get_response(path + ".html", scope)
+
+                except StarletteHTTPException:
+                    pass
+
+            return await super().get_response("200.html", scope)
+
+
 # Static frontend (the SvelteKit static-adapter build output) is mounted LAST so /api/*
 # routes always win. Absence is tolerated (e.g. before `npm run build` in apps/web/).
 _WEB_DIR = Path(__file__).resolve().parents[4] / "apps" / "web" / "build"
 if _WEB_DIR.is_dir():
-    app.mount("/", StaticFiles(directory=_WEB_DIR, html=True), name="web")
+    app.mount("/", SPAStaticFiles(directory=_WEB_DIR, html=True), name="web")
 
 
 if __name__ == "__main__":
+    import os
+
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    # Port is overridable (env var, set by scripts/serve.py) so it can dodge a busy 8000.
+    port = int(os.environ.get("YALA_API_PORT", "8000"))
+    uvicorn.run(app, host="127.0.0.1", port=port)
