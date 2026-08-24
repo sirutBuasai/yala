@@ -190,6 +190,7 @@
 			{/if}
 
 			{#if selectedTxns.length}
+				{#if selected.pays.length}<div class="daydiv"></div>{/if}
 				<TransactionList
 					transactions={selectedTxns}
 					{edit}
@@ -389,27 +390,41 @@
 	.paylist {
 		display: flex;
 		flex-direction: column;
-		margin-bottom: 6px;
+		/* bleed to the day panel's edges (.side has 20px h-padding); +20px row padding holds the text */
+		margin: 0 -20px 6px;
+	}
+	/* separates the paycheck block from the transaction block; inset like the row dividers */
+	.daydiv {
+		height: 1px;
+		background: var(--border);
+		margin: 2px 0 8px;
 	}
 	.payrow {
+		position: relative;
 		display: grid;
 		grid-template-columns: 10px 1fr auto;
 		align-items: center;
 		gap: 10px;
-		padding: 8px 4px;
-		border-bottom: 1px solid var(--border);
+		padding: 8px 24px;
 		width: 100%;
 		background: none;
-		border-left: 0;
-		border-right: 0;
-		border-top: 0;
+		border: 0;
 		color: inherit;
 		font: inherit;
 		text-align: left;
 	}
+	/* divider stays inset to the content while the row hover is full-bleed */
+	.payrow:not(:last-child)::after {
+		content: '';
+		position: absolute;
+		left: 20px;
+		right: 20px;
+		bottom: 0;
+		height: 1px;
+		background: var(--border);
+	}
 	.payrow.clickable {
 		cursor: pointer;
-		border-radius: 8px;
 	}
 	.payrow.clickable:hover {
 		background: color-mix(in srgb, var(--lav) 9%, transparent);

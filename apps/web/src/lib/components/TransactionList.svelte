@@ -44,23 +44,34 @@
 	.txlist {
 		display: flex;
 		flex-direction: column;
+		/* bleed to the enclosing card's edges (18px 20px padding) so the row hover runs edge-to-edge;
+		   the +20px in the row padding below keeps the text where it was. */
+		margin: 0 -20px;
 	}
 	.tx {
+		position: relative;
 		display: grid;
 		grid-template-columns: 34px 10px 1fr auto 74px;
 		align-items: center;
 		gap: 10px;
-		padding: 8px 4px;
-		border-bottom: 1px solid var(--border);
+		padding: 8px 24px;
 		/* reset button defaults for the clickable (edit-mode) variant */
 		width: 100%;
 		background: none;
-		border-left: 0;
-		border-right: 0;
-		border-top: 0;
+		border: 0;
 		color: inherit;
 		font: inherit;
 		text-align: left;
+	}
+	/* divider stays inset to the content (the +20px bleed offset), while the row hover is full-bleed */
+	.tx:not(:last-child)::after {
+		content: '';
+		position: absolute;
+		left: 20px;
+		right: 20px;
+		bottom: 0;
+		height: 1px;
+		background: var(--border);
 	}
 	.tx.no-date {
 		grid-template-columns: 10px 1fr auto 74px;
@@ -70,12 +81,9 @@
 		flex-direction: column;
 		min-width: 0;
 	}
-	.tx:last-child {
-		border-bottom: 0;
-	}
+	/* full-width square hover (app standard for stacked/list rows) */
 	.tx.clickable {
 		cursor: pointer;
-		border-radius: 8px;
 	}
 	.tx.clickable:hover {
 		background: color-mix(in srgb, var(--lav) 9%, transparent);

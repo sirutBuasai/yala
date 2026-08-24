@@ -63,24 +63,32 @@
 	.plist {
 		display: flex;
 		flex-direction: column;
+		/* bleed to the enclosing card's edges (20px h-padding); +20px row padding holds the text */
+		margin: 0 -20px;
 	}
 	.prow {
+		position: relative;
 		display: grid;
 		grid-template-columns: 84px 10px 1fr auto 84px;
 		align-items: center;
 		gap: 10px;
-		padding: 8px 6px;
+		padding: 8px 26px;
 		background: none;
 		border: 0;
-		border-bottom: 1px solid var(--border);
 		color: var(--ink);
 		text-align: left;
 		cursor: pointer;
-		border-radius: 8px;
 		font: inherit;
 	}
-	.prow:last-child {
-		border-bottom: 0;
+	/* divider stays inset to the content while the row hover is full-bleed */
+	.prow:not(:last-child)::after {
+		content: '';
+		position: absolute;
+		left: 20px;
+		right: 20px;
+		bottom: 0;
+		height: 1px;
+		background: var(--border);
 	}
 	.prow:hover {
 		background: color-mix(in srgb, var(--gold) 10%, transparent);

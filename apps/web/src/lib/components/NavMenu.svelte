@@ -99,7 +99,8 @@
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
-		padding: 16px 14px;
+		/* no horizontal padding: children set their own so the full-width square hover reaches the edges */
+		padding: 16px 0;
 		background: var(--surface);
 		border-right: 1px solid var(--border);
 		box-shadow: var(--shadow);
@@ -108,7 +109,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 4px 8px 12px;
+		padding: 4px 18px 12px;
 		margin-bottom: 6px;
 		border-bottom: 1px solid var(--border);
 	}
@@ -130,11 +131,11 @@
 	.links {
 		display: flex;
 		flex-direction: column;
-		gap: 4px;
 	}
+	/* full-width square hover — the app's standard for vertically stacked items */
 	.links a {
-		padding: 10px 12px;
-		border-radius: 8px;
+		padding: 10px 18px;
+		border-radius: 0;
 		color: var(--ink-2);
 		font-size: 14px;
 		font-weight: 500;
@@ -145,7 +146,7 @@
 		background: var(--inset);
 	}
 	.links a.active {
-		background: color-mix(in srgb, var(--lav) 20%, transparent);
+		background: color-mix(in srgb, var(--lav) 16%, transparent);
 		color: var(--ink);
 	}
 </style>

@@ -64,27 +64,35 @@
 		display: flex;
 		flex-direction: column;
 		overflow-x: auto;
+		/* bleed to the enclosing card's edges (20px h-padding) so row hover runs edge-to-edge;
+		   the +20px in the row padding below keeps the columns where they were. */
+		margin: 0 -20px;
 	}
 	.pcrow {
+		position: relative;
 		display: grid;
 		grid-template-columns: minmax(88px, 1.1fr) repeat(6, 1fr);
 		align-items: center;
 		gap: 8px;
-		padding: 9px 8px;
-		border-bottom: 1px solid var(--border);
+		padding: 9px 28px;
 		font-size: 12.5px;
 		/* reset button defaults for the clickable (edit-mode) variant */
 		width: 100%;
 		background: none;
-		border-left: 0;
-		border-right: 0;
-		border-top: 0;
+		border: 0;
 		color: inherit;
 		font-family: inherit;
 		text-align: left;
 	}
-	.pcrow:last-child {
-		border-bottom: 0;
+	/* divider stays inset to the content while the row hover is full-bleed */
+	.pcrow:not(:last-child)::after {
+		content: '';
+		position: absolute;
+		left: 20px;
+		right: 20px;
+		bottom: 0;
+		height: 1px;
+		background: var(--border);
 	}
 	.pcrow.head span {
 		color: var(--ink-3);
@@ -97,9 +105,9 @@
 		text-align: right;
 		font-variant-numeric: tabular-nums;
 	}
+	/* full-width square hover (app standard for stacked/list rows) */
 	.pcrow.clickable {
 		cursor: pointer;
-		border-radius: 8px;
 	}
 	.pcrow.clickable:hover {
 		background: color-mix(in srgb, var(--lav) 9%, transparent);
