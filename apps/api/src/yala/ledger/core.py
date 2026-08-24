@@ -35,6 +35,7 @@ class Ledger:
         self._entries: list = []
         self.errors: list = []
         self._loaded = False
+        self._txn_cache: list[Transaction] | None = None
 
     def load(self) -> "Ledger":
         if not self.path.exists():
@@ -44,6 +45,7 @@ class Ledger:
         self._entries = entries
         self.errors = errors
         self._loaded = True
+        self._txn_cache = None  # entries changed; drop the derived transaction view
 
         if self.strict and errors:
             shown = "; ".join(str(getattr(e, "message", e)) for e in errors[:5])
@@ -72,18 +74,20 @@ class Ledger:
 
         return "USD"
 
-    def transactions(self, year: int | None = None, month: int | None = None) -> list[Transaction]:
-        """All transaction views, optionally filtered by year/month. Domain-agnostic."""
+    def _all_transactions(self) -> list[Transaction]:
+        """Convert every directive to a :class:`Transaction` once and cache it.
+
+        The conversion (and sort) is the expensive part; domain queries call
+        :meth:`transactions` dozens of times per build, so building it once and filtering the
+        cached list keeps that from being O(entries × queries)."""
+        if self._txn_cache is not None:
+            return self._txn_cache
 
         self._require()
         out: list[Transaction] = []
 
         for e in self._entries:
             if not isinstance(e, data.Transaction):
-                continue
-            if year is not None and e.date.year != year:
-                continue
-            if month is not None and e.date.month != month:
                 continue
 
             postings = [
@@ -103,7 +107,21 @@ class Ledger:
             )
 
         out.sort(key=lambda t: t.date)
+        self._txn_cache = out
         return out
+
+    def transactions(self, year: int | None = None, month: int | None = None) -> list[Transaction]:
+        """All transaction views, optionally filtered by year/month. Domain-agnostic."""
+        txns = self._all_transactions()
+
+        if year is None and month is None:
+            return txns
+
+        return [
+            t
+            for t in txns
+            if (year is None or t.date.year == year) and (month is None or t.date.month == month)
+        ]
 
     def declared_accounts(self, prefix: str | None = None) -> list[str]:
         """Ledger account names, optionally filtered by prefix (e.g. ``'Expenses:'``)."""
