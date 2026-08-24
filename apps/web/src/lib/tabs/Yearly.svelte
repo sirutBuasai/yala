@@ -30,7 +30,7 @@
 		{ id: 'income.deductions', scope: yr, cap: 'tax + benefits' },
 		{ id: 'income.contributions', scope: yr, cap: 'HSA + 401k' },
 		{ id: 'income.net', scope: yr, cap: 'take-home + saved' },
-		{ id: 'ratio.savings_rate', scope: yr }
+		{ id: 'ratio.savings_rate', scope: yr, title: '% saved', cap: 'of income' }
 	]);
 
 	// Spending / cash-flow KPIs (averages carry their own active-month note).
