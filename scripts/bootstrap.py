@@ -8,7 +8,7 @@ from _common import ROOT, WEB, run
 
 def main() -> None:
     print("==> Backend (uv venv + editable install)")
-    run("uv", "venv", cwd=ROOT)
+    run("uv", "venv", "--allow-existing", cwd=ROOT)
     run("uv", "pip", "install", "-e", "apps/api[dev]", cwd=ROOT)
 
     print("==> Frontend (npm install)")

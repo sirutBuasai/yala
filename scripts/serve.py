@@ -21,6 +21,9 @@ def main(argv: list[str]) -> None:
     print("==> Generate data.json -> apps/web/static/data.json")
     run(VENV_PY, "-m", "yala.builder", "apps/web/static/data.json", cwd=ROOT)
 
+    print("==> Sync SvelteKit (regenerate .svelte-kit/ removed by clean)")
+    run("npx", "svelte-kit", "sync", cwd=WEB)
+
     print("==> Build site")
     run("npm", "run", "build", cwd=WEB)
 

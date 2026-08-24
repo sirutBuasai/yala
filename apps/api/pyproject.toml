@@ -22,6 +22,10 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+filterwarnings = [
+    # Third-party: starlette's TestClient warns that it uses httpx (wants httpx2). Not our code.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+]
 
 [tool.ruff]
 line-length = 100
