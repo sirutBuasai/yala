@@ -3,7 +3,7 @@
 	// parent owns the value and applies changes via `onchange`. Shared by the Monthly and
 	// Calendar views.
 	import Select from '$lib/forms/Select.svelte';
-	import Chevron from '$lib/ui/Chevron.svelte';
+	import RangeNav from '$lib/ui/RangeNav.svelte';
 	import { monthName } from '$lib/utils/format';
 	import { addMonths, monthForYear, pickableMonths } from '$lib/utils/period';
 
@@ -22,10 +22,12 @@
 	const monthsInYear = $derived(pickable.filter((k) => k.startsWith(selYear + '-')));
 </script>
 
-<div class="monthnav">
-	<button class="navbtn" aria-label="Previous month" onclick={() => onchange(addMonths(value, -1))}>
-		<Chevron dir="left" />
-	</button>
+<RangeNav
+	prevLabel="Previous month"
+	nextLabel="Next month"
+	onprev={() => onchange(addMonths(value, -1))}
+	onnext={() => onchange(addMonths(value, 1))}
+>
 	<div class="selectors">
 		<div class="monthsel">
 			<Select ariaLabel="Month" {value} options={monthsInYear} optionLabel={monthName} {onchange} />
@@ -39,25 +41,17 @@
 			/>
 		</div>
 	</div>
-	<button class="navbtn" aria-label="Next month" onclick={() => onchange(addMonths(value, 1))}>
-		<Chevron dir="right" />
-	</button>
-</div>
+</RangeNav>
 
 <style>
-	.monthnav {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
 	.selectors {
 		display: flex;
 		gap: 8px;
 	}
 	.monthsel {
-		width: 130px;
+		width: 90px;
 	}
 	.yearsel {
-		width: 100px;
+		width: 110px;
 	}
 </style>

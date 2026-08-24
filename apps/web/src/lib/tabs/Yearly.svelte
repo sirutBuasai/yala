@@ -3,7 +3,8 @@
 	import { money } from '$lib/utils/format';
 	import { incomeScalars, spendingScalars } from '$lib/data/scalar';
 	import { build } from '$lib/data/catalog';
-	import YearHeader from '$lib/ui/YearHeader.svelte';
+	import ViewHeader from '$lib/ui/ViewHeader.svelte';
+	import YearNav from '$lib/ui/YearNav.svelte';
 	import KpiRow from '$lib/ui/KpiRow.svelte';
 	import Pane from '$lib/ui/Pane.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
@@ -33,8 +34,11 @@
 	const catMatrix = $derived(build(data, 'spending.category_by_month', { level: 'year', year }));
 </script>
 
-<YearHeader title="Yearly" {years} bind:year tiles={incomeScalars(data, year)} />
+<ViewHeader title="Yearly">
+	<YearNav value={year} {years} onchange={(y) => (year = y)} />
+</ViewHeader>
 
+<KpiRow tiles={incomeScalars(data, year)} />
 <KpiRow tiles={spendingScalars(data, year)} />
 
 <div class="panes">
