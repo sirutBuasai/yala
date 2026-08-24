@@ -24,7 +24,7 @@ describe('Select', () => {
 		render(Select, {
 			props: { value: '', options: opts, ariaLabel: 'Account', optionLabel: label }
 		});
-		expect(screen.queryByRole('option')).not.toBeInTheDocument(); // closed initially
+		expect(screen.queryByRole('option')).not.toBeInTheDocument();
 
 		await fireEvent.click(screen.getByLabelText('Account'));
 		expect(screen.getAllByRole('option')).toHaveLength(2);
@@ -41,7 +41,7 @@ describe('Select', () => {
 
 		expect(onchange).toHaveBeenCalledWith('Assets:Cash:BankA');
 		expect(screen.getByLabelText('Account')).toHaveTextContent('BankA');
-		expect(screen.queryByRole('option')).not.toBeInTheDocument(); // closed after choosing
+		expect(screen.queryByRole('option')).not.toBeInTheDocument();
 	});
 
 	it('is keyboard operable: ArrowDown then Enter selects', async () => {

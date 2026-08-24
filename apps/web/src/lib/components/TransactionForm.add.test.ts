@@ -116,10 +116,9 @@ describe('TransactionForm (add)', () => {
 		vi.stubGlobal('fetch', okFetch());
 		const { unmount } = render(TransactionForm, { props: { accounts, onsaved: vi.fn() } });
 
-		// pick a non-default funding account via the custom Select, then submit
 		await fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'x' } });
 		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '5' } });
-		await fireEvent.click(screen.getByLabelText('Account')); // open the listbox
+		await fireEvent.click(screen.getByLabelText('Account'));
 		await fireEvent.click(screen.getByRole('option', { name: 'Bank A' })); // Assets:Cash:BankA
 		await fireEvent.click(screen.getByText('+ Add'));
 		await waitFor(() => expect(get(lastFundingAccount)).toBe('Assets:Cash:BankA'));

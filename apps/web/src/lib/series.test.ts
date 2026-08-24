@@ -92,7 +92,7 @@ describe('spending.category_by_month matrix', () => {
 		if (s.shape !== 'matrix') throw new Error('expected matrix shape');
 		expect(s.rows).toEqual(['Grocery', 'Takeouts']);
 		expect(s.cols).toHaveLength(12);
-		expect(s.values[0][0]).toBe(30); // Grocery, January
-		expect(s.values[1][0]).toBe(15.5); // Takeouts, January
+		expect(s.values[0][0]).toBe(30);
+		expect(s.values[1][0]).toBe(15.5);
 	});
 });

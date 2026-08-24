@@ -22,7 +22,6 @@ describe('contributionFamily', () => {
 describe('sankeyModel', () => {
 	it('anchors totals to the yearly rollup and conserves gross', () => {
 		const m = sankeyModel(makeData());
-		// gross = 3000 + 3000, take-home = 1550 + 1550
 		expect(node(m, 'Gross')!.value).toBe(6000);
 		expect(node(m, 'Take-home')!.value).toBe(3100);
 
@@ -42,7 +41,7 @@ describe('sankeyModel', () => {
 	it('routes contributions into Savings, which reconciles to lifetime saved', () => {
 		const d = makeData();
 		const m = sankeyModel(d);
-		const savedLifetime = d.overview.by_year.reduce((a, r) => a + r.saved, 0); // 2180 + 2254.5
+		const savedLifetime = d.overview.by_year.reduce((a, r) => a + r.saved, 0);
 
 		expect(node(m, 'Savings')!.value).toBeCloseTo(savedLifetime);
 		// Savings is fed by both contribution families plus the take-home cash surplus.

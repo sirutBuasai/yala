@@ -40,9 +40,9 @@ def _sink() -> FileLedgerSink:
 
 @contextmanager
 def _api_errors() -> Iterator[None]:
-    """Translate exceptions from an endpoint body into HTTP errors: pass through explicit
-    ``HTTPException``\\ s, map ``KeyError`` (unknown locator) to 404, and any other failure to
-    400. Every write endpoint wraps its body in this so the mapping lives in one place."""
+    """Map exceptions from a write endpoint body to HTTP errors (``KeyError`` → 404 for an
+    unknown locator, anything else → 400). Every write endpoint wraps its body here so the
+    mapping lives in one place."""
     try:
         yield
 

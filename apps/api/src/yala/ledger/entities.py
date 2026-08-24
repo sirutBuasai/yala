@@ -19,7 +19,7 @@ INVESTMENTS = "Assets:Investments:"
 
 
 def leaf(account: str) -> str:
-    """The last segment of an account path, e.g. ``Assets:Investments:HSA`` → ``HSA``."""
+    """The last segment of an account path."""
     return account.split(":")[-1]
 
 

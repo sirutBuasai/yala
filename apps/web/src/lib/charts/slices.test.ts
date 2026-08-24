@@ -8,13 +8,13 @@ describe('categorySlices', () => {
 			{ category: 'Takeouts', amount: 70 }
 		]);
 		expect(slices.map((s) => s.name)).toEqual(['Takeouts', 'Grocery']);
-		expect(slices[0].color).toBe('var(--cat-takeouts)'); // Takeouts token
-		expect(slices[1].color).toBe('var(--cat-grocery)'); // Grocery token
+		expect(slices[0].color).toBe('var(--cat-takeouts)');
+		expect(slices[1].color).toBe('var(--cat-grocery)');
 	});
 
 	it('shows every category individually when at or under the limit', () => {
 		const items = Array.from({ length: 10 }, (_, i) => ({ category: `C${i}`, amount: 100 - i }));
-		const slices = categorySlices(items); // default limit 10
+		const slices = categorySlices(items);
 		expect(slices).toHaveLength(10);
 		expect(slices.some((s) => s.name === 'Other')).toBe(false);
 	});
@@ -29,7 +29,6 @@ describe('categorySlices', () => {
 		expect(rest.color).toBe('var(--ink-3)');
 		// combined value = ranks 10..12 (amounts for C9, C10, C11 = 91 + 90 + 89)
 		expect(rest.value).toBe(91 + 90 + 89);
-		// the 9 named slices are the top 9 by amount
 		expect(slices.slice(0, 9).every((s) => s.name !== 'Other')).toBe(true);
 	});
 

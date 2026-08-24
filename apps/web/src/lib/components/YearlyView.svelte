@@ -34,7 +34,6 @@
 
 	const yearSpent = $derived(data.years[String(year)]?.total_spent ?? 0);
 
-	// Income vs Spent vs Saved per month (net income from the year matrix).
 	const grouped = $derived.by(() => {
 		const yd = data.years[String(year)];
 		const income = MONTHS.map((_, m) => yd?.matrix[m]?.income ?? 0);

@@ -221,7 +221,7 @@ def test_new_category_is_usable_by_a_transaction(client: TestClient):
             # (correctly) be rejected by the active-on-date check.
             "payee": "birthday",
             "amount": 20.0,
-            "category": "Gifts",  # the just-created category
+            "category": "Gifts",
             "funding_account": "Liabilities:CC:CardA",
         },
     )

@@ -22,7 +22,6 @@
 	const lifetimeIncome = $derived(byYear.reduce((a, r) => a + r.income, 0));
 	const lifetimeSpent = $derived(byYear.reduce((a, r) => a + r.spent, 0));
 
-	// Lifetime "where it all went": top categories (capped) + a distinct Saved slice.
 	const slices = $derived.by<Slice[]>(() => {
 		const saved = lifetimeIncome - lifetimeSpent;
 		const savedShown = lifetimeIncome > 0 && saved > 0;

@@ -66,7 +66,6 @@ def test_matrix_spent_maps_categories_and_omits_zeros():
     aug = next(r for r in d.years["2025"].matrix if r.month == 8)
     # month total equals the sum of the mapped category amounts
     assert round(sum(aug.spent.values()), 2) == round(d.months["2025-08"].total_spent, 2)
-    # only non-zero categories are present
     assert all(v != 0 for v in aug.spent.values())
 
 

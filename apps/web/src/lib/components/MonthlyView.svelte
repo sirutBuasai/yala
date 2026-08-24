@@ -31,7 +31,6 @@
 		md ? [...md.transactions].sort((a, b) => b.date.localeCompare(a.date)) : []
 	);
 
-	// Donut: where the month's income went — top categories, a rolled-up "Other", and a green Saved slice.
 	const slices = $derived.by<Slice[]>(() => {
 		if (!md) return [];
 		const saved = md.total_income - md.total_spent;
