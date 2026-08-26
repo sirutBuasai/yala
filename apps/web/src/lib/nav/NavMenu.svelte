@@ -4,6 +4,8 @@
 	// Development sandbox. Plain <a> links let SvelteKit handle client-side navigation.
 	import { page } from '$app/stores';
 	import { fly, fade } from 'svelte/transition';
+	import { focusTrap } from '$lib/utils/focusTrap';
+	import { dur } from '$lib/utils/motion';
 
 	let open = $state(false);
 
@@ -35,12 +37,20 @@
 	<button
 		class="backdrop"
 		aria-label="Close menu"
-		transition:fade={{ duration: 150 }}
+		transition:fade={{ duration: dur(150) }}
 		onclick={close}
 	></button>
-	<aside class="sidebar" transition:fly={{ x: -300, duration: 220 }}>
+	<div
+		class="sidebar"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="sidebar-title"
+		tabindex="-1"
+		use:focusTrap
+		transition:fly={{ x: -300, duration: dur(220) }}
+	>
 		<div class="head">
-			<span class="serif title">Yala</span>
+			<span id="sidebar-title" class="serif title">Yala</span>
 			<button class="close" aria-label="Close menu" onclick={close}>✕</button>
 		</div>
 		<nav class="links">
@@ -50,7 +60,7 @@
 				>
 			{/each}
 		</nav>
-	</aside>
+	</div>
 {/if}
 
 <style>

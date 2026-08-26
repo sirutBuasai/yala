@@ -89,13 +89,7 @@
 						>
 					{/if}
 				{/each}
-				<text
-					x={gx + outer.bandwidth() / 2}
-					y={ih + 20}
-					text-anchor="middle"
-					fill="var(--ink-3)"
-					style="font-size: var(--text-axis)">{lb}</text
-				>
+				<text x={gx + outer.bandwidth() / 2} y={ih + 20} text-anchor="middle">{lb}</text>
 			{/each}
 		</g>
 	</svg>
@@ -116,10 +110,5 @@
 		position: absolute;
 		inset: 0;
 		height: 100%;
-	}
-	.vlabel {
-		fill: var(--ink-3);
-		font-size: var(--text-micro);
-		font-variant-numeric: tabular-nums;
 	}
 </style>

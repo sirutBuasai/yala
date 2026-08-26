@@ -1,5 +1,6 @@
 /* Warm-dark Kanagawa / Tokyo-Night */
 :root {
+	color-scheme: dark;
 	--bg: #16161f;
 	--surface: #1f1f2b;
 	--surface-2: #26263a;
@@ -25,7 +26,7 @@
 	   Shared across themes since the accent fills don't change between light and dark. */
 	--on-accent: #1a1522;
 	/* Reserved color for the synthetic "Saved" slice/series so it never collides with a spending category. */
-	--saved: #9ece69;
+	--saved: #9ece6a;
 	/* Category palette. */
 	--cat-housing: #f7768e;
 	--cat-grocery: #f295c5;
@@ -180,6 +181,7 @@
 }
 :root[data-theme='light'] {
 	/* Light mode overrides ONLY the neutral chrome (backgrounds, text, borders). */
+	color-scheme: light;
 	--bg: #f0ebdd;
 	--surface: #faf6ec;
 	--surface-2: #f1ead9;
@@ -548,9 +550,9 @@ svg.chart {
 	font-size: var(--text-axis);
 }
 .chart .vlabel {
-	fill: var(--ink);
-	font-size: var(--text-axis);
-	font-weight: var(--fw-semibold);
+	fill: var(--ink-3);
+	font-size: var(--text-micro);
+	font-variant-numeric: tabular-nums;
 }
 .chart .gridline {
 	stroke: var(--grid);
@@ -612,4 +614,15 @@ svg.chart {
 }
 .banner code {
 	color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
 }

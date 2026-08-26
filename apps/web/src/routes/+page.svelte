@@ -20,6 +20,12 @@
 	import NavMenu from '$lib/nav/NavMenu.svelte';
 
 	type Tab = 'overview' | 'yearly' | 'monthly' | 'calendar';
+	const TABS: { id: Tab; label: string }[] = [
+		{ id: 'overview', label: 'Overview' },
+		{ id: 'yearly', label: 'Yearly' },
+		{ id: 'monthly', label: 'Monthly' },
+		{ id: 'calendar', label: 'Calendar' }
+	];
 	let tab = $state<Tab>('overview');
 	let year = $state<number>(0); // 0 = unset; the default-scope effect fills it once data loads
 	let monthKey = $state<string>('');
@@ -101,6 +107,26 @@
 	function onsaved() {
 		void refreshEditData();
 	}
+
+	// Tablist keyboard model (ARIA APG): arrows move selection + focus, Home/End jump to ends.
+	function onTabKeydown(e: KeyboardEvent) {
+		const i = TABS.findIndex((t) => t.id === tab);
+		let next = i;
+		if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % TABS.length;
+		else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp')
+			next = (i - 1 + TABS.length) % TABS.length;
+		else if (e.key === 'Home') next = 0;
+		else if (e.key === 'End') next = TABS.length - 1;
+		else return;
+		const chosen = TABS[next];
+		if (!chosen) return;
+		e.preventDefault();
+		tab = chosen.id;
+		const tabs = (e.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>(
+			'[role="tab"]'
+		);
+		tabs[next]?.focus();
+	}
 </script>
 
 <div class="wrap">
@@ -122,16 +148,25 @@
 			</span>
 		</div>
 		<div class="controls">
-			<nav class="views">
-				<button class:active={tab === 'overview'} onclick={() => (tab = 'overview')}
-					>Overview</button
-				>
-				<button class:active={tab === 'yearly'} onclick={() => (tab = 'yearly')}>Yearly</button>
-				<button class:active={tab === 'monthly'} onclick={() => (tab = 'monthly')}>Monthly</button>
-				<button class:active={tab === 'calendar'} onclick={() => (tab = 'calendar')}
-					>Calendar</button
-				>
-			</nav>
+			<div
+				class="views"
+				role="tablist"
+				aria-label="Dashboard views"
+				tabindex="-1"
+				onkeydown={onTabKeydown}
+			>
+				{#each TABS as t (t.id)}
+					<button
+						role="tab"
+						id={`tab-${t.id}`}
+						aria-selected={tab === t.id}
+						aria-controls="view-panel"
+						tabindex={tab === t.id ? 0 : -1}
+						class:active={tab === t.id}
+						onclick={() => (tab = t.id)}>{t.label}</button
+					>
+				{/each}
+			</div>
 			<div class="tgls">
 				<EditToggle onhint={showHint} />
 				<ThemeToggle />
@@ -139,26 +174,30 @@
 		</div>
 	</header>
 
-	{#if $loadState.status === 'loading'}
-		<div class="banner">Loading <code>data.json</code>…</div>
-	{:else if $loadState.status === 'error'}
-		<div class="banner">{$loadState.message}</div>
-	{/if}
+	<div aria-live="polite" aria-atomic="true">
+		{#if $loadState.status === 'loading'}
+			<div class="banner">Loading <code>data.json</code>…</div>
+		{:else if $loadState.status === 'error'}
+			<div class="banner" role="alert">{$loadState.message}</div>
+		{/if}
 
-	{#if hint}
-		<div class="banner">{hint}</div>
-	{/if}
+		{#if hint}
+			<div class="banner" role="status">{hint}</div>
+		{/if}
+	</div>
 
 	{#if $data && $loadState.status === 'ready'}
-		{#if tab === 'overview'}
-			<OverviewView data={$data} />
-		{:else if tab === 'yearly'}
-			<YearlyView data={$data} bind:year />
-		{:else if tab === 'monthly'}
-			<MonthlyView data={$data} bind:monthKey {edit} accounts={$accounts} {onsaved} />
-		{:else}
-			<CalendarView data={$data} {edit} accounts={$accounts} {onsaved} />
-		{/if}
+		<div id="view-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} tabindex="0">
+			{#if tab === 'overview'}
+				<OverviewView data={$data} />
+			{:else if tab === 'yearly'}
+				<YearlyView data={$data} bind:year />
+			{:else if tab === 'monthly'}
+				<MonthlyView data={$data} bind:monthKey {edit} accounts={$accounts} {onsaved} />
+			{:else}
+				<CalendarView data={$data} {edit} accounts={$accounts} {onsaved} />
+			{/if}
+		</div>
 	{/if}
 </div>
 
@@ -214,7 +253,7 @@
 		align-items: center;
 		flex-wrap: wrap;
 	}
-	nav.views {
+	.views {
 		display: flex;
 		gap: var(--space-2);
 		background: var(--surface);
@@ -223,7 +262,7 @@
 		padding: var(--space-2);
 		box-shadow: var(--shadow);
 	}
-	nav.views button {
+	.views button {
 		border: 0;
 		background: none;
 		color: var(--ink-2);
@@ -233,12 +272,26 @@
 		cursor: pointer;
 		font-weight: var(--fw-medium);
 	}
-	nav.views button.active {
+	.views button.active {
 		background: color-mix(in srgb, var(--lav) 20%, transparent);
 		color: var(--ink);
 	}
-	nav.views button:hover:not(.active) {
+	.views button:hover:not(.active) {
 		color: var(--ink);
+	}
+	.views button:focus-visible {
+		outline: none;
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 45%, transparent);
+	}
+	/* The tabpanel is focusable (APG) so keyboard users can page into the content, but it should
+	   never draw a ring on mouse click — only on keyboard focus. */
+	#view-panel:focus {
+		outline: none;
+	}
+	#view-panel:focus-visible {
+		outline: none;
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 30%, transparent);
+		border-radius: var(--radius-lg);
 	}
 	.tgls {
 		display: flex;

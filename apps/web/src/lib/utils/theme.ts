@@ -41,8 +41,11 @@ function initialMode(): ThemeMode {
 
 export const theme = writable<ThemeMode>(initialMode());
 
+const THEME_COLOR: Record<ThemeMode, string> = { light: '#f0ebdd', dark: '#16161f' };
+
 export function setTheme(mode: ThemeMode): void {
 	document.documentElement.setAttribute('data-theme', mode);
+	document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLOR[mode]);
 
 	try {
 		localStorage.setItem('yala-theme', mode);

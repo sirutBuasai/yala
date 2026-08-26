@@ -4,6 +4,7 @@
 	import type { Snippet } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { focusTrap } from '$lib/utils/focusTrap';
+	import { dur } from '$lib/utils/motion';
 
 	interface Props {
 		title: string;
@@ -14,19 +15,27 @@
 	let { title, onclose, variant = 'modal', children }: Props = $props();
 </script>
 
-<div class="backdrop" role="presentation" onclick={onclose} transition:fade={{ duration: 150 }}>
+<div
+	class="backdrop"
+	role="presentation"
+	onclick={onclose}
+	transition:fade={{ duration: dur(150) }}
+>
 	<div
 		class="panel {variant}"
 		role="dialog"
 		aria-modal="true"
+		aria-labelledby="overlay-title"
 		tabindex="-1"
 		use:focusTrap
 		onclick={(e) => e.stopPropagation()}
 		onkeydown={(e) => e.key === 'Escape' && onclose()}
-		transition:fly={variant === 'drawer' ? { x: 480, duration: 220 } : { y: 10, duration: 170 }}
+		transition:fly={variant === 'drawer'
+			? { x: 480, duration: dur(220) }
+			: { y: 10, duration: dur(170) }}
 	>
 		<div class="head">
-			<h2 class="serif">{title}</h2>
+			<h2 id="overlay-title" class="serif">{title}</h2>
 			<button type="button" class="x" onclick={onclose}>✕</button>
 		</div>
 		<div class="body">
@@ -56,6 +65,8 @@
 		display: flex;
 		flex-direction: column;
 		overflow-y: auto;
+		/* Keep a scroll gesture that reaches the panel's end from chaining to the page behind it. */
+		overscroll-behavior: contain;
 		padding: var(--space-10) var(--space-11);
 	}
 	/* Shrinks to fit narrow screens; content shrinks with it, so it never needs a horizontal scroll. */

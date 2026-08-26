@@ -95,7 +95,7 @@
 		align-items: center;
 		gap: var(--gap-row);
 		padding: var(--space-2) 0;
-		font-size: var(--text-secondary);
+		font-size: var(--text-caption);
 	}
 	.legend-list .sw {
 		width: 11px;

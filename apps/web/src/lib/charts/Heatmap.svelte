@@ -96,7 +96,7 @@
 		fill: var(--ink-3);
 	}
 	.rowh {
-		fill: var(--ink-2);
+		fill: var(--ink-3);
 		font-size: var(--text-axis);
 	}
 	.cellv {
