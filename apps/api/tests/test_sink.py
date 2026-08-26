@@ -58,7 +58,7 @@ def test_append_netted_transaction(ledger_dir: Path):
         amount=Decimal("300.00"),  # the total bill
         category="Takeouts",
         funding_account="Liabilities:CC:CardA",
-        credits=[("Assets:Venmo", Decimal("200.00"))],  # a $200 payback coming in
+        credits=[("Assets:Cash:Venmo", Decimal("200.00"))],  # a $200 payback coming in
     )
     led = _loads_clean(ledger_dir)
 
@@ -76,7 +76,7 @@ def test_append_netted_transaction(ledger_dir: Path):
     assert "bill: 300.00 USD" in text
     # beancount's printer controls column alignment; assert content, not exact spacing.
     assert re.search(r"Expenses:Takeouts\s+100\.00 USD", text)
-    assert re.search(r"Assets:Venmo\s+200\.00 USD", text)
+    assert re.search(r"Assets:Cash:Venmo\s+200\.00 USD", text)
     assert "-300.00 USD" in text  # funding paid the full bill
 
 
@@ -88,7 +88,7 @@ def test_append_refund_yields_negative_net(ledger_dir: Path):
         amount=Decimal("50.00"),  # total bill
         category="Takeouts",
         funding_account="Liabilities:CC:CardA",
-        credits=[("Assets:Venmo", Decimal("80.00"))],  # credits exceed the bill
+        credits=[("Assets:Cash:Venmo", Decimal("80.00"))],  # credits exceed the bill
     )
     led = _loads_clean(ledger_dir)
     txn = [t for t in led.spending.transactions() if t.payee == "over-refunded dinner"][0]
@@ -120,7 +120,7 @@ def test_update_transaction_replaces_in_place(ledger_dir: Path):
         category="Takeouts",
         funding_account="Liabilities:CC:CardA",
         pending=False,  # ! -> *
-        credits=[("Assets:Venmo", Decimal("25.00"))],
+        credits=[("Assets:Cash:Venmo", Decimal("25.00"))],
     )
     assert new_id == entry_id  # id preserved across edit
 
@@ -449,7 +449,7 @@ def test_update_preserves_narration_tag_and_custom_meta(ledger_dir: Path):
         amount=Decimal("45.00"),
         category="Grocery",
         funding_account="Liabilities:CC:CardA",
-        credits=[("Assets:Venmo", Decimal("5.00"))],
+        credits=[("Assets:Cash:Venmo", Decimal("5.00"))],
     )
 
     led = _loads_clean(ledger_dir)
@@ -515,7 +515,7 @@ def test_quantize_first_balances(ledger_dir: Path):
         amount=Decimal("10.005"),  # total bill
         category="Takeouts",
         funding_account="Liabilities:CC:CardA",
-        credits=[("Assets:Venmo", Decimal("10.005"))],
+        credits=[("Assets:Cash:Venmo", Decimal("10.005"))],
     )
     led = _loads_clean(ledger_dir)  # loads without residual-balance errors
     txn = [t for t in led.spending.transactions() if t.payee == "odd cents"][0]
@@ -533,7 +533,7 @@ def test_funding_meta_beats_more_negative_split(ledger_dir: Path):
         funding_account="Liabilities:CC:CardA",
         # A receivable leg more negative than the funding card would fool the heuristic.
         credits=[
-            ("Assets:Venmo", Decimal("200.00")),
+            ("Assets:Cash:Venmo", Decimal("200.00")),
             ("Assets:Receivable:Friends", Decimal("-400.00")),
         ],
     )

@@ -60,7 +60,7 @@ def test_accounts_contribution_list_excludes_closed_401k(client: TestClient):
 def test_accounts_credit_accounts(client: TestClient):
     body = client.get("/api/accounts").json()
     credit = body["credit_accounts"]
-    assert "Assets:Venmo" in credit
+    assert "Assets:Cash:Venmo" in credit
     # a payback can be a credit-card refund/credit
     assert any(a.startswith("Liabilities:CC:") for a in credit)
     assert "Liabilities:CC:CardA" in credit
@@ -100,7 +100,7 @@ def test_post_netted_transaction_counts_net_share(client: TestClient):
             "amount": 300.0,  # the total bill
             "category": "Takeouts",
             "funding_account": "Liabilities:CC:CardA",
-            "credits": [{"account": "Assets:Venmo", "amount": 200.0}],
+            "credits": [{"account": "Assets:Cash:Venmo", "amount": 200.0}],
         },
     )
     assert r.status_code == 200
@@ -142,7 +142,7 @@ def test_update_transaction_flow(client: TestClient):
             "category": "Takeouts",
             "funding_account": "Liabilities:CC:CardA",
             "pending": False,
-            "credits": [{"account": "Assets:Venmo", "amount": 25.0}],
+            "credits": [{"account": "Assets:Cash:Venmo", "amount": 25.0}],
         },
     )
     assert u.status_code == 200
@@ -153,7 +153,7 @@ def test_update_transaction_flow(client: TestClient):
     assert detail2["amount"] == 40.0  # total bill (net + Σ paybacks)
     assert detail2["net_expense"] == 15.0  # your share
     assert detail2["bill"] == 40.0
-    assert detail2["credits"] == [{"account": "Assets:Venmo", "amount": 25.0}]
+    assert detail2["credits"] == [{"account": "Assets:Cash:Venmo", "amount": 25.0}]
 
 
 def test_txn_detail_when_funding_and_credit_share_account(client: TestClient):

@@ -13,7 +13,7 @@ const accounts: AccountsInfo = {
 	deduction_categories: ['Tax'],
 	contribution_categories: ['HSA'],
 	cash_accounts: ['Assets:Cash:BankA'],
-	credit_accounts: ['Assets:Venmo', 'Liabilities:CC:CardA']
+	credit_accounts: ['Assets:Cash:Venmo', 'Liabilities:CC:CardA']
 };
 
 function okFetch(body: unknown = { ok: true, id: 'new-id' }) {

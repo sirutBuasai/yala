@@ -170,25 +170,16 @@ def get_accounts() -> dict:
     ledger = _ledger()
     active = _active_accounts(ledger)
     cash = [a for a in active if a.startswith("Assets:Cash:")]
+    funding = [a for a in active if a.startswith("Assets:Cash:") or a.startswith("Liabilities:CC:")]
 
     return {
         "spending_categories": ledger.spending.categories(),
-        "funding_accounts": [
-            a for a in active if a.startswith("Liabilities:CC:") or a.startswith("Assets:Cash:")
-        ],
+        "funding_accounts": funding,
         "income_accounts": [a for a in active if a.startswith("Income:")],
         "deduction_categories": sorted(leaf(a) for a in active if a.startswith(DEDUCTIONS)),
         "contribution_categories": sorted(leaf(a) for a in active if a.startswith(INVESTMENTS)),
         "cash_accounts": cash,
-        # Where reimbursement credits can land: a Venmo transfer,
-        # a bank credit, or a credit-card refund/credit.
-        "credit_accounts": [
-            a
-            for a in active
-            if a == "Assets:Venmo"
-            or a.startswith("Assets:Cash:")
-            or a.startswith("Liabilities:CC:")
-        ],
+        "credit_accounts": funding,
     }
 
 
