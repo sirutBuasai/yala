@@ -381,7 +381,7 @@ def test_update_paycheck_across_year_moves_file(ledger_dir: Path):
     moved = led.income.paychecks(2027, 3)
     assert len(moved) == 1
     assert moved[0].locator == f"id:{entry_id}"
-    assert 'include "income/2027.beancount"' in (ledger_dir / "main.beancount").read_text()
+    assert 'include "income/2027.beancount"' in (ledger_dir / "income.beancount").read_text()
 
 
 def test_update_paycheck_to_unopened_account_rejected(ledger_dir: Path):
@@ -419,8 +419,22 @@ def test_new_year_file_creates_include(ledger_dir: Path):
         funding_account="Liabilities:CC:CardA",
     )
     assert (ledger_dir / "spending" / "2027.beancount").exists()
-    main_text = (ledger_dir / "main.beancount").read_text()
-    assert 'include "spending/2027.beancount"' in main_text
+    # the year include joins the spending.beancount aggregator, not main
+    assert 'include "spending/2027.beancount"' in (ledger_dir / "spending.beancount").read_text()
+    assert 'include "spending/2027.beancount"' not in (ledger_dir / "main.beancount").read_text()
+    _loads_clean(ledger_dir)
+
+    # a second 2027 entry reuses the file/include — no duplicate include
+    FileLedgerSink(ledger_dir).append_transaction(
+        date=dt.date(2027, 2, 9),
+        payee="another future latte",
+        amount=Decimal("6.00"),
+        category="Takeouts",
+        funding_account="Liabilities:CC:CardA",
+    )
+    assert (ledger_dir / "spending.beancount").read_text().count(
+        'include "spending/2027.beancount"'
+    ) == 1
     _loads_clean(ledger_dir)
 
 
@@ -704,7 +718,7 @@ def test_update_across_year_moves_entry_to_new_year_file(ledger_dir: Path):
     assert '"moving txn"' not in src_file.read_text()  # gone from the old year
     assert '"moving txn"' in dst_file.read_text()  # landed in the new year
     assert '2027-03-09 * "moving txn"' in dst_file.read_text()
-    assert 'include "spending/2027.beancount"' in (ledger_dir / "main.beancount").read_text()
+    assert 'include "spending/2027.beancount"' in (ledger_dir / "spending.beancount").read_text()
 
     led = _loads_clean(ledger_dir)
     moved = [t for t in led.spending.transactions() if t.payee == "moving txn"]

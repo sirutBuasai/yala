@@ -523,9 +523,11 @@ class FileLedgerSink(LedgerSink):
     def _append(self, subdir: str, year: int, header: str, block: str) -> None:
         year_file = self.ledger_dir / subdir / f"{year}.beancount"
         include_line = f'include "{subdir}/{year}.beancount"'
+        agg_file = self.ledger_dir / f"{subdir}.beancount"
 
         year_before = year_file.read_text() if year_file.exists() else None
         main_before = self.main_ledger.read_text() if self.main_ledger.exists() else None
+        agg_before = agg_file.read_text() if agg_file.exists() else None
 
         try:
             year_file.parent.mkdir(parents=True, exist_ok=True)
@@ -549,16 +551,28 @@ class FileLedgerSink(LedgerSink):
             else:
                 _atomic_write(year_file, year_before)
 
-            if main_before is None:
-                self.main_ledger.unlink(missing_ok=True)
-
-            elif self.main_ledger.exists() and self.main_ledger.read_text() != main_before:
-                _atomic_write(self.main_ledger, main_before)
+            self._restore(agg_file, agg_before)
+            self._restore(self.main_ledger, main_before)
 
             raise
 
+    @staticmethod
+    def _restore(path: Path, before: str | None) -> None:
+        """Undo a touched file: delete it if it didn't exist before, else rewrite prior content."""
+        if before is None:
+            path.unlink(missing_ok=True)
+
+        elif path.exists() and path.read_text() != before:
+            _atomic_write(path, before)
+
     def _ensure_include(self, subdir: str, include_line: str) -> None:
-        text = self.main_ledger.read_text() if self.main_ledger.exists() else ""
+        """Register a new year file's include in the ``{subdir}.beancount`` aggregator (which main
+        includes), so a new year joins the same load path as the existing ones — not scattered
+        into main. Wires the aggregator into main too, for a fresh ledger."""
+        self._ensure_main_include(f'include "{subdir}.beancount"')
+
+        aggregator = self.ledger_dir / f"{subdir}.beancount"
+        text = aggregator.read_text() if aggregator.exists() else ""
         if include_line in text:
             return
 
@@ -572,4 +586,13 @@ class FileLedgerSink(LedgerSink):
         else:
             lines.insert(last + 1, include_line)
 
-        _atomic_write(self.main_ledger, "\n".join(lines) + "\n")
+        _atomic_write(aggregator, "\n".join(lines) + "\n")
+
+    def _ensure_main_include(self, include_line: str) -> None:
+        """Idempotently ensure ``include_line`` is present in main.beancount (appends if absent)."""
+        text = self.main_ledger.read_text() if self.main_ledger.exists() else ""
+        if include_line in text:
+            return
+
+        lead = "" if not text or text.endswith("\n") else "\n"
+        _atomic_write(self.main_ledger, f"{text}{lead}{include_line}\n")
