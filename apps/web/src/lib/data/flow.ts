@@ -13,13 +13,6 @@ import type { Flow, FlowLink, FlowNode } from './primitives';
 import { MONEY } from './primitives';
 import { sumValues } from '$lib/utils/num';
 
-/** Collapse 401k variants (`Roth401k`, `Trad401k`, …) into one `401k` family so the flow
- * doesn't fragment as the ledger gets more granular; other keys pass through unchanged. */
-export function contributionFamily(key: string): string {
-	if (/401\s*\(?k\)?/i.test(key)) return '401k';
-	return key;
-}
-
 /** Split `total` across named buckets by their `shares` proportions. Returns nothing when the
  * total is zero, and a single `fallbackLabel` bucket when there's no breakdown to split by. */
 function distribute(
@@ -31,7 +24,7 @@ function distribute(
 	const sum = sumValues(shares);
 	if (sum <= 0) return { [fallbackLabel]: total };
 	const out: Record<string, number> = {};
-	for (const [k, v] of Object.entries(shares)) out[k] = (v / sum) * total;
+	for (const [k, v] of Object.entries(shares)) if (v > 0) out[k] = (v / sum) * total;
 	return out;
 }
 
@@ -54,10 +47,9 @@ export function moneyFlow(data: DashboardData): Flow {
 	for (const month of Object.values(data.months)) {
 		for (const p of month.paychecks) {
 			for (const [k, v] of Object.entries(p.deductions)) dedShares[k] = (dedShares[k] ?? 0) + v;
-			for (const [k, v] of Object.entries(p.contributions)) {
-				const fam = contributionFamily(k);
-				conShares[fam] = (conShares[fam] ?? 0) + v;
-			}
+			// Each contribution label (Roth401k / Trad401k / AfterTax401k / HSA …) is its own
+			// bucket; a label absent from every paycheck never appears, so zero legs don't show.
+			for (const [k, v] of Object.entries(p.contributions)) conShares[k] = (conShares[k] ?? 0) + v;
 		}
 	}
 	const ded = distribute(dedShares, dedTotal, 'Deductions');

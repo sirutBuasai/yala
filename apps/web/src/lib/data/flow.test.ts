@@ -1,23 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { contributionFamily, moneyFlow } from '$lib/data/flow';
+import { moneyFlow } from '$lib/data/flow';
 import { makeData } from '$lib/data/__fixtures__/dashboard';
 
 const node = (m: ReturnType<typeof moneyFlow>, id: string) => m.nodes.find((n) => n.id === id);
 const linksInto = (m: ReturnType<typeof moneyFlow>, target: string) =>
 	m.links.filter((l) => l.target === target);
-
-describe('contributionFamily', () => {
-	it('rolls every 401k variant into a single family', () => {
-		for (const k of ['401k', '401K', 'Roth401k', 'Trad401k', 'AfterTax401k', '401(k)']) {
-			expect(contributionFamily(k)).toBe('401k');
-		}
-	});
-
-	it('leaves other contribution keys untouched', () => {
-		expect(contributionFamily('HSA')).toBe('HSA');
-		expect(contributionFamily('ESPP')).toBe('ESPP');
-	});
-});
 
 describe('moneyFlow', () => {
 	it('anchors totals to the yearly rollup and conserves gross', () => {
@@ -31,11 +18,11 @@ describe('moneyFlow', () => {
 		expect(outOfGross).toBeCloseTo(6000);
 	});
 
-	it('collapses the Roth401k paycheck key into a 401k node scaled to the authoritative total', () => {
+	it('keeps each contribution label as its own node scaled to the authoritative total', () => {
 		const m = moneyFlow(makeData());
-		expect(node(m, 'Roth401k')).toBeUndefined();
-		// conTotal = 1500, split HSA:150 / Roth401k:600 -> 401k gets 600/750 * 1500 = 1200.
-		expect(node(m, '401k')!.value).toBeCloseTo(1200);
+		expect(node(m, '401k')).toBeUndefined(); // no longer collapsed into a family
+		// conTotal = 1500, split HSA:150 / Roth401k:600 -> Roth401k gets 600/750 * 1500 = 1200.
+		expect(node(m, 'Roth401k')!.value).toBeCloseTo(1200);
 		expect(node(m, 'HSA')!.value).toBeCloseTo(300);
 	});
 
@@ -49,7 +36,7 @@ describe('moneyFlow', () => {
 		const sources = linksInto(m, 'Savings')
 			.map((l) => l.source)
 			.sort();
-		expect(sources).toEqual(['401k', 'HSA', 'Take-home']);
+		expect(sources).toEqual(['HSA', 'Roth401k', 'Take-home']);
 		expect(linksInto(m, 'Savings').reduce((a, l) => a + l.value, 0)).toBeCloseTo(savedLifetime);
 	});
 
