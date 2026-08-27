@@ -22,21 +22,19 @@ from beancount.parser import printer
 
 from yala import config
 from yala.ledger import Ledger
-from yala.ledger.entities import locator_of
+from yala.ledger.entities import DROPPED_META, locator_of
 from yala.money import round_cents
 
 Credit = tuple[str, Decimal]
-
-_INTERNAL_META = {"filename", "lineno"}  # beancount-injected source location
-_RETIRED_META = {"src"}  # spreadsheet-import artifact, dropped on edit
-_MANAGED_META = {"id", "funding", "bill"}  # we always (re)compute these
-# Meta keys we never carry forward onto an edited entry (recomputed or internal).
-_DROPPED_META = _INTERNAL_META | _RETIRED_META | _MANAGED_META
+DeductionLeg = tuple[str, Decimal]  # (account, amount)
+ContributionLeg = tuple[str, str | None, Decimal]  # (account, label or None, amount)
 
 
-def _posting(account: str, number: Decimal) -> data.Posting:
-    """A single USD posting with no cost/price/flag/meta."""
-    return data.Posting(account, Amount(number, "USD"), None, None, None, None)
+def _posting(account: str, number: Decimal, meta: dict | None = None) -> data.Posting:
+    """A single USD posting with no cost/price/flag; optional posting meta (e.g. ``label``)."""
+    return data.Posting(
+        account, Amount(number, "USD"), cost=None, price=None, flag=None, meta=meta or None
+    )
 
 
 def _atomic_write(path: Path, content: str) -> None:
@@ -117,8 +115,9 @@ class LedgerSink(ABC):
         self,
         date: dt.date,
         gross: Decimal,
-        deductions: dict[str, Decimal],
-        contributions: dict[str, Decimal],
+        income_account: str,
+        deduction_legs: list[DeductionLeg],
+        contribution_legs: list[ContributionLeg],
         deposit_account: str,
         payee: str = "paycheck",
     ) -> str:
@@ -258,8 +257,9 @@ class FileLedgerSink(LedgerSink):
         *,
         date: dt.date,
         gross: Decimal,
-        deductions: dict[str, Decimal],
-        contributions: dict[str, Decimal],
+        income_account: str,
+        deduction_legs: list[DeductionLeg],
+        contribution_legs: list[ContributionLeg],
         deposit_account: str,
         entry_id: str,
         payee: str = "paycheck",
@@ -268,61 +268,57 @@ class FileLedgerSink(LedgerSink):
         links=(),
         extra_meta: dict | None = None,
     ) -> data.Transaction:
-        """Build a balanced beancount paycheck ``Transaction`` (validates accounts + legs)."""
+        """Build a balanced beancount paycheck ``Transaction`` (validates accounts + legs).
+
+        Legs are pre-resolved to full accounts; a contribution's label (Roth401k/…) is stamped as
+        a ``label`` posting-meta on its leg so the money stays in one account (net worth sees one
+        401k pot) while income can still break out the split.
+        """
         gross = round_cents(gross)
-        deductions = {k: round_cents(v) for k, v in deductions.items()}
-        contributions = {k: round_cents(v) for k, v in contributions.items()}
+        deduction_legs = [(a, round_cents(v)) for a, v in deduction_legs]
+        contribution_legs = [(a, s, round_cents(v)) for a, s, v in contribution_legs]
 
         self._assert_accounts_active(
             date,
             [
-                "Income:Salary",
+                income_account,
                 deposit_account,
-                *(f"Expenses:Deductions:{name}" for name in deductions),
-                *(f"Assets:Investments:{name}" for name in contributions),
+                *(a for a, _ in deduction_legs),
+                *(a for a, _, _ in contribution_legs),
             ],
         )
 
-        take_home = (
-            gross - sum(deductions.values(), Decimal(0)) - sum(contributions.values(), Decimal(0))
+        out = sum((v for _, v in deduction_legs), Decimal(0)) + sum(
+            (v for _, _, v in contribution_legs), Decimal(0)
         )
+        take_home = gross - out
         if take_home < 0:
             raise ValueError(
                 f"deductions and contributions exceed gross (take-home would be {take_home})"
             )
 
-        legs: list[tuple[str, Decimal]] = [("Income:Salary", -gross)]
-        for name, amt in deductions.items():
-            legs.append((f"Expenses:Deductions:{name}", amt))
-        for name, amt in contributions.items():
-            legs.append((f"Assets:Investments:{name}", amt))
-        legs.append((deposit_account, take_home))
-
-        total = sum((amt for _, amt in legs), Decimal(0))
-        if total != 0:
-            raise ValueError(f"paycheck legs do not sum to zero (off by {total})")
+        postings = [_posting(income_account, -gross)]
+        for account, amt in deduction_legs:
+            postings.append(_posting(account, amt))
+        for account, label, amt in contribution_legs:
+            postings.append(_posting(account, amt, {"label": label} if label else None))
+        postings.append(_posting(deposit_account, take_home))
 
         meta: dict = {"id": entry_id}
         if extra_meta:
             meta.update(extra_meta)
 
         return data.Transaction(
-            meta,
-            date,
-            "*",
-            payee,
-            narration,
-            frozenset(tags),
-            frozenset(links),
-            [_posting(account, amt) for account, amt in legs],
+            meta, date, "*", payee, narration, frozenset(tags), frozenset(links), postings
         )
 
     def append_paycheck(
         self,
         date: dt.date,
         gross: Decimal,
-        deductions: dict[str, Decimal],
-        contributions: dict[str, Decimal],
+        income_account: str,
+        deduction_legs: list[DeductionLeg],
+        contribution_legs: list[ContributionLeg],
         deposit_account: str,
         payee: str = "paycheck",
     ) -> str:
@@ -330,8 +326,9 @@ class FileLedgerSink(LedgerSink):
         entry = self._paycheck_entry(
             date=date,
             gross=gross,
-            deductions=deductions,
-            contributions=contributions,
+            income_account=income_account,
+            deduction_legs=deduction_legs,
+            contribution_legs=contribution_legs,
             deposit_account=deposit_account,
             entry_id=entry_id,
             payee=payee,
@@ -351,7 +348,7 @@ class FileLedgerSink(LedgerSink):
         carried = {
             k: v
             for k, v in (entry.meta or {}).items()
-            if k not in _DROPPED_META and not k.startswith("__")
+            if k not in DROPPED_META and not k.startswith("__")
         }
         return entry, entry_id, carried, (date or entry.date)
 
@@ -360,8 +357,9 @@ class FileLedgerSink(LedgerSink):
         locator: str,
         *,
         gross: Decimal,
-        deductions: dict[str, Decimal],
-        contributions: dict[str, Decimal],
+        income_account: str,
+        deduction_legs: list[DeductionLeg],
+        contribution_legs: list[ContributionLeg],
         deposit_account: str,
         date: dt.date | None = None,
         payee: str = "paycheck",
@@ -372,8 +370,9 @@ class FileLedgerSink(LedgerSink):
         new_entry = self._paycheck_entry(
             date=resolved_date,
             gross=Decimal(gross),
-            deductions={k: Decimal(v) for k, v in deductions.items()},
-            contributions={k: Decimal(v) for k, v in contributions.items()},
+            income_account=income_account,
+            deduction_legs=[(a, Decimal(v)) for a, v in deduction_legs],
+            contribution_legs=[(a, s, Decimal(v)) for a, s, v in contribution_legs],
             deposit_account=deposit_account,
             entry_id=entry_id,
             payee=payee,

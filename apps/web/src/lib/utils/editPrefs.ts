@@ -4,7 +4,7 @@
 
 import { writable } from 'svelte/store';
 
-/** Last funding account chosen in "Add transaction" (e.g. "Liabilities:CC:AmexGold"). */
+/** Last funding account chosen in "Add transaction" (e.g. "Liabilities:CC:CardA"). */
 export const lastFundingAccount = writable<string>('');
 
 /** Last spending category chosen in "Add transaction" (e.g. "Takeout"). */

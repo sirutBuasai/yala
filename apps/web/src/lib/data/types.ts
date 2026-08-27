@@ -46,6 +46,7 @@ export type Bill = number | null;
 export type Transactions = Txn[];
 export type Date1 = string;
 export type Payee1 = string;
+export type Employer = string | null;
 export type Gross = number;
 export type Net = number;
 export type TakeHome = number;
@@ -192,6 +193,7 @@ export interface Txn {
 export interface PaycheckOut {
 	date: Date1;
 	payee: Payee1;
+	employer?: Employer;
 	gross: Gross;
 	deductions: Deductions;
 	contributions: Contributions;

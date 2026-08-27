@@ -321,6 +321,18 @@
           "title": "Payee",
           "type": "string"
         },
+        "employer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Employer"
+        },
         "gross": {
           "title": "Gross",
           "type": "number"

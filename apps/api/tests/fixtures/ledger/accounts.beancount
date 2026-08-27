@@ -8,7 +8,7 @@ option "operating_currency" "USD"
 ; ------------------------------------------------
 2020-01-01 open Assets:Cash:BankA USD
 2020-01-01 open Assets:Cash:BankB USD
-2020-01-01 open Assets:Cash:Venmo USD
+2020-01-01 open Assets:Cash:Wallet USD
 2020-01-01 open Assets:Receivable:Friends USD
 
 ; ------------------------------------------------
@@ -26,19 +26,31 @@ option "operating_currency" "USD"
 2026-08-14 open Liabilities:CC:CardC USD
 
 ; ------------------------------------------------
-; Payroll
+; Payroll — employers as Income:Salary:<Employer>; the open set (minus closes)
+; is the active-employer list. Employer2 was left; its plan accounts stay open.
 ; ------------------------------------------------
-2020-01-01 open Income:Salary USD
+2020-01-01 open Income:Salary:Employer1 USD
+2020-01-01 open Income:Salary:Employer2 USD
+2022-01-01 close Income:Salary:Employer2
+
 2020-01-01 open Expenses:Deductions:Tax USD
 2020-01-01 open Expenses:Deductions:Insurance USD
-2020-01-01 open Assets:Investments:HSA USD
-2020-01-01 open Assets:Investments:Roth401k USD
-2020-01-01 open Assets:Investments:Trad401k USD
-2020-01-01 open Assets:Investments:AfterTax401k USD
 
-; Generic 401k retired in favor of the granular accounts; closed after its last posting.
-2020-01-01 open Assets:Investments:401k USD
-2026-08-21 close Assets:Investments:401k
+; Payroll contributions: an `employer` meta marks an investment account as payroll-contributable
+; and scopes it; `labels` (comma-separated) lists its line-item options, and the chosen label is
+; recorded as a `label` posting-meta on the single shared account so net worth sees one 401k pot.
+2020-01-01 open Assets:Investments:TaxAdvantaged:HSA:Broker1
+  labels: "HSA"
+  employer: "Employer1"
+2020-01-01 open Assets:Investments:TaxAdvantaged:Employer401k USD
+  labels: "Roth401k,Trad401k,AfterTax401k"
+  employer: "Employer1"
+
+; A closed payroll account exercises active-account filtering of options.
+2020-01-01 open Assets:Investments:TaxAdvantaged:LegacyPlan
+  labels: "LegacyPlan"
+  employer: "Employer1"
+2026-08-21 close Assets:Investments:TaxAdvantaged:LegacyPlan
 
 ; ------------------------------------------------
 ; Closed Accounts (exercise active-account filtering)

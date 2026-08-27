@@ -9,12 +9,19 @@ import type { DashboardData } from '$lib/data/types';
 
 export const EXPECTED_SCHEMA = 1;
 
+/** A selectable paycheck line item, scoped to an employer (or generic when employer is null). */
+export interface PayrollOption {
+	kind: 'deduction' | 'contribution';
+	label: string;
+	employer: string | null;
+	account: string;
+}
+
 export interface AccountsInfo {
 	spending_categories: string[];
 	funding_accounts: string[];
-	income_accounts: string[];
-	deduction_categories: string[];
-	contribution_categories: string[];
+	employers: string[];
+	payroll_options: PayrollOption[];
 	cash_accounts: string[];
 	credit_accounts: string[];
 }

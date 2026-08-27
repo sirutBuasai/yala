@@ -4,7 +4,7 @@ import { fireEvent } from '@testing-library/dom';
 import Credits from '$lib/forms/Credits.svelte';
 import { reactive } from '$lib/utils/reactive.svelte';
 
-const accts = ['Assets:Cash:Venmo', 'Liabilities:CC:CardA'];
+const accts = ['Assets:Cash:Wallet', 'Liabilities:CC:CardA'];
 
 describe('Credits', () => {
 	it('starts with no rows and adds one on "+ credit"', async () => {
@@ -19,8 +19,8 @@ describe('Credits', () => {
 		render(Credits, {
 			props: {
 				credits: reactive([
-					{ value: 'Assets:Cash:Venmo', amount: 20 },
-					{ value: 'Assets:Cash:Venmo', amount: 5 }
+					{ value: 'Assets:Cash:Wallet', amount: 20 },
+					{ value: 'Assets:Cash:Wallet', amount: 5 }
 				]),
 				creditAccounts: accts
 			}

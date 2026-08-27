@@ -21,9 +21,6 @@
 		removable?: boolean;
 		/** Value for a newly added row (default: the first option). */
 		defaultValue?: string;
-		/** When set, renders an inline creator whose entered name is passed here. */
-		onCreateType?: (name: string) => void;
-		createPlaceholder?: string;
 	}
 	let {
 		rows = $bindable(),
@@ -33,24 +30,14 @@
 		selectAriaLabel,
 		optionLabel = (v) => v,
 		removable = true,
-		defaultValue,
-		onCreateType,
-		createPlaceholder = 'new type'
+		defaultValue
 	}: Props = $props();
-
-	let newType = $state('');
 
 	function add() {
 		rows = [...rows, { value: defaultValue ?? options[0] ?? '', amount: null }];
 	}
 	function remove(i: number) {
 		rows = rows.filter((_, idx) => idx !== i);
-	}
-	function create() {
-		const name = newType.trim();
-		if (!name) return;
-		onCreateType?.(name);
-		newType = '';
 	}
 </script>
 
@@ -70,12 +57,6 @@
 			{/if}
 		</div>
 	{/each}
-	{#if onCreateType}
-		<div class="newtype">
-			<input bind:value={newType} placeholder={createPlaceholder} />
-			<button type="button" class="btn-mini" onclick={create}>+ type</button>
-		</div>
-	{/if}
 </div>
 
 <style>
@@ -113,24 +94,5 @@
 	.rm:hover {
 		border-color: var(--crit);
 		color: var(--crit-text);
-	}
-	.newtype {
-		display: flex;
-		gap: var(--gap-row);
-		margin-top: var(--gap-row);
-	}
-	.newtype input {
-		flex: 1;
-		min-width: 0;
-		background: var(--inset);
-		border: 1px dashed var(--border);
-		color: var(--ink);
-		border-radius: var(--radius-md);
-		padding: var(--pad-control);
-		font-size: var(--text-control);
-		font-family: inherit;
-	}
-	.newtype .btn-mini {
-		flex: 0 0 auto;
 	}
 </style>

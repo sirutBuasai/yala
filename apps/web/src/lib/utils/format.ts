@@ -51,11 +51,9 @@ export function esc(s: unknown): string {
 	);
 }
 
-/** Display-name overrides for account leaves that plain de-CamelCasing gets wrong. */
-const ACCOUNT_ALIASES_OVERRIDE: Record<string, string> = {
-	BofACash: 'BofA Cash',
-	BofA: 'BofA'
-};
+/** Display-name overrides for account leaves whose acronym casing plain de-CamelCasing gets
+ * wrong (e.g. `UsBankCash` → `US Bank Cash`). Empty by default; extend per your own accounts. */
+const ACCOUNT_ALIASES_OVERRIDE: Record<string, string> = {};
 
 /** The leaf of an account path — the segment after the last ":", or the whole name if none. */
 export function accountLeaf(name: string | null | undefined): string {

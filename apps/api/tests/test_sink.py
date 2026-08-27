@@ -58,7 +58,7 @@ def test_append_netted_transaction(ledger_dir: Path):
         amount=Decimal("300.00"),  # the total bill
         category="Takeouts",
         funding_account="Liabilities:CC:CardA",
-        credits=[("Assets:Cash:Venmo", Decimal("200.00"))],  # a $200 payback coming in
+        credits=[("Assets:Cash:Wallet", Decimal("200.00"))],  # a $200 payback coming in
     )
     led = _loads_clean(ledger_dir)
 
@@ -76,7 +76,7 @@ def test_append_netted_transaction(ledger_dir: Path):
     assert "bill: 300.00 USD" in text
     # beancount's printer controls column alignment; assert content, not exact spacing.
     assert re.search(r"Expenses:Takeouts\s+100\.00 USD", text)
-    assert re.search(r"Assets:Cash:Venmo\s+200\.00 USD", text)
+    assert re.search(r"Assets:Cash:Wallet\s+200\.00 USD", text)
     assert "-300.00 USD" in text  # funding paid the full bill
 
 
@@ -88,7 +88,7 @@ def test_append_refund_yields_negative_net(ledger_dir: Path):
         amount=Decimal("50.00"),  # total bill
         category="Takeouts",
         funding_account="Liabilities:CC:CardA",
-        credits=[("Assets:Cash:Venmo", Decimal("80.00"))],  # credits exceed the bill
+        credits=[("Assets:Cash:Wallet", Decimal("80.00"))],  # credits exceed the bill
     )
     led = _loads_clean(ledger_dir)
     txn = [t for t in led.spending.transactions() if t.payee == "over-refunded dinner"][0]
@@ -120,7 +120,7 @@ def test_update_transaction_replaces_in_place(ledger_dir: Path):
         category="Takeouts",
         funding_account="Liabilities:CC:CardA",
         pending=False,  # ! -> *
-        credits=[("Assets:Cash:Venmo", Decimal("25.00"))],
+        credits=[("Assets:Cash:Wallet", Decimal("25.00"))],
     )
     assert new_id == entry_id  # id preserved across edit
 
@@ -207,18 +207,53 @@ def test_update_rolls_back_on_broken_ledger(ledger_dir: Path):
     _loads_clean(ledger_dir)
 
 
+# Resolved payroll accounts (the API layer maps option labels → these).
+_EMPLOYER = "Income:Salary:Employer1"
+_TAX = "Expenses:Deductions:Tax"
+_INSURANCE = "Expenses:Deductions:Insurance"
+_HSA = "Assets:Investments:TaxAdvantaged:HSA:Broker1"
+_K401 = "Assets:Investments:TaxAdvantaged:Employer401k"
+
+
 def test_append_paycheck_balances_and_loads(ledger_dir: Path):
     FileLedgerSink(ledger_dir).append_paycheck(
         date=dt.date(2026, 2, 15),
         gross=Decimal("3000.00"),
-        deductions={"Tax": Decimal("600.00"), "Insurance": Decimal("100.00")},
-        contributions={"HSA": Decimal("150.00"), "Roth401k": Decimal("600.00")},
+        income_account=_EMPLOYER,
+        deduction_legs=[(_TAX, Decimal("600.00")), (_INSURANCE, Decimal("100.00"))],
+        contribution_legs=[(_HSA, None, Decimal("150.00")), (_K401, "Roth401k", Decimal("600.00"))],
         deposit_account="Assets:Cash:BankB",
     )
     text = (ledger_dir / "income" / "2026.beancount").read_text()
     assert text.count('"paycheck"') == 2
     assert "id:" in text
     _loads_clean(ledger_dir)
+
+
+def test_append_paycheck_splits_share_one_account_via_meta(ledger_dir: Path):
+    """401k splits post to the SAME account, distinguished by a `split` posting-meta — so net
+    worth sees one pot while income breaks out the split."""
+    sink = FileLedgerSink(ledger_dir)
+    entry_id = sink.append_paycheck(
+        date=dt.date(2026, 2, 15),
+        gross=Decimal("3000.00"),
+        income_account=_EMPLOYER,
+        deduction_legs=[(_TAX, Decimal("600.00"))],
+        contribution_legs=[
+            (_K401, "Roth401k", Decimal("400.00")),
+            (_K401, "Trad401k", Decimal("200.00")),
+        ],
+        deposit_account="Assets:Cash:BankB",
+    )
+    text = (ledger_dir / "income" / "2026.beancount").read_text()
+    assert 'label: "Roth401k"' in text
+    assert 'label: "Trad401k"' in text
+    assert f"{_K401}:" not in text  # no split sub-accounts — one shared account, tagged by meta
+
+    # Income relabels each split distinctly from the posting meta...
+    led = _loads_clean(ledger_dir)
+    pc = next(p for p in led.income.paychecks(2026, 2) if p.locator == f"id:{entry_id}")
+    assert pc.contributions == {"Roth401k": Decimal("400.00"), "Trad401k": Decimal("200.00")}
 
 
 def test_paycheck_to_unopened_deposit_account_raises_not_found(ledger_dir: Path):
@@ -230,8 +265,9 @@ def test_paycheck_to_unopened_deposit_account_raises_not_found(ledger_dir: Path)
         FileLedgerSink(ledger_dir).append_paycheck(
             date=dt.date(2026, 2, 15),
             gross=Decimal("1000.00"),
-            deductions={"Tax": Decimal("100.00")},
-            contributions={},
+            income_account=_EMPLOYER,
+            deduction_legs=[(_TAX, Decimal("100.00"))],
+            contribution_legs=[],
             deposit_account="Assets:Cash:NonExistent",  # never opened
         )
     msg = str(exc.value)
@@ -247,8 +283,9 @@ def test_paycheck_to_closed_account_raises_closed(ledger_dir: Path):
         FileLedgerSink(ledger_dir).append_paycheck(
             date=dt.date(2025, 3, 2),
             gross=Decimal("1000.00"),
-            deductions={},
-            contributions={},
+            income_account=_EMPLOYER,
+            deduction_legs=[],
+            contribution_legs=[],
             deposit_account="Liabilities:CC:CardD",  # closed 2024-10-01
         )
     msg = str(exc.value)
@@ -262,8 +299,11 @@ def test_paycheck_with_unopened_contribution_account_raises(ledger_dir: Path):
         FileLedgerSink(ledger_dir).append_paycheck(
             date=dt.date(2026, 2, 15),
             gross=Decimal("1000.00"),
-            deductions={},
-            contributions={"Brokerage": Decimal("100.00")},  # Assets:Investments:Brokerage unopened
+            income_account=_EMPLOYER,
+            deduction_legs=[],
+            contribution_legs=[
+                ("Assets:Investments:Brokerage", None, Decimal("100.00"))
+            ],  # unopened
             deposit_account="Assets:Cash:BankB",
         )
     assert "Assets:Investments:Brokerage" in str(exc.value)
@@ -275,8 +315,9 @@ def test_paycheck_with_wrong_legs_raises(ledger_dir: Path):
         FileLedgerSink(ledger_dir).append_paycheck(
             date=dt.date(2026, 3, 1),
             gross=Decimal("1000.00"),
-            deductions={"Tax": Decimal("900.00")},
-            contributions={"Roth401k": Decimal("500.00")},  # exceeds gross
+            income_account=_EMPLOYER,
+            deduction_legs=[(_TAX, Decimal("900.00"))],
+            contribution_legs=[(_K401, "Roth401k", Decimal("500.00"))],  # exceeds gross
             deposit_account="Assets:Cash:BankB",
         )
 
@@ -286,8 +327,9 @@ def test_update_paycheck_edits_in_place(ledger_dir: Path):
     entry_id = sink.append_paycheck(
         date=dt.date(2026, 2, 15),
         gross=Decimal("3000.00"),
-        deductions={"Tax": Decimal("600.00")},
-        contributions={"HSA": Decimal("150.00")},
+        income_account=_EMPLOYER,
+        deduction_legs=[(_TAX, Decimal("600.00"))],
+        contribution_legs=[(_HSA, None, Decimal("150.00"))],
         deposit_account="Assets:Cash:BankB",
     )
     target = ledger_dir / "income" / "2026.beancount"
@@ -296,8 +338,9 @@ def test_update_paycheck_edits_in_place(ledger_dir: Path):
     new_id = sink.update_paycheck(
         f"id:{entry_id}",
         gross=Decimal("3200.00"),
-        deductions={"Tax": Decimal("640.00")},
-        contributions={"HSA": Decimal("160.00")},
+        income_account=_EMPLOYER,
+        deduction_legs=[(_TAX, Decimal("640.00"))],
+        contribution_legs=[(_HSA, None, Decimal("160.00"))],
         deposit_account="Assets:Cash:BankB",
     )
     assert new_id == entry_id  # id preserved
@@ -315,16 +358,18 @@ def test_update_paycheck_across_year_moves_file(ledger_dir: Path):
     entry_id = sink.append_paycheck(
         date=dt.date(2026, 3, 15),
         gross=Decimal("3000.00"),
-        deductions={"Tax": Decimal("600.00")},
-        contributions={},
+        income_account=_EMPLOYER,
+        deduction_legs=[(_TAX, Decimal("600.00"))],
+        contribution_legs=[],
         deposit_account="Assets:Cash:BankB",
     )
     sink.update_paycheck(
         f"id:{entry_id}",
         date=dt.date(2027, 3, 15),  # crosses into 2027
         gross=Decimal("3000.00"),
-        deductions={"Tax": Decimal("600.00")},
-        contributions={},
+        income_account=_EMPLOYER,
+        deduction_legs=[(_TAX, Decimal("600.00"))],
+        contribution_legs=[],
         deposit_account="Assets:Cash:BankB",
     )
     assert '"paycheck"' not in "".join(
@@ -344,8 +389,9 @@ def test_update_paycheck_to_unopened_account_rejected(ledger_dir: Path):
     entry_id = sink.append_paycheck(
         date=dt.date(2026, 2, 15),
         gross=Decimal("1000.00"),
-        deductions={},
-        contributions={},
+        income_account=_EMPLOYER,
+        deduction_legs=[],
+        contribution_legs=[],
         deposit_account="Assets:Cash:BankB",
     )
     target = ledger_dir / "income" / "2026.beancount"
@@ -355,8 +401,9 @@ def test_update_paycheck_to_unopened_account_rejected(ledger_dir: Path):
         sink.update_paycheck(
             f"id:{entry_id}",
             gross=Decimal("1000.00"),
-            deductions={},
-            contributions={},
+            income_account=_EMPLOYER,
+            deduction_legs=[],
+            contribution_legs=[],
             deposit_account="Assets:Cash:Nope",  # unopened
         )
     assert target.read_bytes() == before  # nothing clobbered
@@ -449,7 +496,7 @@ def test_update_preserves_narration_tag_and_custom_meta(ledger_dir: Path):
         amount=Decimal("45.00"),
         category="Grocery",
         funding_account="Liabilities:CC:CardA",
-        credits=[("Assets:Cash:Venmo", Decimal("5.00"))],
+        credits=[("Assets:Cash:Wallet", Decimal("5.00"))],
     )
 
     led = _loads_clean(ledger_dir)
@@ -515,7 +562,7 @@ def test_quantize_first_balances(ledger_dir: Path):
         amount=Decimal("10.005"),  # total bill
         category="Takeouts",
         funding_account="Liabilities:CC:CardA",
-        credits=[("Assets:Cash:Venmo", Decimal("10.005"))],
+        credits=[("Assets:Cash:Wallet", Decimal("10.005"))],
     )
     led = _loads_clean(ledger_dir)  # loads without residual-balance errors
     txn = [t for t in led.spending.transactions() if t.payee == "odd cents"][0]
@@ -533,7 +580,7 @@ def test_funding_meta_beats_more_negative_split(ledger_dir: Path):
         funding_account="Liabilities:CC:CardA",
         # A receivable leg more negative than the funding card would fool the heuristic.
         credits=[
-            ("Assets:Cash:Venmo", Decimal("200.00")),
+            ("Assets:Cash:Wallet", Decimal("200.00")),
             ("Assets:Receivable:Friends", Decimal("-400.00")),
         ],
     )

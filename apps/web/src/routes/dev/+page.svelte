@@ -244,7 +244,7 @@
 
 	// Rows for the edge-to-edge bleed demo (mirrors RowList's real markup).
 	const bleedRows = [
-		{ label: 'Trader Joe’s', amt: '$42' },
+		{ label: 'Example Store', amt: '$42' },
 		{ label: 'Rent', amt: '$1,850' },
 		{ label: 'Paycheck', amt: '+$3,496' }
 	];
@@ -474,7 +474,7 @@
 		<div class="demorow">
 			<div class="field">
 				<label for="d1">Payee</label>
-				<input id="d1" value="Trader Joe's" />
+				<input id="d1" value="Example Store" />
 			</div>
 			<div class="field">
 				<label for="d2">Amount</label>

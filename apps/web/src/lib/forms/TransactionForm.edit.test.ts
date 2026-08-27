@@ -7,11 +7,10 @@ import TransactionForm from '$lib/forms/TransactionForm.svelte';
 const accounts: AccountsInfo = {
 	spending_categories: ['Grocery', 'Takeouts'],
 	funding_accounts: ['Liabilities:CC:CardA', 'Assets:Cash:BankA'],
-	income_accounts: ['Income:Salary'],
-	deduction_categories: ['Tax'],
-	contribution_categories: ['HSA'],
+	employers: ['Employer1'],
+	payroll_options: [],
 	cash_accounts: ['Assets:Cash:BankA'],
-	credit_accounts: ['Assets:Cash:Venmo', 'Liabilities:CC:CardA']
+	credit_accounts: ['Assets:Cash:Wallet', 'Liabilities:CC:CardA']
 };
 
 const prefill = {

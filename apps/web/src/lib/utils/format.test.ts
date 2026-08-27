@@ -87,7 +87,7 @@ describe('esc', () => {
 
 describe('accountLeaf', () => {
 	it('returns the segment after the last colon, or the whole name if none', () => {
-		expect(accountLeaf('Liabilities:CC:AmexGold')).toBe('AmexGold');
+		expect(accountLeaf('Liabilities:CC:Card1')).toBe('Card1');
 		expect(accountLeaf('Cash')).toBe('Cash');
 		expect(accountLeaf(null)).toBe('');
 		expect(accountLeaf(undefined)).toBe('');
@@ -96,12 +96,9 @@ describe('accountLeaf', () => {
 
 describe('formatAccount', () => {
 	it('takes the leaf and de-CamelCases it', () => {
-		expect(formatAccount('Liabilities:CC:AmexGold')).toBe('Amex Gold');
-		expect(formatAccount('Assets:Cash:WFAutograph')).toBe('WF Autograph');
-	});
-
-	it('applies acronym overrides', () => {
-		expect(formatAccount('Assets:Cash:BofACash')).toBe('BofA Cash');
+		expect(formatAccount('Assets:Cash:Bank1Checking')).toBe('Bank1 Checking');
+		// a run of caps before a capitalized word splits once (acronym stays together)
+		expect(formatAccount('Assets:Cash:ABBank')).toBe('AB Bank');
 	});
 
 	it('returns empty string for nullish', () => {

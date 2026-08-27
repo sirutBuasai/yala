@@ -36,31 +36,43 @@ def test_get_accounts_keys(client: TestClient):
     assert set(body) == {
         "spending_categories",
         "funding_accounts",
-        "income_accounts",
-        "deduction_categories",
-        "contribution_categories",
+        "employers",
+        "payroll_options",
         "cash_accounts",
         "credit_accounts",
     }
     # closed account is excluded from active funding accounts
     assert "Liabilities:CC:CardD" not in body["funding_accounts"]
-    assert "Income:Salary" in body["income_accounts"]
+    # only open employers surface; Employer2 was closed
+    assert body["employers"] == ["Employer1"]
 
 
-def test_accounts_contribution_list_excludes_closed_401k(client: TestClient):
+def test_accounts_payroll_options_scoped_and_split(client: TestClient):
     body = client.get("/api/accounts").json()
-    contribs = set(body["contribution_categories"])
+    opts = body["payroll_options"]
+
+    contribs = {o["label"] for o in opts if o["kind"] == "contribution"}
     assert {"Roth401k", "Trad401k", "AfterTax401k", "HSA"} <= contribs
-    assert "401k" not in contribs  # retired via close directive, not a hardcoded exclusion
-    # income can still load the historical 401k postings
-    data = client.get("/api/data").json()
-    assert data["income"]["by_year"]
+    assert "LegacyPlan" not in contribs  # closed payroll account excluded
+
+    # the 401k splits all resolve to ONE shared account (net worth sees one pot)
+    k401 = "Assets:Investments:TaxAdvantaged:Employer401k"
+    splits = [o for o in opts if o["label"] in {"Roth401k", "Trad401k", "AfterTax401k"}]
+    assert {o["account"] for o in splits} == {k401}
+    assert all(o["employer"] == "Employer1" for o in splits)
+
+    # generic deductions carry no employer scope
+    tax = next(o for o in opts if o["label"] == "Tax")
+    assert tax["kind"] == "deduction" and tax["employer"] is None
+
+    # income can still load the historical postings
+    assert client.get("/api/data").json()["income"]["by_year"]
 
 
 def test_accounts_credit_accounts(client: TestClient):
     body = client.get("/api/accounts").json()
     credit = body["credit_accounts"]
-    assert "Assets:Cash:Venmo" in credit
+    assert "Assets:Cash:Wallet" in credit
     # a payback can be a credit-card refund/credit
     assert any(a.startswith("Liabilities:CC:") for a in credit)
     assert "Liabilities:CC:CardA" in credit
@@ -100,7 +112,7 @@ def test_post_netted_transaction_counts_net_share(client: TestClient):
             "amount": 300.0,  # the total bill
             "category": "Takeouts",
             "funding_account": "Liabilities:CC:CardA",
-            "credits": [{"account": "Assets:Cash:Venmo", "amount": 200.0}],
+            "credits": [{"account": "Assets:Cash:Wallet", "amount": 200.0}],
         },
     )
     assert r.status_code == 200
@@ -142,7 +154,7 @@ def test_update_transaction_flow(client: TestClient):
             "category": "Takeouts",
             "funding_account": "Liabilities:CC:CardA",
             "pending": False,
-            "credits": [{"account": "Assets:Cash:Venmo", "amount": 25.0}],
+            "credits": [{"account": "Assets:Cash:Wallet", "amount": 25.0}],
         },
     )
     assert u.status_code == 200
@@ -153,7 +165,7 @@ def test_update_transaction_flow(client: TestClient):
     assert detail2["amount"] == 40.0  # total bill (net + Σ paybacks)
     assert detail2["net_expense"] == 15.0  # your share
     assert detail2["bill"] == 40.0
-    assert detail2["credits"] == [{"account": "Assets:Cash:Venmo", "amount": 25.0}]
+    assert detail2["credits"] == [{"account": "Assets:Cash:Wallet", "amount": 25.0}]
 
 
 def test_txn_detail_when_funding_and_credit_share_account(client: TestClient):
@@ -181,15 +193,8 @@ def test_txn_detail_when_funding_and_credit_share_account(client: TestClient):
     assert sorted(s["amount"] for s in d["credits"]) == [250.0, 500.0]
 
 
-def test_post_account_declares_contribution_type(client: TestClient):
-    r = client.post("/api/account", json={"kind": "contribution", "leaf": "Brokerage"})
-    assert r.status_code == 200
-    contribs = client.get("/api/accounts").json()["contribution_categories"]
-    assert "Brokerage" in contribs
-
-
 def test_post_account_invalid_leaf_is_400(client: TestClient):
-    r = client.post("/api/account", json={"kind": "deduction", "leaf": "Bad Leaf"})
+    r = client.post("/api/account", json={"kind": "category", "leaf": "Bad Leaf"})
     assert r.status_code == 400
 
 
@@ -304,6 +309,7 @@ def test_post_paycheck_is_visible_on_next_get(client: TestClient):
         "/api/paycheck",
         json={
             "date": "2026-02-15",
+            "employer": "Employer1",
             "gross": 3000.0,
             "deductions": {"Tax": 600.0, "Insurance": 100.0},
             "contributions": {"HSA": 150.0, "Roth401k": 600.0},
@@ -314,7 +320,9 @@ def test_post_paycheck_is_visible_on_next_get(client: TestClient):
     assert r.json()["ok"] is True
 
     paychecks = client.get("/api/data").json()["months"]["2026-02"]["paychecks"]
-    assert any(p["gross"] == 3000.0 for p in paychecks)
+    match = next(p for p in paychecks if p["gross"] == 3000.0)
+    assert match["employer"] == "Employer1"
+    assert match["contributions"] == {"HSA": 150.0, "Roth401k": 600.0}
 
 
 def test_get_and_update_paycheck_flow(client: TestClient):
@@ -322,6 +330,7 @@ def test_get_and_update_paycheck_flow(client: TestClient):
         "/api/paycheck",
         json={
             "date": "2026-02-15",
+            "employer": "Employer1",
             "gross": 3000.0,
             "deductions": {"Tax": 600.0},
             "contributions": {"HSA": 150.0},
@@ -333,6 +342,7 @@ def test_get_and_update_paycheck_flow(client: TestClient):
 
     state = client.get("/api/paycheck", params={"locator": loc}).json()
     assert state["gross"] == 3000.0
+    assert state["employer"] == "Employer1"
     assert state["deductions"] == {"Tax": 600.0}
     assert state["contributions"] == {"HSA": 150.0}
     assert state["deposit_account"] == "Assets:Cash:BankB"
@@ -342,9 +352,10 @@ def test_get_and_update_paycheck_flow(client: TestClient):
         json={
             "locator": loc,
             "date": "2026-02-15",
+            "employer": "Employer1",
             "gross": 3200.0,
             "deductions": {"Tax": 640.0},
-            "contributions": {"HSA": 150.0},
+            "contributions": {"Roth401k": 150.0},
             "deposit_account": "Assets:Cash:BankB",
         },
     )
@@ -353,6 +364,39 @@ def test_get_and_update_paycheck_flow(client: TestClient):
     state2 = client.get("/api/paycheck", params={"locator": loc}).json()
     assert state2["gross"] == 3200.0
     assert state2["deductions"]["Tax"] == 640.0
+    assert state2["contributions"] == {"Roth401k": 150.0}  # split relabels on read
+
+
+def test_post_paycheck_inactive_employer_is_400(client: TestClient):
+    """A closed employer (Employer2) is no longer selectable for new paychecks."""
+    r = client.post(
+        "/api/paycheck",
+        json={
+            "employer": "Employer2",
+            "gross": 1000.0,
+            "deductions": {"Tax": 100.0},
+            "contributions": {},
+            "deposit_account": "Assets:Cash:BankB",
+        },
+    )
+    assert r.status_code == 400
+    assert "employer" in r.json()["detail"].lower()
+
+
+def test_post_paycheck_contribution_not_offered_by_employer_is_400(client: TestClient):
+    """A contribution label the employer doesn't offer is rejected."""
+    r = client.post(
+        "/api/paycheck",
+        json={
+            "employer": "Employer1",
+            "gross": 1000.0,
+            "deductions": {},
+            "contributions": {"Pension": 100.0},  # no such option
+            "deposit_account": "Assets:Cash:BankB",
+        },
+    )
+    assert r.status_code == 400
+    assert "Pension" in r.json()["detail"]
 
 
 def test_get_paycheck_unknown_is_404(client: TestClient):
@@ -365,6 +409,7 @@ def test_update_paycheck_unknown_is_404(client: TestClient):
         "/api/paycheck/update",
         json={
             "locator": "id:nope",
+            "employer": "Employer1",
             "gross": 100.0,
             "deductions": {},
             "contributions": {},
@@ -393,6 +438,7 @@ def test_post_paycheck_take_home_negative_is_400(client: TestClient):
     r = client.post(
         "/api/paycheck",
         json={
+            "employer": "Employer1",
             "gross": 1000.0,
             "deductions": {"Tax": 900.0},
             "contributions": {"Roth401k": 500.0},  # exceeds gross
@@ -408,6 +454,7 @@ def test_post_paycheck_unopened_account_is_400_with_clear_detail(client: TestCli
         "/api/paycheck",
         json={
             "date": "2026-02-15",
+            "employer": "Employer1",
             "gross": 1000.0,
             "deductions": {"Tax": 100.0},
             "contributions": {},

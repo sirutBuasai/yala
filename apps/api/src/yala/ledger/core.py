@@ -8,6 +8,7 @@ Python over the loaded directives, though domains needing cost-basis/price seman
 
 from __future__ import annotations
 
+import datetime as dt
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,7 +16,7 @@ from beancount import loader
 from beancount.core import data
 
 from yala import config
-from yala.ledger.entities import Posting, Transaction
+from yala.ledger.entities import INTERNAL_META, Posting, Transaction
 
 if TYPE_CHECKING:
     from yala.ledger.income import Income
@@ -36,6 +37,7 @@ class Ledger:
         self.errors: list = []
         self._loaded = False
         self._txn_cache: list[Transaction] | None = None
+        self._meta_cache: dict[str, dict] | None = None
 
     def load(self) -> "Ledger":
         if not self.path.exists():
@@ -45,7 +47,8 @@ class Ledger:
         self._entries = entries
         self.errors = errors
         self._loaded = True
-        self._txn_cache = None  # entries changed; drop the derived transaction view
+        self._txn_cache = None  # entries changed; drop the derived views
+        self._meta_cache = None
 
         if self.strict and errors:
             shown = "; ".join(str(getattr(e, "message", e)) for e in errors[:5])
@@ -91,7 +94,7 @@ class Ledger:
                 continue
 
             postings = [
-                Posting(p.account, p.units.number)
+                Posting(p.account, p.units.number, dict(p.meta or {}))
                 for p in e.postings
                 if p.units is not None and p.units.number is not None
             ]
@@ -133,6 +136,35 @@ class Ledger:
             for e in self._entries
             if isinstance(e, data.Open) and (prefix is None or e.account.startswith(prefix))
         )
+
+    def active_accounts(self, prefix: str | None = None) -> list[str]:
+        """Accounts opened without a later close as of today, optionally filtered by prefix."""
+        self._require()
+        today = dt.date.today()
+        opened: set[str] = set()
+        closed: set[str] = set()
+
+        for e in self._entries:
+            if isinstance(e, data.Open) and e.date <= today:
+                opened.add(e.account)
+            elif isinstance(e, data.Close) and e.date <= today:
+                closed.add(e.account)
+
+        active = opened - closed
+        return sorted(a for a in active if prefix is None or a.startswith(prefix))
+
+    def account_meta(self) -> dict[str, dict]:
+        """Per-account metadata from ``Open`` directives (source-location keys stripped)."""
+        self._require()
+
+        if self._meta_cache is None:
+            self._meta_cache = {
+                e.account: {k: v for k, v in (e.meta or {}).items() if k not in INTERNAL_META}
+                for e in self._entries
+                if isinstance(e, data.Open)
+            }
+
+        return self._meta_cache
 
     # --- domain query namespaces (uniform shape: Domain(ledger)) ---
 

@@ -20,7 +20,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from yala.ledger.entities import DEDUCTIONS, INCOME, INVESTMENTS, leaf
+from yala.ledger.entities import INCOME
+from yala.ledger.payroll import summarize_paycheck
 
 if TYPE_CHECKING:
     from yala.ledger.core import Ledger
@@ -34,6 +35,7 @@ class Paycheck:
     contributions: dict[str, Decimal]
     locator: str = ""
     payee: str = "paycheck"
+    employer: str | None = None
 
     @property
     def direct_out(self) -> Decimal:
@@ -64,33 +66,24 @@ class Income:
 
     def paychecks(self, year: int | None = None, month: int | None = None) -> list[Paycheck]:
         out: list[Paycheck] = []
+        account_meta = self._led.account_meta()
 
         for t in self._led.transactions(year, month):
             if not any(p.account.startswith(INCOME) for p in t.postings):
                 continue
 
-            gross = Decimal(0)
-            deductions: dict[str, Decimal] = defaultdict(lambda: Decimal(0))
-            contributions: dict[str, Decimal] = defaultdict(lambda: Decimal(0))
-
-            for p in t.postings:
-                if p.account.startswith(INCOME):
-                    gross += -p.amount  # Income postings are credits (negative)
-
-                elif p.account.startswith(DEDUCTIONS):
-                    deductions[leaf(p.account)] += p.amount
-
-                elif p.account.startswith(INVESTMENTS):
-                    contributions[leaf(p.account)] += p.amount
-
+            s = summarize_paycheck(
+                ((p.account, p.amount, p.meta.get("label")) for p in t.postings), account_meta
+            )
             out.append(
                 Paycheck(
                     t.date,
-                    gross,
-                    dict(deductions),
-                    dict(contributions),
+                    s.gross,
+                    s.deductions,
+                    s.contributions,
                     t.locator,
                     t.payee or "paycheck",
+                    s.employer,
                 )
             )
 

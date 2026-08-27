@@ -44,6 +44,7 @@ def _paycheck_out(p: Paycheck) -> PaycheckOut:
     return PaycheckOut(
         date=p.date.isoformat(),
         payee=p.payee,
+        employer=p.employer,
         gross=money(p.gross),
         deductions={k: money(v) for k, v in p.deductions.items()},
         contributions={k: money(v) for k, v in p.contributions.items()},

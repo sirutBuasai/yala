@@ -1,9 +1,10 @@
 ; Income for 2025
 
 2025-08-15 * "paycheck"
-  Income:Salary    -3000.00 USD
+  Income:Salary:Employer1    -3000.00 USD
   Expenses:Deductions:Tax    600.00 USD
   Expenses:Deductions:Insurance    100.00 USD
-  Assets:Investments:HSA    150.00 USD
-  Assets:Investments:401k    600.00 USD
+  Assets:Investments:TaxAdvantaged:HSA:Broker1    150.00 USD
+  Assets:Investments:TaxAdvantaged:Employer401k    600.00 USD
+    label: "Trad401k"
   Assets:Cash:BankB    1550.00 USD

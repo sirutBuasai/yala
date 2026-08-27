@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import datetime as dt
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 
 from yala import config
@@ -18,7 +18,15 @@ from yala import config
 EXPENSES = "Expenses:"
 DEDUCTIONS = EXPENSES + "Deductions:"
 INCOME = "Income:"
+SALARY = INCOME + "Salary:"
 INVESTMENTS = "Assets:Investments:"
+
+# Source-location keys beancount injects onto every directive's meta (not our data).
+INTERNAL_META = frozenset({"filename", "lineno"})
+RETIRED_META = frozenset({"src"})  # spreadsheet-import artifact, dropped on edit
+MANAGED_META = frozenset({"id", "funding", "bill"})  # we always (re)compute these
+# Meta keys we never carry forward onto an edited entry (recomputed or internal).
+DROPPED_META = INTERNAL_META | RETIRED_META | MANAGED_META
 
 
 def leaf(account: str) -> str:
@@ -65,6 +73,7 @@ def locator_of(meta: dict | None) -> str:
 class Posting:
     account: str
     amount: Decimal
+    meta: dict = field(default_factory=dict)
 
 
 @dataclass

@@ -98,6 +98,7 @@ class Txn(_Base):
 class PaycheckOut(_Base):
     date: str
     payee: str
+    employer: str | None = None  # paying employer (Income:Salary:<Employer>), if known
     gross: float
     deductions: dict[str, float]
     contributions: dict[str, float]

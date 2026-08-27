@@ -22,8 +22,8 @@ from starlette.types import Scope
 
 from yala import config
 from yala.builder import build_dict
-from yala.ledger import Ledger
-from yala.ledger.entities import DEDUCTIONS, EXPENSES, INCOME, INVESTMENTS, leaf
+from yala.ledger import Ledger, payroll
+from yala.ledger.entities import DEDUCTIONS, EXPENSES, INCOME
 from yala.sink import FileLedgerSink, entry_locator, find_transaction
 
 app = FastAPI(title="Yala")
@@ -61,10 +61,6 @@ def _api_errors() -> Iterator[None]:
 def _dec(value: float) -> Decimal:
     """Decimal from a request float, via str so 19.99 doesn't become 19.9900000001."""
     return Decimal(str(value))
-
-
-def _dec_map(m: dict[str, float]) -> dict[str, Decimal]:
-    return {k: _dec(v) for k, v in m.items()}
 
 
 def _valid_name(value: str) -> str:
@@ -129,13 +125,11 @@ class TransactionDeleteIn(BaseModel):
 
 
 class AccountIn(BaseModel):
-    kind: Literal["contribution", "deduction", "category", "funding_credit", "funding_cash"]
+    kind: Literal["category", "funding_credit", "funding_cash"]
     leaf: str
 
 
 _ACCOUNT_PREFIX: dict[str, str] = {
-    "contribution": INVESTMENTS,
-    "deduction": DEDUCTIONS,
     "category": EXPENSES,
     "funding_credit": "Liabilities:CC:",
     "funding_cash": "Assets:Cash:",
@@ -144,6 +138,7 @@ _ACCOUNT_PREFIX: dict[str, str] = {
 
 class PaycheckIn(BaseModel):
     date: str | None = None
+    employer: str
     gross: float
     deductions: dict[str, float] = {}
     contributions: dict[str, float] = {}
@@ -175,9 +170,16 @@ def get_accounts() -> dict:
     return {
         "spending_categories": ledger.spending.categories(),
         "funding_accounts": funding,
-        "income_accounts": [a for a in active if a.startswith("Income:")],
-        "deduction_categories": sorted(leaf(a) for a in active if a.startswith(DEDUCTIONS)),
-        "contribution_categories": sorted(leaf(a) for a in active if a.startswith(INVESTMENTS)),
+        "employers": payroll.employers(ledger),
+        "payroll_options": [
+            {
+                "kind": o.kind,
+                "label": o.label,
+                "employer": o.employer,
+                "account": o.account,
+            }
+            for o in payroll.options(ledger)
+        ],
         "cash_accounts": cash,
         "credit_accounts": funding,
     }
@@ -243,45 +245,40 @@ def get_transaction(locator: str) -> dict:
         return _txn_state(find_transaction(_ledger().entries, locator))
 
 
-def _paycheck_state(entry: data.Transaction) -> dict:
-    """Editable state of one paycheck: gross, deposit, and the deduction/contribution maps."""
-    postings = _postings(entry)
-    if not any(a.startswith(INCOME) for a, _ in postings):
+def _paycheck_state(entry: data.Transaction, ledger: Ledger) -> dict:
+    """Editable state of one paycheck: employer, gross, deposit, deduction/contribution maps.
+
+    Contributions are keyed by their display label (``HSA``, ``Roth401k``) via
+    ``payroll.summarize_paycheck``, matching the options the form offers, so an edit round-trips.
+    """
+    if not any(p.account.startswith(INCOME) for p in entry.postings):
         raise HTTPException(status_code=400, detail="not a paycheck")
 
-    gross = -sum((n for a, n in postings if a.startswith(INCOME)), Decimal(0))
-    deductions: dict[str, float] = {}
-    contributions: dict[str, float] = {}
-    deposit: tuple[str, Decimal] | None = None
-
-    for a, n in postings:
-        if a.startswith(INCOME):
-            continue
-
-        elif a.startswith(DEDUCTIONS):
-            deductions[leaf(a)] = float(n)
-
-        elif a.startswith(INVESTMENTS):
-            contributions[leaf(a)] = float(n)
-
-        elif deposit is None or n > deposit[1]:
-            deposit = (a, n)
+    legs = (
+        (p.account, p.units.number, (p.meta or {}).get("label"))
+        for p in entry.postings
+        if p.units is not None and p.units.number is not None
+    )
+    s = payroll.summarize_paycheck(legs, ledger.account_meta())
+    deposit = max(s.other, key=lambda o: o[1], default=None)
 
     return {
         "locator": entry_locator(entry),
         "date": entry.date.isoformat(),
         "payee": entry.payee or entry.narration or "paycheck",
-        "gross": float(gross),
+        "employer": s.employer,
+        "gross": float(s.gross),
         "deposit_account": deposit[0] if deposit else "",
-        "deductions": deductions,
-        "contributions": contributions,
+        "deductions": {k: float(v) for k, v in s.deductions.items()},
+        "contributions": {k: float(v) for k, v in s.contributions.items()},
     }
 
 
 @app.get("/api/paycheck")
 def get_paycheck(locator: str) -> dict:
     with _api_errors():
-        return _paycheck_state(find_transaction(_ledger().entries, locator))
+        ledger = _ledger()
+        return _paycheck_state(find_transaction(ledger.entries, locator), ledger)
 
 
 @app.get("/api/pending")
@@ -316,13 +313,42 @@ def _credits(credits: list[CreditIn]) -> list[tuple[str, Decimal]]:
     return credits_out
 
 
-def _paycheck_legs(body: PaycheckIn) -> tuple[dict[str, Decimal], dict[str, Decimal]]:
-    """Validate a paycheck's deposit + line-item names and convert its maps to Decimal."""
-    _valid_name(body.deposit_account)
-    for name in (*body.deductions, *body.contributions):
-        _valid_name(name)
+def _resolve_paycheck(
+    body: PaycheckIn, ledger: Ledger
+) -> tuple[str, list[tuple[str, Decimal]], list[tuple[str, str | None, Decimal]]]:
+    """Resolve an employer + option-labeled maps into concrete ledger legs.
 
-    return _dec_map(body.deductions), _dec_map(body.contributions)
+    Returns ``(income_account, deduction_legs, contribution_legs)``; raises 400 on an unknown
+    employer or a line item the selected employer doesn't offer.
+    """
+    _valid_name(body.deposit_account)
+
+    if body.employer not in payroll.employers(ledger):
+        raise HTTPException(
+            status_code=400, detail=f"unknown or inactive employer: {body.employer!r}"
+        )
+
+    income_account = f"{payroll.SALARY}{body.employer}"
+    deduction_legs: list[tuple[str, Decimal]] = []
+    contribution_legs: list[tuple[str, str | None, Decimal]] = []
+
+    for label, amount in body.deductions.items():
+        option = payroll.resolve(ledger, "deduction", label, body.employer)
+        if option is None:
+            raise HTTPException(
+                status_code=400, detail=f"no deduction {label!r} for {body.employer}"
+            )
+        deduction_legs.append((option.account, _dec(amount)))
+
+    for label, amount in body.contributions.items():
+        option = payroll.resolve(ledger, "contribution", label, body.employer)
+        if option is None:
+            raise HTTPException(
+                status_code=400, detail=f"no contribution {label!r} for {body.employer}"
+            )
+        contribution_legs.append((option.account, option.label, _dec(amount)))
+
+    return income_account, deduction_legs, contribution_legs
 
 
 @app.post("/api/transaction")
@@ -397,13 +423,14 @@ def post_account(body: AccountIn) -> dict:
 @app.post("/api/paycheck")
 def post_paycheck(body: PaycheckIn) -> dict:
     with _api_errors():
-        deductions, contributions = _paycheck_legs(body)
+        income_account, deduction_legs, contribution_legs = _resolve_paycheck(body, _ledger())
 
         _sink().append_paycheck(
             date=_parse_date(body.date),
             gross=_dec(body.gross),
-            deductions=deductions,
-            contributions=contributions,
+            income_account=income_account,
+            deduction_legs=deduction_legs,
+            contribution_legs=contribution_legs,
             deposit_account=body.deposit_account,
             payee=body.payee,
         )
@@ -414,14 +441,15 @@ def post_paycheck(body: PaycheckIn) -> dict:
 @app.post("/api/paycheck/update")
 def post_paycheck_update(body: PaycheckUpdateIn) -> dict:
     with _api_errors():
-        deductions, contributions = _paycheck_legs(body)
+        income_account, deduction_legs, contribution_legs = _resolve_paycheck(body, _ledger())
 
         entry_id = _sink().update_paycheck(
             body.locator,
             date=dt.date.fromisoformat(body.date) if body.date else None,
             gross=_dec(body.gross),
-            deductions=deductions,
-            contributions=contributions,
+            income_account=income_account,
+            deduction_legs=deduction_legs,
+            contribution_legs=contribution_legs,
             deposit_account=body.deposit_account,
             payee=body.payee,
         )

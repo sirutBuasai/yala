@@ -3,7 +3,7 @@
 	// token maps to a fixed figure so columns line up across rows. 'saved' sums the contributions
 	// (401k…); 'deductions' sums every deduction entry.
 	export type PaycheckField =
-		'gross' | 'tax' | 'benefits' | 'hsa' | 'deductions' | 'saved' | 'takehome' | 'net';
+		'gross' | 'tax' | 'benefits' | 'deductions' | 'saved' | 'takehome' | 'net';
 </script>
 
 <script lang="ts">
@@ -34,7 +34,6 @@
 		gross: 'gross',
 		tax: 'tax',
 		benefits: 'benefits',
-		hsa: 'hsa',
 		deductions: 'deductions',
 		saved: 'saved',
 		takehome: 'take-home',
@@ -49,8 +48,6 @@
 				return p.deductions['Tax'] ?? 0;
 			case 'benefits':
 				return p.deductions['Benefits'] ?? 0;
-			case 'hsa':
-				return p.deductions['HSA'] ?? 0;
 			case 'deductions':
 				return sumValues(p.deductions);
 			case 'saved':
