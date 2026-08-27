@@ -532,3 +532,55 @@ def test_update_across_year_moves_txn_between_month_pages(client: TestClient):
     old = data["months"].get("2026-02", {}).get("transactions", [])
     assert not [t for t in old if t["payee"] == "relocating"]
     assert any(t["payee"] == "relocating" for t in data["months"]["2027-05"]["transactions"])
+
+
+def test_transfer_add_get_and_surfaces_in_month(client: TestClient):
+    add = client.post(
+        "/api/transfer",
+        json={
+            "date": "2026-03-05",
+            "payee": "card autopay",
+            "from_account": "Assets:Cash:BankA",
+            "to_account": "Liabilities:CC:CardA",
+            "amount": 250.0,
+        },
+    )
+    assert add.status_code == 200
+    locator = f"id:{add.json()['id']}"
+
+    got = client.get("/api/transfer", params={"locator": locator}).json()
+    assert got["from_account"] == "Assets:Cash:BankA"
+    assert got["to_account"] == "Liabilities:CC:CardA"
+    assert got["amount"] == 250.0
+
+    transfers = client.get("/api/data").json()["months"]["2026-03"]["transfers"]
+    assert [t["payee"] for t in transfers] == ["card autopay"]
+
+
+def test_transfer_update_and_delete(client: TestClient):
+    add = client.post(
+        "/api/transfer",
+        json={
+            "date": "2026-03-05",
+            "from_account": "Assets:Cash:BankA",
+            "to_account": "Liabilities:CC:CardA",
+            "amount": 250.0,
+        },
+    )
+    locator = f"id:{add.json()['id']}"
+
+    upd = client.post(
+        "/api/transfer/update",
+        json={
+            "locator": locator,
+            "from_account": "Assets:Cash:BankB",
+            "to_account": "Liabilities:CC:CardA",
+            "amount": 300.0,
+        },
+    )
+    assert upd.status_code == 200
+    assert client.get("/api/transfer", params={"locator": locator}).json()["amount"] == 300.0
+
+    d = client.post("/api/transaction/delete", json={"locator": locator})
+    assert d.status_code == 200
+    assert client.get("/api/data").json()["months"].get("2026-03", {}).get("transfers", []) == []

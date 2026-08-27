@@ -152,6 +152,21 @@ class PaycheckUpdateIn(PaycheckIn):
     locator: str
 
 
+class TransferIn(BaseModel):
+    date: str | None = None
+    payee: str = "payment"
+    from_account: str
+    to_account: str
+    amount: float
+    pending: bool = False
+
+
+class TransferUpdateIn(TransferIn):
+    """An add body plus the locator of the transfer to replace."""
+
+    locator: str
+
+
 # --- read endpoints ---
 
 
@@ -279,6 +294,34 @@ def get_paycheck(locator: str) -> dict:
     with _api_errors():
         ledger = _ledger()
         return _paycheck_state(find_transaction(ledger.entries, locator), ledger)
+
+
+def _transfer_state(entry: data.Transaction) -> dict:
+    """Editable state of one transfer: from/to accounts and the amount moved."""
+    postings = _postings(entry)
+
+    if len(postings) != 2:
+        raise HTTPException(status_code=400, detail="not a two-leg transfer")
+
+    outflow, inflow = sorted(postings, key=lambda p: p[1])
+    if outflow[1] >= 0 or inflow[1] <= 0:
+        raise HTTPException(status_code=400, detail="not a transfer")
+
+    return {
+        "locator": entry_locator(entry),
+        "date": entry.date.isoformat(),
+        "payee": entry.payee or entry.narration or "payment",
+        "pending": entry.flag == "!",
+        "from_account": outflow[0],
+        "to_account": inflow[0],
+        "amount": float(inflow[1]),
+    }
+
+
+@app.get("/api/transfer")
+def get_transfer(locator: str) -> dict:
+    with _api_errors():
+        return _transfer_state(find_transaction(_ledger().entries, locator))
 
 
 @app.get("/api/pending")
@@ -455,6 +498,47 @@ def post_paycheck_update(body: PaycheckUpdateIn) -> dict:
         )
 
     return {"ok": True, "message": "updated paycheck", "id": entry_id}
+
+
+@app.post("/api/transfer")
+def post_transfer(body: TransferIn) -> dict:
+    with _api_errors():
+        _valid_name(body.from_account)
+        _valid_name(body.to_account)
+
+        entry_id = _sink().append_transfer(
+            date=_parse_date(body.date),
+            from_account=body.from_account,
+            to_account=body.to_account,
+            amount=_dec(body.amount),
+            payee=body.payee,
+            pending=body.pending,
+        )
+
+    return {
+        "ok": True,
+        "message": f"appended transfer {body.from_account} -> {body.to_account}",
+        "id": entry_id,
+    }
+
+
+@app.post("/api/transfer/update")
+def post_transfer_update(body: TransferUpdateIn) -> dict:
+    with _api_errors():
+        _valid_name(body.from_account)
+        _valid_name(body.to_account)
+
+        entry_id = _sink().update_transfer(
+            body.locator,
+            date=dt.date.fromisoformat(body.date) if body.date else None,
+            from_account=body.from_account,
+            to_account=body.to_account,
+            amount=_dec(body.amount),
+            payee=body.payee,
+            pending=body.pending,
+        )
+
+    return {"ok": True, "message": "updated transfer", "id": entry_id}
 
 
 class SPAStaticFiles(StaticFiles):

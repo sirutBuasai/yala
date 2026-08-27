@@ -12,3 +12,9 @@ export const lastCategory = writable<string>('');
 
 /** Last deposit account chosen in "Add paycheck" (e.g. "Assets:Cash:BankA"). */
 export const lastDepositAccount = writable<string>('');
+
+/** Last funding account paid from in "Add bill pay" (e.g. "Assets:Cash:BankA"). */
+export const lastTransferFrom = writable<string>('');
+
+/** Last account paid toward in "Add bill pay" (e.g. "Liabilities:CC:CardA"). */
+export const lastTransferTo = writable<string>('');

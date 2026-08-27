@@ -52,6 +52,14 @@ export type Net = number;
 export type TakeHome = number;
 export type Locator1 = string;
 export type Paychecks = PaycheckOut[];
+export type Date2 = string;
+export type Payee2 = string;
+export type Amount2 = number;
+export type FromAccount = string;
+export type ToAccount = string;
+export type Pending1 = boolean;
+export type Locator2 = string;
+export type Transfers = Transfer[];
 export type Year1 = number;
 export type Gross1 = number;
 export type Net1 = number;
@@ -171,6 +179,7 @@ export interface MonthPage {
 	by_category: ByCategory;
 	transactions: Transactions;
 	paychecks: Paychecks;
+	transfers?: Transfers;
 }
 /**
  * This interface was referenced by `DashboardData`'s JSON-Schema
@@ -206,6 +215,19 @@ export interface Deductions {
 }
 export interface Contributions {
 	[k: string]: number;
+}
+/**
+ * This interface was referenced by `DashboardData`'s JSON-Schema
+ * via the `definition` "Transfer".
+ */
+export interface Transfer {
+	date: Date2;
+	payee: Payee2;
+	amount: Amount2;
+	from_account: FromAccount;
+	to_account: ToAccount;
+	pending: Pending1;
+	locator: Locator2;
 }
 /**
  * This interface was referenced by `DashboardData`'s JSON-Schema

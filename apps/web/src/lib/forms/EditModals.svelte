@@ -1,11 +1,24 @@
+<script module lang="ts">
+	export type EntryKind = 'transaction' | 'paycheck' | 'transfer';
+
+	const KINDS: { value: EntryKind; label: string }[] = [
+		{ value: 'transaction', label: 'Transaction' },
+		{ value: 'paycheck', label: 'Paycheck' },
+		{ value: 'transfer', label: 'Bill pay' }
+	];
+</script>
+
 <script lang="ts">
-	// The add/edit transaction + paycheck modal set, shared by the Monthly and Calendar tabs so
-	// the four overlays and their open/close + after-save orchestration live in one place. The
-	// parent opens them imperatively (bind:this) and refreshes its data via `onsaved`.
+	// One Add overlay with a kind switcher (Transaction / Paycheck / Bill pay) plus per-type edit
+	// overlays. Shared by the Monthly and Calendar tabs, which open it imperatively (bind:this)
+	// and refresh their data via `onsaved`. Editing is always type-specific (a row is one kind),
+	// so only adding needs the switcher.
 	import type { AccountsInfo } from '$lib/data/load';
 	import Overlay from '$lib/overlay/Overlay.svelte';
+	import SegTabs from '$lib/forms/SegTabs.svelte';
 	import TransactionForm from '$lib/forms/TransactionForm.svelte';
 	import PaycheckForm from '$lib/forms/PaycheckForm.svelte';
+	import TransferForm from '$lib/forms/TransferForm.svelte';
 
 	interface Props {
 		accounts: AccountsInfo | null;
@@ -13,65 +26,66 @@
 		onsaved: () => void;
 		/** Add-mode date preset (e.g. the calendar day clicked). */
 		presetDate?: string;
-		addTxnTitle?: string;
-		addPayTitle?: string;
+		addTitle?: string;
 	}
-	let {
-		accounts,
-		onsaved,
-		presetDate,
-		addTxnTitle = 'Add transaction',
-		addPayTitle = 'Add paycheck'
-	}: Props = $props();
+	let { accounts, onsaved, presetDate, addTitle = 'Add entry' }: Props = $props();
 
 	let showAdd = $state(false);
-	let showPaycheck = $state(false);
-	let editingLocator = $state<string | null>(null);
+	let addKind = $state<EntryKind>('transaction');
+	let editingTxn = $state<string | null>(null);
 	let editingPaycheck = $state<string | null>(null);
+	let editingTransfer = $state<string | null>(null);
 
-	// Imperative openers — the parent calls these from its trigger buttons / row clicks.
-	export function addTransaction() {
+	export function add(kind: EntryKind = 'transaction') {
+		addKind = kind;
 		showAdd = true;
 	}
-	export function addPaycheck() {
-		showPaycheck = true;
-	}
 	export function editTransaction(locator: string) {
-		editingLocator = locator;
+		editingTxn = locator;
 	}
 	export function editPaycheck(locator: string) {
 		editingPaycheck = locator;
 	}
+	export function editTransfer(locator: string) {
+		editingTransfer = locator;
+	}
 
 	function afterSave() {
 		showAdd = false;
-		showPaycheck = false;
-		editingLocator = null;
+		editingTxn = null;
 		editingPaycheck = null;
+		editingTransfer = null;
 		onsaved();
 	}
 </script>
 
 {#if showAdd && accounts}
-	<Overlay title={addTxnTitle} onclose={() => (showAdd = false)}>
-		<TransactionForm {accounts} {presetDate} onsaved={afterSave} />
+	<Overlay title={addTitle} onclose={() => (showAdd = false)}>
+		<SegTabs options={KINDS} bind:value={addKind} ariaLabel="Entry type" />
+		{#if addKind === 'transaction'}
+			<TransactionForm {accounts} {presetDate} onsaved={afterSave} />
+		{:else if addKind === 'paycheck'}
+			<PaycheckForm {accounts} {presetDate} onsaved={afterSave} />
+		{:else}
+			<TransferForm {accounts} {presetDate} onsaved={afterSave} />
+		{/if}
 	</Overlay>
 {/if}
 
-{#if showPaycheck && accounts}
-	<Overlay title={addPayTitle} onclose={() => (showPaycheck = false)}>
-		<PaycheckForm {accounts} {presetDate} onsaved={afterSave} />
-	</Overlay>
-{/if}
-
-{#if editingLocator && accounts}
-	<Overlay title="Edit transaction" onclose={() => (editingLocator = null)}>
-		<TransactionForm locator={editingLocator} {accounts} onsaved={afterSave} />
+{#if editingTxn && accounts}
+	<Overlay title="Edit transaction" onclose={() => (editingTxn = null)}>
+		<TransactionForm locator={editingTxn} {accounts} onsaved={afterSave} />
 	</Overlay>
 {/if}
 
 {#if editingPaycheck && accounts}
 	<Overlay title="Edit paycheck" onclose={() => (editingPaycheck = null)}>
 		<PaycheckForm locator={editingPaycheck} {accounts} onsaved={afterSave} />
+	</Overlay>
+{/if}
+
+{#if editingTransfer && accounts}
+	<Overlay title="Edit bill pay" onclose={() => (editingTransfer = null)}>
+		<TransferForm locator={editingTransfer} {accounts} onsaved={afterSave} />
 	</Overlay>
 {/if}

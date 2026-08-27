@@ -6,6 +6,7 @@
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import MonthNav from '$lib/nav/MonthNav.svelte';
 	import TransactionList from '$lib/lists/TransactionList.svelte';
+	import TransferList from '$lib/lists/TransferList.svelte';
 	import PaycheckList from '$lib/lists/PaycheckList.svelte';
 	import EditModals from '$lib/forms/EditModals.svelte';
 
@@ -42,6 +43,7 @@
 		iso: string;
 		txns: DashboardData['months'][string]['transactions'];
 		pays: DashboardData['months'][string]['paychecks'];
+		xfers: NonNullable<DashboardData['months'][string]['transfers']>;
 		spent: number;
 		income: number;
 		/** Up to 3 categories, ranked by that day's spend in each. */
@@ -58,6 +60,7 @@
 			const iso = `${key}-${String(d).padStart(2, '0')}`;
 			const txns = (md?.transactions ?? []).filter((t) => dayOf(t.date) === d);
 			const pays = (md?.paychecks ?? []).filter((p) => dayOf(p.date) === d);
+			const xfers = (md?.transfers ?? []).filter((t) => dayOf(t.date) === d);
 			const spent = txns.reduce((a, t) => a + t.amount, 0);
 			const income = pays.reduce((a, p) => a + p.net, 0);
 			// Rank the day's categories by total spend, show the top 3 as dots, and flag any extra.
@@ -66,8 +69,8 @@
 			const ranked = [...catTotals.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
 			const cats = ranked.slice(0, 3);
 			const more = ranked.length > 3;
-			const pending = txns.some((t) => t.pending);
-			out.push({ day: d, iso, txns, pays, spent, income, cats, more, pending });
+			const pending = txns.some((t) => t.pending) || xfers.some((t) => t.pending);
+			out.push({ day: d, iso, txns, pays, xfers, spent, income, cats, more, pending });
 		}
 		return out;
 	});
@@ -147,8 +150,7 @@
 				</div>
 				{#if edit}
 					<div class="dpactions">
-						<button class="btn-ghost" onclick={() => modals.addTransaction()}>+ Transaction</button>
-						<button class="btn-ghost" onclick={() => modals.addPaycheck()}>+ Paycheck</button>
+						<button class="btn-ghost" onclick={() => modals.add()}>+ Add entry</button>
 					</div>
 				{/if}
 			</div>
@@ -170,9 +172,21 @@
 					onedit={(l) => modals.editTransaction(l)}
 					showDate={false}
 				/>
-			{:else if !selected.pays.length}
+			{/if}
+
+			{#if selected.xfers.length}
+				{#if selected.pays.length || selectedTxns.length}<div class="daydiv"></div>{/if}
+				<TransferList
+					transfers={selected.xfers}
+					{edit}
+					onedit={(l) => modals.editTransfer(l)}
+					showDate={false}
+				/>
+			{/if}
+
+			{#if !selected.pays.length && !selectedTxns.length && !selected.xfers.length}
 				<p class="note">
-					No activity this day.{#if edit}&nbsp;Add a transaction or paycheck above.{/if}
+					No activity this day.{#if edit}&nbsp;Add an entry above.{/if}
 				</p>
 			{/if}
 		{/if}
@@ -184,8 +198,7 @@
 	{accounts}
 	{onsaved}
 	presetDate={selected?.iso}
-	addTxnTitle={selected ? `Add transaction · ${MONTHS[mm - 1]} ${selected.day}` : 'Add transaction'}
-	addPayTitle={selected ? `Add paycheck · ${MONTHS[mm - 1]} ${selected.day}` : 'Add paycheck'}
+	addTitle={selected ? `Add entry · ${MONTHS[mm - 1]} ${selected.day}` : 'Add entry'}
 />
 
 <style>

@@ -128,6 +128,22 @@ class LedgerSink(ABC):
         """Replace an existing spending directive in place, preserving/assigning its id."""
 
     @abstractmethod
+    def append_transfer(
+        self,
+        date: dt.date,
+        from_account: str,
+        to_account: str,
+        amount: Decimal,
+        payee: str = "payment",
+        pending: bool = False,
+    ) -> str:
+        """Append one transfer directive (from_account − amount, to_account + amount)."""
+
+    @abstractmethod
+    def update_transfer(self, locator: str, **new_state) -> str:
+        """Replace an existing transfer directive in place, preserving/assigning its id."""
+
+    @abstractmethod
     def delete_transaction(self, locator: str) -> None:
         """Remove the located directive (spending or paycheck) from its source file."""
 
@@ -428,6 +444,93 @@ class FileLedgerSink(LedgerSink):
         )
         return entry_id
 
+    def _transfer_entry(
+        self,
+        *,
+        date: dt.date,
+        payee: str,
+        from_account: str,
+        to_account: str,
+        amount: Decimal,
+        entry_id: str,
+        flag: str = "*",
+        narration: str | None = None,
+        tags=(),
+        links=(),
+        extra_meta: dict | None = None,
+    ) -> data.Transaction:
+        """Build a balanced transfer ``Transaction``: amount out of ``from_account`` into
+        ``to_account`` (no Expenses/Income legs, so it's neither spending nor income)."""
+        amt = round_cents(amount)
+        self._assert_accounts_active(date, [from_account, to_account])
+
+        meta: dict = {"id": entry_id}
+        if extra_meta:
+            meta.update(extra_meta)
+
+        postings = [_posting(to_account, amt), _posting(from_account, -amt)]
+
+        return data.Transaction(
+            meta, date, flag, payee, narration, frozenset(tags), frozenset(links), postings
+        )
+
+    def append_transfer(
+        self,
+        date: dt.date,
+        from_account: str,
+        to_account: str,
+        amount: Decimal,
+        payee: str = "payment",
+        pending: bool = False,
+    ) -> str:
+        entry_id = str(uuid.uuid4())
+        entry = self._transfer_entry(
+            date=date,
+            payee=payee,
+            from_account=from_account,
+            to_account=to_account,
+            amount=Decimal(amount),
+            entry_id=entry_id,
+            flag="!" if pending else "*",
+        )
+        self._append(
+            "transfers", date.year, f"; Transfers for {date.year}", printer.format_entry(entry)
+        )
+
+        return entry_id
+
+    def update_transfer(
+        self,
+        locator: str,
+        *,
+        from_account: str,
+        to_account: str,
+        amount: Decimal,
+        date: dt.date | None = None,
+        payee: str = "payment",
+        pending: bool = False,
+    ) -> str:
+        entry, entry_id, carried, resolved_date = self._locate_for_update(locator, date)
+
+        new_entry = self._transfer_entry(
+            date=resolved_date,
+            payee=payee,
+            from_account=from_account,
+            to_account=to_account,
+            amount=Decimal(amount),
+            entry_id=entry_id,
+            flag="!" if pending else "*",
+            narration=entry.narration,
+            tags=entry.tags or (),
+            links=entry.links or (),
+            extra_meta=carried,
+        )
+        self._replace_located(
+            entry, resolved_date, printer.format_entry(new_entry), "transfers", locator
+        )
+
+        return entry_id
+
     def _entry_span(
         self, entry: data.Transaction, locator: str
     ) -> tuple[Path, str, list[str], int, int]:
@@ -482,6 +585,7 @@ class FileLedgerSink(LedgerSink):
             headers = {
                 "spending": f"; Spending transactions for {resolved_date.year}",
                 "income": f"; Income for {resolved_date.year}",
+                "transfers": f"; Transfers for {resolved_date.year}",
             }
             _atomic_write(path, "".join(lines[:begin] + lines[end:]))  # drop from the old file
 

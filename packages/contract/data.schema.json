@@ -266,6 +266,14 @@
           },
           "title": "Paychecks",
           "type": "array"
+        },
+        "transfers": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Transfer"
+          },
+          "title": "Transfers",
+          "type": "array"
         }
       },
       "required": [
@@ -375,6 +383,50 @@
         "locator"
       ],
       "title": "PaycheckOut",
+      "type": "object"
+    },
+    "Transfer": {
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "title": "Date",
+          "type": "string"
+        },
+        "payee": {
+          "title": "Payee",
+          "type": "string"
+        },
+        "amount": {
+          "title": "Amount",
+          "type": "number"
+        },
+        "from_account": {
+          "title": "From Account",
+          "type": "string"
+        },
+        "to_account": {
+          "title": "To Account",
+          "type": "string"
+        },
+        "pending": {
+          "title": "Pending",
+          "type": "boolean"
+        },
+        "locator": {
+          "title": "Locator",
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "payee",
+        "amount",
+        "from_account",
+        "to_account",
+        "pending",
+        "locator"
+      ],
+      "title": "Transfer",
       "type": "object"
     },
     "Txn": {

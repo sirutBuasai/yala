@@ -29,6 +29,7 @@ from yala.schema import (
     MonthPage,
     Overview,
     PaycheckOut,
+    Transfer,
     Txn,
     YearPage,
     YearSpend,
@@ -51,6 +52,18 @@ def _paycheck_out(p: Paycheck) -> PaycheckOut:
         net=money(p.net),
         take_home=money(p.take_home),
         locator=p.locator,
+    )
+
+
+def _transfer_out(t) -> Transfer:
+    return Transfer(
+        date=t.date.isoformat(),
+        payee=t.payee,
+        amount=money(t.amount),
+        from_account=t.from_account,
+        to_account=t.to_account,
+        pending=t.pending,
+        locator=t.locator,
     )
 
 
@@ -122,7 +135,7 @@ def _years(spending, income, all_years) -> dict[str, YearPage]:
     return years
 
 
-def _months(spending, income, all_months) -> dict[str, MonthPage]:
+def _months(spending, income, transfers, all_months) -> dict[str, MonthPage]:
     months: dict[str, MonthPage] = {}
 
     for y, m in all_months:
@@ -153,6 +166,7 @@ def _months(spending, income, all_months) -> dict[str, MonthPage]:
             by_category=by_category,
             transactions=txns,
             paychecks=[_paycheck_out(p) for p in income.paychecks(y, m)],
+            transfers=[_transfer_out(t) for t in transfers.transactions(y, m)],
         )
 
     return months
@@ -182,11 +196,16 @@ def build(ledger: Ledger) -> DashboardData:
     """Query the ledger and validate / construct the dashboard contract."""
     spending = ledger.spending
     income = ledger.income
+    transfers = ledger.transfers
 
     categories = spending.categories()
+    all_transfers = transfers.transactions()
     income_months = {(p.date.year, p.date.month) for p in income.paychecks()}
-    all_months = sorted(set(spending.months()) | income_months)
-    all_years = sorted(set(spending.years()) | set(income.years()))
+    transfer_months = {(t.date.year, t.date.month) for t in all_transfers}
+    all_months = sorted(set(spending.months()) | income_months | transfer_months)
+    all_years = sorted(
+        set(spending.years()) | set(income.years()) | {t.date.year for t in all_transfers}
+    )
 
     return DashboardData(
         schema_version=1,
@@ -195,7 +214,7 @@ def build(ledger: Ledger) -> DashboardData:
         meta=_meta(spending, income, categories, all_years, all_months),
         overview=_overview(spending, income, categories, all_years),
         years=_years(spending, income, all_years),
-        months=_months(spending, income, all_months),
+        months=_months(spending, income, transfers, all_months),
         income=_income(income),
     )
 

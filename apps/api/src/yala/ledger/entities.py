@@ -19,7 +19,10 @@ EXPENSES = "Expenses:"
 DEDUCTIONS = EXPENSES + "Deductions:"
 INCOME = "Income:"
 SALARY = INCOME + "Salary:"
-INVESTMENTS = "Assets:Investments:"
+ASSETS = "Assets:"
+LIABILITIES = "Liabilities:"
+EQUITY = "Equity:"
+INVESTMENTS = ASSETS + "Investments:"
 
 # Source-location keys beancount injects onto every directive's meta (not our data).
 INTERNAL_META = frozenset({"filename", "lineno"})

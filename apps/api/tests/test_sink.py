@@ -444,6 +444,86 @@ def test_open_account_adds_contribution_type(ledger_dir: Path):
     assert "Assets:Investments:Brokerage" in led.declared_accounts("Assets:Investments:")
 
 
+# --- transfers (bill pay) ---
+
+
+def test_append_transfer_lists_as_transfer_only(ledger_dir: Path):
+    tid = FileLedgerSink(ledger_dir).append_transfer(
+        date=dt.date(2026, 2, 15),
+        from_account="Assets:Cash:BankA",
+        to_account="Liabilities:CC:CardA",
+        amount=Decimal("250.00"),
+        payee="card autopay",
+    )
+    led = _loads_clean(ledger_dir)
+    xfers = led.transfers.transactions(2026, 2)
+
+    assert [t.locator for t in xfers] == [f"id:{tid}"]
+    assert xfers[0].from_account == "Assets:Cash:BankA"
+    assert xfers[0].to_account == "Liabilities:CC:CardA"
+    assert xfers[0].amount == Decimal("250.00")
+    # a transfer counts as neither spending nor income
+    assert all(s.payee != "card autopay" for s in led.spending.transactions())
+    assert all(p.payee != "card autopay" for p in led.income.paychecks())
+
+
+def test_update_transfer_in_place(ledger_dir: Path):
+    sink = FileLedgerSink(ledger_dir)
+    tid = sink.append_transfer(
+        date=dt.date(2026, 2, 15),
+        from_account="Assets:Cash:BankA",
+        to_account="Liabilities:CC:CardA",
+        amount=Decimal("250.00"),
+    )
+    new_id = sink.update_transfer(
+        f"id:{tid}",
+        from_account="Assets:Cash:BankB",
+        to_account="Liabilities:CC:CardA",
+        amount=Decimal("300.00"),
+    )
+
+    assert new_id == tid
+    t = _loads_clean(ledger_dir).transfers.transactions(2026, 2)[0]
+    assert t.from_account == "Assets:Cash:BankB"
+    assert t.amount == Decimal("300.00")
+
+
+def test_update_transfer_across_year_relocates(ledger_dir: Path):
+    sink = FileLedgerSink(ledger_dir)
+    tid = sink.append_transfer(
+        date=dt.date(2026, 2, 15),
+        from_account="Assets:Cash:BankA",
+        to_account="Liabilities:CC:CardA",
+        amount=Decimal("250.00"),
+    )
+    sink.update_transfer(
+        f"id:{tid}",
+        from_account="Assets:Cash:BankA",
+        to_account="Liabilities:CC:CardA",
+        amount=Decimal("250.00"),
+        date=dt.date(2027, 1, 3),
+    )
+    led = _loads_clean(ledger_dir)
+
+    assert led.transfers.transactions(2026, 2) == []
+    moved = led.transfers.transactions(2027, 1)
+    assert len(moved) == 1 and moved[0].locator == f"id:{tid}"
+    assert 'include "transfers/2027.beancount"' in (ledger_dir / "transfers.beancount").read_text()
+
+
+def test_delete_transfer(ledger_dir: Path):
+    sink = FileLedgerSink(ledger_dir)
+    tid = sink.append_transfer(
+        date=dt.date(2026, 2, 15),
+        from_account="Assets:Cash:BankA",
+        to_account="Liabilities:CC:CardA",
+        amount=Decimal("250.00"),
+    )
+    sink.delete_transaction(f"id:{tid}")
+
+    assert _loads_clean(ledger_dir).transfers.transactions() == []
+
+
 # --- delete ---
 
 

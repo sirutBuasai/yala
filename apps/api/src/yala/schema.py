@@ -95,6 +95,16 @@ class Txn(_Base):
     bill: float | None = None  # pre-reimbursement total when the txn was split
 
 
+class Transfer(_Base):
+    date: str  # "YYYY-MM-DD"
+    payee: str
+    amount: float  # magnitude moved
+    from_account: str
+    to_account: str
+    pending: bool
+    locator: str
+
+
 class PaycheckOut(_Base):
     date: str
     payee: str
@@ -113,6 +123,7 @@ class MonthPage(_Base):
     by_category: list[CategoryAmount]
     transactions: list[Txn]
     paychecks: list[PaycheckOut]
+    transfers: list[Transfer] = []
 
 
 class IncomeYear(_Base):

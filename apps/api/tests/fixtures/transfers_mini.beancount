@@ -1,0 +1,40 @@
+option "operating_currency" "USD"
+
+2020-01-01 commodity USD
+2020-01-01 open Assets:Cash:BankA USD
+2020-01-01 open Assets:Cash:Venmo USD
+2020-01-01 open Liabilities:CC:CardA USD
+2020-01-01 open Income:Salary USD
+2020-01-01 open Expenses:Grocery USD
+2020-01-01 open Equity:Opening-Balances
+
+; bill payment (bank -> credit card): a transfer
+2025-08-05 * "card autopay"
+  Assets:Cash:BankA      -250.00 USD
+  Liabilities:CC:CardA    250.00 USD
+
+; cash sweep (bank -> venmo): a transfer
+2025-08-06 * "venmo sweep"
+  Assets:Cash:BankA       -30.00 USD
+  Assets:Cash:Venmo        30.00 USD
+
+; paycheck (has an Income leg): not a transfer
+2025-08-07 * "employer"
+  Income:Salary         -1000.00 USD
+  Assets:Cash:BankA      1000.00 USD
+
+; spending (has an Expenses leg): not a transfer
+2025-08-08 * "grocery"
+  Expenses:Grocery         40.00 USD
+  Liabilities:CC:CardA    -40.00 USD
+
+; opening-balance move (touches Equity): not a transfer
+2025-08-09 * "seed"
+  Assets:Cash:BankA        500.00 USD
+  Equity:Opening-Balances -500.00 USD
+
+; three-leg move: excluded (only simple two-leg transfers)
+2025-08-10 * "split move"
+  Assets:Cash:BankA      -100.00 USD
+  Assets:Cash:Venmo        60.00 USD
+  Liabilities:CC:CardA     40.00 USD

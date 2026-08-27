@@ -9,7 +9,7 @@
 	import Select from '$lib/forms/Select.svelte';
 	import DatePicker from '$lib/forms/DatePicker.svelte';
 	import LineColumn, { type AmountRow } from '$lib/forms/LineColumn.svelte';
-	import DeleteConfirm from '$lib/forms/DeleteConfirm.svelte';
+	import EntryFooter from '$lib/forms/EntryFooter.svelte';
 
 	interface Props {
 		accounts: AccountsInfo;
@@ -190,20 +190,20 @@
 	/>
 </div>
 
-<div class="foot">
-	<span class="takehome">Take-home: <b>{money(takeHome)}</b></span>
-	<div class="right">
-		{#if msg}<span class="edit-msg" class:err>{msg}</span>{/if}
-		{#if editing}
-			<div class="actions">
-				<button class="btn-primary" onclick={submit}>Save changes</button>
-				<DeleteConfirm label="Delete paycheck" question="Delete this paycheck?" ondelete={del} />
-			</div>
-		{:else}
-			<button class="btn-primary" onclick={submit}>+ Add paycheck</button>
-		{/if}
-	</div>
-</div>
+<EntryFooter
+	{editing}
+	{msg}
+	{err}
+	addLabel="+ Add paycheck"
+	deleteLabel="Delete paycheck"
+	deleteQuestion="Delete this paycheck?"
+	onsubmit={submit}
+	ondelete={del}
+>
+	{#snippet summary()}
+		<span class="takehome">Take-home: <b>{money(takeHome)}</b></span>
+	{/snippet}
+</EntryFooter>
 
 <style>
 	.editrow {
@@ -220,25 +220,6 @@
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		gap: var(--gap-section);
-	}
-	.foot {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-top: var(--gap-grid);
-		gap: var(--gap-grid);
-	}
-	.right {
-		display: flex;
-		align-items: flex-start;
-		gap: var(--gap-grid);
-	}
-	/* Save changes and Delete stack, so Delete sits directly beneath Save (same width). */
-	.actions {
-		display: flex;
-		flex-direction: column;
-		align-items: stretch;
-		gap: var(--gap-row);
 	}
 	.takehome {
 		color: var(--ink-2);

@@ -10,6 +10,7 @@
 	import MonthNav from '$lib/nav/MonthNav.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
 	import TransactionList, { TXN_SORTS, type TxnSort } from '$lib/lists/TransactionList.svelte';
+	import TransferList from '$lib/lists/TransferList.svelte';
 	import SortMenu from '$lib/lists/SortMenu.svelte';
 	import PaycheckList from '$lib/lists/PaycheckList.svelte';
 	import PendingQueue from '$lib/lists/PendingQueue.svelte';
@@ -67,8 +68,7 @@
 		<div class="ephead">
 			<h2 class="serif">Edit · {monthLabel(monthKey)}</h2>
 			<div class="epactions">
-				<button class="btn-ghost" onclick={() => modals.addTransaction()}>+ Add transaction</button>
-				<button class="btn-ghost" onclick={() => modals.addPaycheck()}>+ Add paycheck</button>
+				<button class="btn-ghost" onclick={() => modals.add()}>+ Add entry</button>
 			</div>
 		</div>
 		<PendingQueue {refreshKey} onedit={(l) => modals.editTransaction(l)} />
@@ -121,6 +121,14 @@
 		{/if}
 	</Pane>
 </div>
+
+{#if md?.transfers?.length}
+	<div class="panes">
+		<Pane title="Bill pay & transfers" cap={`${md.transfers.length} · ${monthLabel(monthKey)}`}>
+			<TransferList transfers={md.transfers} {edit} onedit={(l) => modals.editTransfer(l)} />
+		</Pane>
+	</div>
+{/if}
 
 <EditModals bind:this={modals} {accounts} onsaved={onSaved} />
 

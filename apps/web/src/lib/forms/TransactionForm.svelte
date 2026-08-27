@@ -9,7 +9,7 @@
 	import AccountField from '$lib/forms/AccountField.svelte';
 	import Credits, { type Credit } from '$lib/forms/Credits.svelte';
 	import DatePicker from '$lib/forms/DatePicker.svelte';
-	import DeleteConfirm from '$lib/forms/DeleteConfirm.svelte';
+	import EntryFooter from '$lib/forms/EntryFooter.svelte';
 
 	const FUNDING_KINDS = [
 		{ value: 'funding_credit', label: 'Credit card' },
@@ -177,24 +177,20 @@
 
 <Credits bind:credits creditAccounts={accounts.credit_accounts} />
 
-<div class="mfoot">
-	<span class="share">Your share: <b>{money(yourShare)}</b></span>
-	<div class="right">
-		{#if msg}<span class="edit-msg" class:err>{msg}</span>{/if}
-		{#if editing}
-			<div class="actions">
-				<button class="btn-primary" onclick={submit}>Save changes</button>
-				<DeleteConfirm
-					label="Delete transaction"
-					question="Delete this transaction?"
-					ondelete={del}
-				/>
-			</div>
-		{:else}
-			<button class="btn-primary" onclick={submit}>+ Add</button>
-		{/if}
-	</div>
-</div>
+<EntryFooter
+	{editing}
+	{msg}
+	{err}
+	addLabel="+ Add"
+	deleteLabel="Delete transaction"
+	deleteQuestion="Delete this transaction?"
+	onsubmit={submit}
+	ondelete={del}
+>
+	{#snippet summary()}
+		<span class="share">Your share: <b>{money(yourShare)}</b></span>
+	{/snippet}
+</EntryFooter>
 
 <style>
 	.editrow {
@@ -211,25 +207,6 @@
 		align-items: center;
 		gap: var(--gap-inline);
 		padding-bottom: var(--gap-row);
-	}
-	.mfoot {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		gap: var(--gap-grid);
-		margin-top: var(--space-8);
-	}
-	.right {
-		display: flex;
-		align-items: flex-start;
-		gap: var(--gap-grid);
-	}
-	/* Save changes and Delete stack, so Delete sits directly beneath Save (same width). */
-	.actions {
-		display: flex;
-		flex-direction: column;
-		align-items: stretch;
-		gap: var(--gap-row);
 	}
 	.share {
 		color: var(--ink-2);

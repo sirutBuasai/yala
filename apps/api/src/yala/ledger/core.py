@@ -21,6 +21,7 @@ from yala.ledger.entities import INTERNAL_META, Posting, Transaction
 if TYPE_CHECKING:
     from yala.ledger.income import Income
     from yala.ledger.spending import Spending
+    from yala.ledger.transfers import Transfers
 
 
 class LedgerError(Exception):
@@ -179,3 +180,9 @@ class Ledger:
         from yala.ledger.income import Income
 
         return Income(self)
+
+    @property
+    def transfers(self) -> "Transfers":
+        from yala.ledger.transfers import Transfers
+
+        return Transfers(self)
