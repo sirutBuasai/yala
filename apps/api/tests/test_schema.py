@@ -38,9 +38,6 @@ def example_data() -> DashboardData:
             domains=Domains(
                 spending=True,
                 income=True,
-                networth=False,
-                investments=False,
-                cards=False,
             ),
         ),
         overview=Overview(

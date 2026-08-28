@@ -24,10 +24,7 @@ export function makeData(): DashboardData {
 			categories: ['Grocery', 'Takeouts'],
 			domains: {
 				spending: true,
-				income: true,
-				networth: false,
-				investments: false,
-				cards: false
+				income: true
 			}
 		},
 		overview: {
@@ -121,9 +118,6 @@ export function makeData(): DashboardData {
 					locator: 'id:pc-1'
 				}
 			]
-		},
-		networth: null,
-		investments: null,
-		cards: []
+		}
 	};
 }

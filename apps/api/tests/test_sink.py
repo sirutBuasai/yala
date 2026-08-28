@@ -519,7 +519,7 @@ def test_delete_transfer(ledger_dir: Path):
         to_account="Liabilities:CC:CardA",
         amount=Decimal("250.00"),
     )
-    sink.delete_transaction(f"id:{tid}")
+    sink.delete_entry(f"id:{tid}")
 
     assert _loads_clean(ledger_dir).transfers.transactions() == []
 
@@ -539,7 +539,7 @@ def test_delete_spending_transaction_by_id(ledger_dir: Path):
     before = _loads_clean(ledger_dir).spending.count()
     assert [t for t in _loads_clean(ledger_dir).spending.transactions() if t.payee == "delete me"]
 
-    sink.delete_transaction(f"id:{entry_id}")
+    sink.delete_entry(f"id:{entry_id}")
 
     led = _loads_clean(ledger_dir)
     assert led.spending.count() == before - 1
@@ -551,7 +551,7 @@ def test_delete_paycheck_by_locator(ledger_dir: Path):
     paycheck = led.income.paychecks(2025, 8)[0]
     net_before = led.income.net(2025)
 
-    FileLedgerSink(ledger_dir).delete_transaction(paycheck.locator)
+    FileLedgerSink(ledger_dir).delete_entry(paycheck.locator)
 
     led2 = _loads_clean(ledger_dir)
     assert led2.income.paychecks(2025, 8) == []
@@ -563,7 +563,7 @@ def test_delete_unknown_locator_raises_and_leaves_files_intact(ledger_dir: Path)
     before = target.read_bytes()
 
     with pytest.raises(KeyError):
-        FileLedgerSink(ledger_dir).delete_transaction("id:does-not-exist")
+        FileLedgerSink(ledger_dir).delete_entry("id:does-not-exist")
 
     assert target.read_bytes() == before
     _loads_clean(ledger_dir)
@@ -699,7 +699,7 @@ def test_update_raises_on_stale_line_locator(ledger_dir: Path, monkeypatch):
     fitness = txns["Example Gym"]
     # boba resolved, but pointed at fitness's line -> stale locator.
     stale = boba._replace(meta={**boba.meta, "lineno": fitness.meta["lineno"]})
-    monkeypatch.setattr(sink_mod, "find_transaction", lambda entries, locator: stale)
+    monkeypatch.setattr(sink_mod, "find_entry", lambda entries, locator: stale)
 
     target = ledger_dir / "spending" / "2026.beancount"
     before = target.read_bytes()

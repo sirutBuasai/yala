@@ -17,6 +17,7 @@ from pathlib import Path
 
 from yala.ledger import Ledger
 from yala.ledger.income import Paycheck
+from yala.money import money
 from yala.schema import (
     CategoryAmount,
     DashboardData,
@@ -33,12 +34,26 @@ from yala.schema import (
     Txn,
     YearPage,
     YearSpend,
-    money,
 )
+
+# The frontend reads its data snapshot from apps/web/static/data.json, which the vite build
+# copies into apps/web/build/. Writing straight there means no intermediate build/ dir to copy.
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+_DEFAULT_OUT = _REPO_ROOT / "apps" / "web" / "static" / "data.json"
 
 
 def _now_rfc3339() -> str:
     return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def year_key(year: int) -> str:
+    """The ``"YYYY"`` key the contract uses for a year page."""
+    return f"{year:04d}"
+
+
+def month_key(year: int, month: int) -> str:
+    """The ``"YYYY-MM"`` key the contract uses for a month page."""
+    return f"{year:04d}-{month:02d}"
 
 
 def _paycheck_out(p: Paycheck) -> PaycheckOut:
@@ -72,7 +87,7 @@ def _meta(spending, income, categories, all_years, all_months) -> Meta:
 
     return Meta(
         years=all_years,
-        month_keys=[f"{y:04d}-{m:02d}" for y, m in all_months],
+        month_keys=[month_key(y, m) for y, m in all_months],
         transaction_count=spending.count(),
         date_range=(
             DateRange(start=date_range[0].isoformat(), end=date_range[1].isoformat())
@@ -83,9 +98,6 @@ def _meta(spending, income, categories, all_years, all_months) -> Meta:
         domains=Domains(
             spending=spending.count() > 0,
             income=len(income.paychecks()) > 0,
-            networth=False,
-            investments=False,
-            cards=False,
         ),
     )
 
@@ -126,7 +138,7 @@ def _years(spending, income, all_years) -> dict[str, YearPage]:
                 )
             )
 
-        years[f"{y:04d}"] = YearPage(
+        years[year_key(y)] = YearPage(
             total_spent=money(spending.total(y)),
             total_income=money(income.net(y)),
             matrix=matrix,
@@ -160,7 +172,7 @@ def _months(spending, income, transfers, all_months) -> dict[str, MonthPage]:
             for t in spending.transactions(y, m)
         ]
 
-        months[f"{y:04d}-{m:02d}"] = MonthPage(
+        months[month_key(y, m)] = MonthPage(
             total_spent=money(spending.total(y, m)),
             total_income=money(income.net(y, m)),
             by_category=by_category,
@@ -187,7 +199,7 @@ def _income(income) -> IncomeSection:
             )
             for y in income.years()
         ],
-        by_month={f"{y:04d}": [money(v) for v in income.by_month(y)] for y in income.years()},
+        by_month={year_key(y): [money(v) for v in income.by_month(y)] for y in income.years()},
         recent_paychecks=[_paycheck_out(p) for p in recent],
     )
 
@@ -222,12 +234,6 @@ def build(ledger: Ledger) -> DashboardData:
 def build_dict() -> dict:
     """Live rebuild from the configured ledger, as a JSON-serializable dict (for the API)."""
     return build(Ledger().load()).model_dump(mode="json")
-
-
-# The frontend reads its data snapshot from apps/web/static/data.json, which the vite build
-# copies into apps/web/build/. Writing straight there means no intermediate build/ dir to copy.
-_REPO_ROOT = Path(__file__).resolve().parents[4]
-_DEFAULT_OUT = _REPO_ROOT / "apps" / "web" / "static" / "data.json"
 
 
 def main(argv: list[str] | None = None) -> None:

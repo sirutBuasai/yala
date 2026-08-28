@@ -45,9 +45,6 @@ def test_domains_flags():
     dm = _data().meta.domains
     assert dm.spending is True
     assert dm.income is True
-    assert dm.networth is False
-    assert dm.investments is False
-    assert dm.cards is False
 
 
 def test_matrix_has_twelve_rows():
@@ -105,13 +102,6 @@ def test_income_helper_independently():
     assert len(section.recent_paychecks) == len(income.paychecks())
     dates = [p.date for p in section.recent_paychecks]
     assert dates == sorted(dates, reverse=True)
-
-
-def test_reserved_sections_empty():
-    d = _data()
-    assert d.networth is None
-    assert d.investments is None
-    assert d.cards == []
 
 
 def test_income_only_month_still_produces_a_month_page():

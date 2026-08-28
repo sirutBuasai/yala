@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from yala.ledger.entities import INCOME
+from yala.ledger.constants import INCOME
 from yala.ledger.payroll import summarize_paycheck
 
 if TYPE_CHECKING:

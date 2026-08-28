@@ -49,26 +49,11 @@
         "income": {
           "title": "Income",
           "type": "boolean"
-        },
-        "networth": {
-          "title": "Networth",
-          "type": "boolean"
-        },
-        "investments": {
-          "title": "Investments",
-          "type": "boolean"
-        },
-        "cards": {
-          "title": "Cards",
-          "type": "boolean"
         }
       },
       "required": [
         "spending",
-        "income",
-        "networth",
-        "investments",
-        "cards"
+        "income"
       ],
       "title": "Domains",
       "type": "object"
@@ -146,13 +131,6 @@
         "contributions"
       ],
       "title": "IncomeYear",
-      "type": "object"
-    },
-    "InvestmentsSection": {
-      "additionalProperties": true,
-      "description": "Reserved: broker holdings / gain-loss. Empty in v1.",
-      "properties": {},
-      "title": "InvestmentsSection",
       "type": "object"
     },
     "Meta": {
@@ -284,13 +262,6 @@
         "paychecks"
       ],
       "title": "MonthPage",
-      "type": "object"
-    },
-    "NetWorthSection": {
-      "additionalProperties": true,
-      "description": "Reserved: derived assets \u2212 liabilities over time. Empty in v1.",
-      "properties": {},
-      "title": "NetWorthSection",
       "type": "object"
     },
     "Overview": {
@@ -586,34 +557,6 @@
     },
     "income": {
       "$ref": "#/$defs/IncomeSection"
-    },
-    "networth": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/NetWorthSection"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null
-    },
-    "investments": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/InvestmentsSection"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null
-    },
-    "cards": {
-      "default": [],
-      "items": {},
-      "title": "Cards",
-      "type": "array"
     }
   },
   "required": [

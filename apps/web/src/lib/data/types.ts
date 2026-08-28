@@ -16,9 +16,6 @@ export type End = string;
 export type Categories = string[];
 export type Spending = boolean;
 export type Income = boolean;
-export type Networth = boolean;
-export type Investments = boolean;
-export type Cards = boolean;
 export type Year = number;
 export type Spent = number;
 export type Income1 = number;
@@ -68,7 +65,6 @@ export type Deductions1 = number;
 export type Contributions1 = number;
 export type ByYear1 = IncomeYear[];
 export type RecentPaychecks = PaycheckOut[];
-export type Cards1 = unknown[];
 
 export interface DashboardData {
 	schema_version: SchemaVersion;
@@ -79,9 +75,6 @@ export interface DashboardData {
 	years: Years1;
 	months: Months;
 	income: IncomeSection;
-	networth?: NetWorthSection | null;
-	investments?: InvestmentsSection | null;
-	cards?: Cards1;
 }
 /**
  * This interface was referenced by `DashboardData`'s JSON-Schema
@@ -112,9 +105,6 @@ export interface DateRange {
 export interface Domains {
 	spending: Spending;
 	income: Income;
-	networth: Networth;
-	investments: Investments;
-	cards: Cards;
 }
 /**
  * This interface was referenced by `DashboardData`'s JSON-Schema
@@ -252,22 +242,4 @@ export interface IncomeYear {
 }
 export interface ByMonth {
 	[k: string]: number[];
-}
-/**
- * Reserved: derived assets − liabilities over time. Empty in v1.
- *
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "NetWorthSection".
- */
-export interface NetWorthSection {
-	[k: string]: unknown;
-}
-/**
- * Reserved: broker holdings / gain-loss. Empty in v1.
- *
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "InvestmentsSection".
- */
-export interface InvestmentsSection {
-	[k: string]: unknown;
 }

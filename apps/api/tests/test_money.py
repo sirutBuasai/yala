@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from yala.money import round_cents
-from yala.schema import money
+from yala.money import money, round_cents
 
 
 def test_round_cents_uses_bankers_rounding():

@@ -9,67 +9,16 @@ derivations (a spending category, an expense amount) live in the domain modules,
 from __future__ import annotations
 
 import datetime as dt
-import os
 from dataclasses import dataclass, field
 from decimal import Decimal
 
-from yala import config
-
-EXPENSES = "Expenses:"
-DEDUCTIONS = EXPENSES + "Deductions:"
-INCOME = "Income:"
-SALARY = INCOME + "Salary:"
-ASSETS = "Assets:"
-LIABILITIES = "Liabilities:"
-EQUITY = "Equity:"
-INVESTMENTS = ASSETS + "Investments:"
-
-# Source-location keys beancount injects onto every directive's meta (not our data).
-INTERNAL_META = frozenset({"filename", "lineno"})
-RETIRED_META = frozenset({"src"})  # spreadsheet-import artifact, dropped on edit
-MANAGED_META = frozenset({"id", "funding", "bill"})  # we always (re)compute these
-# Meta keys we never carry forward onto an edited entry (recomputed or internal).
-DROPPED_META = INTERNAL_META | RETIRED_META | MANAGED_META
+from yala.ledger.constants import EXPENSES
+from yala.ledger.locators import locator_of
 
 
 def leaf(account: str) -> str:
-    """The last segment of an account path."""
+    """The last segment of an account path (e.g. ``Assets:Cash:BofA`` → ``BofA``)."""
     return account.split(":")[-1]
-
-
-def ledger_relative(filename: str) -> str:
-    """A ledger-relative path, so a private absolute path never leaks into ``data.json``.
-
-    beancount stamps entries with the absolute source path; emitting that verbatim in a
-    ``line:`` locator would embed e.g. ``/Users/<owner>/.../ledger`` in the public snapshot.
-    Falls back to the original path when it can't be made relative (outside the ledger dir,
-    or a different drive on Windows)."""
-    base = str(config.LEDGER_DIR)
-    try:
-        rel = os.path.relpath(filename, base)
-        if not rel.startswith(".."):
-            return rel
-
-        # A lexical relpath breaks when the paths differ only by a symlink (e.g. a macOS temp
-        # dir surfacing as both /var and /private/var); retry against the canonical paths.
-        rel = os.path.relpath(os.path.realpath(filename), os.path.realpath(base))
-    except ValueError:
-        return filename
-
-    return filename if rel.startswith("..") else rel
-
-
-def locator_of(meta: dict | None) -> str:
-    """Stable edit handle from an entry's meta: ``id:<uuid>`` if present, else
-    ``line:<ledger-relative-path>:<lineno>``. Shared by the entity view and the raw-entry
-    sink helpers."""
-    meta = meta or {}
-    uid = meta.get("id")
-
-    if uid:
-        return f"id:{uid}"
-
-    return f"line:{ledger_relative(meta['filename'])}:{meta['lineno']}"
 
 
 @dataclass

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from yala.ledger.entities import ASSETS, LIABILITIES
+from yala.ledger.constants import ASSETS, LIABILITIES
 
 if TYPE_CHECKING:
     from yala.ledger.core import Ledger

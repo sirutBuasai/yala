@@ -16,7 +16,8 @@ from beancount import loader
 from beancount.core import data
 
 from yala import config
-from yala.ledger.entities import INTERNAL_META, Posting, Transaction
+from yala.ledger.constants import INTERNAL_META
+from yala.ledger.entities import Posting, Transaction
 
 if TYPE_CHECKING:
     from yala.ledger.income import Income

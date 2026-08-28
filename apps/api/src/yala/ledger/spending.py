@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from yala.ledger.entities import DEDUCTIONS, EXPENSES
+from yala.ledger.constants import DEDUCTIONS, EXPENSES
 
 if TYPE_CHECKING:
     from yala.ledger.core import Ledger

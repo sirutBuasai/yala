@@ -5,12 +5,9 @@ Additive changes keep ``SCHEMA_VERSION`` stable; breaking changes bump it.
 
 from __future__ import annotations
 
-from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
-
-from yala.money import round_cents
 
 SCHEMA_VERSION = 1
 
@@ -19,16 +16,6 @@ class _Base(BaseModel):
     """Base for every contract model: reject unknown keys so drift fails loudly."""
 
     model_config = ConfigDict(extra="forbid")
-
-
-class _ReservedSection(BaseModel):
-    """A future domain section, reserved and empty in v1.
-
-    Permissive (``extra="allow"``) so the section can be filled additively — a new domain adds
-    its fields and flips its ``meta.domains`` flag without a schema-version bump.
-    """
-
-    model_config = ConfigDict(extra="allow")
 
 
 class DateRange(_Base):
@@ -41,9 +28,6 @@ class Domains(_Base):
 
     spending: bool
     income: bool
-    networth: bool
-    investments: bool
-    cards: bool
 
 
 class Meta(_Base):
@@ -141,14 +125,6 @@ class IncomeSection(_Base):
     recent_paychecks: list[PaycheckOut]
 
 
-class NetWorthSection(_ReservedSection):
-    """Reserved: derived assets − liabilities over time. Empty in v1."""
-
-
-class InvestmentsSection(_ReservedSection):
-    """Reserved: broker holdings / gain-loss. Empty in v1."""
-
-
 class DashboardData(_Base):
     schema_version: Literal[1]
     generated_at: str  # RFC 3339 UTC
@@ -160,17 +136,7 @@ class DashboardData(_Base):
     months: dict[str, MonthPage]  # keyed "YYYY-MM"
     income: IncomeSection
 
-    # Reserved future domains
-    networth: NetWorthSection | None = None
-    investments: InvestmentsSection | None = None
-    cards: list = []
-
 
 def json_schema() -> dict:
     """The JSON Schema for the contract (the frontend codegens TS types from this)."""
     return DashboardData.model_json_schema()
-
-
-def money(value: Decimal | int | float) -> float:
-    """Normalize a ledger amount to a 2dp float (banker's rounding, via :mod:`yala.money`)."""
-    return float(round_cents(value))

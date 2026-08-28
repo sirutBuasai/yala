@@ -22,7 +22,8 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from yala.ledger.entities import DEDUCTIONS, INCOME, INVESTMENTS, SALARY, leaf
+from yala.ledger.constants import DEDUCTIONS, INCOME, INVESTMENTS, SALARY
+from yala.ledger.entities import leaf
 
 if TYPE_CHECKING:
     from yala.ledger.core import Ledger

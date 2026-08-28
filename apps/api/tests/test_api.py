@@ -584,3 +584,92 @@ def test_transfer_update_and_delete(client: TestClient):
     d = client.post("/api/transaction/delete", json={"locator": locator})
     assert d.status_code == 200
     assert client.get("/api/data").json()["months"].get("2026-03", {}).get("transfers", []) == []
+
+
+# --- request-body validation (pydantic → 422) ---
+
+
+def _txn_body(**overrides) -> dict:
+    body = {
+        "payee": "x",
+        "amount": 1.0,
+        "category": "Takeouts",
+        "funding_account": "Liabilities:CC:CardA",
+    }
+    body.update(overrides)
+    return body
+
+
+@pytest.mark.parametrize("bad_amount", [0, -5.0])
+def test_post_transaction_non_positive_amount_is_422(client: TestClient, bad_amount: float):
+    r = client.post("/api/transaction", json=_txn_body(amount=bad_amount))
+    assert r.status_code == 422
+
+
+@pytest.mark.parametrize("bad_amount", [float("nan"), float("inf"), float("-inf")])
+def test_transaction_body_rejects_non_finite_amount(bad_amount: float):
+    # JSON has no non-finite literals, so a compliant client can't send these; the constraint is
+    # defense in depth. Assert it at the model layer (HTTP's error-echo can't encode nan/inf).
+    from pydantic import ValidationError
+
+    from yala.api import TransactionIn
+
+    with pytest.raises(ValidationError):
+        TransactionIn(**_txn_body(amount=bad_amount))
+
+
+def test_post_transaction_negative_credit_is_422(client: TestClient):
+    r = client.post(
+        "/api/transaction",
+        json=_txn_body(credits=[{"account": "Assets:Cash:Wallet", "amount": -1.0}]),
+    )
+    assert r.status_code == 422
+
+
+def test_post_transfer_same_account_is_422(client: TestClient):
+    r = client.post(
+        "/api/transfer",
+        json={
+            "from_account": "Assets:Cash:BankA",
+            "to_account": "Assets:Cash:BankA",
+            "amount": 10.0,
+        },
+    )
+    assert r.status_code == 422
+
+
+def test_post_transfer_non_positive_amount_is_422(client: TestClient):
+    r = client.post(
+        "/api/transfer",
+        json={
+            "from_account": "Assets:Cash:BankA",
+            "to_account": "Liabilities:CC:CardA",
+            "amount": 0,
+        },
+    )
+    assert r.status_code == 422
+
+
+def test_post_paycheck_negative_deduction_is_422(client: TestClient):
+    r = client.post(
+        "/api/paycheck",
+        json={
+            "employer": "Employer1",
+            "gross": 1000.0,
+            "deductions": {"Tax": -1.0},
+            "deposit_account": "Assets:Cash:BankA",
+        },
+    )
+    assert r.status_code == 422
+
+
+def test_update_transaction_invalid_date_is_400(client: TestClient):
+    add = client.post("/api/transaction", json=_txn_body(date="2026-02-01"))
+    locator = f"id:{add.json()['id']}"
+
+    r = client.post(
+        "/api/transaction/update",
+        json=_txn_body(date="2026-13-40", locator=locator),
+    )
+    assert r.status_code == 400
+    assert "invalid date" in r.json()["detail"]

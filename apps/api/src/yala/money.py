@@ -10,3 +10,8 @@ CENTS = Decimal("0.01")
 def round_cents(value: Decimal | int | float | str) -> Decimal:
     """Quantize ``value`` to cents using banker's rounding (ROUND_HALF_EVEN)."""
     return Decimal(value).quantize(CENTS, rounding=ROUND_HALF_EVEN)
+
+
+def money(value: Decimal | int | float) -> float:
+    """Normalize a ledger amount to a 2dp float (banker's rounding) for the JSON contract."""
+    return float(round_cents(value))

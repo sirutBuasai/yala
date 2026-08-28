@@ -22,7 +22,8 @@ from beancount.parser import printer
 
 from yala import config
 from yala.ledger import Ledger
-from yala.ledger.entities import DROPPED_META, locator_of
+from yala.ledger.constants import DROPPED_META, EXPENSES
+from yala.ledger.locators import find_entry
 from yala.money import round_cents
 
 Credit = tuple[str, Decimal]
@@ -30,8 +31,9 @@ DeductionLeg = tuple[str, Decimal]  # (account, amount)
 ContributionLeg = tuple[str, str | None, Decimal]  # (account, label or None, amount)
 
 
-def _posting(account: str, number: Decimal, meta: dict | None = None) -> data.Posting:
-    """A single USD posting with no cost/price/flag; optional posting meta (e.g. ``label``)."""
+def _build_posting(account: str, number: Decimal, meta: dict | None = None) -> data.Posting:
+    """Construct a single USD posting with no cost/price/flag; optional posting meta (e.g.
+    ``label``)."""
     return data.Posting(
         account, Amount(number, "USD"), cost=None, price=None, flag=None, meta=meta or None
     )
@@ -53,45 +55,16 @@ def _atomic_write(path: Path, content: str) -> None:
         raise
 
 
-def _resolve_ledger_path(path: str) -> str:
-    """Canonical absolute path for a ``line:`` locator path (accepts relative or absolute), so a
-    ledger-relative locator round-trips against beancount's ``filename`` meta even across symlinks
-    (e.g. macOS /var vs /private/var)."""
-    absolute = path if os.path.isabs(path) else os.path.join(config.LEDGER_DIR, path)
-    return os.path.realpath(absolute)
+def _year_header(subdir: str, year: int) -> str:
+    """The ``; <Title> for <year>`` header line a new year-file opens with."""
+    # Comment title each dated ``<subdir>/<year>.beancount`` file opens with.
+    _file_titles = {
+        "spending": "Spending transactions",
+        "income": "Income",
+        "transfers": "Transfers",
+    }
 
-
-def find_transaction(entries: list, locator: str) -> data.Transaction:
-    """Resolve a locator (``id:<uuid>`` or ``line:<path>:<lineno>``) to a beancount transaction.
-
-    ``line:`` paths are ledger-relative (see :func:`~yala.ledger.entities.locator_of`); legacy
-    absolute paths still resolve too."""
-    kind, _, rest = locator.partition(":")
-    txns = [e for e in entries if isinstance(e, data.Transaction)]
-
-    if kind == "id":
-        for e in txns:
-            if (e.meta or {}).get("id") == rest:
-                return e
-
-    elif kind == "line":
-        path, _, lineno = rest.rpartition(":")
-        target = _resolve_ledger_path(path)
-        for e in txns:
-            filename = e.meta.get("filename")
-            if (
-                filename is not None
-                and os.path.realpath(filename) == target
-                and e.meta.get("lineno") == int(lineno)
-            ):
-                return e
-
-    raise KeyError(f"no transaction found for locator {locator!r}")
-
-
-def entry_locator(entry: data.Transaction) -> str:
-    """Stable handle for a raw beancount entry: id-form if it carries an id, else line-form."""
-    return locator_of(entry.meta)
+    return f"; {_file_titles[subdir]} for {year}"
 
 
 class LedgerSink(ABC):
@@ -111,6 +84,10 @@ class LedgerSink(ABC):
         """Append one spending directive (one Expenses category, credits, one funding account)."""
 
     @abstractmethod
+    def update_transaction(self, locator: str, **new_state) -> str:
+        """Replace an existing spending directive in place, preserving/assigning its id."""
+
+    @abstractmethod
     def append_paycheck(
         self,
         date: dt.date,
@@ -124,8 +101,8 @@ class LedgerSink(ABC):
         """Append one paycheck directive (Income − gross, deductions, contributions, deposit)."""
 
     @abstractmethod
-    def update_transaction(self, locator: str, **new_state) -> str:
-        """Replace an existing spending directive in place, preserving/assigning its id."""
+    def update_paycheck(self, locator: str, **new_state) -> str:
+        """Replace an existing paycheck directive in place, preserving/assigning its id."""
 
     @abstractmethod
     def append_transfer(
@@ -144,8 +121,8 @@ class LedgerSink(ABC):
         """Replace an existing transfer directive in place, preserving/assigning its id."""
 
     @abstractmethod
-    def delete_transaction(self, locator: str) -> None:
-        """Remove the located directive (spending or paycheck) from its source file."""
+    def delete_entry(self, locator: str) -> None:
+        """Remove any located directive (spending, paycheck, or transfer) from its source file."""
 
 
 class FileLedgerSink(LedgerSink):
@@ -188,7 +165,7 @@ class FileLedgerSink(LedgerSink):
                     f"{date.isoformat()} (closed {close_date.isoformat()})."
                 )
 
-    # --- shared builder (add + update) ---
+    # --- spending ---
 
     def _spending_entry(
         self,
@@ -215,7 +192,7 @@ class FileLedgerSink(LedgerSink):
 
         for account, amt in credits or []:
             qamt = round_cents(amt)
-            credit_postings.append(_posting(account, qamt))
+            credit_postings.append(_build_posting(account, qamt))
             credit_sum += qamt
 
         net_expense = total - credit_sum
@@ -226,14 +203,12 @@ class FileLedgerSink(LedgerSink):
         if extra_meta:
             meta.update(extra_meta)
 
-        postings = [_posting(f"Expenses:{category}", net_expense), *credit_postings]
-        postings.append(_posting(funding_account, -total))
+        postings = [_build_posting(f"{EXPENSES}{category}", net_expense), *credit_postings]
+        postings.append(_build_posting(funding_account, -total))
 
         return data.Transaction(
             meta, date, flag, payee, narration, frozenset(tags), frozenset(links), postings
         )
-
-    # --- writes ---
 
     def append_transaction(
         self,
@@ -248,7 +223,7 @@ class FileLedgerSink(LedgerSink):
         credit_legs = [(a, Decimal(amt)) for a, amt in (credits or [])]
 
         self._assert_accounts_active(
-            date, [f"Expenses:{category}", funding_account, *(a for a, _ in credit_legs)]
+            date, [f"{EXPENSES}{category}", funding_account, *(a for a, _ in credit_legs)]
         )
 
         entry_id = str(uuid.uuid4())
@@ -262,11 +237,51 @@ class FileLedgerSink(LedgerSink):
             entry_id=entry_id,
             credits=credit_legs,
         )
-        block = printer.format_entry(entry)
-
-        self._append("spending", date.year, f"; Spending transactions for {date.year}", block)
+        self._append_entry("spending", entry)
 
         return entry_id
+
+    def update_transaction(
+        self,
+        locator: str,
+        *,
+        payee: str,
+        amount: Decimal,
+        category: str,
+        funding_account: str,
+        date: dt.date | None = None,
+        pending: bool = False,
+        credits: list[Credit] | None = None,
+    ) -> str:
+        """Replace the located transaction in place; assign an id if it lacked one."""
+        entry, entry_id, carried, resolved_date = self._locate_for_update(locator, date)
+        credit_legs = [(a, Decimal(amt)) for a, amt in (credits or [])]
+
+        narration = entry.narration if entry.narration and entry.narration != payee else None
+
+        self._assert_accounts_active(
+            resolved_date, [f"{EXPENSES}{category}", funding_account, *(a for a, _ in credit_legs)]
+        )
+        new_entry = self._spending_entry(
+            date=resolved_date,
+            flag="!" if pending else "*",
+            payee=payee,
+            category=category,
+            amount=Decimal(amount),
+            funding_account=funding_account,
+            entry_id=entry_id,
+            credits=credit_legs,
+            narration=narration,
+            tags=entry.tags or (),
+            links=entry.links or (),
+            extra_meta=carried,
+        )
+        self._replace_located(
+            entry, resolved_date, printer.format_entry(new_entry), "spending", locator
+        )
+        return entry_id
+
+    # --- paycheck ---
 
     def _paycheck_entry(
         self,
@@ -313,12 +328,12 @@ class FileLedgerSink(LedgerSink):
                 f"deductions and contributions exceed gross (take-home would be {take_home})"
             )
 
-        postings = [_posting(income_account, -gross)]
+        postings = [_build_posting(income_account, -gross)]
         for account, amt in deduction_legs:
-            postings.append(_posting(account, amt))
+            postings.append(_build_posting(account, amt))
         for account, label, amt in contribution_legs:
-            postings.append(_posting(account, amt, {"label": label} if label else None))
-        postings.append(_posting(deposit_account, take_home))
+            postings.append(_build_posting(account, amt, {"label": label} if label else None))
+        postings.append(_build_posting(deposit_account, take_home))
 
         meta: dict = {"id": entry_id}
         if extra_meta:
@@ -349,24 +364,9 @@ class FileLedgerSink(LedgerSink):
             entry_id=entry_id,
             payee=payee,
         )
-        self._append("income", date.year, f"; Income for {date.year}", printer.format_entry(entry))
+        self._append_entry("income", entry)
 
         return entry_id
-
-    def _locate_for_update(
-        self, locator: str, date: dt.date | None
-    ) -> tuple[data.Transaction, str, dict, dt.date]:
-        """Shared preamble for both updates: strict-load, resolve the locator, and derive the
-        target entry, its id (assigned if missing), the meta to carry forward, and the resolved
-        date (the edit's date, or the entry's own if unchanged)."""
-        entry = find_transaction(Ledger(self.main_ledger, strict=True).load().entries, locator)
-        entry_id = (entry.meta or {}).get("id") or str(uuid.uuid4())
-        carried = {
-            k: v
-            for k, v in (entry.meta or {}).items()
-            if k not in DROPPED_META and not k.startswith("__")
-        }
-        return entry, entry_id, carried, (date or entry.date)
 
     def update_paycheck(
         self,
@@ -404,45 +404,7 @@ class FileLedgerSink(LedgerSink):
 
         return entry_id
 
-    def update_transaction(
-        self,
-        locator: str,
-        *,
-        payee: str,
-        amount: Decimal,
-        category: str,
-        funding_account: str,
-        date: dt.date | None = None,
-        pending: bool = False,
-        credits: list[Credit] | None = None,
-    ) -> str:
-        """Replace the located transaction in place; assign an id if it lacked one."""
-        entry, entry_id, carried, resolved_date = self._locate_for_update(locator, date)
-        credit_legs = [(a, Decimal(amt)) for a, amt in (credits or [])]
-
-        narration = entry.narration if entry.narration and entry.narration != payee else None
-
-        self._assert_accounts_active(
-            resolved_date, [f"Expenses:{category}", funding_account, *(a for a, _ in credit_legs)]
-        )
-        new_entry = self._spending_entry(
-            date=resolved_date,
-            flag="!" if pending else "*",
-            payee=payee,
-            category=category,
-            amount=Decimal(amount),
-            funding_account=funding_account,
-            entry_id=entry_id,
-            credits=credit_legs,
-            narration=narration,
-            tags=entry.tags or (),
-            links=entry.links or (),
-            extra_meta=carried,
-        )
-        self._replace_located(
-            entry, resolved_date, printer.format_entry(new_entry), "spending", locator
-        )
-        return entry_id
+    # --- transfers ---
 
     def _transfer_entry(
         self,
@@ -468,7 +430,7 @@ class FileLedgerSink(LedgerSink):
         if extra_meta:
             meta.update(extra_meta)
 
-        postings = [_posting(to_account, amt), _posting(from_account, -amt)]
+        postings = [_build_posting(to_account, amt), _build_posting(from_account, -amt)]
 
         return data.Transaction(
             meta, date, flag, payee, narration, frozenset(tags), frozenset(links), postings
@@ -493,9 +455,7 @@ class FileLedgerSink(LedgerSink):
             entry_id=entry_id,
             flag="!" if pending else "*",
         )
-        self._append(
-            "transfers", date.year, f"; Transfers for {date.year}", printer.format_entry(entry)
-        )
+        self._append_entry("transfers", entry)
 
         return entry_id
 
@@ -531,6 +491,46 @@ class FileLedgerSink(LedgerSink):
 
         return entry_id
 
+    # --- delete + account directives ---
+
+    def delete_entry(self, locator: str) -> None:
+        """Remove the located entry (spending, paycheck, or transfer) from its file, then
+        strict-reload."""
+        entry = find_entry(
+            Ledger(self.main_ledger, strict=True).load().entries, locator
+        )  # raises KeyError if unknown
+
+        path, original, lines, begin, end = self._entry_span(entry, locator)
+
+        self._commit(path, "".join(lines[:begin] + lines[end:]), original)
+
+    def open_account(self, account: str, date: dt.date | None = None) -> None:
+        """Append an ``open`` directive to the accounts file (e.g. a new contribution type)."""
+        date = date or dt.date.today()
+        accounts_file = self.ledger_dir / "accounts.beancount"
+
+        original = accounts_file.read_text()
+        text = original if original.endswith("\n") else original + "\n"
+
+        self._commit(accounts_file, f"{text}{date.isoformat()} open {account} USD\n", original)
+
+    # --- internals: locate, write, roll back ---
+
+    def _locate_for_update(
+        self, locator: str, date: dt.date | None
+    ) -> tuple[data.Transaction, str, dict, dt.date]:
+        """Shared preamble for both updates: strict-load, resolve the locator, and derive the
+        target entry, its id (assigned if missing), the meta to carry forward, and the resolved
+        date (the edit's date, or the entry's own if unchanged)."""
+        entry = find_entry(Ledger(self.main_ledger, strict=True).load().entries, locator)
+        entry_id = (entry.meta or {}).get("id") or str(uuid.uuid4())
+        carried = {
+            k: v
+            for k, v in (entry.meta or {}).items()
+            if k not in DROPPED_META and not k.startswith("__")
+        }
+        return entry, entry_id, carried, (date or entry.date)
+
     def _entry_span(
         self, entry: data.Transaction, locator: str
     ) -> tuple[Path, str, list[str], int, int]:
@@ -559,70 +559,10 @@ class FileLedgerSink(LedgerSink):
 
         return path, original, lines, begin, end
 
-    def _commit(self, path: Path, content: str, original: str) -> None:
-        """Write ``content`` to ``path``, strict-reload, and roll ``path`` back to ``original``
-        (re-raising) if the reload fails — so a bad write never sticks."""
-        _atomic_write(path, content)
-        try:
-            Ledger(self.main_ledger, strict=True).load()
-
-        except Exception:
-            _atomic_write(path, original)
-            raise
-
-    def _replace_located(
-        self, entry: data.Transaction, resolved_date: dt.date, block: str, subdir: str, locator: str
-    ) -> None:
-        """Swap ``entry``'s source block for ``block``, then strict-reload with rollback.
-
-        If ``resolved_date`` falls in a different year than the entry, relocate it to
-        ``<subdir>/<year>.beancount`` instead of rewriting in place."""
-        path, original, lines, begin, end = self._entry_span(entry, locator)
-
-        # A date edit that crosses into a different year must relocate the entry to that year's
-        # file, not leave it stranded in the original year's file.
-        if resolved_date.year != entry.date.year:
-            headers = {
-                "spending": f"; Spending transactions for {resolved_date.year}",
-                "income": f"; Income for {resolved_date.year}",
-                "transfers": f"; Transfers for {resolved_date.year}",
-            }
-            _atomic_write(path, "".join(lines[:begin] + lines[end:]))  # drop from the old file
-
-            try:
-                self._append(subdir, resolved_date.year, headers[subdir], block)
-
-            except Exception:
-                _atomic_write(path, original)  # restore old file; _append rolled back its own
-                raise
-
-            return
-
-        rewritten = "".join(lines[:begin] + block.splitlines(keepends=True) + lines[end:])
-
-        self._commit(path, rewritten, original)
-
-    def delete_transaction(self, locator: str) -> None:
-        """Remove the located entry (spending or paycheck) from its file, then strict-reload."""
-        entry = find_transaction(
-            Ledger(self.main_ledger, strict=True).load().entries, locator
-        )  # raises KeyError if unknown
-
-        path, original, lines, begin, end = self._entry_span(entry, locator)
-
-        self._commit(path, "".join(lines[:begin] + lines[end:]), original)
-
-    def open_account(self, account: str, date: dt.date | None = None) -> None:
-        """Append an ``open`` directive to the accounts file (e.g. a new contribution type)."""
-        date = date or dt.date.today()
-        accounts_file = self.ledger_dir / "accounts.beancount"
-
-        original = accounts_file.read_text()
-        text = original if original.endswith("\n") else original + "\n"
-
-        self._commit(accounts_file, f"{text}{date.isoformat()} open {account} USD\n", original)
-
-    # --- internals ---
+    def _append_entry(self, subdir: str, entry: data.Transaction) -> None:
+        """Format ``entry`` and append it to its dated ``<subdir>/<year>.beancount`` file."""
+        year = entry.date.year
+        self._append(subdir, year, _year_header(subdir, year), printer.format_entry(entry))
 
     def _append(self, subdir: str, year: int, header: str, block: str) -> None:
         year_file = self.ledger_dir / subdir / f"{year}.beancount"
@@ -659,6 +599,46 @@ class FileLedgerSink(LedgerSink):
             self._restore(self.main_ledger, main_before)
 
             raise
+
+    def _commit(self, path: Path, content: str, original: str) -> None:
+        """Write ``content`` to ``path``, strict-reload, and roll ``path`` back to ``original``
+        (re-raising) if the reload fails — so a bad write never sticks."""
+        _atomic_write(path, content)
+        try:
+            Ledger(self.main_ledger, strict=True).load()
+
+        except Exception:
+            _atomic_write(path, original)
+            raise
+
+    def _replace_located(
+        self, entry: data.Transaction, resolved_date: dt.date, block: str, subdir: str, locator: str
+    ) -> None:
+        """Swap ``entry``'s source block for ``block``, then strict-reload with rollback.
+
+        If ``resolved_date`` falls in a different year than the entry, relocate it to
+        ``<subdir>/<year>.beancount`` instead of rewriting in place."""
+        path, original, lines, begin, end = self._entry_span(entry, locator)
+
+        # A date edit that crosses into a different year must relocate the entry to that year's
+        # file, not leave it stranded in the original year's file.
+        if resolved_date.year != entry.date.year:
+            _atomic_write(path, "".join(lines[:begin] + lines[end:]))  # drop from the old file
+
+            try:
+                self._append(
+                    subdir, resolved_date.year, _year_header(subdir, resolved_date.year), block
+                )
+
+            except Exception:
+                _atomic_write(path, original)  # restore old file; _append rolled back its own
+                raise
+
+            return
+
+        rewritten = "".join(lines[:begin] + block.splitlines(keepends=True) + lines[end:])
+
+        self._commit(path, rewritten, original)
 
     @staticmethod
     def _restore(path: Path, before: str | None) -> None:
