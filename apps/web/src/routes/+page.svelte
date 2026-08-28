@@ -14,17 +14,19 @@
 	import YearlyView from '$lib/tabs/Yearly.svelte';
 	import MonthlyView from '$lib/tabs/Monthly.svelte';
 	import CalendarView from '$lib/tabs/Calendar.svelte';
+	import ManageView from '$lib/tabs/Manage.svelte';
 	import ThemeToggle from '$lib/forms/ThemeToggle.svelte';
 	import EditToggle from '$lib/forms/EditToggle.svelte';
 	import Tooltip from '$lib/overlay/Tooltip.svelte';
 	import NavMenu from '$lib/nav/NavMenu.svelte';
 
-	type Tab = 'overview' | 'yearly' | 'monthly' | 'calendar';
+	type Tab = 'overview' | 'yearly' | 'monthly' | 'calendar' | 'manage';
 	const TABS: { id: Tab; label: string }[] = [
 		{ id: 'overview', label: 'Overview' },
 		{ id: 'yearly', label: 'Yearly' },
 		{ id: 'monthly', label: 'Monthly' },
-		{ id: 'calendar', label: 'Calendar' }
+		{ id: 'calendar', label: 'Calendar' },
+		{ id: 'manage', label: 'Manage' }
 	];
 	let tab = $state<Tab>('overview');
 	let year = $state<number>(0); // 0 = unset; the default-scope effect fills it once data loads
@@ -45,7 +47,7 @@
 			const raw = localStorage.getItem(VIEW_KEY);
 			if (raw) {
 				const s = JSON.parse(raw);
-				if (['overview', 'yearly', 'monthly', 'calendar'].includes(s.tab)) tab = s.tab;
+				if (['overview', 'yearly', 'monthly', 'calendar', 'manage'].includes(s.tab)) tab = s.tab;
 				if (typeof s.year === 'number') year = s.year;
 				if (typeof s.monthKey === 'string') monthKey = s.monthKey;
 			}
@@ -194,8 +196,10 @@
 				<YearlyView data={$data} bind:year />
 			{:else if tab === 'monthly'}
 				<MonthlyView data={$data} bind:monthKey {edit} accounts={$accounts} {onsaved} />
-			{:else}
+			{:else if tab === 'calendar'}
 				<CalendarView data={$data} {edit} accounts={$accounts} {onsaved} />
+			{:else}
+				<ManageView data={$data} />
 			{/if}
 		</div>
 	{/if}
