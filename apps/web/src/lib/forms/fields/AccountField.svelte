@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { postJson, refreshAccounts } from '$lib/data/load';
-	import Select from '$lib/forms/Select.svelte';
+	import Select from '$lib/forms/fields/Select.svelte';
 
 	interface CreatableKind {
 		value: 'category' | 'deduction' | 'contribution' | 'funding_credit' | 'funding_cash';

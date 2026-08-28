@@ -2,7 +2,7 @@
 	// Month period stepper: prev/next arrows around a month + year picker. Controlled — the
 	// parent owns the value and applies changes via `onchange`. Shared by the Monthly and
 	// Calendar views.
-	import Select from '$lib/forms/Select.svelte';
+	import Select from '$lib/forms/fields/Select.svelte';
 	import RangeNav from '$lib/nav/RangeNav.svelte';
 	import { monthName } from '$lib/utils/format';
 	import { addMonths, monthForYear, pickableMonths } from '$lib/utils/period';

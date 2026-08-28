@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Year period stepper: prev/next arrows around a year picker. Controlled — the parent owns
 	// the value and applies changes via `onchange`. Sibling of MonthNav for year-based views.
-	import Select from '$lib/forms/Select.svelte';
+	import Select from '$lib/forms/fields/Select.svelte';
 	import RangeNav from '$lib/nav/RangeNav.svelte';
 
 	interface Props {

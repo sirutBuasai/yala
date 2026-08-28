@@ -44,6 +44,7 @@
 	--gold-text: #e0af68;
 	--lav-text: #bb9af7;
 	--teal-text: #7dcfff;
+	--salmon-text: #f7768e;
 	--grid: #2a2a3c;
 	--s1: #26263a;
 	--s2: #3c3560;
@@ -197,6 +198,7 @@
 	--gold-text: #8a6a12;
 	--lav-text: #6a49bd;
 	--teal-text: #1d7d99;
+	--salmon-text: #c0405a;
 	--grid: #e6ddca;
 	--s1: #ece3f8;
 	--s2: #d6c4f0;
@@ -497,6 +499,15 @@ input[type='checkbox']:focus-visible {
 	color: var(--ink-3);
 	text-transform: uppercase;
 	letter-spacing: var(--ls-wide);
+}
+/* Responsive row of form fields inside an add/edit section: they wrap onto multiple rows,
+   each column wide enough for longer account values. Shared by the transaction / paycheck /
+   bill-pay forms so their field spacing stays identical. */
+.field-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: var(--gap-field);
+	align-items: end;
 }
 .edit-msg {
 	font-size: var(--text-secondary);

@@ -8,7 +8,7 @@
 <script lang="ts">
 	// A labeled column of {value, amount} rows: each row picks a value (Select) and an amount.
 	// Reused for a paycheck's deduction/contribution lines and a transaction's credits.
-	import Select from '$lib/forms/Select.svelte';
+	import Select from '$lib/forms/fields/Select.svelte';
 
 	interface Props {
 		rows: AmountRow[];

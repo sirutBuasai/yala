@@ -6,10 +6,11 @@
 	import { deleteTransaction, getJson, postJson } from '$lib/data/load';
 	import { accountLeaf, formatAccount, money } from '$lib/utils/format';
 	import { lastCategory, lastFundingAccount } from '$lib/utils/editPrefs';
-	import AccountField from '$lib/forms/AccountField.svelte';
-	import Credits, { type Credit } from '$lib/forms/Credits.svelte';
-	import DatePicker from '$lib/forms/DatePicker.svelte';
-	import EntryFooter from '$lib/forms/EntryFooter.svelte';
+	import AccountField from '$lib/forms/fields/AccountField.svelte';
+	import Credits, { type Credit } from '$lib/forms/transaction/Credits.svelte';
+	import DatePicker from '$lib/forms/fields/DatePicker.svelte';
+	import EntryFooter from '$lib/forms/fields/EntryFooter.svelte';
+	import FormSection from '$lib/forms/fields/FormSection.svelte';
 
 	const FUNDING_KINDS = [
 		{ value: 'funding_credit', label: 'Credit card' },
@@ -135,47 +136,56 @@
 	}
 </script>
 
-<div class="editrow">
-	<div class="field">
-		<label for="tx-date">Date</label>
-		<DatePicker id="tx-date" ariaLabel="Date" bind:value={date} />
+<FormSection label="Details">
+	<div class="field-grid">
+		<div class="field">
+			<label for="tx-date">Date</label>
+			<DatePicker id="tx-date" ariaLabel="Date" bind:value={date} />
+		</div>
+		<div class="field">
+			<label for="tx-payee">Title</label><input
+				id="tx-payee"
+				bind:value={payee}
+				placeholder="e.g. lucky"
+			/>
+		</div>
+		<div class="field">
+			<label for="tx-amt">Total bill</label><input
+				id="tx-amt"
+				type="number"
+				step="0.01"
+				placeholder="0"
+				bind:value={total}
+			/>
+		</div>
 	</div>
-	<div class="field">
-		<label for="tx-payee">Title</label><input
-			id="tx-payee"
-			bind:value={payee}
-			placeholder="e.g. lucky"
-		/>
-	</div>
-	<div class="field">
-		<label for="tx-amt">Total bill</label><input
-			id="tx-amt"
-			type="number"
-			step="0.01"
-			placeholder="0"
-			bind:value={total}
-		/>
-	</div>
-	<AccountField
-		id="tx-cat"
-		label="Category"
-		bind:value={category}
-		options={accounts.spending_categories}
-		kinds={[{ value: 'category', label: 'Category' }]}
-		deriveValue={accountLeaf}
-	/>
-	<AccountField
-		id="tx-fund"
-		label="Account"
-		bind:value={funding_account}
-		options={accounts.funding_accounts}
-		optionLabel={formatAccount}
-		kinds={[...FUNDING_KINDS]}
-	/>
-	<label class="chk"><input type="checkbox" bind:checked={pending} /> Pending</label>
-</div>
+</FormSection>
 
-<Credits bind:credits creditAccounts={accounts.credit_accounts} />
+<FormSection label="Categorize">
+	<div class="field-grid">
+		<AccountField
+			id="tx-cat"
+			label="Category"
+			bind:value={category}
+			options={accounts.spending_categories}
+			kinds={[{ value: 'category', label: 'Category' }]}
+			deriveValue={accountLeaf}
+		/>
+		<AccountField
+			id="tx-fund"
+			label="Account"
+			bind:value={funding_account}
+			options={accounts.funding_accounts}
+			optionLabel={formatAccount}
+			kinds={[...FUNDING_KINDS]}
+		/>
+		<label class="chk"><input type="checkbox" bind:checked={pending} /> Pending</label>
+	</div>
+</FormSection>
+
+<FormSection label="Reimbursements">
+	<Credits bind:credits creditAccounts={accounts.credit_accounts} />
+</FormSection>
 
 <EntryFooter
 	{editing}
@@ -193,13 +203,6 @@
 </EntryFooter>
 
 <style>
-	.editrow {
-		/* Responsive grid: fields wrap onto multiple rows, each wide enough for longer account values. */
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-		gap: var(--gap-field);
-		align-items: end;
-	}
 	.chk {
 		font-size: var(--text-secondary);
 		color: var(--ink-2);

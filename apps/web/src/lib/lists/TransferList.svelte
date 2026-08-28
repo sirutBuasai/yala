@@ -36,10 +36,10 @@
 	{#snippet main(t)}
 		<span class="main">
 			<span class="title">
-				<span class="payee">{t.payee}</span>
+				<span class="route">{formatAccount(t.from_account)} → {formatAccount(t.to_account)}</span>
 				{#if t.pending}<span class="pending">● pending</span>{/if}
 			</span>
-			<span class="route">{formatAccount(t.from_account)} → {formatAccount(t.to_account)}</span>
+			{#if t.payee}<span class="note">{t.payee}</span>{/if}
 		</span>
 	{/snippet}
 	{#snippet columns(_t)}
@@ -63,7 +63,7 @@
 		font-size: var(--text-row);
 		font-weight: var(--fw-medium);
 	}
-	.payee {
+	.route {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -77,7 +77,10 @@
 		margin-left: var(--space-3);
 		white-space: nowrap;
 	}
-	.route {
+	.note {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 		color: var(--ink-3);
 		font-size: var(--text-badge);
 	}

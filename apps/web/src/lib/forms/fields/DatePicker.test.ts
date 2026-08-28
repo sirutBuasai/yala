@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent } from '@testing-library/dom';
-import DatePicker from '$lib/forms/DatePicker.svelte';
+import DatePicker from '$lib/forms/fields/DatePicker.svelte';
 
 describe('DatePicker', () => {
 	it('shows the placeholder when empty and a friendly date when set', () => {

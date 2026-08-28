@@ -6,10 +6,11 @@
 	import { deleteTransaction, getJson, postJson } from '$lib/data/load';
 	import { formatAccount, money } from '$lib/utils/format';
 	import { lastDepositAccount } from '$lib/utils/editPrefs';
-	import Select from '$lib/forms/Select.svelte';
-	import DatePicker from '$lib/forms/DatePicker.svelte';
-	import LineColumn, { type AmountRow } from '$lib/forms/LineColumn.svelte';
-	import EntryFooter from '$lib/forms/EntryFooter.svelte';
+	import Select from '$lib/forms/fields/Select.svelte';
+	import DatePicker from '$lib/forms/fields/DatePicker.svelte';
+	import LineColumn, { type AmountRow } from '$lib/forms/fields/LineColumn.svelte';
+	import EntryFooter from '$lib/forms/fields/EntryFooter.svelte';
+	import FormSection from '$lib/forms/fields/FormSection.svelte';
 
 	interface Props {
 		accounts: AccountsInfo;
@@ -135,66 +136,71 @@
 	}
 </script>
 
-<div class="editrow">
-	<div class="field">
-		<label for="pc-date">Date</label>
-		<DatePicker id="pc-date" ariaLabel="Date" bind:value={date} />
+<FormSection label="Paycheck">
+	<div class="field-grid">
+		<div class="field">
+			<label for="pc-date">Date</label>
+			<DatePicker id="pc-date" ariaLabel="Date" bind:value={date} />
+		</div>
+		<div class="field">
+			<label for="pc-employer">Employer</label>
+			<Select
+				id="pc-employer"
+				ariaLabel="Employer"
+				bind:value={employer}
+				options={accounts.employers}
+			/>
+		</div>
+		<div class="field">
+			<label for="pc-gross">Gross</label><input
+				id="pc-gross"
+				type="number"
+				step="0.01"
+				placeholder="0"
+				bind:value={gross}
+			/>
+		</div>
+		<div class="field">
+			<label for="pc-dep">Deposit account</label>
+			<Select
+				id="pc-dep"
+				ariaLabel="Deposit account"
+				bind:value={deposit_account}
+				options={accounts.cash_accounts}
+				optionLabel={formatAccount}
+			/>
+		</div>
+		<div class="field">
+			<label for="pc-payee">Payee</label><input id="pc-payee" bind:value={payee} />
+		</div>
 	</div>
-	<div class="field">
-		<label for="pc-employer">Employer</label>
-		<Select
-			id="pc-employer"
-			ariaLabel="Employer"
-			bind:value={employer}
-			options={accounts.employers}
-		/>
-	</div>
-	<div class="field">
-		<label for="pc-gross">Gross</label><input
-			id="pc-gross"
-			type="number"
-			step="0.01"
-			placeholder="0"
-			bind:value={gross}
-		/>
-	</div>
-	<div class="field">
-		<label for="pc-dep">Deposit account</label>
-		<Select
-			id="pc-dep"
-			ariaLabel="Deposit account"
-			bind:value={deposit_account}
-			options={accounts.cash_accounts}
-			optionLabel={formatAccount}
-		/>
-	</div>
-	<div class="field">
-		<label for="pc-payee">Payee</label><input id="pc-payee" bind:value={payee} />
-	</div>
-</div>
+</FormSection>
 
-<div class="lines">
+<FormSection label="Deductions">
 	<LineColumn
-		header="Deductions (Tax, Benefits…)"
+		header="Tax, benefits, insurance…"
 		addLabel="+ row"
 		bind:rows={deductions}
 		options={deductionOptions}
 		selectAriaLabel="deduction type"
 	/>
+</FormSection>
+
+<FormSection label="Contributions">
 	<LineColumn
-		header="Contributions (401k, HSA…)"
+		header="401k, HSA…"
 		addLabel="+ row"
 		bind:rows={contributions}
 		options={contributionOptions}
 		selectAriaLabel="contribution type"
 	/>
-</div>
+</FormSection>
 
 <EntryFooter
 	{editing}
 	{msg}
 	{err}
-	addLabel="+ Add paycheck"
+	addLabel="+ Add"
 	deleteLabel="Delete paycheck"
 	deleteQuestion="Delete this paycheck?"
 	onsubmit={submit}
@@ -206,21 +212,6 @@
 </EntryFooter>
 
 <style>
-	.editrow {
-		display: flex;
-		gap: var(--space-5);
-		flex-wrap: wrap;
-		align-items: flex-end;
-		margin-bottom: var(--gap-field);
-	}
-	.editrow .field {
-		min-width: 130px;
-	}
-	.lines {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--gap-section);
-	}
 	.takehome {
 		color: var(--ink-2);
 		font-size: var(--text-control);
@@ -228,10 +219,5 @@
 	.takehome b {
 		color: var(--good-text);
 		font-size: var(--text-amount);
-	}
-	@media (max-width: 640px) {
-		.lines {
-			grid-template-columns: 1fr;
-		}
 	}
 </style>

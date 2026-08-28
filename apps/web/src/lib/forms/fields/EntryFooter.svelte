@@ -2,7 +2,7 @@
 	// Shared footer for the entry forms (transaction / paycheck / bill pay): a running summary on
 	// the left, and on the right either an Add button (add mode) or Save + Delete (edit mode).
 	import type { Snippet } from 'svelte';
-	import DeleteConfirm from '$lib/forms/DeleteConfirm.svelte';
+	import DeleteConfirm from '$lib/forms/fields/DeleteConfirm.svelte';
 
 	interface Props {
 		editing: boolean;

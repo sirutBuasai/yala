@@ -2,7 +2,7 @@
 	// Reusable sort control for any list: a clickable "Sorted by X" label that opens the field
 	// menu, plus an order-direction arrow. Owns no data — binds sortKey/sortDir for the caller.
 	import Arrow from '$lib/icons/Arrow.svelte';
-	import Select from '$lib/forms/Select.svelte';
+	import Select from '$lib/forms/fields/Select.svelte';
 
 	interface Props {
 		/** The sortable fields, in menu order. */

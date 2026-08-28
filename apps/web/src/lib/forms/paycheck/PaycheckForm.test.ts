@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
 import type { AccountsInfo } from '$lib/data/load';
-import PaycheckForm from '$lib/forms/PaycheckForm.svelte';
+import PaycheckForm from '$lib/forms/paycheck/PaycheckForm.svelte';
 
 const accounts: AccountsInfo = {
 	spending_categories: [],
@@ -45,7 +45,7 @@ describe('PaycheckForm (add) — same-label rows sum', () => {
 		await fireEvent.input(amounts[1]!, { target: { value: '150' } });
 		await fireEvent.input(amounts[2]!, { target: { value: '150' } });
 
-		await fireEvent.click(screen.getByText('+ Add paycheck'));
+		await fireEvent.click(screen.getByText('+ Add'));
 
 		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
 		const [url, opts] = fetchSpy.mock.calls[0]!;

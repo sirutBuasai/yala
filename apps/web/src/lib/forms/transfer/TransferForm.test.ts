@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
 import type { AccountsInfo } from '$lib/data/load';
 import { lastTransferFrom, lastTransferTo } from '$lib/utils/editPrefs';
-import TransferForm from '$lib/forms/TransferForm.svelte';
+import TransferForm from '$lib/forms/transfer/TransferForm.svelte';
 
 const accounts: AccountsInfo = {
 	spending_categories: [],
@@ -33,7 +33,7 @@ describe('TransferForm (add) — bill pay', () => {
 		render(TransferForm, { props: { accounts, onsaved: vi.fn() } });
 
 		await fireEvent.input(screen.getByLabelText('Amount'), { target: { value: '250' } });
-		await fireEvent.click(screen.getByText('+ Add bill pay'));
+		await fireEvent.click(screen.getByText('+ Add'));
 
 		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
 		const [url, opts] = fetchSpy.mock.calls[0]!;
@@ -60,7 +60,7 @@ describe('TransferForm (add) — bill pay', () => {
 		render(TransferForm, { props: { accounts: wide, onsaved: vi.fn() } });
 
 		await fireEvent.input(screen.getByLabelText('Amount'), { target: { value: '100' } });
-		await fireEvent.click(screen.getByText('+ Add bill pay'));
+		await fireEvent.click(screen.getByText('+ Add'));
 
 		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
 		const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);

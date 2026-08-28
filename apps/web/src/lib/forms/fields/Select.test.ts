@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent } from '@testing-library/dom';
-import Select from '$lib/forms/Select.svelte';
+import Select from '$lib/forms/fields/Select.svelte';
 
 const opts = ['Liabilities:CC:CardA', 'Assets:Cash:BankA'];
 const label = (a: string) => a.split(':').pop() ?? a;

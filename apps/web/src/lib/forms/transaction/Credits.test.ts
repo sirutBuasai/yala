@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent } from '@testing-library/dom';
-import Credits from '$lib/forms/Credits.svelte';
+import Credits from '$lib/forms/transaction/Credits.svelte';
 import { reactive } from '$lib/utils/reactive.svelte';
 
 const accts = ['Assets:Cash:Wallet', 'Liabilities:CC:CardA'];

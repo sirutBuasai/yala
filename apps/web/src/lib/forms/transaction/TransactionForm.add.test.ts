@@ -4,7 +4,7 @@ import { fireEvent, waitFor } from '@testing-library/dom';
 import { get } from 'svelte/store';
 import type { AccountsInfo } from '$lib/data/load';
 import { lastCategory, lastFundingAccount } from '$lib/utils/editPrefs';
-import TransactionForm from '$lib/forms/TransactionForm.svelte';
+import TransactionForm from '$lib/forms/transaction/TransactionForm.svelte';
 
 const accounts: AccountsInfo = {
 	spending_categories: ['Grocery', 'Takeouts'],

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
 import type { AccountsInfo } from '$lib/data/load';
-import TransactionForm from '$lib/forms/TransactionForm.svelte';
+import TransactionForm from '$lib/forms/transaction/TransactionForm.svelte';
 
 const accounts: AccountsInfo = {
 	spending_categories: ['Grocery', 'Takeouts'],

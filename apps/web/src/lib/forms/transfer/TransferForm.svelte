@@ -6,9 +6,10 @@
 	import { deleteTransaction, getJson, postJson } from '$lib/data/load';
 	import { formatAccount, money } from '$lib/utils/format';
 	import { lastTransferFrom, lastTransferTo } from '$lib/utils/editPrefs';
-	import AccountField from '$lib/forms/AccountField.svelte';
-	import DatePicker from '$lib/forms/DatePicker.svelte';
-	import EntryFooter from '$lib/forms/EntryFooter.svelte';
+	import AccountField from '$lib/forms/fields/AccountField.svelte';
+	import DatePicker from '$lib/forms/fields/DatePicker.svelte';
+	import EntryFooter from '$lib/forms/fields/EntryFooter.svelte';
+	import FormSection from '$lib/forms/fields/FormSection.svelte';
 
 	interface Props {
 		accounts: AccountsInfo;
@@ -112,50 +113,62 @@
 	}
 </script>
 
-<div class="editrow">
-	<div class="field">
-		<label for="tf-date">Date</label>
-		<DatePicker id="tf-date" ariaLabel="Date" bind:value={date} />
+<FormSection label="When & how much">
+	<div class="field-grid">
+		<div class="field">
+			<label for="tf-date">Date</label>
+			<DatePicker id="tf-date" ariaLabel="Date" bind:value={date} />
+		</div>
+		<div class="field">
+			<label for="tf-amt">Amount</label><input
+				id="tf-amt"
+				type="number"
+				step="0.01"
+				placeholder="0"
+				bind:value={amount}
+			/>
+		</div>
 	</div>
-	<AccountField
-		id="tf-from"
-		label="Pay from"
-		bind:value={from_account}
-		options={accounts.cash_accounts}
-		optionLabel={formatAccount}
-		kinds={[{ value: 'funding_cash', label: 'Cash / bank' }]}
-	/>
-	<AccountField
-		id="tf-to"
-		label="Pay toward"
-		bind:value={to_account}
-		options={toAccounts}
-		optionLabel={formatAccount}
-		kinds={[
-			{ value: 'funding_cash', label: 'Cash / bank' },
-			{ value: 'funding_credit', label: 'Credit card' }
-		]}
-	/>
-	<div class="field">
-		<label for="tf-amt">Amount</label><input
-			id="tf-amt"
-			type="number"
-			step="0.01"
-			placeholder="0"
-			bind:value={amount}
+</FormSection>
+
+<FormSection label="Accounts">
+	<div class="field-grid">
+		<AccountField
+			id="tf-from"
+			label="Pay from"
+			bind:value={from_account}
+			options={accounts.cash_accounts}
+			optionLabel={formatAccount}
+			kinds={[{ value: 'funding_cash', label: 'Cash / bank' }]}
+		/>
+		<AccountField
+			id="tf-to"
+			label="Pay toward"
+			bind:value={to_account}
+			options={toAccounts}
+			optionLabel={formatAccount}
+			kinds={[
+				{ value: 'funding_cash', label: 'Cash / bank' },
+				{ value: 'funding_credit', label: 'Credit card' }
+			]}
 		/>
 	</div>
-	<div class="field">
-		<label for="tf-payee">Note</label><input id="tf-payee" bind:value={payee} />
+</FormSection>
+
+<FormSection label="Details">
+	<div class="field-grid">
+		<div class="field">
+			<label for="tf-payee">Note</label><input id="tf-payee" bind:value={payee} />
+		</div>
+		<label class="chk"><input type="checkbox" bind:checked={pending} /> Pending</label>
 	</div>
-	<label class="chk"><input type="checkbox" bind:checked={pending} /> Pending</label>
-</div>
+</FormSection>
 
 <EntryFooter
 	{editing}
 	{msg}
 	{err}
-	addLabel="+ Add bill pay"
+	addLabel="+ Add"
 	deleteLabel="Delete bill pay"
 	deleteQuestion="Delete this bill payment?"
 	onsubmit={submit}
@@ -167,12 +180,6 @@
 </EntryFooter>
 
 <style>
-	.editrow {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-		gap: var(--gap-field);
-		align-items: end;
-	}
 	.chk {
 		font-size: var(--text-secondary);
 		color: var(--ink-2);

@@ -17,8 +17,8 @@
 			value: 'transaction',
 			label: 'Transaction',
 			icon: 'up',
-			accent: 'var(--lav)',
-			accentText: 'var(--lav-text)'
+			accent: 'var(--salmon)',
+			accentText: 'var(--salmon-text)'
 		},
 		{
 			value: 'paycheck',
@@ -35,6 +35,10 @@
 			accentText: 'var(--teal-text)'
 		}
 	];
+	const KIND = Object.fromEntries(KINDS.map((k) => [k.value, k])) as Record<
+		EntryKind,
+		(typeof KINDS)[number]
+	>;
 </script>
 
 <script lang="ts">
@@ -46,9 +50,9 @@
 	import Overlay from '$lib/overlay/Overlay.svelte';
 	import Arrow from '$lib/icons/Arrow.svelte';
 	import Swap from '$lib/icons/Swap.svelte';
-	import TransactionForm from '$lib/forms/TransactionForm.svelte';
-	import PaycheckForm from '$lib/forms/PaycheckForm.svelte';
-	import TransferForm from '$lib/forms/TransferForm.svelte';
+	import TransactionForm from '$lib/forms/transaction/TransactionForm.svelte';
+	import PaycheckForm from '$lib/forms/paycheck/PaycheckForm.svelte';
+	import TransferForm from '$lib/forms/transfer/TransferForm.svelte';
 
 	interface Props {
 		accounts: AccountsInfo | null;
@@ -62,7 +66,7 @@
 
 	let showAdd = $state(false);
 	let addKind = $state<EntryKind>('transaction');
-	const addMeta = $derived(KINDS.find((k) => k.value === addKind)!);
+	const addMeta = $derived(KIND[addKind]);
 	let editingTxn = $state<string | null>(null);
 	let editingPaycheck = $state<string | null>(null);
 	let editingTransfer = $state<string | null>(null);
@@ -130,19 +134,37 @@
 {/if}
 
 {#if editingTxn && accounts}
-	<Overlay title="Edit transaction" onclose={() => (editingTxn = null)}>
+	<Overlay
+		title={KIND.transaction.label}
+		kicker="Edit entry"
+		accent={KIND.transaction.accent}
+		accentText={KIND.transaction.accentText}
+		onclose={() => (editingTxn = null)}
+	>
 		<TransactionForm locator={editingTxn} {accounts} onsaved={afterSave} />
 	</Overlay>
 {/if}
 
 {#if editingPaycheck && accounts}
-	<Overlay title="Edit paycheck" onclose={() => (editingPaycheck = null)}>
+	<Overlay
+		title={KIND.paycheck.label}
+		kicker="Edit entry"
+		accent={KIND.paycheck.accent}
+		accentText={KIND.paycheck.accentText}
+		onclose={() => (editingPaycheck = null)}
+	>
 		<PaycheckForm locator={editingPaycheck} {accounts} onsaved={afterSave} />
 	</Overlay>
 {/if}
 
 {#if editingTransfer && accounts}
-	<Overlay title="Edit bill pay" onclose={() => (editingTransfer = null)}>
+	<Overlay
+		title={KIND.transfer.label}
+		kicker="Edit entry"
+		accent={KIND.transfer.accent}
+		accentText={KIND.transfer.accentText}
+		onclose={() => (editingTransfer = null)}
+	>
 		<TransferForm locator={editingTransfer} {accounts} onsaved={afterSave} />
 	</Overlay>
 {/if}
