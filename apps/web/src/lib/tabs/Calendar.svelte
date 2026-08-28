@@ -9,6 +9,7 @@
 	import TransferList from '$lib/lists/TransferList.svelte';
 	import PaycheckList from '$lib/lists/PaycheckList.svelte';
 	import EditModals from '$lib/forms/EditModals.svelte';
+	import Empty from '$lib/layout/Empty.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -192,9 +193,9 @@
 			{/if}
 
 			{#if !selected.pays.length && !selectedTxns.length && !selected.xfers.length}
-				<p class="note">
-					No activity this day.{#if edit}&nbsp;Add an entry above.{/if}
-				</p>
+				<Empty
+					>No activity this day.{#if edit}&nbsp;Add an entry above.{/if}</Empty
+				>
 			{/if}
 		{/if}
 	</aside>
@@ -371,10 +372,6 @@
 		letter-spacing: var(--ls-wider);
 		color: var(--ink-2);
 		font-weight: var(--fw-semibold);
-	}
-	.note {
-		color: var(--ink-3);
-		font-size: var(--text-secondary);
 	}
 	@media (max-width: 900px) {
 		.calwrap {

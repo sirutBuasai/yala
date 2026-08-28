@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Yala · Donut reflow (container-query)</title>
+		<style>
+			:root {
+				color-scheme: dark;
+				--bg: #16161f;
+				--surface: #1f1f2b;
+				--border: #33334a;
+				--ink: #e6e0c8;
+				--ink-2: #a8a28c;
+				--ink-3: #6f6c5c;
+				--green: #9ece6a;
+				--cat-housing: #f7768e;
+				--cat-grocery: #f295c5;
+				--cat-takeouts: #bb9af7;
+				--cat-travel: #6f8fe8;
+				--cat-utilities: #ff9e64;
+				--cat-transport: #ffd27f;
+				--cat-personal: #7dcfff;
+				--cat-health: #2bb673;
+				--cat-subscription: #ffd5d2;
+				--cat-misc: #c0794f;
+				--shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 14px 34px -18px rgba(0, 0, 0, 0.7);
+				--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+				--sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
+			}
+			:root[data-theme='light'] {
+				color-scheme: light;
+				--bg: #f0ebdd;
+				--surface: #faf6ec;
+				--border: #ddd2bb;
+				--ink: #2e2a22;
+				--ink-2: #6b6350;
+				--ink-3: #9a9078;
+				--shadow: 0 1px 2px rgba(120, 90, 40, 0.06), 0 14px 34px -18px rgba(120, 90, 40, 0.28);
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				background: var(--bg);
+				color: var(--ink);
+				font-family: var(--sans);
+				font-size: 14px;
+				line-height: 1.45;
+			}
+			.pagehead {
+				padding: 18px 28px;
+				border-bottom: 1px solid var(--border);
+			}
+			.pagehead h1 {
+				margin: 0;
+				font-size: 22px;
+				font-family: var(--serif);
+			}
+			.pagehead p {
+				margin: 4px 0 0;
+				color: var(--ink-2);
+				font-size: 12px;
+				max-width: 860px;
+			}
+			.pagehead button {
+				background: var(--surface);
+				border: 1px solid var(--border);
+				color: var(--ink-2);
+				border-radius: 999px;
+				padding: 8px 14px;
+				font-size: 12px;
+				cursor: pointer;
+				margin-top: 10px;
+			}
+			.wrap {
+				max-width: 1120px;
+				margin: 0 auto;
+				padding: 26px 28px 80px;
+			}
+			.cap {
+				margin: 24px 0 8px;
+			}
+			.cap b {
+				font-size: 14px;
+			}
+			.cap span {
+				color: var(--ink-3);
+				font-size: 12px;
+				margin-left: 8px;
+			}
+			.demorow {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 18px;
+				align-items: start;
+			}
+
+			/* The donut PANE is the query container: its own size drives the layout, not the viewport. */
+			.pane {
+				container-type: size;
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-radius: 16px;
+				padding: 16px 18px;
+				box-shadow: var(--shadow);
+				display: flex;
+				flex-direction: column;
+			}
+			.paneh {
+				display: flex;
+				align-items: baseline;
+				justify-content: space-between;
+				gap: 10px;
+				margin-bottom: 10px;
+				flex: none;
+			}
+			.paneh h4 {
+				margin: 0;
+				font-size: 16px;
+				font-weight: 600;
+			}
+			.paneh .pc {
+				color: var(--ink-3);
+				font-size: 12px;
+			}
+			.body {
+				flex: 1;
+				min-height: 0;
+			}
+
+			/* default: ring beside legend, centered in the body */
+			.dflow {
+				height: 100%;
+				display: flex;
+				gap: 18px;
+				align-items: center;
+			}
+			.ring {
+				flex: none;
+				width: 118px;
+				height: 118px;
+				border-radius: 999px;
+				background: conic-gradient(
+					var(--cat-housing) 0 19%,
+					var(--cat-takeouts) 19% 25%,
+					var(--cat-misc) 25% 31%,
+					var(--cat-travel) 31% 34%,
+					var(--cat-personal) 34% 36%,
+					var(--green) 36% 100%
+				);
+				-webkit-mask: radial-gradient(circle 36px at center, transparent 98%, #000 100%);
+				mask: radial-gradient(circle 36px at center, transparent 98%, #000 100%);
+			}
+			.legend {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+				flex: 1;
+				min-width: 0;
+			}
+			.legend li {
+				display: grid;
+				grid-template-columns: 12px 1fr auto;
+				gap: 8px;
+				align-items: center;
+				padding: 3px 0;
+				font-size: 12px;
+			}
+			.legend .sw {
+				width: 11px;
+				height: 11px;
+				border-radius: 3px;
+			}
+			.legend .ll {
+				color: var(--ink-2);
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+			.legend .la {
+				color: var(--ink-3);
+				font-variant-numeric: tabular-nums;
+				text-align: right;
+			}
+
+			/* Once the pane is tall enough, stack: ring on top (grown to fill), legend below in
+			   as many columns as fit. Threshold is relative to the PANE, so it's not a viewport hack. */
+			@container (min-height: 300px) {
+				.dflow {
+					flex-direction: column;
+					align-items: center;
+					justify-content: flex-start;
+					gap: 16px;
+				}
+				.ring {
+					width: min(58cqh, 240px);
+					height: min(58cqh, 240px);
+				}
+				.legend {
+					flex: none;
+					width: 100%;
+					columns: 2;
+					column-gap: 22px;
+				}
+			}
+			/* Wider tall panes: allow a third legend column so it keeps filling the width. */
+			@container (min-height: 300px) and (min-width: 460px) {
+				.legend {
+					columns: 3;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<header class="pagehead">
+			<h1>Donut reflow — driven by the pane's own size</h1>
+			<p>
+				Legend sits beside the ring in a compact pane; once the pane grows tall (e.g. when it
+				stretches to match the paycheck+bill column in Monthly), the legend drops below and the ring
+				grows to fill. Uses a CSS container query on the pane — no viewport breakpoints, no fixed
+				pixel layout. The 10-category cap (then "Other") is unchanged.
+			</p>
+			<button id="theme">◐ Toggle light / dark</button>
+		</header>
+
+		<main class="wrap" id="wrap"></main>
+
+		<script>
+			const CATS = [
+				['Housing', '$3,465 · 23%', '--cat-housing'],
+				['Takeouts', '$615 · 4%', '--cat-takeouts'],
+				['Misc', '$540 · 4%', '--cat-misc'],
+				['Travel', '$262 · 2%', '--cat-travel'],
+				['Personal', '$122 · 1%', '--cat-personal'],
+				['Grocery', '$476 · 3%', '--cat-grocery'],
+				['Utilities', '$95 · 1%', '--cat-utilities'],
+				['Transport', '$95 · 1%', '--cat-transport'],
+				['Health', '$60 · 0%', '--cat-health'],
+				['Other', '$126 · 1%', '--ink-3'],
+				['Saved', '$9,727 · 64%', '--green']
+			];
+			const legend = () =>
+				`<ul class="legend">${CATS.map(([l, a, v]) => `<li><span class="sw" style="background:var(${v})"></span><span class="ll">${l}</span><span class="la">${a}</span></li>`).join('')}</ul>`;
+			const donut = (h) => `
+				<section class="pane" style="height:${h}px">
+					<div class="paneh"><h4>Where your income went</h4><span class="pc">net $15,233</span></div>
+					<div class="body"><div class="dflow"><div class="ring"></div>${legend()}</div></div>
+				</section>`;
+
+			document.getElementById('wrap').innerHTML = `
+				<p class="cap"><b>Compact panes (short)</b><span>ring beside legend — the current side-by-side layout</span></p>
+				<div class="demorow">${donut(210)}${donut(250)}</div>
+
+				<p class="cap"><b>Tall pane (stretched, e.g. matches paycheck + bill column)</b><span>legend drops below, ring grows to fill — legend uses 2–3 columns as width allows</span></p>
+				<div class="demorow">${donut(430)}<section class="pane" style="height:430px;background:none;border:0;box-shadow:none"></section></div>
+
+				<p class="cap"><b>Tall &amp; full-width</b><span>same reflow, more room → ring larger, legend in 3 columns</span></p>
+				${donut(430).replace('class="pane"', 'class="pane" data-wide')}`;
+
+			document.getElementById('theme').addEventListener('click', () => {
+				const r = document.documentElement;
+				r.dataset.theme = r.dataset.theme === 'light' ? 'dark' : 'light';
+			});
+		</script>
+	</body>
+</html>

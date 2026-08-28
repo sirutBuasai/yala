@@ -18,8 +18,9 @@
 		dateOf?: (item: T) => string;
 		/** Row spacing: 'compact' (default, dense lists) or 'comfortable' (roomier). */
 		density?: 'compact' | 'comfortable';
-		/** Cap the list to this many rows, then scroll; height comes from a row-height token. */
-		maxRows?: number;
+		/** Fix the list to exactly this many rows tall (scroll past it); height from a row-height
+		    token. Constant whether the list has fewer rows (blank space) or more (scrolls). */
+		fixedRows?: number;
 		main: Snippet<[T]>;
 		columns: Snippet<[T]>;
 		amount: Snippet<[T]>;
@@ -32,7 +33,7 @@
 		dotColor,
 		dateOf,
 		density = 'compact',
-		maxRows,
+		fixedRows,
 		main,
 		columns,
 		amount
@@ -42,8 +43,8 @@
 <div
 	class="list bleed-x"
 	class:comfortable={density === 'comfortable'}
-	class:capped={maxRows != null}
-	style:--max-rows={maxRows}
+	class:fixed={fixedRows != null}
+	style:--rows={fixedRows}
 >
 	{#each items as item (item.locator)}
 		<svelte:element
@@ -75,10 +76,11 @@
 	.list.comfortable {
 		--rowh: var(--listrow-h-comfortable);
 	}
-	/* Capped list: show maxRows rows, then scroll. overflow-x stays hidden so the edge-to-edge
-	   bleed never triggers a horizontal scrollbar (rows already fill the bled width exactly). */
-	.list.capped {
-		max-height: calc(var(--rowh) * var(--max-rows));
+	/* Fixed-height list: exactly fixedRows rows tall — blank space when there are fewer, scrolls
+	   when there are more. overflow-x stays hidden so the edge-to-edge bleed never triggers a
+	   horizontal scrollbar (rows already fill the bled width exactly). */
+	.list.fixed {
+		height: calc(var(--rowh) * var(--rows));
 		overflow-y: auto;
 		overflow-x: hidden;
 		overscroll-behavior: contain;

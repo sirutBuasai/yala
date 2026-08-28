@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Yala · Monthly fixed-size + empty-state scenarios</title>
+		<style>
+			:root {
+				color-scheme: dark;
+				--bg: #16161f;
+				--surface: #1f1f2b;
+				--inset: #2a2a3c;
+				--border: #33334a;
+				--ink: #e6e0c8;
+				--ink-2: #a8a28c;
+				--ink-3: #6f6c5c;
+				--green: #9ece6a;
+				--gold: #e0af68;
+				--good-text: #9ece6a;
+				--cat-housing: #f7768e;
+				--cat-grocery: #f295c5;
+				--cat-takeouts: #bb9af7;
+				--cat-travel: #6f8fe8;
+				--cat-subscription: #ffd5d2;
+				--cat-misc: #c0794f;
+				--shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 14px 34px -18px rgba(0, 0, 0, 0.7);
+				--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+				--sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
+				--rowh: 48px; /* approx one list row; fixed box = rowh * N */
+			}
+			:root[data-theme='light'] {
+				color-scheme: light;
+				--bg: #f0ebdd;
+				--surface: #faf6ec;
+				--inset: #ece4d2;
+				--border: #ddd2bb;
+				--ink: #2e2a22;
+				--ink-2: #6b6350;
+				--ink-3: #9a9078;
+				--good-text: #4f8129;
+				--shadow: 0 1px 2px rgba(120, 90, 40, 0.06), 0 14px 34px -18px rgba(120, 90, 40, 0.28);
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				background: var(--bg);
+				color: var(--ink);
+				font-family: var(--sans);
+				font-size: 14px;
+				line-height: 1.45;
+			}
+			.serif {
+				font-family: var(--serif);
+			}
+			.pagehead {
+				position: sticky;
+				top: 0;
+				z-index: 5;
+				display: flex;
+				align-items: baseline;
+				justify-content: space-between;
+				gap: 16px;
+				padding: 18px 28px;
+				background: color-mix(in srgb, var(--bg) 88%, transparent);
+				backdrop-filter: blur(8px);
+				border-bottom: 1px solid var(--border);
+			}
+			.pagehead h1 {
+				margin: 0;
+				font-size: 22px;
+			}
+			.pagehead p {
+				margin: 4px 0 0;
+				color: var(--ink-2);
+				font-size: 12px;
+				max-width: 860px;
+			}
+			.pagehead button {
+				background: var(--surface);
+				border: 1px solid var(--border);
+				color: var(--ink-2);
+				border-radius: 999px;
+				padding: 8px 14px;
+				font-size: 12px;
+				cursor: pointer;
+				white-space: nowrap;
+			}
+			.wrap {
+				max-width: 1040px;
+				margin: 0 auto;
+				padding: 24px 28px 80px;
+			}
+			.scn {
+				margin: 26px 0 34px;
+			}
+			.scn > .cap {
+				margin: 0 0 10px;
+			}
+			.scn > .cap b {
+				font-size: 14px;
+			}
+			.scn > .cap span {
+				color: var(--ink-3);
+				font-size: 12px;
+				margin-left: 8px;
+			}
+
+			.card {
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-radius: 16px;
+				padding: 16px 18px;
+				box-shadow: var(--shadow);
+			}
+			.paneh {
+				display: flex;
+				align-items: baseline;
+				justify-content: space-between;
+				gap: 10px;
+				margin-bottom: 10px;
+			}
+			.paneh h4 {
+				margin: 0;
+				font-size: 16px;
+				font-weight: 600;
+			}
+			.paneh .pc {
+				color: var(--ink-3);
+				font-size: 12px;
+			}
+
+			/* one list row ~ --rowh tall */
+			.lrow {
+				display: grid;
+				grid-template-columns: 10px 1fr auto;
+				gap: 10px;
+				align-items: center;
+				height: var(--rowh);
+				border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+			}
+			.lrow:first-child {
+				border-top: 0;
+			}
+			.dot {
+				width: 8px;
+				height: 8px;
+				border-radius: 999px;
+			}
+			.lmain {
+				min-width: 0;
+			}
+			.lt {
+				display: block;
+				font-size: 13px;
+				font-weight: 500;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+			.lc {
+				display: block;
+				font-size: 11px;
+				color: var(--ink-3);
+			}
+			.lamt {
+				text-align: right;
+				font-variant-numeric: tabular-nums;
+				font-weight: 600;
+				font-size: 13px;
+			}
+			.inc {
+				color: var(--good-text);
+			}
+			.pend {
+				color: var(--gold);
+				font-size: 10px;
+				font-weight: 700;
+				margin-left: 6px;
+			}
+
+			/* Fixed-height list box: constant height (rowh*N) whenever there is ≥1 row; scrolls when
+			   there are more, leaves blank space when fewer. Empty lists don't use this — they render
+			   the .empty message instead, so the pane shrinks. */
+			.fixed {
+				overflow-y: auto;
+				overscroll-behavior: contain;
+			}
+			.fixed.pay {
+				height: calc(var(--rowh) * 3);
+			}
+			.fixed.bill {
+				height: calc(var(--rowh) * 4);
+			}
+
+			/* One consistent empty-state style, shared by every section AND the donut's "No data". */
+			.empty {
+				color: var(--ink-3);
+				font-size: 13px;
+				margin: 4px 0;
+			}
+			.empty.center {
+				min-height: 120px;
+				display: grid;
+				place-items: center;
+				text-align: center;
+			}
+
+			/* A2 top row: donut left, paycheck+bill rail right; donut stretches to the rail height. */
+			.tworow {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 14px;
+				align-items: stretch;
+			}
+			.rail {
+				display: flex;
+				flex-direction: column;
+				gap: 14px;
+			}
+			.donutcard {
+				display: flex;
+				flex-direction: column;
+			}
+			.donutcard .body {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+			}
+			.donutrow {
+				display: flex;
+				gap: 18px;
+				align-items: center;
+			}
+			.ring {
+				flex: none;
+				width: 104px;
+				height: 104px;
+				border-radius: 999px;
+				background: conic-gradient(
+					var(--cat-housing) 0 19%,
+					var(--cat-takeouts) 19% 25%,
+					var(--cat-misc) 25% 31%,
+					var(--green) 31% 100%
+				);
+				-webkit-mask: radial-gradient(circle 32px at center, transparent 98%, #000 100%);
+				mask: radial-gradient(circle 32px at center, transparent 98%, #000 100%);
+			}
+			.legend {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+				flex: 1;
+				min-width: 0;
+			}
+			.legend li {
+				display: grid;
+				grid-template-columns: 12px 1fr auto;
+				gap: 8px;
+				align-items: center;
+				padding: 3px 0;
+				font-size: 12px;
+			}
+			.legend .sw {
+				width: 11px;
+				height: 11px;
+				border-radius: 3px;
+			}
+			.legend .ll {
+				color: var(--ink-2);
+			}
+			.legend .la {
+				color: var(--ink-3);
+				font-variant-numeric: tabular-nums;
+				text-align: right;
+			}
+			.txnwrap {
+				margin-top: 14px;
+			}
+		</style>
+	</head>
+	<body>
+		<header class="pagehead">
+			<div>
+				<h1 class="serif">Monthly — fixed-size &amp; empty-state scenarios</h1>
+				<p>
+					Paychecks / Bill pay are a fixed height when they have ≥1 row (scroll if more, blank space
+					if fewer) and shrink to just the message when empty. Every empty state — including the
+					donut's "No data" — uses one shared style. Tell me which scenario is off.
+				</p>
+			</div>
+			<button id="theme">◐ Toggle light / dark</button>
+		</header>
+
+		<main class="wrap" id="wrap"></main>
+
+		<script>
+			const LEGEND = [
+				['Housing', '$3,465 · 23%', '--cat-housing'],
+				['Takeouts', '$615 · 4%', '--cat-takeouts'],
+				['Grocery', '$476 · 3%', '--cat-grocery'],
+				['Travel', '$262 · 2%', '--cat-travel'],
+				['Subscription', '$251 · 2%', '--cat-subscription'],
+				['Saved', '$9,727 · 64%', '--green']
+			];
+			const PAYS = [
+				['Amazon', 'take-home', '+$5,078'],
+				['Acme Corp', 'take-home', '+$3,200'],
+				['Freelance LLC', 'take-home', '+$1,450'],
+				['Dividends', 'brokerage', '+$310'],
+				['Bonus', 'take-home', '+$900']
+			];
+			const BILLS = [
+				['Wealthfront → Venmo', 'venmo sweep', '$20', false],
+				['Chase → Amex Gold', 'card payment', '$1,240', true],
+				['Ally → Chase', 'autopay', '$600', false],
+				['Fidelity → Ally', 'rebalance', '$2,000', false],
+				['Chase → Discover', 'card payment', '$430', false],
+				['Ally → Schwab', 'transfer', '$1,000', false]
+			];
+			const TXNS = [
+				['rent', 'Housing', '$3,450', '--cat-housing'],
+				['amazon prime', 'Subscription', '$151', '--cat-subscription'],
+				['seattle flight', 'Travel', '$262', '--cat-travel'],
+				['trader joes', 'Grocery', '$67', '--cat-grocery'],
+				['halal cart', 'Takeouts', '$61', '--cat-takeouts'],
+				['daiso', 'Grocery', '$18', '--cat-grocery']
+			];
+
+			const payRows = (n) =>
+				PAYS.slice(0, n)
+					.map(
+						([
+							e,
+							c,
+							a
+						]) => `<div class="lrow"><span class="dot" style="background:var(--green)"></span>
+					<span class="lmain"><span class="lt">${e}</span><span class="lc">${c}</span></span>
+					<span class="lamt inc">${a}</span></div>`
+					)
+					.join('');
+			const billRows = (n) =>
+				BILLS.slice(0, n)
+					.map(
+						([
+							r,
+							note,
+							a,
+							p
+						]) => `<div class="lrow"><span class="dot" style="background:var(--ink-3)"></span>
+					<span class="lmain"><span class="lt">${r}${p ? '<span class="pend">● pending</span>' : ''}</span><span class="lc">${note}</span></span>
+					<span class="lamt">${a}</span></div>`
+					)
+					.join('');
+			const txnRows = (n) =>
+				TXNS.slice(0, n)
+					.map(
+						([
+							p,
+							c,
+							a,
+							v
+						]) => `<div class="lrow"><span class="dot" style="background:var(${v})"></span>
+					<span class="lmain"><span class="lt">${p}</span><span class="lc">${c}</span></span>
+					<span class="lamt">${a}</span></div>`
+					)
+					.join('');
+
+			const pane = (title, cap, body, extraClass = '') =>
+				`<section class="card ${extraClass}"><div class="paneh"><h4>${title}</h4>${cap ? `<span class="pc">${cap}</span>` : ''}</div><div class="body">${body}</div></section>`;
+
+			const payPane = (n) =>
+				pane(
+					'Paychecks this month',
+					n ? `${n} in Jul 2026` : '0 in Jul 2026',
+					n
+						? `<div class="fixed pay">${payRows(n)}</div>`
+						: `<p class="empty">No paychecks this month.</p>`
+				);
+			const billPane = (n) =>
+				pane(
+					'Bill pay & transfers',
+					n ? `${n} · Jul 2026` : '0 · Jul 2026',
+					n
+						? `<div class="fixed bill">${billRows(n)}</div>`
+						: `<p class="empty">No bill pay this month.</p>`
+				);
+			const txnPane = (n) =>
+				pane(
+					'Transaction history',
+					n ? `${n} transactions · Jul 2026` : '0 transactions · Jul 2026',
+					n ? txnRows(n) : `<p class="empty">No transactions this month.</p>`
+				);
+			const donutPane = (has) =>
+				pane(
+					'Where your income went',
+					has ? 'Jul 2026 · net income $15,233' : 'Jul 2026',
+					has
+						? `<div class="donutrow"><div class="ring"></div><ul class="legend">${LEGEND.map(([l, a, v]) => `<li><span class="sw" style="background:var(${v})"></span><span class="ll">${l}</span><span class="la">${a}</span></li>`).join('')}</ul></div>`
+						: `<p class="empty center">No data</p>`,
+					'donutcard'
+				);
+
+			const SCN = [
+				{
+					n: 'S1 · Populated',
+					d: 'Baseline: paychecks 3, bill pay 4, transactions 6.',
+					pay: 3,
+					bill: 4,
+					txn: 6,
+					donut: true
+				},
+				{
+					n: 'S2 · Sparse (1 row each)',
+					d: 'Fixed boxes stay full height with blank space below the single row. Donut stretches to the rail.',
+					pay: 1,
+					bill: 1,
+					txn: 1,
+					donut: true
+				},
+				{
+					n: 'S3 · Overflow',
+					d: 'More rows than the fixed height → each box scrolls internally (5 paychecks, 6 bill pays).',
+					pay: 5,
+					bill: 6,
+					txn: 6,
+					donut: true
+				},
+				{
+					n: 'S4 · Empty paycheck + empty transactions',
+					d: 'Both shrink to a consistent message; bill pay populated. Donut still has income data.',
+					pay: 0,
+					bill: 2,
+					txn: 0,
+					donut: true
+				},
+				{
+					n: 'S5 · Empty bill pay',
+					d: 'Bill pay section still shows (was previously hidden), with its own empty message.',
+					pay: 2,
+					bill: 0,
+					txn: 3,
+					donut: true
+				},
+				{
+					n: 'S6 · All empty',
+					d: 'Every section shows its message; donut shows "No data" in the same font. All panes shrink.',
+					pay: 0,
+					bill: 0,
+					txn: 0,
+					donut: false
+				}
+			];
+
+			document.getElementById('wrap').innerHTML = SCN.map(
+				(s) => `
+				<section class="scn">
+					<p class="cap"><b>${s.n}</b><span>${s.d}</span></p>
+					<div class="tworow">
+						${donutPane(s.donut)}
+						<div class="rail">${payPane(s.pay)}${billPane(s.bill)}</div>
+					</div>
+					<div class="txnwrap">${txnPane(s.txn)}</div>
+				</section>`
+			).join('');
+
+			document.getElementById('theme').addEventListener('click', () => {
+				const r = document.documentElement;
+				r.dataset.theme = r.dataset.theme === 'light' ? 'dark' : 'light';
+			});
+		</script>
+	</body>
+</html>

@@ -5,6 +5,7 @@
 	// hand-shaping props — the data→visual coupling lives entirely in the registry.
 	import type { Primitive, Series } from '$lib/data/primitives';
 	import { CHARTS_BY_ID, defaultChart } from './registry';
+	import Empty from '$lib/layout/Empty.svelte';
 
 	interface Props {
 		primitive: Primitive;
@@ -28,12 +29,5 @@
 	{@const Chart = def.component}
 	<Chart {...chartProps} />
 {:else}
-	<p class="empty">No chart accepts {primitive.kind} data.</p>
+	<Empty>No chart accepts {primitive.kind} data.</Empty>
 {/if}
-
-<style>
-	.empty {
-		color: var(--ink-3);
-		font-size: var(--text-secondary);
-	}
-</style>

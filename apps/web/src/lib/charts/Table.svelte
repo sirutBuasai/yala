@@ -3,6 +3,7 @@
 	// formatted by their unit; text columns are left-aligned.
 	import type { Table } from '$lib/data/primitives';
 	import { formatUnit } from '$lib/data/primitives';
+	import Empty from '$lib/layout/Empty.svelte';
 
 	interface Props {
 		table: Table;
@@ -35,7 +36,7 @@
 		</tbody>
 	</table>
 {:else}
-	<p class="empty">No data.</p>
+	<Empty>No data.</Empty>
 {/if}
 
 <style>
@@ -63,8 +64,5 @@
 	.num {
 		text-align: right;
 		font-variant-numeric: tabular-nums;
-	}
-	.empty {
-		color: var(--ink-3);
 	}
 </style>

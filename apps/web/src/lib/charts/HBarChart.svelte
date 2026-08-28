@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { money, moneyK, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
+	import Empty from '$lib/layout/Empty.svelte';
 
 	interface Item {
 		label: string;
@@ -51,11 +52,5 @@
 		{/each}
 	</svg>
 {:else}
-	<p class="empty">No data.</p>
+	<Empty>No data.</Empty>
 {/if}
-
-<style>
-	.empty {
-		color: var(--ink-3);
-	}
-</style>
