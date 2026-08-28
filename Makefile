@@ -4,8 +4,8 @@
 help:
 	@echo "make bootstrap   install backend + frontend deps (first run)"
 	@echo "make gen         regenerate contract: data.schema.json + types.ts"
-	@echo "make serve       clean, generate data.json, build, serve view-only site (PORT= to override)"
-	@echo "make serve-api   clean, generate data.json, build, serve site + edit API (PORT= to override)"
+	@echo "make serve       clean, generate data.json, build, serve view-only site (PORT=/WORKTREE= to override)"
+	@echo "make serve-api   clean, generate data.json, build, serve site + edit API (PORT=/WORKTREE= to override)"
 	@echo "make test        run backend + frontend test suites"
 	@echo "make test-api    run backend tests"
 	@echo "make test-web    run frontend tests"
@@ -18,10 +18,10 @@ gen:
 	python3 scripts/gen.py
 
 serve:
-	python3 scripts/serve.py web $(if $(PORT),--port $(PORT))
+	python3 scripts/serve.py web $(if $(PORT),--port $(PORT)) $(if $(WORKTREE),--worktree $(WORKTREE))
 
 serve-api:
-	python3 scripts/serve.py api $(if $(PORT),--port $(PORT))
+	python3 scripts/serve.py api $(if $(PORT),--port $(PORT)) $(if $(WORKTREE),--worktree $(WORKTREE))
 
 test:
 	python3 scripts/test.py all
