@@ -1,6 +1,8 @@
 <script lang="ts">
 	// A dismissible overlay panel over a backdrop. `variant` picks the presentation:
-	// 'modal' floats near the top-center; 'drawer' slides in from the right edge.
+	// 'modal' floats near the top-center; 'drawer' slides in from the right edge. When `accent`
+	// is set the header becomes a full-bleed tinted band (with an optional `kicker` and a
+	// `controls` snippet, e.g. an entry-type switcher); the header stays fixed and the body scrolls.
 	import type { Snippet } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { focusTrap } from '$lib/utils/focusTrap';
@@ -10,9 +12,26 @@
 		title: string;
 		onclose: () => void;
 		variant?: 'modal' | 'drawer';
+		/** Tints the header into a full-bleed band in this accent color (band fill + border). */
+		accent?: string;
+		/** Kicker text color; use a mode-aware `-text` accent so it stays legible on the light band. */
+		accentText?: string;
+		/** Small uppercase label above the title (e.g. "New entry"). */
+		kicker?: string;
+		/** Extra header content below the title row, inside the band (e.g. a type switcher). */
+		controls?: Snippet;
 		children: Snippet;
 	}
-	let { title, onclose, variant = 'modal', children }: Props = $props();
+	let {
+		title,
+		onclose,
+		variant = 'modal',
+		accent,
+		accentText,
+		kicker,
+		controls,
+		children
+	}: Props = $props();
 </script>
 
 <div
@@ -34,9 +53,21 @@
 			? { x: 480, duration: dur(220) }
 			: { y: 10, duration: dur(170) }}
 	>
-		<div class="head">
-			<h2 id="overlay-title" class="serif">{title}</h2>
-			<button type="button" class="x" onclick={onclose}>✕</button>
+		<div
+			class="head"
+			class:tinted={accent}
+			style={accent ? `--accent: ${accent}; --accent-text: ${accentText ?? accent}` : undefined}
+		>
+			<div class="titlerow">
+				<div class="titles">
+					{#if kicker}<span class="kicker">{kicker}</span>{/if}
+					<h2 id="overlay-title" class="serif">{title}</h2>
+				</div>
+				<button type="button" class="x" onclick={onclose}>✕</button>
+			</div>
+			{#if controls}
+				<div class="controls">{@render controls()}</div>
+			{/if}
 		</div>
 		<div class="body">
 			{@render children()}
@@ -64,10 +95,8 @@
 		border: 1px solid var(--border);
 		display: flex;
 		flex-direction: column;
-		overflow-y: auto;
-		/* Keep a scroll gesture that reaches the panel's end from chaining to the page behind it. */
-		overscroll-behavior: contain;
-		padding: var(--space-10) var(--space-11);
+		/* Clip the full-bleed header band to the panel's rounded corners; the body owns scrolling. */
+		overflow: hidden;
 	}
 	/* Shrinks to fit narrow screens; content shrinks with it, so it never needs a horizontal scroll. */
 	.modal {
@@ -86,14 +115,38 @@
 		box-shadow: -18px 0 40px -20px rgba(0, 0, 0, 0.7);
 	}
 	.head {
+		flex-shrink: 0;
+		padding: var(--space-8) var(--space-11);
+	}
+	.head.tinted {
+		background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+		border-bottom: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+	}
+	.titlerow {
 		display: flex;
 		justify-content: space-between;
-		align-items: center;
-		margin-bottom: var(--space-8);
+		align-items: flex-start;
+	}
+	.titles {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+	}
+	.kicker {
+		font-size: var(--text-label);
+		text-transform: uppercase;
+		letter-spacing: var(--ls-wider);
+		color: var(--ink-3);
+	}
+	.head.tinted .kicker {
+		color: var(--accent-text);
 	}
 	.head h2 {
 		margin: 0;
 		font-size: var(--text-dialog);
+	}
+	.controls {
+		margin-top: var(--space-6);
 	}
 	.x {
 		background: none;
@@ -106,5 +159,11 @@
 	.x:hover {
 		border-color: var(--crit);
 		color: var(--crit-text);
+	}
+	.body {
+		overflow-y: auto;
+		/* Keep a scroll gesture that reaches the body's end from chaining to the page behind it. */
+		overscroll-behavior: contain;
+		padding: var(--space-10) var(--space-11);
 	}
 </style>

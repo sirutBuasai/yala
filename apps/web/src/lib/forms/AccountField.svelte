@@ -2,7 +2,7 @@
 	import { postJson, refreshAccounts } from '$lib/data/load';
 	import Select from '$lib/forms/Select.svelte';
 
-	export interface CreatableKind {
+	interface CreatableKind {
 		value: 'category' | 'deduction' | 'contribution' | 'funding_credit' | 'funding_cash';
 		label: string;
 	}

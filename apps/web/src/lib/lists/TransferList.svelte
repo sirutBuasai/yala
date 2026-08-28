@@ -1,5 +1,5 @@
 <script module lang="ts">
-	export interface TransferRow {
+	interface TransferRow {
 		locator: string;
 		date: string;
 		payee: string;

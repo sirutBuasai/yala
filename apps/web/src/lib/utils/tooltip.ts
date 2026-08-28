@@ -4,7 +4,7 @@
 
 import { writable } from 'svelte/store';
 
-export interface TipState {
+interface TipState {
 	html: string;
 	x: number;
 	y: number;

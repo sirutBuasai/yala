@@ -2,8 +2,7 @@
 	// Figures a paycheck row can break out into its own aligned column, in the order given. Each
 	// token maps to a fixed figure so columns line up across rows. 'saved' sums the contributions
 	// (401k…); 'deductions' sums every deduction entry.
-	export type PaycheckField =
-		'gross' | 'tax' | 'benefits' | 'deductions' | 'saved' | 'takehome' | 'net';
+	type PaycheckField = 'gross' | 'tax' | 'benefits' | 'deductions' | 'saved' | 'takehome' | 'net';
 </script>
 
 <script lang="ts">

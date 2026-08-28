@@ -30,7 +30,7 @@ import DataTable from './Table.svelte';
 import StatTile from './StatTile.svelte';
 
 /** Extra rendering options a caller can pass to `adapt` (all optional). */
-export interface AdaptOpts {
+interface AdaptOpts {
 	/** Additional series to layer onto a series/line chart (filtered to compatible). */
 	layers?: Series[];
 	/** Draw a gradient area under a single line. */

@@ -38,7 +38,7 @@ import {
 
 export type { Scope, ScopeLevel } from './scope';
 
-export interface DataDef {
+interface DataDef {
 	id: string;
 	label: string;
 	kind: PrimitiveKind;

@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Yala · Add-entry popup mockups</title>
+		<style>
+			/* ── Tokens lifted from apps/web/src/app.css so the mockups match the real app ── */
+			:root {
+				color-scheme: dark;
+				--bg: #16161f;
+				--surface: #1f1f2b;
+				--surface-2: #26263a;
+				--inset: #2a2a3c;
+				--border: #33334a;
+				--ink: #e6e0c8;
+				--ink-2: #a8a28c;
+				--ink-3: #6f6c5c;
+				--lav: #bb9af7;
+				--green: #9ece6a;
+				--teal: #7dcfff;
+				--gold: #e0af68;
+				--crit: #e46876;
+				--on-accent: #1a1522;
+				--radius-sm: 6px;
+				--radius-md: 9px;
+				--radius-lg: 12px;
+				--radius-xl: 16px;
+				--radius-pill: 999px;
+				--shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 14px 34px -18px rgba(0, 0, 0, 0.7);
+				--font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+				--font-sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
+			}
+			:root[data-theme='light'] {
+				color-scheme: light;
+				--bg: #f0ebdd;
+				--surface: #faf6ec;
+				--surface-2: #f1ead9;
+				--inset: #ece4d2;
+				--border: #ddd2bb;
+				--ink: #2e2a22;
+				--ink-2: #6b6350;
+				--ink-3: #9a9078;
+				--shadow: 0 1px 2px rgba(120, 90, 40, 0.06), 0 14px 34px -18px rgba(120, 90, 40, 0.28);
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				background: var(--bg);
+				color: var(--ink);
+				font-family: var(--font-sans);
+				font-size: 14px;
+				line-height: 1.45;
+				-webkit-font-smoothing: antialiased;
+			}
+			.serif {
+				font-family: var(--font-serif);
+			}
+			.pagehead {
+				position: sticky;
+				top: 0;
+				z-index: 5;
+				display: flex;
+				align-items: baseline;
+				justify-content: space-between;
+				gap: 16px;
+				padding: 18px 28px;
+				background: color-mix(in srgb, var(--bg) 88%, transparent);
+				backdrop-filter: blur(8px);
+				border-bottom: 1px solid var(--border);
+			}
+			.pagehead h1 {
+				margin: 0;
+				font-size: 22px;
+			}
+			.pagehead p {
+				margin: 4px 0 0;
+				color: var(--ink-2);
+				font-size: 12px;
+			}
+			.pagehead button {
+				background: var(--surface);
+				border: 1px solid var(--border);
+				color: var(--ink-2);
+				border-radius: var(--radius-pill);
+				padding: 8px 14px;
+				font-size: 12px;
+				cursor: pointer;
+			}
+			.gallery {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+				gap: 28px;
+				padding: 28px;
+				max-width: 1500px;
+				margin: 0 auto;
+			}
+			.cell {
+				display: flex;
+				flex-direction: column;
+				gap: 12px;
+			}
+			.cell > .meta h2 {
+				margin: 0;
+				font-size: 15px;
+			}
+			.cell > .meta p {
+				margin: 3px 0 0;
+				color: var(--ink-2);
+				font-size: 12px;
+			}
+			/* A framed stage that stands in for the dimmed app behind the popup. */
+			.stage {
+				position: relative;
+				background:
+					repeating-linear-gradient(
+						135deg,
+						color-mix(in srgb, var(--surface) 60%, transparent) 0 14px,
+						transparent 14px 28px
+					),
+					var(--bg);
+				border: 1px solid var(--border);
+				border-radius: var(--radius-xl);
+				padding: 26px;
+				min-height: 440px;
+				display: flex;
+				align-items: flex-start;
+				justify-content: center;
+				overflow: hidden;
+			}
+			.stage::before {
+				content: '';
+				position: absolute;
+				inset: 0;
+				background: rgba(0, 0, 0, 0.42);
+			}
+
+			/* ── shared popup chrome ── */
+			.panel {
+				position: relative;
+				width: min(460px, 100%);
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-radius: var(--radius-xl);
+				box-shadow: var(--shadow);
+				overflow: hidden;
+			}
+			.phead {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 16px 20px;
+			}
+			.phead h3 {
+				margin: 0;
+				font-size: 18px;
+			}
+			.x {
+				background: none;
+				border: 1px solid var(--border);
+				color: var(--ink-2);
+				border-radius: var(--radius-sm);
+				width: 26px;
+				height: 26px;
+				cursor: pointer;
+			}
+			.pbody {
+				padding: 4px 20px 20px;
+			}
+
+			/* form primitives */
+			.grid2 {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 12px;
+			}
+			.field {
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+				min-width: 0;
+			}
+			.field.full {
+				grid-column: 1 / -1;
+			}
+			.field label {
+				font-size: 11px;
+				color: var(--ink-3);
+				text-transform: uppercase;
+				letter-spacing: 0.6px;
+			}
+			.control {
+				background: var(--inset);
+				border: 1px solid var(--border);
+				color: var(--ink);
+				border-radius: var(--radius-md);
+				padding: 8px 12px;
+				font-size: 13px;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+			}
+			.control.ph {
+				color: var(--ink-3);
+			}
+			.chk {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				font-size: 12px;
+				color: var(--ink-2);
+			}
+			.box {
+				width: 16px;
+				height: 16px;
+				border: 1px solid var(--border);
+				border-radius: var(--radius-sm);
+				background: var(--inset);
+			}
+			.pfoot {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 12px;
+				margin-top: 18px;
+			}
+			.summary {
+				color: var(--ink-2);
+				font-size: 13px;
+			}
+			.summary b {
+				color: var(--ink);
+				font-size: 16px;
+			}
+			.actions {
+				display: flex;
+				gap: 8px;
+			}
+			.btn-cancel {
+				background: none;
+				border: 1px solid var(--border);
+				color: var(--ink-2);
+				border-radius: var(--radius-md);
+				padding: 8px 16px;
+				font-size: 13px;
+				cursor: pointer;
+			}
+			.btn-primary {
+				border: 0;
+				border-radius: var(--radius-md);
+				padding: 8px 16px;
+				font-size: 13px;
+				font-weight: 700;
+				color: var(--on-accent);
+				background: var(--accent, var(--lav));
+				cursor: pointer;
+			}
+
+			/* ── A: segmented tabs (current, refined) ── */
+			.seg {
+				display: inline-flex;
+				gap: 2px;
+				padding: 2px;
+				margin: 0 0 16px;
+				background: var(--inset);
+				border: 1px solid var(--border);
+				border-radius: var(--radius-lg);
+			}
+			.seg button {
+				padding: 6px 12px;
+				border: 0;
+				border-radius: var(--radius-md);
+				background: none;
+				color: var(--ink-2);
+				font: inherit;
+				font-size: 13px;
+				cursor: pointer;
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+			}
+			.seg button[aria-selected='true'] {
+				background: var(--surface);
+				color: var(--ink);
+				box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+			}
+			.dot {
+				width: 8px;
+				height: 8px;
+				border-radius: var(--radius-pill);
+				background: var(--accent, var(--lav));
+			}
+
+			/* ── B: accent-tinted header band ── */
+			.band {
+				padding: 16px 20px 14px;
+				background: color-mix(in srgb, var(--accent, var(--lav)) 14%, var(--surface));
+				border-bottom: 1px solid color-mix(in srgb, var(--accent, var(--lav)) 34%, var(--border));
+			}
+			.band .kicker {
+				font-size: 11px;
+				text-transform: uppercase;
+				letter-spacing: 0.9px;
+				color: var(--accent, var(--lav));
+				display: flex;
+				align-items: center;
+				gap: 6px;
+			}
+			.band h3 {
+				margin: 4px 0 12px;
+				font-size: 18px;
+			}
+			.pills {
+				display: flex;
+				gap: 8px;
+				flex-wrap: wrap;
+			}
+			.pills button {
+				border: 1px solid var(--border);
+				background: color-mix(in srgb, var(--surface) 70%, transparent);
+				color: var(--ink-2);
+				border-radius: var(--radius-pill);
+				padding: 6px 14px;
+				font: inherit;
+				font-size: 12px;
+				cursor: pointer;
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+			}
+			.pills button[aria-selected='true'] {
+				background: var(--accent, var(--lav));
+				border-color: var(--accent, var(--lav));
+				color: var(--on-accent);
+				font-weight: 700;
+			}
+
+			/* ── C: left rail ── */
+			.split {
+				display: grid;
+				grid-template-columns: 148px 1fr;
+			}
+			.rail {
+				border-right: 1px solid var(--border);
+				background: var(--surface-2);
+				padding: 12px 8px;
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+			}
+			.rail button {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				padding: 9px 10px;
+				border: 0;
+				border-radius: var(--radius-md);
+				background: none;
+				color: var(--ink-2);
+				font: inherit;
+				font-size: 13px;
+				text-align: left;
+				cursor: pointer;
+			}
+			.rail button[aria-selected='true'] {
+				background: color-mix(in srgb, var(--accent, var(--lav)) 20%, transparent);
+				color: var(--ink);
+			}
+			.rail .ic {
+				width: 26px;
+				height: 26px;
+				display: grid;
+				place-items: center;
+				border-radius: var(--radius-sm);
+				background: color-mix(in srgb, var(--accent, var(--lav)) 22%, transparent);
+				color: var(--accent, var(--lav));
+			}
+			.rail button[aria-selected='true'] .ic {
+				background: var(--accent, var(--lav));
+				color: var(--on-accent);
+			}
+
+			/* ── D: launcher grid (step 1) ── */
+			.launch {
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				gap: 12px;
+			}
+			.launch button {
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+				padding: 18px 14px;
+				border: 1px solid var(--border);
+				border-radius: var(--radius-lg);
+				background: var(--inset);
+				color: var(--ink);
+				font: inherit;
+				cursor: pointer;
+				text-align: left;
+			}
+			.launch button:hover {
+				border-color: var(--accent);
+			}
+			.launch .ic {
+				width: 34px;
+				height: 34px;
+				display: grid;
+				place-items: center;
+				border-radius: var(--radius-md);
+				background: color-mix(in srgb, var(--accent) 22%, transparent);
+				color: var(--accent);
+				font-size: 18px;
+			}
+			.launch .t {
+				font-size: 14px;
+				font-weight: 600;
+			}
+			.launch .d {
+				font-size: 11px;
+				color: var(--ink-3);
+			}
+			.hint {
+				margin: 14px 2px 0;
+				font-size: 12px;
+				color: var(--ink-3);
+				text-align: center;
+			}
+			.icon {
+				font-size: 13px;
+				line-height: 1;
+			}
+		</style>
+	</head>
+	<body>
+		<header class="pagehead">
+			<div>
+				<h1 class="serif">Add-entry popup — mockups</h1>
+				<p>
+					Four directions for the Transaction / Paycheck / Bill&nbsp;pay switcher. Click a type in
+					any card to preview it. Real app tokens (Kanagawa / Tokyo-Night).
+				</p>
+			</div>
+			<button id="theme">◐ Toggle light / dark</button>
+		</header>
+
+		<main class="gallery" id="gallery"></main>
+
+		<script>
+			// Mirrors the real glyphs: transaction/paycheck reuse icons/Arrow.svelte (up/down),
+			// bill pay uses icons/Swap.svelte (↑↓). Spending out (↑), income in (↓), moved between (↑↓).
+			function icon(kind, size = 16) {
+				const paths = {
+					transaction: '<path d="M8 13V3M4.5 6.5 8 3l3.5 3.5"/>',
+					paycheck: '<path d="M8 3v10M4.5 9.5 8 13l3.5-3.5"/>',
+					billpay: '<path d="M5.5 12V4M3.5 6 5.5 4 7.5 6M10.5 4v8M8.5 10 10.5 12 12.5 10"/>'
+				};
+				return `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none"
+					stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+					aria-hidden="true">${paths[kind]}</svg>`;
+			}
+
+			// ── Entry-type model: label, accent, and the blurb each type shows ──
+			const TYPES = {
+				transaction: { label: 'Transaction', accent: 'var(--lav)', blurb: 'A purchase or bill' },
+				paycheck: { label: 'Paycheck', accent: 'var(--green)', blurb: 'Income deposited' },
+				billpay: { label: 'Bill pay', accent: 'var(--teal)', blurb: 'Move money to a card' }
+			};
+
+			const FORMS = {
+				transaction: {
+					title: 'Add transaction',
+					fields: [
+						['Date', 'Aug 27, 2026'],
+						['Total bill', '0', true],
+						['Title', 'e.g. lucky', true],
+						['Category', 'Grocery'],
+						['Account', 'Chase ···4021'],
+						['__chk', 'Pending']
+					],
+					summary: ['Your share', '$0.00'],
+					cta: '+ Add'
+				},
+				paycheck: {
+					title: 'Add paycheck',
+					fields: [
+						['Date', 'Aug 27, 2026'],
+						['Gross', '0', true],
+						['Employer', 'e.g. Acme', true],
+						['Deposit account', 'Ally Savings'],
+						['Payee', 'Optional', true],
+						['__rows', 'Deductions · Allocations']
+					],
+					summary: ['Take-home', '$0.00'],
+					cta: '+ Add paycheck'
+				},
+				billpay: {
+					title: 'Add bill pay',
+					fields: [
+						['Date', 'Aug 27, 2026'],
+						['Amount', '0', true],
+						['Pay from', 'Chase Checking'],
+						['Pay toward', 'Amex Gold'],
+						['Note', 'Optional', true],
+						['__chk', 'Pending']
+					],
+					summary: ['Moves', '$0.00'],
+					cta: '+ Add bill pay'
+				}
+			};
+
+			const ORDER = ['transaction', 'paycheck', 'billpay'];
+
+			function fieldHtml(f) {
+				const [label, val, isInput] = f;
+				if (label === '__chk')
+					return `<label class="chk full"><span class="box"></span> ${val}</label>`;
+				if (label === '__rows')
+					return `<div class="field full"><label>${val}</label>
+						<div class="control ph"><span>+ row</span><span class="icon">＋</span></div></div>`;
+				const cls = 'control' + (isInput ? ' ph' : '');
+				const caret = isInput ? '' : '<span class="icon">▾</span>';
+				const full =
+					label === 'Title' || label === 'Employer' || label === 'Note' || label === 'Payee';
+				return `<div class="field${full ? ' full' : ''}"><label>${label}</label>
+					<div class="${cls}"><span>${val}</span>${caret}</div></div>`;
+			}
+
+			function formBody(kind) {
+				const f = FORMS[kind];
+				return `
+					<div class="grid2">${f.fields.map(fieldHtml).join('')}</div>
+					<div class="pfoot">
+						<span class="summary">${f.summary[0]}: <b>${f.summary[1]}</b></span>
+						<div class="actions">
+							<button class="btn-cancel">Cancel</button>
+							<button class="btn-primary">${f.cta}</button>
+						</div>
+					</div>`;
+			}
+
+			// ── Variant renderers: each returns the inner HTML of the popup panel ──
+			const VARIANTS = {
+				A: (kind) => `
+					<div class="phead"><h3 class="serif">Add entry</h3><button class="x">✕</button></div>
+					<div class="pbody">
+						<div class="seg" role="tablist">
+							${ORDER.map(
+								(k) =>
+									`<button role="tab" data-kind="${k}" aria-selected="${k === kind}"
+										style="--accent:${TYPES[k].accent}"><span class="dot"></span>${TYPES[k].label}</button>`
+							).join('')}
+						</div>
+						${formBody(kind)}
+					</div>`,
+				B: (kind) => `
+					<div class="band" style="--accent:${TYPES[kind].accent}">
+						<div class="kicker">${icon(kind, 13)} New entry</div>
+						<h3 class="serif">${FORMS[kind].title.replace('Add ', '')}</h3>
+						<div class="pills" role="tablist">
+							${ORDER.map(
+								(k) =>
+									`<button role="tab" data-kind="${k}" aria-selected="${k === kind}"
+										style="--accent:${TYPES[k].accent}">${icon(k, 14)}${TYPES[k].label}</button>`
+							).join('')}
+						</div>
+					</div>
+					<div class="pbody" style="--accent:${TYPES[kind].accent}">${formBody(kind)}</div>`,
+				C: (kind) => `
+					<div class="split">
+						<nav class="rail" role="tablist">
+							${ORDER.map(
+								(k) =>
+									`<button role="tab" data-kind="${k}" aria-selected="${k === kind}"
+										style="--accent:${TYPES[k].accent}"><span class="ic">${icon(k, 15)}</span>${TYPES[k].label}</button>`
+							).join('')}
+						</nav>
+						<div>
+							<div class="phead"><h3 class="serif">${FORMS[kind].title}</h3><button class="x">✕</button></div>
+							<div class="pbody" style="--accent:${TYPES[kind].accent}">${formBody(kind)}</div>
+						</div>
+					</div>`,
+				D: (kind) =>
+					kind === null
+						? `<div class="phead"><h3 class="serif">Add entry</h3><button class="x">✕</button></div>
+							<div class="pbody">
+								<div class="launch">
+									${ORDER.map(
+										(k) =>
+											`<button data-kind="${k}" style="--accent:${TYPES[k].accent}">
+												<span class="ic">${icon(k, 18)}</span>
+												<span class="t">${TYPES[k].label}</span>
+												<span class="d">${TYPES[k].blurb}</span>
+											</button>`
+									).join('')}
+								</div>
+								<p class="hint">Pick a type — the matching form opens next.</p>
+							</div>`
+						: `<div class="phead" style="--accent:${TYPES[kind].accent}">
+								<h3 class="serif"><span style="color:${TYPES[kind].accent};vertical-align:-2px">${icon(kind, 17)}</span>
+								&nbsp;${FORMS[kind].title}</h3>
+								<button class="x" data-kind="null">‹ Back</button></div>
+							<div class="pbody" style="--accent:${TYPES[kind].accent}">${formBody(kind)}</div>`
+			};
+
+			const CARDS = [
+				{
+					id: 'A',
+					name: 'A · Segmented tabs (current, refined)',
+					note: 'Keeps today’s SegTabs; adds a per-type accent dot. Lowest-effort — it is the existing component.'
+				},
+				{
+					id: 'B',
+					name: 'B · Accent-tinted header band',
+					note: 'Header adopts the type’s color; pill switcher. Strong at-a-glance sense of "which kind am I logging".'
+				},
+				{
+					id: 'C',
+					name: 'C · Left icon rail',
+					note: 'Vertical type list on the left, form on the right. Scales best if more entry types get added later.'
+				},
+				{
+					id: 'D',
+					name: 'D · Two-step launcher',
+					note: 'Pick a type card first, then the form. Cleanest single-purpose form; one extra click to switch types.'
+				}
+			];
+
+			// default kind per card; D starts on the launcher (null)
+			const state = { A: 'transaction', B: 'paycheck', C: 'transaction', D: null };
+
+			function render() {
+				const g = document.getElementById('gallery');
+				g.innerHTML = CARDS.map(
+					(c) => `
+					<section class="cell">
+						<div class="meta"><h2>${c.name}</h2><p>${c.note}</p></div>
+						<div class="stage">
+							<div class="panel" data-card="${c.id}">${VARIANTS[c.id](state[c.id])}</div>
+						</div>
+					</section>`
+				).join('');
+			}
+
+			document.addEventListener('click', (e) => {
+				const btn = e.target.closest('[data-kind]');
+				if (!btn) return;
+				const card = btn.closest('[data-card]')?.dataset.card;
+				if (!card) return;
+				const k = btn.dataset.kind;
+				state[card] = k === 'null' ? null : k;
+				render();
+			});
+			document.getElementById('theme').addEventListener('click', () => {
+				const r = document.documentElement;
+				r.dataset.theme = r.dataset.theme === 'light' ? 'dark' : 'light';
+			});
+
+			render();
+		</script>
+	</body>
+</html>

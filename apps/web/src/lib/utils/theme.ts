@@ -4,7 +4,7 @@
 
 import { writable } from 'svelte/store';
 
-export type ThemeMode = 'dark' | 'light';
+type ThemeMode = 'dark' | 'light';
 
 /**
  * Per-category accent map. Values are CSS token suffixes (fallback lavender),

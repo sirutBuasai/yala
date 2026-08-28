@@ -7,7 +7,7 @@ import { writable } from 'svelte/store';
 import { asset } from '$app/paths';
 import type { DashboardData } from '$lib/data/types';
 
-export const EXPECTED_SCHEMA = 1;
+const EXPECTED_SCHEMA = 1;
 
 /** A selectable paycheck line item, scoped to an employer (or generic when employer is null). */
 export interface PayrollOption {
