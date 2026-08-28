@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
 import type { AccountsInfo } from '$lib/data/load';
+import { lastTransferFrom, lastTransferTo } from '$lib/utils/editPrefs';
 import TransferForm from '$lib/forms/TransferForm.svelte';
 
 const accounts: AccountsInfo = {
@@ -17,6 +18,12 @@ function okFetch() {
 	return vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true }) });
 }
 
+// The sticky last-used stores are module-scoped and leak across tests; reset so each test's
+// seeded defaults are deterministic.
+beforeEach(() => {
+	lastTransferFrom.set('');
+	lastTransferTo.set('');
+});
 afterEach(() => vi.unstubAllGlobals());
 
 describe('TransferForm (add) — bill pay', () => {
@@ -37,19 +44,29 @@ describe('TransferForm (add) — bill pay', () => {
 		expect(body.amount).toBe(250);
 	});
 
-	it('seeds pay-toward to a credit card, skipping cash in the money-in list', async () => {
+	it('offers banks and Venmo as pay-toward targets, excluding the source account', async () => {
 		const fetchSpy = okFetch();
 		vi.stubGlobal('fetch', fetchSpy);
-		const mixed: AccountsInfo = {
+		const wide: AccountsInfo = {
 			...accounts,
-			credit_accounts: ['Assets:Cash:BankA', 'Liabilities:CC:CardA']
+			cash_accounts: ['Assets:Cash:BankA'],
+			credit_accounts: [
+				'Assets:Cash:BankA',
+				'Assets:Cash:BankB',
+				'Assets:Cash:Venmo',
+				'Liabilities:CC:CardA'
+			]
 		};
-		render(TransferForm, { props: { accounts: mixed, onsaved: vi.fn() } });
+		render(TransferForm, { props: { accounts: wide, onsaved: vi.fn() } });
 
 		await fireEvent.input(screen.getByLabelText('Amount'), { target: { value: '100' } });
 		await fireEvent.click(screen.getByText('+ Add bill pay'));
 
 		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
-		expect(JSON.parse(fetchSpy.mock.calls[0]![1].body).to_account).toBe('Liabilities:CC:CardA');
+		const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
+		// Source seeds to the only bank; "pay toward" now defaults to a non-source account (another
+		// bank), proving banks/Venmo are valid bill-pay targets — not just credit cards.
+		expect(body.from_account).toBe('Assets:Cash:BankA');
+		expect(body.to_account).toBe('Assets:Cash:BankB');
 	});
 });

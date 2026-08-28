@@ -24,6 +24,7 @@ from yala.builder import build_dict
 from yala.ledger import Ledger, payroll
 from yala.ledger.constants import CASH, CREDIT_CARDS, EXPENSES
 from yala.ledger.locators import find_entry
+from yala.ledger.venmo_sweep import is_sweep, reconcile_months
 from yala.sink import FileLedgerSink
 
 app = FastAPI(title="Yala")
@@ -105,6 +106,22 @@ def _parse_date_opt(value: str | None) -> dt.date | None:
     """Parse an ISO date, or ``None`` when omitted (used by update endpoints to keep the
     entry's own date). Raises a 400 with a clear message on a malformed string."""
     return _parse_date(value) if value else None
+
+
+def _reconcile_sweeps(*dates: dt.date | None) -> None:
+    """Re-derive the auto-managed Venmo sweep for every month a just-written entry touched, so it
+    tracks Venmo activity as entries are added, edited, moved across months, or removed."""
+    months = {(d.year, d.month) for d in dates if d is not None}
+    if months:
+        reconcile_months(_sink(), months)
+
+
+def _entry_date(locator: str) -> dt.date | None:
+    """Date of an existing entry (looked up before an update/delete), or ``None`` if it's gone."""
+    try:
+        return find_entry(_ledger().entries, locator).date
+    except KeyError:
+        return None
 
 
 # --- overview / collection reads ---
@@ -208,8 +225,9 @@ def post_transaction(body: TransactionIn) -> dict:
         _valid_name(body.category)
         _valid_name(body.funding_account)
 
+        date = _parse_date(body.date)
         entry_id = _sink().append_transaction(
-            date=_parse_date(body.date),
+            date=date,
             payee=body.payee,
             amount=_dec(body.amount),
             category=body.category,
@@ -217,6 +235,7 @@ def post_transaction(body: TransactionIn) -> dict:
             pending=body.pending,
             credits=_credits(body.credits),
         )
+        _reconcile_sweeps(date)
 
     return _ok(f"appended transaction for {body.payee}", id=entry_id)
 
@@ -227,9 +246,11 @@ def post_transaction_update(body: TransactionUpdateIn) -> dict:
         _valid_name(body.category)
         _valid_name(body.funding_account)
 
+        old_date = _entry_date(body.locator)
+        new_date = _parse_date_opt(body.date)
         entry_id = _sink().update_transaction(
             body.locator,
-            date=_parse_date_opt(body.date),
+            date=new_date,
             payee=body.payee,
             amount=_dec(body.amount),
             category=body.category,
@@ -237,6 +258,7 @@ def post_transaction_update(body: TransactionUpdateIn) -> dict:
             pending=body.pending,
             credits=_credits(body.credits),
         )
+        _reconcile_sweeps(old_date, new_date or old_date)
 
     return _ok(f"updated transaction for {body.payee}", id=entry_id)
 
@@ -245,7 +267,9 @@ def post_transaction_update(body: TransactionUpdateIn) -> dict:
 def post_transaction_delete(body: TransactionDeleteIn) -> dict:
     """Delete a located entry (spending transaction or paycheck) from the ledger."""
     with _api_errors():
+        old_date = _entry_date(body.locator)
         _sink().delete_entry(body.locator)
+        _reconcile_sweeps(old_date)
 
     return _ok(f"deleted entry {body.locator}")
 
@@ -321,8 +345,9 @@ def post_paycheck(body: PaycheckIn) -> dict:
     with _api_errors():
         income_account, deduction_legs, contribution_legs = _resolve_paycheck(body, _ledger())
 
+        date = _parse_date(body.date)
         _sink().append_paycheck(
-            date=_parse_date(body.date),
+            date=date,
             gross=_dec(body.gross),
             income_account=income_account,
             deduction_legs=deduction_legs,
@@ -330,6 +355,7 @@ def post_paycheck(body: PaycheckIn) -> dict:
             deposit_account=body.deposit_account,
             payee=body.payee,
         )
+        _reconcile_sweeps(date)
 
     return _ok(f"appended paycheck dated {body.date or 'today'}")
 
@@ -339,9 +365,11 @@ def post_paycheck_update(body: PaycheckUpdateIn) -> dict:
     with _api_errors():
         income_account, deduction_legs, contribution_legs = _resolve_paycheck(body, _ledger())
 
+        old_date = _entry_date(body.locator)
+        new_date = _parse_date_opt(body.date)
         entry_id = _sink().update_paycheck(
             body.locator,
-            date=_parse_date_opt(body.date),
+            date=new_date,
             gross=_dec(body.gross),
             income_account=income_account,
             deduction_legs=deduction_legs,
@@ -349,6 +377,7 @@ def post_paycheck_update(body: PaycheckUpdateIn) -> dict:
             deposit_account=body.deposit_account,
             payee=body.payee,
         )
+        _reconcile_sweeps(old_date, new_date or old_date)
 
     return _ok("updated paycheck", id=entry_id)
 
@@ -389,14 +418,16 @@ def post_transfer(body: TransferIn) -> dict:
         _valid_name(body.from_account)
         _valid_name(body.to_account)
 
+        date = _parse_date(body.date)
         entry_id = _sink().append_transfer(
-            date=_parse_date(body.date),
+            date=date,
             from_account=body.from_account,
             to_account=body.to_account,
             amount=_dec(body.amount),
             payee=body.payee,
             pending=body.pending,
         )
+        _reconcile_sweeps(date)
 
     return _ok(f"appended transfer {body.from_account} -> {body.to_account}", id=entry_id)
 
@@ -407,15 +438,26 @@ def post_transfer_update(body: TransferUpdateIn) -> dict:
         _valid_name(body.from_account)
         _valid_name(body.to_account)
 
+        old = find_entry(_ledger().entries, body.locator)
+        old_date = old.date
+
+        # The Venmo sweep is auto-managed, so a manual edit is discarded: re-derive it from the
+        # month's activity instead, which reverts it to the computed value on save.
+        if is_sweep([p.account for p in old.postings]):
+            _reconcile_sweeps(old_date)
+            return _ok("venmo sweep is auto-managed; reverted to computed value")
+
+        new_date = _parse_date_opt(body.date)
         entry_id = _sink().update_transfer(
             body.locator,
-            date=_parse_date_opt(body.date),
+            date=new_date,
             from_account=body.from_account,
             to_account=body.to_account,
             amount=_dec(body.amount),
             payee=body.payee,
             pending=body.pending,
         )
+        _reconcile_sweeps(old_date, new_date or old_date)
 
     return _ok("updated transfer", id=entry_id)
 

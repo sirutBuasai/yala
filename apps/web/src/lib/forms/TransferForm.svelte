@@ -33,11 +33,9 @@
 	let msg = $state('');
 	let err = $state(false);
 
-	// A bill payment reduces a credit-card balance, so "pay toward" is the card subset of the
-	// (cash + credit) money-in accounts the API returns.
-	const cardAccounts = $derived(
-		accounts.credit_accounts.filter((a) => a.startsWith('Liabilities:CC:'))
-	);
+	// `credit_accounts` is the full money-in set (banks, Venmo, and credit cards); a bill pay can
+	// target any of them except the account being paid from.
+	const toAccounts = $derived(accounts.credit_accounts.filter((a) => a !== from_account));
 
 	const seed = (remembered: string, options: string[]): string =>
 		options.includes(remembered) ? remembered : (options[0] ?? '');
@@ -46,7 +44,7 @@
 		if (locator == null) {
 			if (!date && presetDate) date = presetDate;
 			if (!from_account) from_account = seed(get(lastTransferFrom), accounts.cash_accounts);
-			if (!to_account) to_account = seed(get(lastTransferTo), cardAccounts);
+			if (!to_account) to_account = seed(get(lastTransferTo), toAccounts);
 			return;
 		}
 		const l = locator;
@@ -131,9 +129,12 @@
 		id="tf-to"
 		label="Pay toward"
 		bind:value={to_account}
-		options={cardAccounts}
+		options={toAccounts}
 		optionLabel={formatAccount}
-		kinds={[{ value: 'funding_credit', label: 'Credit card' }]}
+		kinds={[
+			{ value: 'funding_cash', label: 'Cash / bank' },
+			{ value: 'funding_credit', label: 'Credit card' }
+		]}
 	/>
 	<div class="field">
 		<label for="tf-amt">Amount</label><input

@@ -17,6 +17,13 @@ INVESTMENTS = ASSETS + "Investments:"
 CASH = ASSETS + "Cash:"
 CREDIT_CARDS = LIABILITIES + "CC:"
 
+# Venmo is a passthrough for Wealthfront: money in/out of Venmo is really pulled from or pushed to
+# Wealthfront. The backend keeps Venmo balanced to zero each month with a single auto-maintained
+# sweep transfer between these two accounts (see yala.ledger.venmo_sweep).
+VENMO = CASH + "Venmo"
+VENMO_PASSTHROUGH = CASH + "Wealthfront"
+SWEEP_PAYEE = "venmo sweep"
+
 # Source-location keys beancount injects onto every directive's meta (not our data).
 INTERNAL_META = frozenset({"filename", "lineno"})
 RETIRED_META = frozenset({"src"})  # spreadsheet-import artifact, dropped on edit
