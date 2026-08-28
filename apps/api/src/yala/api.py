@@ -13,16 +13,19 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import FastAPI, HTTPException
+from beancount.core import data
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, model_validator
+from pydantic import AfterValidator, BaseModel, Field, model_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
 
 from yala import config, projections
 from yala.builder import build_dict
 from yala.ledger import Ledger, payroll
-from yala.ledger.constants import CASH, CREDIT_CARDS, EXPENSES
+from yala.ledger.constants import ASSETS, CASH, CREDIT_CARDS, EXPENSES, LIABILITIES
 from yala.ledger.locators import find_entry
 from yala.ledger.venmo_sweep import is_sweep, reconcile_months
 from yala.sink import FileLedgerSink
@@ -31,6 +34,7 @@ app = FastAPI(title="Yala")
 
 _NAME_RE = re.compile(r"^[A-Za-z0-9:-]+$")
 _LEAF_RE = re.compile(r"^[A-Za-z0-9-]+$")
+_CTRL_RE = re.compile(r"[\x00-\x1f\x7f]")  # C0 control chars incl. newline/tab, and DEL
 _WEB_DIR = Path(__file__).resolve().parents[4] / "apps" / "web" / "build"
 
 _ACCOUNT_PREFIX: dict[str, str] = {
@@ -39,10 +43,58 @@ _ACCOUNT_PREFIX: dict[str, str] = {
     "funding_cash": CASH,
 }
 
+# Pydantic error ``loc`` field name → the label the user sees in the form, so a body-validation
+# failure reads in the form's vocabulary rather than raw JSON keys.
+_FIELD_LABELS = {
+    "payee": "Title",
+    "amount": "Amount",
+    "gross": "Gross",
+    "category": "Category",
+    "funding_account": "Account",
+    "deposit_account": "Deposit account",
+    "from_account": "From account",
+    "to_account": "To account",
+    "employer": "Employer",
+    "deductions": "Deductions",
+    "contributions": "Contributions",
+    "credits": "Reimbursements",
+    "leaf": "Name",
+}
+
+# Sanity ceilings. Money is bounded well below float's precision cliff (2^53 cents) so cent-exact
+# arithmetic stays exact; free text is single-line and short; leg lists are capped so one request
+# can't balloon a ledger file. These are defense-in-depth, not domain rules.
+MAX_AMOUNT = 1e12
+MAX_TEXT = 200
+MAX_LEGS = 100
+
+
+# --- request field types ---
+#
+# ``Text`` references ``_clean_text``, so the validator is defined first;
+
+
+def _clean_text(value: str) -> str:
+    """Normalize a free-text field (payee/note) to a single trimmed line.
+
+    The ledger is a line-based file, so a newline or control char in a payee would corrupt it (or
+    silently smuggle content into the stored string). We strip control chars, collapse internal
+    whitespace, trim, and bound the length — rejecting an all-blank value outright.
+    """
+    text = " ".join(_CTRL_RE.sub(" ", value).split())
+    if not text:
+        raise ValueError("must not be blank")
+    if len(text) > MAX_TEXT:
+        raise ValueError(f"must be at most {MAX_TEXT} characters")
+    return text
+
+
 # A transaction/transfer amount must be positive; a credit or payroll line item may be zero
-# (e.g. a $0 deduction) but never negative.
-Amount = Annotated[float, Field(gt=0, allow_inf_nan=False)]
-NonNegAmount = Annotated[float, Field(ge=0, allow_inf_nan=False)]
+# (e.g. a $0 deduction) but never negative. Both are finite and bounded (see MAX_AMOUNT).
+Amount = Annotated[float, Field(gt=0, le=MAX_AMOUNT, allow_inf_nan=False)]
+NonNegAmount = Annotated[float, Field(ge=0, le=MAX_AMOUNT, allow_inf_nan=False)]
+# A required, single-line free-text field.
+Text = Annotated[str, AfterValidator(_clean_text)]
 
 
 # --- shared helpers ---
@@ -59,7 +111,8 @@ def _sink() -> FileLedgerSink:
 @contextmanager
 def _api_errors() -> Iterator[None]:
     """Map exceptions from a write endpoint body to HTTP errors (``KeyError`` → 404 for an
-    unknown locator, anything else → 400). Every write endpoint wraps its body here so the
+    unknown locator, any other client-input problem → 422). Explicit ``HTTPException``\\ s (e.g. a
+    409 sweep conflict) pass through unchanged. Every write endpoint wraps its body here so the
     mapping lives in one place."""
     try:
         yield
@@ -71,7 +124,7 @@ def _api_errors() -> Iterator[None]:
         raise HTTPException(status_code=404, detail=str(e))
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 def _dec(value: float) -> Decimal:
@@ -84,9 +137,57 @@ def _ok(message: str, **extra) -> dict:
     return {"ok": True, "message": message, **extra}
 
 
+def _humanize_error(err: dict) -> str:
+    """Turn one pydantic error into a plain, field-labeled sentence."""
+    field = next((str(p) for p in err.get("loc", ()) if p not in ("body", "query")), "")
+    label = _FIELD_LABELS.get(field, field or "value")
+    etype, ctx = err.get("type", ""), err.get("ctx") or {}
+
+    def num(key: str) -> str:  # so a whole-number bound reads "0", not "0.0"
+        v = ctx.get(key, 0)
+        return str(int(v)) if isinstance(v, float) and v.is_integer() else str(v)
+
+    phrase = {
+        "missing": "is required",
+        "greater_than": f"must be greater than {num('gt')}",
+        "greater_than_equal": f"must be at least {num('ge')}",
+        "less_than_equal": f"must be at most {num('le')}",
+        "too_long": "has too many items",
+        "finite_number": "must be a finite number",
+    }.get(etype)
+
+    if phrase is None:
+        # value_error carries our own AfterValidator/model_validator message; keep it verbatim.
+        phrase = (err.get("msg") or "is invalid").removeprefix("Value error, ")
+
+    return f"{label} {phrase}"
+
+
+@app.exception_handler(RequestValidationError)
+async def on_validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
+    """Return a request body/query validation failure as a single clear ``detail`` string (still
+    HTTP 422), so the frontend shows one readable sentence, not pydantic's raw error list."""
+    messages = dict.fromkeys(_humanize_error(e) for e in exc.errors())
+    detail = "; ".join(messages) or "invalid request"
+    return JSONResponse(status_code=422, content={"detail": detail})
+
+
 def _valid_name(value: str) -> str:
     if not _NAME_RE.match(value):
-        raise HTTPException(status_code=400, detail=f"invalid account/category name: {value!r}")
+        raise HTTPException(status_code=422, detail=f"invalid account/category name: {value!r}")
+    return value
+
+
+def _valid_transfer_account(value: str) -> str:
+    """A transfer moves money between balance-sheet accounts, so its legs must be an asset or a
+    liability — never an ``Expenses``/``Income`` account (that would be spending or income, not a
+    transfer)."""
+    _valid_name(value)
+    if not value.startswith((ASSETS, LIABILITIES)):
+        raise HTTPException(
+            status_code=422,
+            detail=f"transfer accounts must be an asset or liability account: {value!r}",
+        )
     return value
 
 
@@ -99,7 +200,7 @@ def _parse_date(value: str | None) -> dt.date:
         return dt.date.fromisoformat(value)
 
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"invalid date: {value!r}")
+        raise HTTPException(status_code=422, detail=f"invalid date: {value!r}")
 
 
 def _parse_date_opt(value: str | None) -> dt.date | None:
@@ -122,6 +223,16 @@ def _entry_date(locator: str) -> dt.date | None:
         return find_entry(_ledger().entries, locator).date
     except KeyError:
         return None
+
+
+def _reject_if_sweep(entry: data.Transaction) -> None:
+    """The Venmo↔Wealthfront sweep is auto-managed — recomputed from the month's Venmo activity —
+    so a manual edit or delete is refused rather than silently overwritten or re-created."""
+    if is_sweep([p.account for p in entry.postings]):
+        raise HTTPException(
+            status_code=409,
+            detail="This Venmo sweep is auto-managed and can't be edited or deleted.",
+        )
 
 
 # --- overview / collection reads ---
@@ -178,19 +289,20 @@ def get_pending() -> dict:
 # --- transactions ---
 
 
+# A credit is money received back — strictly positive; the net share falls out as bill − Σcredits.
 class CreditIn(BaseModel):
     account: str
-    amount: NonNegAmount
+    amount: Amount
 
 
 class TransactionIn(BaseModel):
     date: str | None = None
-    payee: str
+    payee: Text
     amount: Amount
     category: str
     funding_account: str
     pending: bool = False
-    credits: list[CreditIn] = []
+    credits: list[CreditIn] = Field(default=[], max_length=MAX_LEGS)
 
 
 class TransactionUpdateIn(TransactionIn):
@@ -265,11 +377,12 @@ def post_transaction_update(body: TransactionUpdateIn) -> dict:
 
 @app.post("/api/transaction/delete")
 def post_transaction_delete(body: TransactionDeleteIn) -> dict:
-    """Delete a located entry (spending transaction or paycheck) from the ledger."""
+    """Delete a located entry (spending transaction, paycheck, or transfer) from the ledger."""
     with _api_errors():
-        old_date = _entry_date(body.locator)
+        entry = find_entry(_ledger().entries, body.locator)
+        _reject_if_sweep(entry)
         _sink().delete_entry(body.locator)
-        _reconcile_sweeps(old_date)
+        _reconcile_sweeps(entry.date)
 
     return _ok(f"deleted entry {body.locator}")
 
@@ -281,10 +394,10 @@ class PaycheckIn(BaseModel):
     date: str | None = None
     employer: str
     gross: Amount
-    deductions: dict[str, NonNegAmount] = {}
-    contributions: dict[str, NonNegAmount] = {}
+    deductions: dict[str, NonNegAmount] = Field(default={}, max_length=MAX_LEGS)
+    contributions: dict[str, NonNegAmount] = Field(default={}, max_length=MAX_LEGS)
     deposit_account: str
-    payee: str = "paycheck"
+    payee: Text = "paycheck"
 
 
 class PaycheckUpdateIn(PaycheckIn):
@@ -305,7 +418,7 @@ def _resolve_paycheck(
 
     if body.employer not in payroll.employers(ledger):
         raise HTTPException(
-            status_code=400, detail=f"unknown or inactive employer: {body.employer!r}"
+            status_code=422, detail=f"unknown or inactive employer: {body.employer!r}"
         )
 
     income_account = f"{payroll.SALARY}{body.employer}"
@@ -316,7 +429,7 @@ def _resolve_paycheck(
         option = payroll.resolve(ledger, "deduction", label, body.employer)
         if option is None:
             raise HTTPException(
-                status_code=400, detail=f"no deduction {label!r} for {body.employer}"
+                status_code=422, detail=f"no deduction {label!r} for {body.employer}"
             )
         deduction_legs.append((option.account, _dec(amount)))
 
@@ -324,7 +437,7 @@ def _resolve_paycheck(
         option = payroll.resolve(ledger, "contribution", label, body.employer)
         if option is None:
             raise HTTPException(
-                status_code=400, detail=f"no contribution {label!r} for {body.employer}"
+                status_code=422, detail=f"no contribution {label!r} for {body.employer}"
             )
         contribution_legs.append((option.account, option.label, _dec(amount)))
 
@@ -387,7 +500,7 @@ def post_paycheck_update(body: PaycheckUpdateIn) -> dict:
 
 class TransferIn(BaseModel):
     date: str | None = None
-    payee: str = "payment"
+    payee: Text = "payment"
     from_account: str
     to_account: str
     amount: Amount
@@ -415,8 +528,8 @@ def get_transfer(locator: str) -> dict:
 @app.post("/api/transfer")
 def post_transfer(body: TransferIn) -> dict:
     with _api_errors():
-        _valid_name(body.from_account)
-        _valid_name(body.to_account)
+        _valid_transfer_account(body.from_account)
+        _valid_transfer_account(body.to_account)
 
         date = _parse_date(body.date)
         entry_id = _sink().append_transfer(
@@ -435,17 +548,12 @@ def post_transfer(body: TransferIn) -> dict:
 @app.post("/api/transfer/update")
 def post_transfer_update(body: TransferUpdateIn) -> dict:
     with _api_errors():
-        _valid_name(body.from_account)
-        _valid_name(body.to_account)
+        _valid_transfer_account(body.from_account)
+        _valid_transfer_account(body.to_account)
 
         old = find_entry(_ledger().entries, body.locator)
+        _reject_if_sweep(old)
         old_date = old.date
-
-        # The Venmo sweep is auto-managed, so a manual edit is discarded: re-derive it from the
-        # month's activity instead, which reverts it to the computed value on save.
-        if is_sweep([p.account for p in old.postings]):
-            _reconcile_sweeps(old_date)
-            return _ok("venmo sweep is auto-managed; reverted to computed value")
 
         new_date = _parse_date_opt(body.date)
         entry_id = _sink().update_transfer(
@@ -473,7 +581,10 @@ class AccountIn(BaseModel):
 @app.post("/api/account")
 def post_account(body: AccountIn) -> dict:
     if not _LEAF_RE.match(body.leaf):
-        raise HTTPException(status_code=400, detail=f"invalid account leaf: {body.leaf!r}")
+        raise HTTPException(
+            status_code=422,
+            detail=f"account name must use only letters, numbers, or hyphens: {body.leaf!r}",
+        )
 
     account = f"{_ACCOUNT_PREFIX[body.kind]}{body.leaf}"
 

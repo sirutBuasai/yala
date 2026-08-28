@@ -82,4 +82,29 @@ describe('TransactionForm (edit)', () => {
 		const del = fetchSpy.mock.calls.find((c) => c[0] === '/api/transaction/delete');
 		expect(JSON.parse(del![1].body as string)).toEqual({ locator: 'id:abc' });
 	});
+
+	it('clears a failed-delete error when the confirmation is canceled', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn((url: string) =>
+				url.startsWith('/api/transaction?locator')
+					? Promise.resolve({ ok: true, status: 200, json: async () => prefill })
+					: Promise.resolve({
+							ok: false,
+							status: 409,
+							json: async () => ({ detail: 'auto-managed' })
+						})
+			)
+		);
+		render(TransactionForm, { props: { locator: 'id:abc', accounts, onsaved: vi.fn() } });
+		await screen.findByDisplayValue('lunch');
+
+		await fireEvent.click(screen.getByText('Delete transaction'));
+		await fireEvent.click(screen.getByText('Yes, delete'));
+		expect(await screen.findByText('auto-managed')).toBeInTheDocument();
+
+		await fireEvent.click(screen.getByText('Cancel'));
+		expect(screen.queryByText('auto-managed')).not.toBeInTheDocument();
+		expect(screen.getByText('Delete transaction')).toBeInTheDocument();
+	});
 });

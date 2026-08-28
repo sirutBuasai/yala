@@ -34,7 +34,8 @@ describe('TransactionForm (add)', () => {
 
 		await fireEvent.click(screen.getByText('+ Add'));
 
-		expect(screen.getByText('Title and total bill are required.')).toBeInTheDocument();
+		// both empty fields surface at once, not one prompt at a time
+		expect(screen.getByText('Title and Total bill are required.')).toBeInTheDocument();
 		expect(fetchSpy).not.toHaveBeenCalled();
 	});
 
@@ -92,6 +93,30 @@ describe('TransactionForm (add)', () => {
 
 		// 300 total − 200 payback = $100 your share
 		expect(screen.getByText('$100')).toBeInTheDocument();
+	});
+
+	it('warns but still submits when reimbursements exceed the bill (net refund)', async () => {
+		const fetchSpy = okFetch();
+		vi.stubGlobal('fetch', fetchSpy);
+		const onsaved = vi.fn();
+		render(TransactionForm, { props: { accounts, onsaved } });
+
+		await fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'refund' } });
+		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '10' } });
+		await fireEvent.click(screen.getByText('+ credit'));
+		const amounts = screen.getAllByPlaceholderText('0');
+		await fireEvent.input(amounts[amounts.length - 1]!, { target: { value: '20' } });
+
+		// net share is −$10: a non-blocking warning, not a validation error
+		expect(
+			screen.getByText('Reimbursements exceed the bill — records a net refund.')
+		).toBeInTheDocument();
+
+		await fireEvent.click(screen.getByText('+ Add'));
+		await waitFor(() => expect(onsaved).toHaveBeenCalledOnce());
+		const sent = JSON.parse(fetchSpy.mock.calls[0]![1].body);
+		expect(sent.amount).toBe(10);
+		expect(sent.credits).toEqual([{ account: 'Assets:Cash:Wallet', amount: 20 }]);
 	});
 
 	it('add-new category posts /api/account with kind "category"', async () => {

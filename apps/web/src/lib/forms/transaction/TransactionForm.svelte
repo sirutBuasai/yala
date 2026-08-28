@@ -7,6 +7,7 @@
 	import { accountLeaf, formatAccount, money } from '$lib/utils/format';
 	import { lastCategory, lastFundingAccount } from '$lib/utils/editPrefs';
 	import AccountField from '$lib/forms/fields/AccountField.svelte';
+	import { problems, validateRows } from '$lib/forms/validate';
 	import Credits, { type Credit } from '$lib/forms/transaction/Credits.svelte';
 	import DatePicker from '$lib/forms/fields/DatePicker.svelte';
 	import EntryFooter from '$lib/forms/fields/EntryFooter.svelte';
@@ -92,8 +93,17 @@
 	const yourShare = $derived((total || 0) - paybacks);
 
 	async function submit() {
-		if (!payee.trim() || total == null) {
-			msg = 'Title and total bill are required.';
+		// A net share below zero is a valid net refund (reimbursements exceed the bill), not an error;
+		// the summary flags it so an accidental over-credit is still visible.
+		const problem = problems()
+			.require(payee, 'Title')
+			.positive(total, 'Total bill')
+			.require(category, 'Category')
+			.require(funding_account, 'Account')
+			.add(validateRows(credits, 'reimbursement'))
+			.message();
+		if (problem) {
+			msg = problem;
 			err = true;
 			return;
 		}
@@ -154,6 +164,8 @@
 				id="tx-amt"
 				type="number"
 				step="0.01"
+				min="0"
+				inputmode="decimal"
 				placeholder="0"
 				bind:value={total}
 			/>
@@ -189,8 +201,8 @@
 
 <EntryFooter
 	{editing}
-	{msg}
-	{err}
+	bind:msg
+	bind:err
 	addLabel="+ Add"
 	deleteLabel="Delete transaction"
 	deleteQuestion="Delete this transaction?"
@@ -199,6 +211,9 @@
 >
 	{#snippet summary()}
 		<span class="share">Your share: <b>{money(yourShare)}</b></span>
+		{#if yourShare < 0}
+			<span class="net-refund">Reimbursements exceed the bill — records a net refund.</span>
+		{/if}
 	{/snippet}
 </EntryFooter>
 
@@ -218,5 +233,11 @@
 	.share b {
 		color: var(--ink);
 		font-size: var(--text-amount);
+	}
+	.net-refund {
+		display: block;
+		margin-top: var(--gap-inline);
+		color: var(--warn);
+		font-size: var(--text-caption);
 	}
 </style>

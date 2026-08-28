@@ -132,7 +132,7 @@ def test_net_inflow_reverses_the_sweep(client: TestClient):
     assert _venmo_balance(client) == 0
 
 
-def test_editing_the_sweep_reverts_to_computed_value(client: TestClient):
+def test_editing_the_sweep_is_rejected(client: TestClient):
     _spend_venmo(client, "2026-02-10", 30.00)
     sweep = _sweeps(client, "2026-02")[0]
 
@@ -142,15 +142,27 @@ def test_editing_the_sweep_reverts_to_computed_value(client: TestClient):
             "locator": sweep["locator"],
             "from_account": VENMO_PASSTHROUGH,
             "to_account": VENMO,
-            "amount": 999.00,  # a manual, invalid edit
+            "amount": 999.00,  # a manual edit
         },
     )
-    assert upd.status_code == 200
+    assert upd.status_code == 409
+    assert "auto-managed" in upd.json()["detail"]
 
     after = _sweeps(client, "2026-02")
     assert len(after) == 1
-    assert after[0]["amount"] == 30.00  # reverted, not 999
+    assert after[0]["amount"] == 30.00  # untouched
     assert _venmo_balance(client) == 0
+
+
+def test_deleting_the_sweep_directly_is_rejected(client: TestClient):
+    _spend_venmo(client, "2026-02-10", 30.00)
+    sweep = _sweeps(client, "2026-02")[0]
+
+    d = client.post("/api/transaction/delete", json={"locator": sweep["locator"]})
+    assert d.status_code == 409
+    assert "auto-managed" in d.json()["detail"]
+
+    assert len(_sweeps(client, "2026-02")) == 1  # still there
 
 
 def test_deleting_the_last_venmo_payment_removes_the_sweep(client: TestClient):

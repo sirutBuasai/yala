@@ -1,7 +1,7 @@
 """Read-side projections: a raw beancount entry → the editable-state dict a GET endpoint returns.
 
 Each function shapes one located entry (spending transaction, paycheck, or transfer) for the edit
-forms, and raises :class:`~fastapi.HTTPException` (400) when the entry doesn't match the expected
+forms, and raises :class:`~fastapi.HTTPException` (422) when the entry doesn't match the expected
 shape. Kept out of ``api.py`` so the endpoint module stays routing + request bodies.
 """
 
@@ -33,7 +33,7 @@ def txn_state(entry: data.Transaction) -> dict:
     expenses = [(a, n) for a, n in legs if a.startswith(EXPENSES) and not a.startswith(DEDUCTIONS)]
 
     if len(expenses) != 1:
-        raise HTTPException(status_code=400, detail="not a single-category spending transaction")
+        raise HTTPException(status_code=422, detail="not a single-category spending transaction")
 
     non_expense = [(a, n) for a, n in legs if not a.startswith(EXPENSES)]
     # The funding leg is the outflow (most-negative amount); credits are money-in
@@ -77,7 +77,7 @@ def paycheck_state(entry: data.Transaction, account_meta: dict[str, dict]) -> di
     ``payroll.summarize_paycheck``, matching the options the form offers, so an edit round-trips.
     """
     if not any(p.account.startswith(INCOME) for p in entry.postings):
-        raise HTTPException(status_code=400, detail="not a paycheck")
+        raise HTTPException(status_code=422, detail="not a paycheck")
 
     legs = (
         (p.account, p.units.number, (p.meta or {}).get("label"))
@@ -104,11 +104,11 @@ def transfer_state(entry: data.Transaction) -> dict:
     legs = _entry_legs(entry)
 
     if len(legs) != 2:
-        raise HTTPException(status_code=400, detail="not a two-leg transfer")
+        raise HTTPException(status_code=422, detail="not a two-leg transfer")
 
     outflow, inflow = sorted(legs, key=lambda p: p[1])
     if outflow[1] >= 0 or inflow[1] <= 0:
-        raise HTTPException(status_code=400, detail="not a transfer")
+        raise HTTPException(status_code=422, detail="not a transfer")
 
     return {
         "locator": entry_locator(entry),

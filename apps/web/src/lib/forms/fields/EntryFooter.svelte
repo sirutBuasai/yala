@@ -18,8 +18,8 @@
 	}
 	let {
 		editing,
-		msg,
-		err,
+		msg = $bindable(),
+		err = $bindable(),
 		addLabel,
 		deleteLabel,
 		deleteQuestion,
@@ -27,6 +27,13 @@
 		ondelete,
 		summary
 	}: Props = $props();
+
+	// Backing out of a delete should also drop the error a failed delete left behind, so the footer
+	// returns to its resting layout instead of staying widened by the message.
+	function clearMessage() {
+		msg = '';
+		err = false;
+	}
 </script>
 
 <div class="foot">
@@ -38,7 +45,12 @@
 		{#if editing}
 			<div class="actions">
 				<button class="btn-primary" onclick={onsubmit}>Save changes</button>
-				<DeleteConfirm label={deleteLabel} question={deleteQuestion} {ondelete} />
+				<DeleteConfirm
+					label={deleteLabel}
+					question={deleteQuestion}
+					{ondelete}
+					oncancel={clearMessage}
+				/>
 			</div>
 		{:else}
 			<button class="btn-primary" onclick={onsubmit}>{addLabel}</button>

@@ -193,9 +193,9 @@ def test_txn_detail_when_funding_and_credit_share_account(client: TestClient):
     assert sorted(s["amount"] for s in d["credits"]) == [250.0, 500.0]
 
 
-def test_post_account_invalid_leaf_is_400(client: TestClient):
+def test_post_account_invalid_leaf_is_422(client: TestClient):
     r = client.post("/api/account", json={"kind": "category", "leaf": "Bad Leaf"})
-    assert r.status_code == 400
+    assert r.status_code == 422
 
 
 def test_post_account_declares_spending_category(client: TestClient):
@@ -233,7 +233,7 @@ def test_new_category_is_usable_by_a_transaction(client: TestClient):
     assert r.status_code == 200
 
 
-def test_post_transaction_before_open_date_is_400_with_clear_detail(client: TestClient):
+def test_post_transaction_before_open_date_is_422_with_clear_detail(client: TestClient):
     r = client.post(
         "/api/transaction",
         json={
@@ -244,7 +244,7 @@ def test_post_transaction_before_open_date_is_400_with_clear_detail(client: Test
             "funding_account": "Liabilities:CC:CardC",  # opened 2026-08-14
         },
     )
-    assert r.status_code == 400
+    assert r.status_code == 422
     detail = r.json()["detail"]
     assert detail.startswith("Unable to insert transaction:")
     assert "Liabilities:CC:CardC" in detail
@@ -252,7 +252,7 @@ def test_post_transaction_before_open_date_is_400_with_clear_detail(client: Test
     assert "2026-08-14" in detail
 
 
-def test_post_transaction_invalid_category_is_400(client: TestClient):
+def test_post_transaction_invalid_category_is_422(client: TestClient):
     r = client.post(
         "/api/transaction",
         json={
@@ -262,10 +262,10 @@ def test_post_transaction_invalid_category_is_400(client: TestClient):
             "funding_account": "Liabilities:CC:CardA",
         },
     )
-    assert r.status_code == 400
+    assert r.status_code == 422
 
 
-def test_post_transaction_invalid_date_is_400(client: TestClient):
+def test_post_transaction_invalid_date_is_422(client: TestClient):
     r = client.post(
         "/api/transaction",
         json={
@@ -276,7 +276,7 @@ def test_post_transaction_invalid_date_is_400(client: TestClient):
             "funding_account": "Liabilities:CC:CardA",
         },
     )
-    assert r.status_code == 400
+    assert r.status_code == 422
     assert "invalid date" in r.json()["detail"]
 
 
@@ -367,7 +367,7 @@ def test_get_and_update_paycheck_flow(client: TestClient):
     assert state2["contributions"] == {"Roth401k": 150.0}  # split relabels on read
 
 
-def test_post_paycheck_inactive_employer_is_400(client: TestClient):
+def test_post_paycheck_inactive_employer_is_422(client: TestClient):
     """A closed employer (Employer2) is no longer selectable for new paychecks."""
     r = client.post(
         "/api/paycheck",
@@ -379,11 +379,11 @@ def test_post_paycheck_inactive_employer_is_400(client: TestClient):
             "deposit_account": "Assets:Cash:BankB",
         },
     )
-    assert r.status_code == 400
+    assert r.status_code == 422
     assert "employer" in r.json()["detail"].lower()
 
 
-def test_post_paycheck_contribution_not_offered_by_employer_is_400(client: TestClient):
+def test_post_paycheck_contribution_not_offered_by_employer_is_422(client: TestClient):
     """A contribution label the employer doesn't offer is rejected."""
     r = client.post(
         "/api/paycheck",
@@ -395,7 +395,7 @@ def test_post_paycheck_contribution_not_offered_by_employer_is_400(client: TestC
             "deposit_account": "Assets:Cash:BankB",
         },
     )
-    assert r.status_code == 400
+    assert r.status_code == 422
     assert "Pension" in r.json()["detail"]
 
 
@@ -419,7 +419,7 @@ def test_update_paycheck_unknown_is_404(client: TestClient):
     assert r.status_code == 404
 
 
-def test_get_paycheck_on_spending_txn_is_400(client: TestClient):
+def test_get_paycheck_on_spending_txn_is_422(client: TestClient):
     r = client.post(
         "/api/transaction",
         json={
@@ -431,10 +431,10 @@ def test_get_paycheck_on_spending_txn_is_400(client: TestClient):
     )
     loc = r.json()["id"]
     resp = client.get("/api/paycheck", params={"locator": f"id:{loc}"})
-    assert resp.status_code == 400
+    assert resp.status_code == 422
 
 
-def test_post_paycheck_take_home_negative_is_400(client: TestClient):
+def test_post_paycheck_take_home_negative_is_422(client: TestClient):
     r = client.post(
         "/api/paycheck",
         json={
@@ -445,11 +445,11 @@ def test_post_paycheck_take_home_negative_is_400(client: TestClient):
             "deposit_account": "Assets:Cash:BankB",
         },
     )
-    assert r.status_code == 400
+    assert r.status_code == 422
     assert "exceed gross" in r.json()["detail"]
 
 
-def test_post_paycheck_unopened_account_is_400_with_clear_detail(client: TestClient):
+def test_post_paycheck_unopened_account_is_422_with_clear_detail(client: TestClient):
     r = client.post(
         "/api/paycheck",
         json={
@@ -461,7 +461,7 @@ def test_post_paycheck_unopened_account_is_400_with_clear_detail(client: TestCli
             "deposit_account": "Assets:Cash:NonExistent",  # never opened
         },
     )
-    assert r.status_code == 400
+    assert r.status_code == 422
     detail = r.json()["detail"]
     assert "Assets:Cash:NonExistent" in detail
     assert "does not exist" in detail
@@ -626,6 +626,27 @@ def test_post_transaction_negative_credit_is_422(client: TestClient):
     assert r.status_code == 422
 
 
+def test_post_transaction_zero_credit_is_422(client: TestClient):
+    r = client.post(
+        "/api/transaction",
+        json=_txn_body(credits=[{"account": "Assets:Cash:Wallet", "amount": 0}]),
+    )
+    assert r.status_code == 422
+
+
+def test_post_transfer_to_expense_account_is_422(client: TestClient):
+    r = client.post(
+        "/api/transfer",
+        json={
+            "from_account": "Assets:Cash:BankA",
+            "to_account": "Expenses:Takeouts",  # not a balance-sheet account
+            "amount": 10.0,
+        },
+    )
+    assert r.status_code == 422
+    assert "asset or liability" in r.json()["detail"]
+
+
 def test_post_transfer_same_account_is_422(client: TestClient):
     r = client.post(
         "/api/transfer",
@@ -663,7 +684,50 @@ def test_post_paycheck_negative_deduction_is_422(client: TestClient):
     assert r.status_code == 422
 
 
-def test_update_transaction_invalid_date_is_400(client: TestClient):
+def test_post_transaction_payee_newline_is_sanitized(client: TestClient):
+    """A payee is a single line: newlines/control chars are stripped before it reaches the ledger.
+
+    beancount escapes quotes but preserves raw newlines, which would corrupt the line-based file.
+    """
+    r = client.post(
+        "/api/transaction",
+        json=_txn_body(
+            date="2026-02-01", payee="hello\n2020-01-01 open Assets:Hacked USD\n; injected"
+        ),
+    )
+    assert r.status_code == 200
+    txns = client.get("/api/data").json()["months"]["2026-02"]["transactions"]
+    match = next(t for t in txns if t["locator"] == f"id:{r.json()['id']}")
+    assert match["payee"] == "hello 2020-01-01 open Assets:Hacked USD ; injected"
+    assert "\n" not in match["payee"]
+
+
+def test_post_transaction_blank_payee_is_422_with_clear_detail(client: TestClient):
+    r = client.post("/api/transaction", json=_txn_body(payee="   "))
+    assert r.status_code == 422
+    assert r.json()["detail"] == "Title must not be blank"
+
+
+def test_post_transaction_payee_too_long_is_422(client: TestClient):
+    r = client.post("/api/transaction", json=_txn_body(payee="x" * 201))
+    assert r.status_code == 422
+    assert "at most 200 characters" in r.json()["detail"]
+
+
+def test_validation_detail_is_a_readable_string(client: TestClient):
+    """A pydantic body-validation failure is flattened to one labeled sentence, not a raw list."""
+    r = client.post("/api/transaction", json=_txn_body(amount=0))
+    assert r.status_code == 422
+    assert r.json()["detail"] == "Amount must be greater than 0"
+
+
+def test_post_transaction_amount_above_ceiling_is_422(client: TestClient):
+    r = client.post("/api/transaction", json=_txn_body(amount=1e13))
+    assert r.status_code == 422
+    assert "Amount must be at most" in r.json()["detail"]
+
+
+def test_update_transaction_invalid_date_is_422(client: TestClient):
     add = client.post("/api/transaction", json=_txn_body(date="2026-02-01"))
     locator = f"id:{add.json()['id']}"
 
@@ -671,5 +735,5 @@ def test_update_transaction_invalid_date_is_400(client: TestClient):
         "/api/transaction/update",
         json=_txn_body(date="2026-13-40", locator=locator),
     )
-    assert r.status_code == 400
+    assert r.status_code == 422
     assert "invalid date" in r.json()["detail"]

@@ -51,7 +51,14 @@
 			<div class="grow">
 				<Select ariaLabel={selectAriaLabel} bind:value={row.value} {options} {optionLabel} />
 			</div>
-			<input type="number" step="0.01" bind:value={row.amount} placeholder="0" />
+			<input
+				type="number"
+				step="0.01"
+				min="0"
+				inputmode="decimal"
+				bind:value={row.amount}
+				placeholder="0"
+			/>
 			{#if removable}
 				<button type="button" class="btn-mini rm" onclick={() => remove(i)}>✕</button>
 			{/if}

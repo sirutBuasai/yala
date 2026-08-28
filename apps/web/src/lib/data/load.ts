@@ -65,15 +65,31 @@ export interface PostResult<T> {
 	error: string | null;
 }
 
+/**
+ * A readable error message from a failed API response. The API flattens validation failures into a
+ * string `detail`, but stay defensive: FastAPI's own default handler (or an unhandled path) returns
+ * `detail` as a list of error objects, which must not surface as "[object Object]".
+ */
+function errorMessage(data: { detail?: unknown }, status: number): string {
+	const d = data.detail;
+	if (typeof d === 'string' && d) return d;
+	if (Array.isArray(d)) {
+		const parts = d.map((e) => (e && typeof e === 'object' && 'msg' in e ? String(e.msg) : ''));
+		const joined = parts.filter(Boolean).join('; ');
+		if (joined) return joined;
+	}
+	return `error ${status}`;
+}
+
 /** GET + parse JSON, normalizing errors into a `PostResult` (used to prefill edit forms). */
 export async function getJson<T = Record<string, unknown>>(url: string): Promise<PostResult<T>> {
 	try {
 		const res = await fetch(url, { cache: 'no-store' });
-		const data = (await res.json().catch(() => ({}))) as T & { detail?: string };
+		const data = (await res.json().catch(() => ({}))) as T & { detail?: unknown };
 
 		return res.ok
 			? { ok: true, data, error: null }
-			: { ok: false, data, error: data.detail || `error ${res.status}` };
+			: { ok: false, data, error: errorMessage(data, res.status) };
 	} catch (e) {
 		return { ok: false, data: {} as T, error: 'API unreachable: ' + (e as Error).message };
 	}
@@ -90,11 +106,11 @@ export async function postJson<T = Record<string, unknown>>(
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(body)
 		});
-		const data = (await res.json().catch(() => ({}))) as T & { detail?: string };
+		const data = (await res.json().catch(() => ({}))) as T & { detail?: unknown };
 
 		return res.ok
 			? { ok: true, data, error: null }
-			: { ok: false, data, error: data.detail || `error ${res.status}` };
+			: { ok: false, data, error: errorMessage(data, res.status) };
 	} catch (e) {
 		return { ok: false, data: {} as T, error: 'API unreachable: ' + (e as Error).message };
 	}

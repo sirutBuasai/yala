@@ -7,6 +7,7 @@
 	import { formatAccount, money } from '$lib/utils/format';
 	import { lastTransferFrom, lastTransferTo } from '$lib/utils/editPrefs';
 	import AccountField from '$lib/forms/fields/AccountField.svelte';
+	import { problems } from '$lib/forms/validate';
 	import DatePicker from '$lib/forms/fields/DatePicker.svelte';
 	import EntryFooter from '$lib/forms/fields/EntryFooter.svelte';
 	import FormSection from '$lib/forms/fields/FormSection.svelte';
@@ -70,13 +71,14 @@
 	});
 
 	async function submit() {
-		if (amount == null || amount <= 0) {
-			msg = 'Enter an amount to move.';
-			err = true;
-			return;
-		}
-		if (from_account === to_account) {
-			msg = 'Pick two different accounts.';
+		const problem = problems()
+			.positive(amount, 'Amount')
+			.require(from_account, 'Pay-from account')
+			.require(to_account, 'Pay-toward account')
+			.add(from_account === to_account ? 'Pick two different accounts.' : null)
+			.message();
+		if (problem) {
+			msg = problem;
 			err = true;
 			return;
 		}
@@ -124,6 +126,8 @@
 				id="tf-amt"
 				type="number"
 				step="0.01"
+				min="0"
+				inputmode="decimal"
 				placeholder="0"
 				bind:value={amount}
 			/>
@@ -166,8 +170,8 @@
 
 <EntryFooter
 	{editing}
-	{msg}
-	{err}
+	bind:msg
+	bind:err
 	addLabel="+ Add"
 	deleteLabel="Delete bill pay"
 	deleteQuestion="Delete this bill payment?"

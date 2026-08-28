@@ -6,6 +6,7 @@
 	import { deleteTransaction, getJson, postJson } from '$lib/data/load';
 	import { formatAccount, money } from '$lib/utils/format';
 	import { lastDepositAccount } from '$lib/utils/editPrefs';
+	import { problems, validateRows } from '$lib/forms/validate';
 	import Select from '$lib/forms/fields/Select.svelte';
 	import DatePicker from '$lib/forms/fields/DatePicker.svelte';
 	import LineColumn, { type AmountRow } from '$lib/forms/fields/LineColumn.svelte';
@@ -95,13 +96,16 @@
 	const takeHome = $derived((gross || 0) - sum(deductions) - sum(contributions));
 
 	async function submit() {
-		if (gross == null) {
-			msg = 'Gross is required.';
-			err = true;
-			return;
-		}
-		if (!employer) {
-			msg = 'Employer is required.';
+		const problem = problems()
+			.positive(gross, 'Gross')
+			.require(employer, 'Employer')
+			.require(deposit_account, 'Deposit account')
+			.add(validateRows(deductions, 'deduction'))
+			.add(validateRows(contributions, 'contribution'))
+			.add(takeHome < 0 ? 'Deductions and contributions exceed gross pay.' : null)
+			.message();
+		if (problem) {
+			msg = problem;
 			err = true;
 			return;
 		}
@@ -156,6 +160,8 @@
 				id="pc-gross"
 				type="number"
 				step="0.01"
+				min="0"
+				inputmode="decimal"
 				placeholder="0"
 				bind:value={gross}
 			/>
@@ -198,8 +204,8 @@
 
 <EntryFooter
 	{editing}
-	{msg}
-	{err}
+	bind:msg
+	bind:err
 	addLabel="+ Add"
 	deleteLabel="Delete paycheck"
 	deleteQuestion="Delete this paycheck?"

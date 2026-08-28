@@ -516,6 +516,7 @@ input[type='checkbox']:focus-visible {
 .edit-msg {
 	font-size: var(--text-secondary);
 	color: var(--good-text);
+	white-space: pre-line; /* render each collected problem on its own line */
 }
 .edit-msg.err {
 	color: var(--crit-text);

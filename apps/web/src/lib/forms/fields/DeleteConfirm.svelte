@@ -5,17 +5,24 @@
 		label: string;
 		question: string;
 		ondelete: () => void;
+		/** Called when the user backs out of the confirmation, e.g. to clear a prior delete error. */
+		oncancel?: () => void;
 	}
-	let { label, question, ondelete }: Props = $props();
+	let { label, question, ondelete, oncancel }: Props = $props();
 
 	let confirming = $state(false);
+
+	function cancel() {
+		confirming = false;
+		oncancel?.();
+	}
 </script>
 
 {#if confirming}
 	<div class="confirm">
 		<span class="confirm-q">{question}</span>
 		<button type="button" class="btn-danger" onclick={ondelete}>Yes, delete</button>
-		<button type="button" class="btn-cancel" onclick={() => (confirming = false)}>Cancel</button>
+		<button type="button" class="btn-cancel" onclick={cancel}>Cancel</button>
 	</div>
 {:else}
 	<button type="button" class="btn-danger" onclick={() => (confirming = true)}>{label}</button>
