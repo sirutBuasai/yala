@@ -156,32 +156,39 @@
 			</div>
 
 			{#if selected.pays.length}
-				<PaycheckList
-					paychecks={selected.pays}
-					{edit}
-					onedit={(l) => modals.editPaycheck(l)}
-					showDate={false}
-				/>
-			{/if}
-
-			{#if selectedTxns.length}
-				{#if selected.pays.length}<div class="daydiv"></div>{/if}
-				<TransactionList
-					transactions={selectedTxns}
-					{edit}
-					onedit={(l) => modals.editTransaction(l)}
-					showDate={false}
-				/>
+				<div class="daysec">
+					<h4 class="dslabel">Paychecks</h4>
+					<PaycheckList
+						paychecks={selected.pays}
+						{edit}
+						onedit={(l) => modals.editPaycheck(l)}
+						showDate={false}
+					/>
+				</div>
 			{/if}
 
 			{#if selected.xfers.length}
-				{#if selected.pays.length || selectedTxns.length}<div class="daydiv"></div>{/if}
-				<TransferList
-					transfers={selected.xfers}
-					{edit}
-					onedit={(l) => modals.editTransfer(l)}
-					showDate={false}
-				/>
+				<div class="daysec">
+					<h4 class="dslabel">Bill pay &amp; transfers</h4>
+					<TransferList
+						transfers={selected.xfers}
+						{edit}
+						onedit={(l) => modals.editTransfer(l)}
+						showDate={false}
+					/>
+				</div>
+			{/if}
+
+			{#if selectedTxns.length}
+				<div class="daysec">
+					<h4 class="dslabel">Transactions</h4>
+					<TransactionList
+						transactions={selectedTxns}
+						{edit}
+						onedit={(l) => modals.editTransaction(l)}
+						showDate={false}
+					/>
+				</div>
 			{/if}
 
 			{#if !selected.pays.length && !selectedTxns.length && !selected.xfers.length}
@@ -352,11 +359,18 @@
 	.pos {
 		color: var(--good-text);
 	}
-	/* separates the paycheck block from the transaction block; inset like the row dividers */
-	.daydiv {
-		height: 1px;
-		background: var(--border);
-		margin: var(--space-1) 0 var(--space-4);
+	.daysec + .daysec {
+		margin-top: var(--space-7);
+		padding-top: var(--space-7);
+		border-top: 1px solid var(--border);
+	}
+	.dslabel {
+		margin: 0 0 var(--space-4);
+		font-size: var(--text-label);
+		text-transform: uppercase;
+		letter-spacing: var(--ls-wider);
+		color: var(--ink-2);
+		font-weight: var(--fw-semibold);
 	}
 	.note {
 		color: var(--ink-3);

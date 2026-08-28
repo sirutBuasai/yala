@@ -18,6 +18,8 @@
 		dateOf?: (item: T) => string;
 		/** Row spacing: 'compact' (default, dense lists) or 'comfortable' (roomier). */
 		density?: 'compact' | 'comfortable';
+		/** Cap the list to this many rows, then scroll; height comes from a row-height token. */
+		maxRows?: number;
 		main: Snippet<[T]>;
 		columns: Snippet<[T]>;
 		amount: Snippet<[T]>;
@@ -30,13 +32,19 @@
 		dotColor,
 		dateOf,
 		density = 'compact',
+		maxRows,
 		main,
 		columns,
 		amount
 	}: Props = $props();
 </script>
 
-<div class="list bleed-x" class:comfortable={density === 'comfortable'}>
+<div
+	class="list bleed-x"
+	class:comfortable={density === 'comfortable'}
+	class:capped={maxRows != null}
+	style:--max-rows={maxRows}
+>
 	{#each items as item (item.locator)}
 		<svelte:element
 			this={edit ? 'button' : 'div'}
@@ -60,8 +68,20 @@
 	.list {
 		display: flex;
 		flex-direction: column;
+		--rowh: var(--listrow-h);
 		/* .bleed-x pulls the list to the card's edges so the row hover runs edge-to-edge;
 		   each row's --pad-card-x padding restores the content inset. */
+	}
+	.list.comfortable {
+		--rowh: var(--listrow-h-comfortable);
+	}
+	/* Capped list: show maxRows rows, then scroll. overflow-x stays hidden so the edge-to-edge
+	   bleed never triggers a horizontal scrollbar (rows already fill the bled width exactly). */
+	.list.capped {
+		max-height: calc(var(--rowh) * var(--max-rows));
+		overflow-y: auto;
+		overflow-x: hidden;
+		overscroll-behavior: contain;
 	}
 	.row {
 		position: relative;

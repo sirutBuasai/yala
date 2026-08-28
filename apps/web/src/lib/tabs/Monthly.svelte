@@ -85,21 +85,34 @@
 		{/if}
 		<Figure primitive={donut} chart="donut" />
 	</Pane>
-	<Pane
-		title="Paychecks this month"
-		cap={md ? `${md.paychecks.length} in ${monthLabel(monthKey)}` : ''}
-	>
-		{#if md && md.paychecks.length}
-			<PaycheckList
-				{paychecks}
-				fields={['gross', 'tax', 'benefits', 'saved', 'takehome']}
-				{edit}
-				onedit={(l) => modals.editPaycheck(l)}
-			/>
-		{:else}
-			<p class="note">No paychecks this month.</p>
+	<div class="rail">
+		<Pane
+			title="Paychecks this month"
+			cap={md ? `${md.paychecks.length} in ${monthLabel(monthKey)}` : ''}
+		>
+			{#if md && md.paychecks.length}
+				<PaycheckList
+					{paychecks}
+					fields={['gross', 'tax', 'benefits', 'saved', 'takehome']}
+					{edit}
+					onedit={(l) => modals.editPaycheck(l)}
+					maxRows={3}
+				/>
+			{:else}
+				<p class="note">No paychecks this month.</p>
+			{/if}
+		</Pane>
+		{#if md?.transfers?.length}
+			<Pane title="Bill pay & transfers" cap={`${md.transfers.length} · ${monthLabel(monthKey)}`}>
+				<TransferList
+					transfers={md.transfers}
+					{edit}
+					onedit={(l) => modals.editTransfer(l)}
+					maxRows={4}
+				/>
+			</Pane>
 		{/if}
-	</Pane>
+	</div>
 </div>
 
 <div class="panes">
@@ -121,14 +134,6 @@
 		{/if}
 	</Pane>
 </div>
-
-{#if md?.transfers?.length}
-	<div class="panes">
-		<Pane title="Bill pay & transfers" cap={`${md.transfers.length} · ${monthLabel(monthKey)}`}>
-			<TransferList transfers={md.transfers} {edit} onedit={(l) => modals.editTransfer(l)} />
-		</Pane>
-	</div>
-{/if}
 
 <EditModals bind:this={modals} {accounts} onsaved={onSaved} />
 
@@ -158,5 +163,11 @@
 	.note {
 		color: var(--ink-3);
 		font-size: var(--text-secondary);
+	}
+	.rail {
+		display: flex;
+		flex-direction: column;
+		gap: var(--gap-grid);
+		min-width: 0;
 	}
 </style>

@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Yala · Monthly & Calendar page-layout mockups</title>
+		<style>
+			:root {
+				color-scheme: dark;
+				--bg: #16161f;
+				--surface: #1f1f2b;
+				--surface-2: #26263a;
+				--inset: #2a2a3c;
+				--border: #33334a;
+				--ink: #e6e0c8;
+				--ink-2: #a8a28c;
+				--ink-3: #6f6c5c;
+				--lav: #bb9af7;
+				--green: #9ece6a;
+				--teal: #7dcfff;
+				--gold: #e0af68;
+				--salmon: #f7768e;
+				--good-text: #9ece6a;
+				--teal-text: #7dcfff;
+				--cat-housing: #f7768e;
+				--cat-grocery: #f295c5;
+				--cat-takeouts: #bb9af7;
+				--cat-travel: #6f8fe8;
+				--cat-transport: #ffd27f;
+				--cat-subscription: #ffd5d2;
+				--cat-misc: #c0794f;
+				--shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 14px 34px -18px rgba(0, 0, 0, 0.7);
+				--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+				--sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
+			}
+			:root[data-theme='light'] {
+				color-scheme: light;
+				--bg: #f0ebdd;
+				--surface: #faf6ec;
+				--surface-2: #f1ead9;
+				--inset: #ece4d2;
+				--border: #ddd2bb;
+				--ink: #2e2a22;
+				--ink-2: #6b6350;
+				--ink-3: #9a9078;
+				--good-text: #4f8129;
+				--teal-text: #1d7d99;
+				--shadow: 0 1px 2px rgba(120, 90, 40, 0.06), 0 14px 34px -18px rgba(120, 90, 40, 0.28);
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				background: var(--bg);
+				color: var(--ink);
+				font-family: var(--sans);
+				font-size: 14px;
+				line-height: 1.45;
+				-webkit-font-smoothing: antialiased;
+			}
+			.serif {
+				font-family: var(--serif);
+			}
+			.pagehead {
+				position: sticky;
+				top: 0;
+				z-index: 5;
+				display: flex;
+				align-items: baseline;
+				justify-content: space-between;
+				gap: 16px;
+				padding: 18px 28px;
+				background: color-mix(in srgb, var(--bg) 88%, transparent);
+				backdrop-filter: blur(8px);
+				border-bottom: 1px solid var(--border);
+			}
+			.pagehead h1 {
+				margin: 0;
+				font-size: 22px;
+			}
+			.pagehead p {
+				margin: 4px 0 0;
+				color: var(--ink-2);
+				font-size: 12px;
+				max-width: 820px;
+			}
+			.pagehead button {
+				background: var(--surface);
+				border: 1px solid var(--border);
+				color: var(--ink-2);
+				border-radius: 999px;
+				padding: 8px 14px;
+				font-size: 12px;
+				cursor: pointer;
+				white-space: nowrap;
+			}
+			.wrap {
+				max-width: 1140px;
+				margin: 0 auto;
+				padding: 28px 28px 80px;
+			}
+			.group > h2 {
+				margin: 28px 0 2px;
+				font-size: 22px;
+			}
+			.group > .gsub {
+				margin: 0 0 8px;
+				color: var(--ink-2);
+				font-size: 12px;
+			}
+			.opt {
+				margin: 22px 0 34px;
+			}
+			.opt > .cap {
+				margin: 0 0 10px;
+			}
+			.opt > .cap b {
+				font-size: 14px;
+			}
+			.opt > .cap span {
+				color: var(--ink-3);
+				font-size: 12px;
+				margin-left: 8px;
+			}
+
+			/* page chrome stand-ins */
+			.vh {
+				display: flex;
+				align-items: baseline;
+				gap: 12px;
+				margin-bottom: 14px;
+			}
+			.vh h3 {
+				margin: 0;
+				font-size: 20px;
+			}
+			.vh .nav {
+				display: flex;
+				gap: 6px;
+				align-items: center;
+				color: var(--ink-2);
+				font-size: 12px;
+			}
+			.vh .nav i {
+				width: 26px;
+				height: 26px;
+				border-radius: 999px;
+				border: 1px solid var(--border);
+				display: grid;
+				place-items: center;
+				font-style: normal;
+			}
+			.kpis {
+				display: grid;
+				grid-template-columns: repeat(4, 1fr);
+				gap: 14px;
+				margin-bottom: 14px;
+			}
+			.kpi {
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-radius: 16px;
+				padding: 14px 16px;
+				box-shadow: var(--shadow);
+			}
+			.kpi .t {
+				font-size: 12px;
+				color: var(--ink-3);
+			}
+			.kpi .v {
+				font-family: var(--serif);
+				font-size: 22px;
+				margin-top: 4px;
+			}
+
+			.card {
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-radius: 16px;
+				padding: 16px 18px;
+				box-shadow: var(--shadow);
+			}
+			.paneh {
+				display: flex;
+				align-items: baseline;
+				justify-content: space-between;
+				gap: 10px;
+				margin-bottom: 10px;
+			}
+			.paneh h4 {
+				margin: 0;
+				font-size: 16px;
+				font-weight: 600;
+			}
+			.paneh .pc {
+				color: var(--ink-3);
+				font-size: 12px;
+			}
+			.paneh .tot {
+				font-variant-numeric: tabular-nums;
+				font-weight: 700;
+				font-size: 13px;
+			}
+
+			/* list rows */
+			.lrow {
+				display: grid;
+				grid-template-columns: 10px 1fr auto;
+				gap: 10px;
+				align-items: center;
+				padding: 7px 0;
+				border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+			}
+			.lrow:first-of-type {
+				border-top: 0;
+			}
+			.dot {
+				width: 8px;
+				height: 8px;
+				border-radius: 999px;
+			}
+			.lmain {
+				min-width: 0;
+			}
+			.lt {
+				display: block;
+				font-size: 13px;
+				font-weight: 500;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+			.lc {
+				display: block;
+				font-size: 11px;
+				color: var(--ink-3);
+			}
+			.lamt {
+				text-align: right;
+				font-variant-numeric: tabular-nums;
+				font-weight: 600;
+				font-size: 13px;
+			}
+			.inc {
+				color: var(--good-text);
+			}
+			.pend {
+				color: var(--gold);
+				font-size: 10px;
+				font-weight: 700;
+				margin-left: 6px;
+			}
+
+			.div {
+				height: 1px;
+				background: var(--border);
+				margin: 12px 0;
+			}
+			.note {
+				color: var(--ink-3);
+				font-size: 12px;
+			}
+
+			/* layout grids */
+			.grid2 {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 14px;
+			}
+			.grid2.top {
+				align-items: start;
+			}
+			/* fixed-height scrollable list: peeks a sliver of the next row as a scroll hint */
+			.cap {
+				overflow-y: auto;
+				overscroll-behavior: contain;
+			}
+			.capPay {
+				max-height: 150px;
+			}
+			.capBill {
+				max-height: 198px;
+			}
+			.grid3 {
+				display: grid;
+				grid-template-columns: 1fr 1.3fr 1fr;
+				gap: 14px;
+				align-items: start;
+			}
+			.mainrail {
+				display: grid;
+				grid-template-columns: 2fr 1fr;
+				gap: 14px;
+				align-items: start;
+			}
+			.rail {
+				display: flex;
+				flex-direction: column;
+				gap: 14px;
+			}
+			.stackgap {
+				display: flex;
+				flex-direction: column;
+				gap: 14px;
+			}
+			.donut {
+				display: grid;
+				place-items: center;
+				min-height: 150px;
+				color: var(--ink-3);
+				font-size: 12px;
+			}
+			.donutrow {
+				display: flex;
+				gap: 18px;
+				align-items: center;
+			}
+			.legend {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+				flex: 1;
+				min-width: 0;
+			}
+			.legend li {
+				display: grid;
+				grid-template-columns: 12px 1fr auto;
+				gap: 8px;
+				align-items: center;
+				padding: 3px 0;
+				font-size: 12px;
+			}
+			.legend .sw {
+				width: 11px;
+				height: 11px;
+				border-radius: 3px;
+			}
+			.legend .ll {
+				color: var(--ink-2);
+			}
+			.legend .la {
+				color: var(--ink-3);
+				font-variant-numeric: tabular-nums;
+				text-align: right;
+			}
+			.ring {
+				width: 110px;
+				height: 110px;
+				border-radius: 999px;
+				background: conic-gradient(
+					var(--cat-housing) 0 19%,
+					var(--cat-takeouts) 19% 25%,
+					var(--cat-misc) 25% 31%,
+					var(--green) 31% 100%
+				);
+				-webkit-mask: radial-gradient(circle 34px at center, transparent 98%, #000 100%);
+				mask: radial-gradient(circle 34px at center, transparent 98%, #000 100%);
+			}
+
+			/* calendar */
+			.calsplit {
+				display: grid;
+				grid-template-columns: 1.7fr 1fr;
+				gap: 14px;
+				align-items: start;
+			}
+			.calhead {
+				display: grid;
+				grid-template-columns: repeat(7, 1fr);
+				gap: 8px;
+				margin-bottom: 8px;
+				color: var(--ink-3);
+				font-size: 11px;
+				text-transform: uppercase;
+				letter-spacing: 0.6px;
+				text-align: center;
+			}
+			.cal {
+				display: grid;
+				grid-template-columns: repeat(7, 1fr);
+				gap: 8px;
+			}
+			.cell {
+				background: var(--surface-2);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				min-height: 74px;
+				padding: 7px;
+				position: relative;
+			}
+			.cell.blank {
+				background: none;
+				border: 0;
+			}
+			.cell.sel {
+				border-color: var(--lav);
+				box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 35%, transparent);
+			}
+			.cell.pending {
+				border-color: var(--gold);
+				background: color-mix(in srgb, var(--gold) 13%, var(--surface-2));
+			}
+			.cell .dn {
+				font-size: 12px;
+				color: var(--ink-2);
+				font-weight: 600;
+			}
+			.cell .cd {
+				position: absolute;
+				top: 7px;
+				right: 7px;
+				display: flex;
+				gap: 2px;
+			}
+			.cell .cd i {
+				width: 6px;
+				height: 6px;
+				border-radius: 999px;
+			}
+			.cell .ca {
+				position: absolute;
+				bottom: 6px;
+				right: 7px;
+				display: flex;
+				flex-direction: column;
+				align-items: flex-end;
+				font-size: 10px;
+				font-weight: 600;
+				font-variant-numeric: tabular-nums;
+			}
+			.subcard {
+				background: var(--surface-2);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 12px 14px;
+			}
+			.subcard + .subcard {
+				margin-top: 12px;
+			}
+		</style>
+	</head>
+	<body>
+		<header class="pagehead">
+			<div>
+				<h1 class="serif">Monthly &amp; Calendar — section layouts</h1>
+				<p>
+					Different ways to arrange the <b>Paychecks</b>, <b>Transactions</b> and
+					<b>Bill&nbsp;pay</b> sections on each page. Real tokens + representative rows. Option A in
+					each group is today's layout.
+				</p>
+			</div>
+			<button id="theme">◐ Toggle light / dark</button>
+		</header>
+
+		<main class="wrap" id="wrap"></main>
+
+		<script>
+			// ── representative content ──
+			const TXN = [
+				['rent', 'Housing', '$3,450', '--cat-housing'],
+				['amazon prime', 'Subscription', '$151', '--cat-subscription'],
+				['seattle flight', 'Travel', '$262', '--cat-travel'],
+				['uber', 'Transport', '$78', '--cat-transport'],
+				['trader joes', 'Grocery', '$67', '--cat-grocery'],
+				['halal cart', 'Takeouts', '$61', '--cat-takeouts']
+			];
+			const PAY = [
+				['Amazon', 'take-home', '+$5,078'],
+				['Acme Corp', 'take-home', '+$3,200']
+			];
+			const BILL = [
+				['Wealthfront → Venmo', 'venmo sweep', '$20', false],
+				['Chase → Amex Gold', 'card payment', '$1,240', true]
+			];
+			// "busy month" variants to stress the A2 right column against the donut's height.
+			const PAY_MANY = [
+				['Amazon', 'take-home', '+$5,078'],
+				['Acme Corp', 'take-home', '+$3,200'],
+				['Freelance LLC', 'take-home', '+$1,450'],
+				['Dividends', 'brokerage', '+$310']
+			];
+			const BILL_MANY = [
+				['Wealthfront → Venmo', 'venmo sweep', '$20', false],
+				['Chase → Amex Gold', 'card payment', '$1,240', true],
+				['Ally → Chase', 'autopay', '$600', false],
+				['Fidelity → Ally', 'rebalance', '$2,000', false]
+			];
+			const BILL_MORE = [...BILL_MANY, ['Chase → Discover', 'card payment', '$430', false]];
+			const LEGEND = [
+				['Housing', '$3,465 · 23%', '--cat-housing'],
+				['Takeouts', '$615 · 4%', '--cat-takeouts'],
+				['Grocery', '$476 · 3%', '--cat-grocery'],
+				['Travel', '$262 · 2%', '--cat-travel'],
+				['Subscription', '$251 · 2%', '--cat-subscription'],
+				['Personal', '$122 · 1%', '--cat-misc'],
+				['Saved', '$9,727 · 64%', '--green']
+			];
+
+			const txnRows = (n = TXN.length) =>
+				TXN.slice(0, n)
+					.map(
+						([
+							p,
+							c,
+							a,
+							v
+						]) => `<div class="lrow"><span class="dot" style="background:var(${v})"></span>
+					<span class="lmain"><span class="lt">${p}</span><span class="lc">${c}</span></span>
+					<span class="lamt">${a}</span></div>`
+					)
+					.join('');
+			const payRows = (rows = PAY) =>
+				rows
+					.map(
+						([
+							e,
+							c,
+							a
+						]) => `<div class="lrow"><span class="dot" style="background:var(--green)"></span>
+					<span class="lmain"><span class="lt">${e}</span><span class="lc">${c}</span></span>
+					<span class="lamt inc">${a}</span></div>`
+					)
+					.join('');
+			const billRows = (rows = BILL) =>
+				rows
+					.map(
+						([
+							r,
+							note,
+							a,
+							pend
+						]) => `<div class="lrow"><span class="dot" style="background:var(--ink-3)"></span>
+					<span class="lmain"><span class="lt">${r}${pend ? '<span class="pend">● pending</span>' : ''}</span><span class="lc">${note}</span></span>
+					<span class="lamt">${a}</span></div>`
+					)
+					.join('');
+
+			const pane = (title, cap, body, tot) => `
+				<section class="card">
+					<div class="paneh"><h4>${title}</h4>${tot ? `<span class="tot">${tot}</span>` : cap ? `<span class="pc">${cap}</span>` : ''}</div>
+					${body}
+				</section>`;
+
+			const PAYPANE = (cap, rows) => pane('Paychecks', cap ?? '2 this month', payRows(rows));
+			const TXNPANE = (cap) => pane('Transactions', cap ?? '47 · Jul 2026', txnRows());
+			const BILLPANE = (cap, rows) =>
+				pane('Bill pay & transfers', cap ?? '2 · Jul 2026', billRows(rows));
+			const DONUTPANE = () =>
+				pane(
+					'Where your income went',
+					'net $15,233',
+					`<div class="donutrow"><div class="ring"></div>
+						<ul class="legend">${LEGEND.map(([l, a, v]) => `<li><span class="sw" style="background:var(${v})"></span><span class="ll">${l}</span><span class="la">${a}</span></li>`).join('')}</ul>
+					</div>`
+				);
+
+			const monthChrome = () => `
+				<div class="vh"><h3 class="serif">Monthly</h3>
+					<span class="nav"><i>‹</i> Jul 2026 <i>›</i></span></div>
+				<div class="kpis">
+					<div class="kpi"><div class="t">Income</div><div class="v">$15,233</div></div>
+					<div class="kpi"><div class="t">Spent</div><div class="v">$5,506</div></div>
+					<div class="kpi"><div class="t">Saved</div><div class="v">$9,727</div></div>
+					<div class="kpi"><div class="t">% used</div><div class="v">36%</div></div>
+				</div>`;
+
+			// ── Monthly layout options ──
+			const MONTHLY = [
+				{
+					name: 'A · Current — paychecks beside donut, then full-width lists',
+					note: 'Paychecks pair with the income donut; Transactions and Bill pay stack full-width below.',
+					body: () => `${monthChrome()}
+						<div class="grid2" style="margin-bottom:14px">${DONUTPANE()}${PAYPANE()}</div>
+						<div style="margin-bottom:14px">${TXNPANE()}</div>
+						${BILLPANE()}`
+				},
+				{
+					name: 'A2 · Bill pay stacked under Paychecks (your tweak)',
+					note: 'Donut on the left; Paychecks then Bill pay stack in the right column. Transactions stay full-width below.',
+					body: () => `${monthChrome()}
+						<div class="grid2" style="margin-bottom:14px">${DONUTPANE()}<div class="rail">${PAYPANE()}${BILLPANE()}</div></div>
+						${TXNPANE()}`
+				},
+				{
+					name: 'A2 · busy month — 4 paychecks + 4 bill pays',
+					note: 'Stress test: the right column outgrows the donut, so the row is as tall as the right column and the donut card gains trailing whitespace (equal-height columns).',
+					body: () => `${monthChrome()}
+						<div class="grid2" style="margin-bottom:14px">${DONUTPANE()}<div class="rail">${PAYPANE('4 this month', PAY_MANY)}${BILLPANE('4 · Jul 2026', BILL_MANY)}</div></div>
+						${TXNPANE()}`
+				},
+				{
+					name: 'A2 · busy, aligned to top (recommended fix)',
+					note: 'Same busy month, but align-items:start — the donut keeps its natural height instead of stretching into a big empty card. The shorter column just ends; Transactions spans full-width below either way.',
+					body: () => `${monthChrome()}
+						<div class="grid2 top" style="margin-bottom:14px">${DONUTPANE()}<div class="rail">${PAYPANE('4 this month', PAY_MANY)}${BILLPANE('4 · Jul 2026', BILL_MANY)}</div></div>
+						${TXNPANE()}`
+				},
+				{
+					name: 'A2 · fixed-height lists (paycheck ≈3 rows, bill pay ≈4, then scroll)',
+					note: 'Each list caps at N rows and scrolls internally (peek of the next row hints it). Bounds the right column so the row height is predictable — and no giant empty donut card. Numbers come from a maxRows prop, not a pixel constant.',
+					body: () => `${monthChrome()}
+						<div class="grid2 top" style="margin-bottom:14px">${DONUTPANE()}<div class="rail">${pane('Paychecks', '4 this month', `<div class="cap capPay">${payRows(PAY_MANY)}</div>`)}${pane('Bill pay & transfers', '5 · Jul 2026', `<div class="cap capBill">${billRows(BILL_MORE)}</div>`)}</div></div>
+						${TXNPANE()}`
+				},
+				{
+					name: 'B · Three columns',
+					note: 'Paychecks | Transactions | Bill pay side by side — everything visible without scrolling; transactions column is widest.',
+					body: () => `${monthChrome()}
+						<div class="grid3">${PAYPANE()}${TXNPANE()}${BILLPANE()}</div>`
+				},
+				{
+					name: 'C · Transactions main + right rail',
+					note: 'Transactions take the large left column; Paychecks and Bill pay stack in a right rail. Emphasizes the busiest list.',
+					body: () => `${monthChrome()}
+						<div class="mainrail">${TXNPANE()}<div class="rail">${PAYPANE()}${BILLPANE()}</div></div>`
+				}
+			];
+
+			// ── calendar mini-grid ──
+			const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+			const DECOR = {
+				3: { dots: ['--cat-subscription', '--cat-housing'], inc: '+5.1k' },
+				9: { dots: ['--cat-grocery', '--cat-takeouts'], sp: '$81' },
+				16: { dots: ['--cat-travel'], sp: '$262' },
+				24: { dots: ['--cat-takeouts', '--cat-transport'], sp: '$96' },
+				29: { dots: ['--cat-housing', '--cat-takeouts', '--cat-transport'], sp: '$3.5k' },
+				31: { dots: ['--cat-grocery', '--cat-misc'], sp: '$366', pending: true, sel: true }
+			};
+			const calGrid = () => {
+				let cells = '';
+				for (let b = 0; b < 2; b++) cells += `<div class="cell blank"></div>`;
+				for (let d = 1; d <= 31; d++) {
+					const x = DECOR[d] || {};
+					const dots = (x.dots || []).map((v) => `<i style="background:var(${v})"></i>`).join('');
+					const amt =
+						x.inc || x.sp
+							? `<span class="ca">${x.inc ? `<span class="inc">${x.inc}</span>` : ''}${x.sp ? `<span>${x.sp}</span>` : ''}</span>`
+							: '';
+					cells += `<div class="cell${x.sel ? ' sel' : ''}${x.pending ? ' pending' : ''}">
+						<span class="dn">${d}</span>${dots ? `<span class="cd">${dots}</span>` : ''}${amt}</div>`;
+				}
+				return `<section class="card"><div class="calhead">${WD.map((w) => `<span>${w}</span>`).join('')}</div><div class="cal">${cells}</div></section>`;
+			};
+			const dayHead = () =>
+				`<div class="paneh"><div><h4>Jul 31, 2026</h4><div class="pc">2 transactions · $366 · <span class="inc">+$0 income</span></div></div><span class="note">+ Add</span></div>`;
+
+			const calChrome = () => `<div class="vh"><h3 class="serif">Calendar</h3>
+				<span class="nav"><i>‹</i> Jul 2026 <i>›</i></span></div>`;
+
+			// ── Calendar layout options ──
+			const CALENDAR = [
+				{
+					name: 'A · Current — day detail stacks in the right panel',
+					note: 'Selected-day Paychecks / Transactions / Bill pay stack in one side card, separated by dividers.',
+					body: () => `${calChrome()}
+						<div class="calsplit">${calGrid()}
+							<section class="card">${dayHead()}
+								${payRows()}<div class="div"></div>${txnRows(3)}<div class="div"></div>${billRows()}
+							</section>
+						</div>`
+				},
+				{
+					name: 'B · Right panel, one sub-card per section',
+					note: 'Same split, but each section becomes its own labeled sub-card with a total — clearer separation when a day is busy.',
+					body: () => `${calChrome()}
+						<div class="calsplit">${calGrid()}
+							<section class="card">${dayHead()}
+								<div class="subcard"><div class="paneh"><h4>Paychecks</h4><span class="tot inc">+$8,278</span></div>${payRows()}</div>
+								<div class="subcard"><div class="paneh"><h4>Transactions</h4><span class="tot">$366</span></div>${txnRows(3)}</div>
+								<div class="subcard"><div class="paneh"><h4>Bill pay</h4><span class="tot">$1,260</span></div>${billRows()}</div>
+							</section>
+						</div>`
+				},
+				{
+					name: 'C · Detail below calendar, three columns',
+					note: 'Calendar spans full width; the selected day opens beneath it as three columns. More room per list on wide screens.',
+					body: () => `${calChrome()}
+						<div style="margin-bottom:14px">${calGrid()}</div>
+						<section class="card">${dayHead()}
+							<div class="grid3" style="margin-top:4px">
+								<div><div class="pc" style="margin-bottom:8px">PAYCHECKS</div>${payRows()}</div>
+								<div><div class="pc" style="margin-bottom:8px">TRANSACTIONS</div>${txnRows(4)}</div>
+								<div><div class="pc" style="margin-bottom:8px">BILL PAY</div>${billRows()}</div>
+							</div>
+						</section>`
+				}
+			];
+
+			function renderGroup(title, sub, opts) {
+				return `<section class="group"><h2 class="serif">${title}</h2><p class="gsub">${sub}</p>
+					${opts
+						.map(
+							(o) =>
+								`<div class="opt"><p class="cap"><b>${o.name}</b><span>${o.note}</span></p>${o.body()}</div>`
+						)
+						.join('')}</section>`;
+			}
+
+			document.getElementById('wrap').innerHTML =
+				renderGroup(
+					'Monthly page',
+					'Arranging the three activity sections below the KPI row.',
+					MONTHLY
+				) +
+				renderGroup(
+					'Calendar page',
+					'Arranging the selected-day sections around the month grid.',
+					CALENDAR
+				);
+
+			document.getElementById('theme').addEventListener('click', () => {
+				const r = document.documentElement;
+				r.dataset.theme = r.dataset.theme === 'light' ? 'dark' : 'light';
+			});
+		</script>
+	</body>
+</html>

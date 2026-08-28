@@ -20,13 +20,16 @@
 		showDate?: boolean;
 		/** Which figures to break out into columns, in order. Trailing amount is always net. */
 		fields?: PaycheckField[];
+		/** Cap the list to this many rows, then scroll (see RowList). */
+		maxRows?: number;
 	}
 	let {
 		paychecks,
 		edit = false,
 		onedit,
 		showDate = true,
-		fields = ['gross', 'takehome']
+		fields = ['gross', 'takehome'],
+		maxRows
 	}: Props = $props();
 
 	const LABELS: Record<PaycheckField, string> = {
@@ -66,6 +69,7 @@
 	{edit}
 	{onedit}
 	{cols}
+	{maxRows}
 	density="comfortable"
 	dotColor={() => 'var(--saved)'}
 	dateOf={showDate ? (p) => p.date : undefined}

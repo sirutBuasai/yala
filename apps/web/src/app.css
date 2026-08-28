@@ -166,6 +166,10 @@
 	--pad-cell: var(--space-4); /* 8 — calendar / table cells */
 	--pad-listrow: var(--space-4) var(--pad-card-x); /* 8×20 — compact list rows, inset to card edge */
 	--pad-listrow-comfortable: var(--space-6) var(--pad-card-x); /* 12×20 — roomier row density */
+	/* Approx height of one list row — used to cap a list to N rows (RowList maxRows) before it
+	   scrolls. Two values track the two row densities so the cap lands on a whole row either way. */
+	--listrow-h: 52px;
+	--listrow-h-comfortable: 58px;
 
 	/* ── Radius ───────────────────────────────────────────────────────────────
 	   Collapses 3/5/6/7/8/9/10/12/16px into 5 steps + a pill. */

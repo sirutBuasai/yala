@@ -19,8 +19,9 @@
 		edit: boolean;
 		onedit: (locator: string) => void;
 		showDate?: boolean;
+		maxRows?: number;
 	}
-	let { transfers, edit, onedit, showDate = true }: Props = $props();
+	let { transfers, edit, onedit, showDate = true, maxRows }: Props = $props();
 
 	const cols = $derived(`${showDate ? '34px ' : ''}10px 1fr auto 74px`);
 </script>
@@ -30,6 +31,7 @@
 	{edit}
 	{onedit}
 	{cols}
+	{maxRows}
 	dotColor={() => 'var(--ink-3)'}
 	dateOf={showDate ? (t) => t.date : undefined}
 >
