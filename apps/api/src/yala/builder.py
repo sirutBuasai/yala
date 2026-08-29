@@ -102,7 +102,7 @@ def _meta(spending, income, categories, all_years, all_months) -> Meta:
     )
 
 
-def _overview(spending, income, categories, all_years) -> Overview:
+def _overview(spending, income, all_years) -> Overview:
     all_time = spending.by_category()
 
     return Overview(
@@ -115,9 +115,13 @@ def _overview(spending, income, categories, all_years) -> Overview:
             )
             for y in all_years
         ],
-        all_time_by_category=[
-            CategoryAmount(category=c, amount=money(all_time.get(c, 0))) for c in categories
-        ],
+        # Lifetime spend per category straight from the transactions, so a closed category's
+        # history still shows here (largest first, empty ones dropped).
+        all_time_by_category=sorted(
+            (CategoryAmount(category=c, amount=money(v)) for c, v in all_time.items() if v != 0),
+            key=lambda ca: ca.amount,
+            reverse=True,
+        ),
     )
 
 
@@ -210,7 +214,10 @@ def build(ledger: Ledger) -> DashboardData:
     income = ledger.income
     transfers = ledger.transfers
 
-    categories = spending.categories()
+    # The analytics category list (for meta, legends, per-category metrics) is every pickable
+    # (active) category plus any category with lifetime spend — so a closed category with history
+    # is still known to the charts, while the /api/accounts picker stays active-only.
+    categories = sorted(set(spending.categories()) | set(spending.by_category()))
     all_transfers = transfers.transactions()
     income_months = {(p.date.year, p.date.month) for p in income.paychecks()}
     transfer_months = {(t.date.year, t.date.month) for t in all_transfers}
@@ -224,7 +231,7 @@ def build(ledger: Ledger) -> DashboardData:
         generated_at=_now_rfc3339(),
         currency=ledger.currency,
         meta=_meta(spending, income, categories, all_years, all_months),
-        overview=_overview(spending, income, categories, all_years),
+        overview=_overview(spending, income, all_years),
         years=_years(spending, income, all_years),
         months=_months(spending, income, transfers, all_months),
         income=_income(income),

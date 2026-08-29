@@ -104,6 +104,30 @@ def test_income_helper_independently():
     assert dates == sorted(dates, reverse=True)
 
 
+def _closed_category_data():
+    return build(Ledger(Path(__file__).parent / "fixtures" / "closed_category.beancount").load())
+
+
+def test_closed_category_keeps_its_lifetime_history():
+    """A closed category with spend stays in analytics: the picker drops it, but the overview
+    lifetime list and meta still include it so its history is visible."""
+    led = Ledger(Path(__file__).parent / "fixtures" / "closed_category.beancount").load()
+    assert led.spending.categories() == ["Grocery"]  # picker: active only
+
+    d = build(led)
+    assert d.meta.categories == ["Grocery", "Gym"]  # analytics: active ∪ lifetime-spend
+    lifetime = {c.category: c.amount for c in d.overview.all_time_by_category}
+    assert lifetime == {"Grocery": 40.0, "Gym": 30.0}
+
+
+def test_closed_category_present_in_its_active_year_matrix():
+    """The 2025 matrix carries both the closed (Gym) and active (Grocery) categories, since both
+    have spend that year — the frontend heatmap unions these keys into its columns."""
+    d = _closed_category_data()
+    spent_keys = {c for row in d.years["2025"].matrix for c in row.spent}
+    assert spent_keys == {"Grocery", "Gym"}
+
+
 def test_income_only_month_still_produces_a_month_page():
     d = build(Ledger(Path(__file__).parent / "fixtures" / "income_mini.beancount").load())
     assert "2025-01" in d.months

@@ -1,0 +1,19 @@
+option "operating_currency" "USD"
+
+2020-01-01 commodity USD
+2020-01-01 open Assets:Checking USD
+2020-01-01 open Liabilities:CC:CardA USD
+2020-01-01 open Expenses:Grocery USD
+2020-01-01 open Expenses:Gym USD
+
+; Gym had real spend, then the category was closed. Its history must still show in
+; analytics (overview lifetime + the year's heatmap), even though it's no longer pickable.
+2025-03-10 * "Old Gym"
+  Expenses:Gym      30.00 USD
+  Liabilities:CC:CardA  -30.00 USD
+
+2025-04-05 * "Grocery run"
+  Expenses:Grocery  40.00 USD
+  Liabilities:CC:CardA  -40.00 USD
+
+2025-06-01 close Expenses:Gym
