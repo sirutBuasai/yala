@@ -91,12 +91,11 @@ class Spending:
         return out
 
     def categories(self) -> list[str]:
-        """Discretionary spending categories from ``Expenses:*`` accounts (excludes
-        Deductions), sorted."""
+        """Discretionary spending categories from open ``Expenses:*`` accounts (excludes
+        Deductions and closed accounts), sorted. A closed category drops out here so it can't be
+        picked for new spending, while historical transactions still report against it."""
         return sorted(
-            a.split(":", 1)[1]
-            for a in self._led.declared_accounts(EXPENSES)
-            if _is_discretionary(a)
+            a.split(":", 1)[1] for a in self._led.active_accounts(EXPENSES) if _is_discretionary(a)
         )
 
     def by_category(self, year: int | None = None, month: int | None = None) -> dict[str, Decimal]:

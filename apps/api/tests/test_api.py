@@ -217,6 +217,31 @@ def test_post_account_declares_funding_credit_and_cash(client: TestClient):
     assert "Assets:Cash:BankZ" in funding
 
 
+def test_close_category_removes_it_from_pickers(client: TestClient):
+    client.post("/api/account", json={"kind": "category", "leaf": "Gifts"})
+    assert "Gifts" in client.get("/api/accounts").json()["spending_categories"]
+
+    r = client.post("/api/account/close", json={"account": "Expenses:Gifts"})
+    assert r.status_code == 200
+    assert r.json()["account"] == "Expenses:Gifts"
+    assert "Gifts" not in client.get("/api/accounts").json()["spending_categories"]
+
+
+def test_close_non_expense_account_is_422(client: TestClient):
+    r = client.post("/api/account/close", json={"account": "Assets:Cash:BankA"})
+    assert r.status_code == 422
+
+
+def test_close_deductions_account_is_422(client: TestClient):
+    r = client.post("/api/account/close", json={"account": "Expenses:Deductions:Tax"})
+    assert r.status_code == 422
+
+
+def test_close_unopened_category_is_422(client: TestClient):
+    r = client.post("/api/account/close", json={"account": "Expenses:DoesNotExist"})
+    assert r.status_code == 422
+
+
 def test_new_category_is_usable_by_a_transaction(client: TestClient):
     client.post("/api/account", json={"kind": "category", "leaf": "Gifts"})
     r = client.post(

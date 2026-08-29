@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { postJson, refreshAccounts } from '$lib/data/load';
+	import { addAccount, type CreatableAccountKind } from '$lib/data/load';
 	import Select from '$lib/forms/fields/Select.svelte';
 
 	interface CreatableKind {
-		value: 'category' | 'deduction' | 'contribution' | 'funding_credit' | 'funding_cash';
+		value: CreatableAccountKind;
 		label: string;
 	}
 
@@ -54,13 +54,9 @@
 		}
 		busy = true;
 		err = '';
-		const { ok, data, error } = await postJson<{ account?: string }>('/api/account', {
-			kind,
-			leaf: trimmed
-		});
-		if (ok) {
-			await refreshAccounts();
-			value = deriveValue(data.account ?? trimmed);
+		const { account, error } = await addAccount(kind as CreatableAccountKind, trimmed);
+		if (account) {
+			value = deriveValue(account);
 			adding = false;
 			leaf = '';
 		} else {

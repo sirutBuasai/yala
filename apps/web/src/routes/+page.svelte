@@ -199,7 +199,7 @@
 			{:else if tab === 'calendar'}
 				<CalendarView data={$data} {edit} accounts={$accounts} {onsaved} />
 			{:else}
-				<ManageView data={$data} />
+				<ManageView data={$data} accounts={$accounts} {edit} />
 			{/if}
 		</div>
 	{/if}

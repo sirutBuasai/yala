@@ -25,7 +25,7 @@ from starlette.types import Scope
 from yala import config, projections
 from yala.builder import build_dict
 from yala.ledger import Ledger, payroll
-from yala.ledger.constants import ASSETS, CASH, CREDIT_CARDS, EXPENSES, LIABILITIES
+from yala.ledger.constants import ASSETS, CASH, CREDIT_CARDS, DEDUCTIONS, EXPENSES, LIABILITIES
 from yala.ledger.locators import find_entry
 from yala.ledger.venmo_sweep import is_sweep, reconcile_months
 from yala.sink import FileLedgerSink
@@ -592,6 +592,24 @@ def post_account(body: AccountIn) -> dict:
         _sink().open_account(account)
 
     return _ok(f"opened {account}", account=account)
+
+
+class CategoryCloseIn(BaseModel):
+    account: str
+
+
+@app.post("/api/account/close")
+def post_account_close(body: CategoryCloseIn) -> dict:
+    """Close a spending category (an ``Expenses:*`` account, excluding the Deductions subtree).
+    It drops out of the category picker but historical spending still reports against it."""
+    account = _valid_name(body.account)
+    if not account.startswith(EXPENSES) or account.startswith(DEDUCTIONS):
+        raise HTTPException(status_code=422, detail=f"not a spending category: {account!r}")
+
+    with _api_errors():
+        _sink().close_account(account)
+
+    return _ok(f"closed {account}", account=account)
 
 
 # --- static frontend + entrypoint ---

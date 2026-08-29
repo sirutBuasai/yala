@@ -505,14 +505,55 @@ class FileLedgerSink(LedgerSink):
         self._commit(path, "".join(lines[:begin] + lines[end:]), original)
 
     def open_account(self, account: str, date: dt.date | None = None) -> None:
-        """Append an ``open`` directive to the accounts file (e.g. a new contribution type)."""
+        """Append an ``open`` directive to the account file that holds the account's siblings
+        (e.g. a new spending category joins ``accounts/expenses.beancount``)."""
         date = date or dt.date.today()
-        accounts_file = self.ledger_dir / "accounts.beancount"
+        self._append_account_directive(account, f"{date.isoformat()} open {account} USD")
 
-        original = accounts_file.read_text()
-        text = original if original.endswith("\n") else original + "\n"
+    def close_account(self, account: str, date: dt.date | None = None) -> None:
+        """Append a ``close`` directive next to the account's own ``open``. Blocks new postings to
+        the account dated on/after ``date`` while leaving prior entries intact; a strict reload
+        rejects closing an unopened or already-closed account."""
+        date = date or dt.date.today()
+        self._append_account_directive(account, f"{date.isoformat()} close {account}")
 
-        self._commit(accounts_file, f"{text}{date.isoformat()} open {account} USD\n", original)
+    def _account_file(self, account: str) -> Path:
+        """The ``.beancount`` file a directive for ``account`` belongs in, so it lands beside its
+        siblings regardless of how the ledger splits its account files.
+
+        An existing ``open`` for the same account wins (a close goes in the file that declared it);
+        otherwise the file most of the account's same-parent siblings live in; failing that, the
+        top-level ``accounts.beancount`` for a wholly new family.
+        """
+        opens = [e for e in Ledger(self.main_ledger).load().entries if isinstance(e, data.Open)]
+
+        def file_of(entry: data.Open) -> str | None:
+            return (entry.meta or {}).get("filename")
+
+        for e in opens:
+            if e.account == account and (f := file_of(e)):
+                return Path(f)
+
+        parent = account.rsplit(":", 1)[0]
+        counts: dict[str, int] = {}
+        for e in opens:
+            if e.account.rsplit(":", 1)[0] == parent and (f := file_of(e)):
+                counts[f] = counts.get(f, 0) + 1
+
+        if counts:
+            return Path(max(counts, key=lambda f: counts[f]))
+
+        return self.ledger_dir / "accounts.beancount"
+
+    def _append_account_directive(self, account: str, directive: str) -> None:
+        """Append one account directive to the file holding the account's family (see
+        ``_account_file``), with strict-reload/rollback."""
+        target = self._account_file(account)
+
+        original = target.read_text() if target.exists() else ""
+        text = original if not original or original.endswith("\n") else original + "\n"
+
+        self._commit(target, f"{text}{directive}\n", original)
 
     # --- internals: locate, write, roll back ---
 

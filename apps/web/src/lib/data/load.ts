@@ -197,3 +197,31 @@ export async function refreshAccounts(): Promise<void> {
 		/* keep the last-known accounts */
 	}
 }
+
+/** A kind of account the API can open on demand (the leaf is appended under the kind's prefix). */
+export type CreatableAccountKind =
+	'category' | 'deduction' | 'contribution' | 'funding_credit' | 'funding_cash';
+
+/**
+ * Open a new ledger account (spending category or funding account) and refresh the account lists
+ * so the new one appears everywhere. Returns the created full account name, or an error message.
+ */
+export async function addAccount(
+	kind: CreatableAccountKind,
+	leaf: string
+): Promise<{ account: string | null; error: string | null }> {
+	const { ok, data, error } = await postJson<{ account?: string }>('/api/account', { kind, leaf });
+	if (!ok) return { account: null, error: error ?? 'add failed' };
+	await refreshAccounts();
+	return { account: data.account ?? leaf, error: null };
+}
+
+/**
+ * Close a spending category (full `Expenses:<leaf>` account) and refresh the account lists so it
+ * drops out of the pickers. Returns an error message on failure, or null on success.
+ */
+export async function closeAccount(account: string): Promise<string | null> {
+	const { ok, error } = await postJson('/api/account/close', { account });
+	if (ok) await refreshAccounts();
+	return ok ? null : (error ?? 'close failed');
+}

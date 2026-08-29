@@ -444,6 +444,40 @@ def test_open_account_adds_contribution_type(ledger_dir: Path):
     assert "Assets:Investments:Brokerage" in led.declared_accounts("Assets:Investments:")
 
 
+def _open_file(ledger_dir: Path, account: str) -> Path:
+    """The source file declaring ``account``'s ``open`` directive."""
+    from beancount.core import data
+
+    for e in _loads_clean(ledger_dir).entries:
+        if isinstance(e, data.Open) and e.account == account:
+            return Path(e.meta["filename"])
+    raise AssertionError(f"no open for {account}")
+
+
+def test_open_account_lands_beside_its_siblings(ledger_dir: Path):
+    """A new open joins the file that already declares its family, not the aggregator."""
+    sink = FileLedgerSink(ledger_dir)
+    family_file = _open_file(ledger_dir, "Expenses:Grocery")
+
+    sink.open_account("Expenses:Gifts")
+
+    assert "open Expenses:Gifts" in family_file.read_text()
+    assert "Expenses:Gifts" in _loads_clean(ledger_dir).declared_accounts("Expenses:")
+
+
+def test_close_account_deactivates_category(ledger_dir: Path):
+    sink = FileLedgerSink(ledger_dir)
+    sink.open_account("Expenses:Gifts")
+    open_file = _open_file(ledger_dir, "Expenses:Gifts")
+
+    sink.close_account("Expenses:Gifts")
+
+    assert "close Expenses:Gifts" in open_file.read_text()  # close sits with its open
+    led = _loads_clean(ledger_dir)
+    assert "Expenses:Gifts" in led.declared_accounts("Expenses:")  # history is preserved
+    assert "Expenses:Gifts" not in led.active_accounts("Expenses:")  # but no longer active
+
+
 # --- transfers (bill pay) ---
 
 
