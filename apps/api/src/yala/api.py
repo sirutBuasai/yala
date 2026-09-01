@@ -30,8 +30,11 @@ from yala.ledger.constants import (
     CASH,
     CREDIT_CARDS,
     DEDUCTIONS,
-    EQUITY,
+    DEFAULT_CURRENCY,
     EXPENSES,
+    INVEST_ADJUSTMENTS,
+    INVEST_TAX_ADVANTAGED,
+    INVEST_TAXABLE,
     INVESTMENTS,
     LIABILITIES,
     SWEEP_META,
@@ -55,6 +58,11 @@ _ACCOUNT_PREFIX: dict[str, str] = {
     "category": EXPENSES,
     "funding_credit": CREDIT_CARDS,
     "funding_cash": CASH,
+}
+
+_INVEST_SUBTREE: dict[str, str] = {
+    "Taxable": INVEST_TAXABLE,
+    "TaxAdvantaged": INVEST_TAX_ADVANTAGED,
 }
 
 # Pydantic error ``loc`` field name → the label the user sees in the form, so a body-validation
@@ -193,9 +201,8 @@ def _valid_name(value: str) -> str:
 
 
 def _valid_transfer_account(value: str) -> str:
-    """A transfer moves money between balance-sheet accounts, so its legs must be an asset or a
-    liability — never an ``Expenses``/``Income`` account (that would be spending or income, not a
-    transfer)."""
+    """A transfer's legs must be a balance-sheet account (asset or liability), never an
+    Expenses/Income account."""
     _valid_name(value)
     if not value.startswith((ASSETS, LIABILITIES)):
         raise HTTPException(
@@ -203,6 +210,17 @@ def _valid_transfer_account(value: str) -> str:
             detail=f"transfer accounts must be an asset or liability account: {value!r}",
         )
     return value
+
+
+def _open_destination(ledger: Ledger, dest: str, account: str) -> str:
+    """Validate ``dest`` as a distinct, currently-open asset/liability target for ``account`` —
+    the shared check for every operation that moves a balance to another account."""
+    _valid_transfer_account(dest)
+    if dest == account:
+        raise HTTPException(status_code=422, detail="destination must differ from the account")
+    if not ledger.is_open(dest):
+        raise HTTPException(status_code=422, detail=f"destination is not an open account: {dest!r}")
+    return dest
 
 
 def _parse_date(value: str | None) -> dt.date:
@@ -224,8 +242,7 @@ def _parse_date_opt(value: str | None) -> dt.date | None:
 
 
 def _reconcile_sweeps(*dates: dt.date | None) -> None:
-    """Re-derive the auto-managed Venmo sweep for every month a just-written entry touched, so it
-    tracks Venmo activity as entries are added, edited, moved across months, or removed."""
+    """Re-derive passthrough sweeps for every month a just-written entry touched."""
     months = {(d.year, d.month) for d in dates if d is not None}
     if months:
         reconcile_months(_sink(), months)
@@ -616,10 +633,7 @@ class AccountCloseIn(BaseModel):
 
 @app.post("/api/account/close")
 def post_account_close(body: AccountCloseIn) -> dict:
-    """Close a spending category (an ``Expenses:*`` account, excluding the Deductions subtree) or a
-    bank/cash account (``Assets:Cash:*``). The account drops out of the pickers but historical
-    entries still report against it. Any account is closeable, including passthroughs like Venmo or
-    Wealthfront — use ``/api/account/drain-close`` first if it still carries a balance."""
+    """Close a spending category or bank/cash account; drain-close first if it carries a balance."""
     account = _valid_name(body.account)
 
     is_category = account.startswith(EXPENSES) and not account.startswith(DEDUCTIONS)
@@ -631,8 +645,7 @@ def post_account_close(body: AccountCloseIn) -> dict:
 
     with _api_errors():
         sink = _sink()
-        # Close first (so a future-dated auto-sweep makes this fail cleanly, nudging drain-close),
-        # then drop any ``sweep_to`` so reconciliation stops tracking the now-closed account.
+        # Close before clearing sweep_to, so a future-dated sweep fails cleanly.
         sink.close_account(account)
         if _ledger().account_meta().get(account, {}).get(SWEEP_META):
             sink.set_account_meta(account, SWEEP_META, None)
@@ -645,14 +658,12 @@ def post_account_close(body: AccountCloseIn) -> dict:
 
 class SweepIn(BaseModel):
     account: str
-    dest: str | None = None  # a null/empty dest clears the passthrough
+    dest: str | None = None  # empty clears the passthrough
 
 
 @app.post("/api/account/sweep")
 def post_account_sweep(body: SweepIn) -> dict:
-    """Declare (or, with an empty ``dest``, clear) ``account`` as a passthrough that sweeps to
-    ``dest``. ``dest`` must be an open asset/liability account other than ``account`` and must not
-    create a sweep cycle."""
+    """Set or clear ``account``'s ``sweep_to`` destination; rejects a cycle."""
     account = _valid_transfer_account(body.account)
 
     if not body.dest:
@@ -660,17 +671,10 @@ def post_account_sweep(body: SweepIn) -> dict:
             _sink().set_account_meta(account, SWEEP_META, None)
         return _ok(f"cleared sweep for {account}", account=account)
 
-    dest = _valid_transfer_account(body.dest)
-    if dest == account:
-        raise HTTPException(status_code=422, detail="a passthrough can't sweep to itself")
-
     ledger = _ledger()
-    if dest not in ledger.active_accounts():
-        raise HTTPException(
-            status_code=422, detail=f"sweep destination is not an open account: {dest!r}"
-        )
+    dest = _open_destination(ledger, body.dest, account)
 
-    # Reject a configuration that would cycle (e.g. A→B→A) before writing it.
+    # Reject a configuration that would cycle before writing it.
     edges = {a: m[SWEEP_META] for a, m in ledger.account_meta().items() if m.get(SWEEP_META)}
     edges[account] = dest
     try:
@@ -692,32 +696,18 @@ class DrainCloseIn(BaseModel):
 
 @app.post("/api/account/drain-close")
 def post_account_drain_close(body: DrainCloseIn) -> dict:
-    """Retire a balance-sheet account: transfer its residual balance to a caller-chosen
-    ``destination``, then close it. Leaves a zero balance so it never lingers in net worth."""
+    """Move a balance-sheet account's balance to ``destination``, then close it at zero."""
     account = _valid_transfer_account(body.account)
-    destination = _valid_transfer_account(body.destination)
-    if destination == account:
-        raise HTTPException(
-            status_code=422, detail="drain destination must differ from the account"
-        )
-
     date = _parse_date(body.date)
 
     with _api_errors():
         sink = _sink()
-        ledger = _ledger()
-        if destination not in ledger.active_accounts():
-            raise HTTPException(
-                status_code=422, detail=f"destination is not an open account: {destination!r}"
-            )
+        destination = _open_destination(_ledger(), body.destination, account)
 
-        # A passthrough is kept near-zero by a month-end sweep; retire that first (delete the
-        # sweep, drop sweep_to) so its balance reflects only real activity and nothing is left
-        # dated after the close. Then the drain below is its true final sweep.
+        # Retire any sweep first, so the balance reflects only real activity.
         retire_passthrough(sink, account, date)
-        ledger = _ledger()
 
-        bal = ledger.balance(account, date)
+        bal = _ledger().balance(account, date)
         if bal != 0:
             # A positive asset balance moves out; a negative one (liability) is paid in.
             from_account, to_account = (account, destination) if bal > 0 else (destination, account)
@@ -739,11 +729,10 @@ def post_account_drain_close(body: DrainCloseIn) -> dict:
 
 
 def _invest_plug(account: str) -> str:
-    """The dedicated adjustments plug paired with a share account, mirroring its path under the
-    subtree (``Assets:Investments:TaxAdvantaged:HSA:Fidelity`` →
-    ``Equity:Adjustments:Investments:HSA:Fidelity``)."""
-    rest = account[len(INVESTMENTS) :].split(":", 1)[1]  # drop the Taxable/TaxAdvantaged segment
-    return f"{EQUITY}Adjustments:Investments:{rest}"
+    """The dedicated adjustments plug paired with a share account, mirroring its path below the
+    subtree segment under ``INVEST_ADJUSTMENTS``."""
+    rest = account[len(INVESTMENTS) :].split(":", 1)[1]
+    return f"{INVEST_ADJUSTMENTS}{rest}"
 
 
 def _valid_leaf_list(values: list[str], field: str) -> None:
@@ -754,18 +743,16 @@ def _valid_leaf_list(values: list[str], field: str) -> None:
 
 class InvestmentIn(BaseModel):
     subtree: Literal["Taxable", "TaxAdvantaged"]
-    name: str  # may be nested, e.g. "HSA:Fidelity"
-    holds_shares: bool = True  # False = a USD-only, tickerless plan (opened USD-constrained)
+    name: str  # may be colon-nested
+    holds_shares: bool = True  # True holds tickers; False is a cash-only plan
     employer: str | None = None
     labels: list[str] = Field(default=[], max_length=MAX_LEGS)
 
 
 @app.post("/api/account/investment")
 def post_investment(body: InvestmentIn) -> dict:
-    """Open an investment account under Taxable/TaxAdvantaged. Share accounts open unconstrained
-    (hold many tickers + USD) and get a ``0.00 USD`` genesis seed plus a paired adjustments plug;
-    a USD-only plan opens USD-constrained with neither. Payroll-contributable accounts carry
-    ``employer``/``labels`` meta."""
+    """Open an investment account. A share account can hold any ticker and gets a 0.00 starting
+    balance plus a paired Equity:Adjustments account; a cash-only plan gets neither."""
     if not all(_SEGMENT_RE.match(s) for s in body.name.split(":")):
         raise HTTPException(
             status_code=422,
@@ -775,7 +762,7 @@ def post_investment(body: InvestmentIn) -> dict:
     if body.employer:
         _valid_leaf_list([body.employer], "employer")
 
-    account = f"{INVESTMENTS}{body.subtree}:{body.name}"
+    account = f"{_INVEST_SUBTREE[body.subtree]}{body.name}"
     meta: dict[str, str] = {}
     if body.employer:
         meta["employer"] = body.employer
@@ -784,9 +771,11 @@ def post_investment(body: InvestmentIn) -> dict:
 
     with _api_errors():
         sink = _sink()
-        sink.open_account(account, currency=None if body.holds_shares else "USD", meta=meta)
+        sink.open_account(
+            account, currency=None if body.holds_shares else DEFAULT_CURRENCY, meta=meta
+        )
         if body.holds_shares:
-            sink.assert_balance(account, "0.00", "USD")
+            sink.assert_balance(account, "0.00")
             sink.open_account(_invest_plug(account), currency=None)
 
     return _ok(f"opened {account}", account=account)
@@ -794,8 +783,7 @@ def post_investment(body: InvestmentIn) -> dict:
 
 @app.get("/api/account/value")
 def get_account_value(account: str) -> dict:
-    """USD value of an account's holdings today (Σ shares × latest price + USD). Used to prefill the
-    investment-retirement split. 422 if a held ticker has no price."""
+    """USD value of an account's holdings today; 422 if a held ticker has no price."""
     account = _valid_name(account)
     with _api_errors():
         return {"account": account, "value": float(_ledger().value(account))}
@@ -814,9 +802,8 @@ class InvestmentCloseIn(BaseModel):
 
 @app.post("/api/account/investment-close")
 def post_investment_close(body: InvestmentCloseIn) -> dict:
-    """Retire an investment account: value its holdings in USD (latest price on/before the date),
-    split that total across the given USD legs, liquidate + close the account (and its plug). The
-    legs must sum to the account's USD value (both zero for an empty account)."""
+    """Value an investment account in USD, split it across the legs, then liquidate and close it.
+    The legs must sum to that value (both zero for an empty account)."""
     account = _valid_name(body.account)
     if not account.startswith(INVESTMENTS):
         raise HTTPException(status_code=422, detail=f"not an investment account: {account!r}")
@@ -826,18 +813,9 @@ def post_investment_close(body: InvestmentCloseIn) -> dict:
     with _api_errors():
         ledger = _ledger()
         for leg in body.legs:
-            _valid_transfer_account(leg.destination)
-            if leg.destination == account:
-                raise HTTPException(
-                    status_code=422, detail="a drain destination must differ from the account"
-                )
-            if leg.destination not in ledger.active_accounts():
-                raise HTTPException(
-                    status_code=422,
-                    detail=f"destination is not an open account: {leg.destination!r}",
-                )
+            _open_destination(ledger, leg.destination, account)
 
-        value = ledger.value(account, date)  # LedgerError (no price) → 422 via _api_errors
+        value = ledger.value(account, date)
         legs_total = round_cents(sum((_dec(leg.amount) for leg in body.legs), Decimal(0)))
         if legs_total != value:
             raise HTTPException(
@@ -846,7 +824,7 @@ def post_investment_close(body: InvestmentCloseIn) -> dict:
             )
 
         plug = _invest_plug(account)
-        plug = plug if plug in ledger.active_accounts() else None
+        plug = plug if ledger.is_open(plug) else None
         _sink().close_investment(
             account, date, [(leg.destination, _dec(leg.amount)) for leg in body.legs], plug
         )

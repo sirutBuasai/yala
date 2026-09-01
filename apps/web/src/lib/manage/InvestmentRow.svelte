@@ -1,6 +1,5 @@
 <script lang="ts">
-	// One investment account on the Manage tab. "Retire" values its holdings in USD, then lets you
-	// split that total across one or more destination accounts before liquidating and closing it.
+	// An investment row: value its holdings, split them across destinations, then close it.
 	import { investmentValue, closeInvestment, type DrainLeg } from '$lib/data/load';
 	import { formatAccount, money } from '$lib/utils/format';
 	import Select from '$lib/forms/fields/Select.svelte';

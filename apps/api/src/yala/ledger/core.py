@@ -133,8 +133,7 @@ class Ledger:
         ]
 
     def balance(self, account: str, as_of: dt.date | None = None) -> Decimal:
-        """Summed USD posting amount for ``account`` up to ``as_of`` (inclusive; today if None).
-        Pad-generated postings are materialized on load, so this equals the asserted balance."""
+        """Summed USD amount for ``account`` up to ``as_of`` (today if None)."""
         total = Decimal(0)
         for t in self.transactions():
             if as_of is not None and t.date > as_of:
@@ -145,10 +144,8 @@ class Ledger:
         return round_cents(total)
 
     def holdings(self, account: str, as_of: dt.date | None = None) -> dict[str, Decimal]:
-        """Per-commodity balance of ``account`` up to ``as_of`` (currency → signed quantity),
-        excluding commodities that net to zero. Unlike :meth:`balance` this keeps each commodity
-        distinct (read from the raw postings' units), so a share account's tickers aren't summed as
-        if they were dollars."""
+        """Per-commodity balance of ``account`` up to ``as_of``, dropping commodities that net to
+        zero. Unlike :meth:`balance` it keeps each commodity distinct."""
         self._require()
         inv: dict[str, Decimal] = {}
         for e in self._entries:
@@ -167,9 +164,8 @@ class Ledger:
         return self._price_cache
 
     def value(self, account: str, as_of: dt.date | None = None) -> Decimal:
-        """USD value of ``account``'s holdings at ``as_of``: Σ quantity × price for each ticker
-        (latest price on or before ``as_of``) plus USD legs at par. Raises :class:`LedgerError` if
-        a held ticker has no price at all."""
+        """USD value of ``account``'s holdings at ``as_of`` (latest price on/before). Raises
+        :class:`LedgerError` if a held ticker has no price."""
         usd = self.currency
         total = Decimal(0)
         for cur, qty in self.holdings(account, as_of).items():
@@ -208,6 +204,10 @@ class Ledger:
 
         active = opened - closed
         return sorted(a for a in active if prefix is None or a.startswith(prefix))
+
+    def is_open(self, account: str) -> bool:
+        """Whether ``account`` is opened without a later close as of today."""
+        return account in self.active_accounts()
 
     def account_meta(self) -> dict[str, dict]:
         """Per-account metadata from ``Open`` directives (source-location keys stripped)."""

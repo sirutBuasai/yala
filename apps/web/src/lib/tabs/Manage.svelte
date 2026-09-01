@@ -17,14 +17,12 @@
 	}
 	let { accounts, edit, onsaved }: Props = $props();
 
-	// The API opens a category as Expenses:<leaf> and a bank as Assets:Cash:<leaf>, so a new name
-	// is a single leaf: letters, numbers, or hyphens (mirrors the backend's _LEAF_RE).
+	// A new account name is a single leaf (mirrors the backend's _LEAF_RE).
 	const LEAF_RE = /^[A-Za-z0-9-]+$/;
 
 	const categories = $derived(accounts?.spending_categories ?? []);
 	const banks = $derived(accounts?.cash_accounts ?? []);
-	// The full money set (banks, Venmo, credit cards) is the candidate pool for sweep and drain
-	// destinations; each row filters out itself.
+	// The full money set is the candidate pool for sweep and drain destinations.
 	const destinations = $derived(accounts?.credit_accounts ?? []);
 	const sweeps = $derived(accounts?.sweeps ?? {});
 
@@ -63,7 +61,6 @@
 	async function close(cat: string) {
 		note = '';
 		err = '';
-		// The API closes the full account; categories are the leaf under Expenses:.
 		const error = await closeAccount(`Expenses:${cat}`);
 		if (error) err = error;
 		else note = `Closed ${cat}.`;
@@ -100,7 +97,7 @@
 
 	// --- investment accounts ---
 	const investments = $derived(accounts?.investment_accounts ?? []);
-	// A retirement can drain to any money account or roll over into another investment.
+	// Retire to any money account or another investment.
 	const investDestinations = $derived([...(accounts?.credit_accounts ?? []), ...investments]);
 
 	let invSubtree = $state('Taxable');

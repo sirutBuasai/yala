@@ -1,26 +1,9 @@
 """Auto-maintained passthrough sweeps.
 
-A *passthrough* account holds no money of its own — every dollar flowing through it is really
-pulled from or pushed to a destination account. Venmo → Wealthfront is the canonical instance.
-Rather than hand-entering a monthly transfer, the backend keeps each passthrough balanced to zero
-by maintaining one sweep transfer per month between it and its destination:
-
-* net outflow (the passthrough paid out more than it took in) → ``dest → passthrough`` for the net,
-* net inflow (it took in more) → ``passthrough → dest``,
-* net zero → no sweep at all.
-
-A passthrough declares its destination as ``sweep_to: "<account>"`` meta on its ``open`` directive,
-so the routing lives in the ledger, not this code. Any number of passthroughs may be configured.
-
-**Transitive reduction:** sweeps chain. If Venmo sweeps to Wealthfront and Wealthfront sweeps to
-BofA, Venmo's sweep resolves directly to ``Venmo → BofA`` (the *terminal* — the first account in
-the chain with no ``sweep_to``), bypassing the intermediate passthrough. Each passthrough is still
-reconciled independently against its own native activity, so intermediates never receive another
-passthrough's sweep and every passthrough nets to zero.
-
-Reconciled after every write that could touch a month's activity: the sweep appears on the first
-qualifying transaction, accumulates as more are added, and vanishes if activity nets back to zero.
-The sweeps' own legs are excluded from the net, so reconciling is idempotent.
+A passthrough declares a ``sweep_to`` destination on its ``open`` and holds no money of its own; a
+monthly transfer keeps it at zero. Sweeps chain transitively: the sweep routes to the terminal (the
+first account in the chain with no ``sweep_to``), so intermediates are bypassed. Reconciling runs
+on every write and is safe to repeat, since the sweeps' own legs are excluded from the net.
 """
 
 from __future__ import annotations
@@ -44,11 +27,11 @@ if TYPE_CHECKING:
 Month = tuple[int, int]  # (year, month)
 
 
-# --- sweep configuration (source → destination, from the ledger's open-meta) ---
+# --- sweep configuration ---
 
 
 def sweep_payee(source: str) -> str:
-    """The payee stamped on a passthrough's sweep, e.g. ``Assets:Cash:Venmo`` → ``venmo sweep``."""
+    """Payee stamped on a passthrough's sweep."""
     return f"{leaf(source).lower()} sweep"
 
 
@@ -77,8 +60,7 @@ def sweep_targets(ledger: Ledger) -> dict[str, str]:
 
 
 def is_sweep(accounts: list[str], ledger: Ledger) -> bool:
-    """Whether a transfer's accounts occupy an auto-managed sweep slot — i.e. they exactly match
-    some passthrough ↔ terminal pair, whatever the payee or direction."""
+    """Whether the accounts match a passthrough↔terminal sweep slot."""
     pairs = {frozenset((s, t)) for s, t in sweep_targets(ledger).items()}
     return len(accounts) == 2 and frozenset(accounts) in pairs
 
@@ -91,8 +73,7 @@ def _last_day(year: int, month: int) -> dt.date:
 
 
 def _active_at(ledger: Ledger, on: dt.date) -> set[str]:
-    """Accounts opened without a later close as of ``on`` — so we never post a sweep to an account
-    that isn't open that month."""
+    """Accounts open (not closed) as of ``on``."""
     opened: set[str] = set()
     closed: set[str] = set()
     for e in ledger.entries:
@@ -117,8 +98,7 @@ def _sweeps_in(
 def _net_activity(
     ledger: Ledger, source: str, year: int, month: int, sweeps: list["Transfer"]
 ) -> Decimal:
-    """Net of every posting to ``source`` for the month, minus the sweeps' own source legs.
-    Negative = it paid out more than it took in (push money in); positive = it took in more."""
+    """Month's net for ``source``, excluding its own sweep legs. Negative = paid out more."""
     total = Decimal(0)
     for t in ledger.transactions(year, month):
         for p in t.postings:
@@ -137,8 +117,7 @@ def _matches(
     date: dt.date,
     payee: str,
 ) -> bool:
-    """Whether the existing sweep already equals the desired one, so an idempotent reconcile skips
-    a redundant write instead of churning the file."""
+    """True if the existing sweep already matches, so reconcile can skip a rewrite."""
     return (
         not sweep.pending
         and sweep.payee == payee
@@ -160,16 +139,13 @@ def _reconcile_one(
     date: dt.date,
 ) -> None:
     """Reconcile a single passthrough's sweep for the month (see :func:`reconcile_month`)."""
-    # A passthrough (or its terminal) that isn't open this month can't hold a sweep — skip it
-    # rather than post to a closed account. Closing a passthrough drains it and clears its
-    # ``sweep_to`` first, so a live passthrough's terminal is always open and this skip never
-    # silently strands activity.
+    # Skip a closed source/terminal; retiring a passthrough clears its sweep_to first.
     if source not in active or terminal not in active:
         return
 
     sweeps = _sweeps_in(ledger, source, terminal, year, month)
 
-    for extra in sweeps[1:]:  # keep one canonical sweep; drop any duplicates
+    for extra in sweeps[1:]:  # drop duplicates, keep one
         sink.delete_entry(extra.locator)
     existing = sweeps[0] if sweeps else None
 
@@ -180,8 +156,7 @@ def _reconcile_one(
             sink.delete_entry(existing.locator)
         return
 
-    # The sweep's source leg cancels the net: a net outflow pulls money in from the terminal, a
-    # net inflow drains it back.
+    # Net outflow pulls money in from the terminal; net inflow drains it back.
     from_account, to_account = (terminal, source) if net < 0 else (source, terminal)
     amount = abs(net)
     payee = sweep_payee(source)
@@ -209,12 +184,8 @@ def _reconcile_one(
 
 
 def reconcile_month(sink: "FileLedgerSink", year: int, month: int) -> None:
-    """Bring each passthrough's single sweep for ``year``/``month`` in line with that month's net
-    activity: create it, update it in place, or delete it so the passthrough nets to zero.
-
-    Passthroughs are reconciled independently: one that fails doesn't abort the rest (each sink
-    write already strict-reloads and rolls itself back), and because reconciliation is idempotent a
-    later write heals whatever failed. Any failures are still surfaced as one aggregated error."""
+    """Reconcile every passthrough's sweep for the month. Passthroughs are independent, so one
+    failure is isolated and surfaced as an aggregated error rather than aborting the rest."""
     ledger = Ledger(sink.main_ledger, strict=True).load()
     date = _last_day(year, month)
     active = _active_at(ledger, date)
@@ -223,7 +194,7 @@ def reconcile_month(sink: "FileLedgerSink", year: int, month: int) -> None:
     for source, terminal in sweep_targets(ledger).items():
         try:
             _reconcile_one(sink, ledger, active, source, terminal, year, month, date)
-        except Exception as e:  # isolate: a bad passthrough can't strand the others
+        except Exception as e:  # one bad passthrough can't strand the others
             failures.append(f"{source}: {e}")
 
     if failures:
@@ -239,10 +210,8 @@ def reconcile_months(sink: "FileLedgerSink", months: set[Month]) -> None:
 
 
 def retire_passthrough(sink: "FileLedgerSink", account: str, on: dt.date) -> None:
-    """Prepare a passthrough for closing on ``on``: delete its auto-sweep for the close month (dated
-    month-end, so it would otherwise fall *after* the close date and break the ledger) and drop its
-    ``sweep_to`` meta. Afterwards the account's balance reflects only real activity, ready to be
-    drained and closed, and reconciliation no longer manages it. No-op if it isn't a passthrough."""
+    """Prepare a passthrough for closing: delete its close-month sweep (dated month-end, so it
+    would otherwise fall after the close) and drop its ``sweep_to``. No-op if not a passthrough."""
     ledger = Ledger(sink.main_ledger, strict=True).load()
     if not ledger.account_meta().get(account, {}).get(SWEEP_META):
         return

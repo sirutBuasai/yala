@@ -22,6 +22,8 @@ FIXTURE_LEDGER = Path(__file__).parent / "fixtures" / "ledger"
 BANK_A = "Assets:Cash:BankA"
 BANK_B = "Assets:Cash:BankB"
 BROKERAGE = "Assets:Investments:Taxable:Brokerage"
+BROKERAGE_PLUG = "Equity:Adjustments:Investments:Brokerage"
+TICKER = "TICKA"
 
 
 @pytest.fixture
@@ -43,20 +45,24 @@ def _open_entry(led: Ledger, account: str) -> data.Open:
     return next(e for e in led.entries if isinstance(e, data.Open) and e.account == account)
 
 
-def _seed_shares(client: TestClient, price: str = "500.00") -> None:
-    """Append a priced share holding (10 VOO, bought from BankA) to the per-test ledger copy."""
+def _append_ledger(client: TestClient, text: str) -> None:
     path = client.ledger_dir / "accounts.beancount"  # type: ignore[attr-defined]
-    path.write_text(
-        path.read_text()
-        + textwrap.dedent(f"""
-        2020-01-01 commodity VOO
+    path.write_text(path.read_text() + textwrap.dedent(text))
+
+
+def _seed_shares(client: TestClient, price: str = "500.00") -> None:
+    """Give BROKERAGE a priced share holding (10 shares, bought from BANK_A)."""
+    _append_ledger(
+        client,
+        f"""
+        2020-01-01 commodity {TICKER}
         2026-01-01 open {BROKERAGE}
-        2020-01-01 open Equity:Adjustments:Investments:Brokerage
-        2026-01-05 price VOO {price} USD
+        2020-01-01 open {BROKERAGE_PLUG}
+        2026-01-05 price {TICKER} {price} USD
         2026-01-05 * "buy"
-          {BROKERAGE}  10 VOO @ {price} USD
+          {BROKERAGE}  10 {TICKER} @ {price} USD
           {BANK_A}  -{Decimal(price) * 10} USD
-        """)
+        """,
     )
 
 
@@ -66,17 +72,15 @@ def _seed_shares(client: TestClient, price: str = "500.00") -> None:
 def test_add_share_account_is_unconstrained_with_seed_and_plug(client: TestClient):
     r = client.post(
         "/api/account/investment",
-        json={"subtree": "Taxable", "name": "Fidelity", "holds_shares": True},
+        json={"subtree": "Taxable", "name": "AcctA", "holds_shares": True},
     )
     assert r.status_code == 200
     led = _ledger(client)
-    account = "Assets:Investments:Taxable:Fidelity"
+    account = "Assets:Investments:Taxable:AcctA"
     assert account in led.active_accounts()
-    assert _open_entry(led, account).currencies is None  # unconstrained → holds any ticker
-    assert "Equity:Adjustments:Investments:Fidelity" in led.active_accounts()
-    assert any(
-        isinstance(e, data.Balance) and e.account == account for e in led.entries
-    )  # 0.00 USD genesis seed
+    assert _open_entry(led, account).currencies is None  # unconstrained
+    assert "Equity:Adjustments:Investments:AcctA" in led.active_accounts()
+    assert any(isinstance(e, data.Balance) and e.account == account for e in led.entries)
 
 
 def test_add_usd_only_plan_is_constrained_without_seed_or_plug(client: TestClient):
@@ -84,33 +88,33 @@ def test_add_usd_only_plan_is_constrained_without_seed_or_plug(client: TestClien
         "/api/account/investment",
         json={
             "subtree": "TaxAdvantaged",
-            "name": "Plan401k",
+            "name": "PlanA",
             "holds_shares": False,
-            "employer": "Amazon",
-            "labels": ["Roth401k", "Trad401k"],
+            "employer": "EmployerA",
+            "labels": ["OptionA", "OptionB"],
         },
     )
     assert r.status_code == 200
     led = _ledger(client)
-    account = "Assets:Investments:TaxAdvantaged:Plan401k"
+    account = "Assets:Investments:TaxAdvantaged:PlanA"
     assert _open_entry(led, account).currencies == ["USD"]  # USD-constrained
-    assert "Equity:Adjustments:Investments:Plan401k" not in led.active_accounts()
+    assert "Equity:Adjustments:Investments:PlanA" not in led.active_accounts()
     meta = led.account_meta()[account]
-    assert meta["employer"] == "Amazon"
-    assert meta["labels"] == "Roth401k,Trad401k"
+    assert meta["employer"] == "EmployerA"
+    assert meta["labels"] == "OptionA,OptionB"
 
 
 def test_add_nested_name_and_bad_segment(client: TestClient):
     assert (
         client.post(
             "/api/account/investment",
-            json={"subtree": "TaxAdvantaged", "name": "HSA:Fidelity", "holds_shares": True},
+            json={"subtree": "TaxAdvantaged", "name": "GroupA:AcctB", "holds_shares": True},
         ).status_code
         == 200
     )
-    assert "Assets:Investments:TaxAdvantaged:HSA:Fidelity" in _ledger(client).active_accounts()
+    assert "Assets:Investments:TaxAdvantaged:GroupA:AcctB" in _ledger(client).active_accounts()
     # lowercase-initial segment is a beancount parse error → rejected up front
-    bad = client.post("/api/account/investment", json={"subtree": "Taxable", "name": "fidelity"})
+    bad = client.post("/api/account/investment", json={"subtree": "Taxable", "name": "acctA"})
     assert bad.status_code == 422
 
 
@@ -118,7 +122,7 @@ def test_add_nested_name_and_bad_segment(client: TestClient):
 
 
 def test_close_share_account_values_and_splits(client: TestClient):
-    _seed_shares(client)  # 10 VOO @ 500 = 5000 USD
+    _seed_shares(client)  # 10 shares @ 500 = 5000 USD
     r = client.post(
         "/api/account/investment-close",
         json={
@@ -133,9 +137,9 @@ def test_close_share_account_values_and_splits(client: TestClient):
     assert r.status_code == 200
     assert r.json()["value"] == 5000.00
     led = _ledger(client)
-    assert led.holdings(BROKERAGE) == {}  # fully liquidated
+    assert led.holdings(BROKERAGE) == {}
     assert BROKERAGE not in led.active_accounts()
-    assert "Equity:Adjustments:Investments:Brokerage" not in led.active_accounts()
+    assert BROKERAGE_PLUG not in led.active_accounts()
 
 
 def test_close_legs_must_sum_to_value(client: TestClient):
@@ -153,17 +157,16 @@ def test_close_legs_must_sum_to_value(client: TestClient):
 
 
 def test_close_without_price_is_422(client: TestClient):
-    path = client.ledger_dir / "accounts.beancount"  # type: ignore[attr-defined]
-    path.write_text(
-        path.read_text()
-        + textwrap.dedent(f"""
-        2020-01-01 commodity NOPX
+    _append_ledger(
+        client,
+        f"""
+        2020-01-01 commodity {TICKER}
         2026-01-01 open {BROKERAGE}
-        2020-01-01 open Equity:Adjustments:Investments:Brokerage
+        2020-01-01 open {BROKERAGE_PLUG}
         2026-01-05 * "buy"
-          {BROKERAGE}  5 NOPX {{100.00 USD}}
+          {BROKERAGE}  5 {TICKER} {{100.00 USD}}
           {BANK_A}  -500.00 USD
-        """)
+        """,
     )
     r = client.post(
         "/api/account/investment-close",
@@ -182,9 +185,9 @@ def test_close_usd_plan_splits_without_plug(client: TestClient):
     today = dt.date.today().isoformat()
     client.post(
         "/api/account/investment",
-        json={"subtree": "TaxAdvantaged", "name": "Plan401k", "holds_shares": False},
+        json={"subtree": "TaxAdvantaged", "name": "PlanA", "holds_shares": False},
     )
-    account = "Assets:Investments:TaxAdvantaged:Plan401k"
+    account = "Assets:Investments:TaxAdvantaged:PlanA"
     client.post(
         "/api/transfer",
         json={"date": today, "from_account": BANK_B, "to_account": account, "amount": 900.00},

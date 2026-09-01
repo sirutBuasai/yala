@@ -220,31 +220,21 @@ export async function addAccount(
 	return { account: data.account ?? leaf, error: null };
 }
 
-/**
- * Close an account by full name — a spending category (`Expenses:<leaf>`) or a bank account
- * (`Assets:Cash:<leaf>`) — and refresh the account lists so it drops out of the pickers. Returns
- * an error message on failure, or null on success.
- */
+/** Close an account by full name and refresh the lists. Returns an error message, or null. */
 export async function closeAccount(account: string): Promise<string | null> {
 	const { ok, error } = await postJson('/api/account/close', { account });
 	if (ok) await refreshAccounts();
 	return ok ? null : (error ?? 'close failed');
 }
 
-/**
- * Declare `account` as a passthrough that sweeps to `dest`, or clear it when `dest` is null.
- * Refreshes the account lists. Returns an error message on failure, or null on success.
- */
+/** Set `account`'s sweep destination (or clear it when `dest` is null); returns an error, or null. */
 export async function setSweep(account: string, dest: string | null): Promise<string | null> {
 	const { ok, error } = await postJson('/api/account/sweep', { account, dest });
 	if (ok) await refreshAccounts();
 	return ok ? null : (error ?? 'sweep update failed');
 }
 
-/**
- * Retire a balance-sheet account: move its balance to `destination`, then close it. Refreshes the
- * account lists. Returns an error message on failure, or null on success.
- */
+/** Move an account's balance to `destination`, then close it; returns an error, or null. */
 export async function drainCloseAccount(
 	account: string,
 	destination: string
@@ -260,10 +250,7 @@ export interface DrainLeg {
 	amount: number;
 }
 
-/**
- * Open an investment account under a subtree. Share accounts hold tickers (unconstrained + seeded);
- * a USD-only plan is tickerless. Refreshes the account lists. Returns an error message, or null.
- */
+/** Open an investment account (Taxable or TaxAdvantaged), then refresh the lists; returns an error, or null. */
 export async function addInvestment(body: {
 	subtree: 'Taxable' | 'TaxAdvantaged';
 	name: string;
@@ -286,10 +273,7 @@ export async function investmentValue(
 	return ok ? { value: data.value ?? 0, error: null } : { value: null, error: error ?? 'failed' };
 }
 
-/**
- * Retire an investment account: value its holdings and split that USD total across `legs`, then
- * liquidate + close. Refreshes the account lists. Returns an error message, or null.
- */
+/** Split an investment account's USD value across `legs`, then close it; returns an error, or null. */
 export async function closeInvestment(account: string, legs: DrainLeg[]): Promise<string | null> {
 	const { ok, error } = await postJson('/api/account/investment-close', { account, legs });
 	if (ok) await refreshAccounts();

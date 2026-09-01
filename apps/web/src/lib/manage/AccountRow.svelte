@@ -1,6 +1,5 @@
 <script lang="ts">
-	// One bank/cash account row on the Manage tab: shows its passthrough target (if any) and lets
-	// you set/clear the sweep or retire the account via drain-close (balance → chosen destination).
+	// A bank row: set/clear its sweep target, or drain-close it to a chosen destination.
 	import { setSweep, drainCloseAccount } from '$lib/data/load';
 	import { formatAccount } from '$lib/utils/format';
 	import Select from '$lib/forms/fields/Select.svelte';
