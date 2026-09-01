@@ -24,6 +24,8 @@ export interface AccountsInfo {
 	payroll_options: PayrollOption[];
 	cash_accounts: string[];
 	credit_accounts: string[];
+	/** Active `Assets:Investments:*` accounts. Always sent by the API. */
+	investment_accounts?: string[];
 	/** Passthrough routing: account → its `sweep_to` destination. Always sent by the API. */
 	sweeps?: Record<string, string>;
 }
@@ -250,4 +252,46 @@ export async function drainCloseAccount(
 	const { ok, error } = await postJson('/api/account/drain-close', { account, destination });
 	if (ok) await refreshAccounts();
 	return ok ? null : (error ?? 'drain-close failed');
+}
+
+/** A destination + USD amount leg of an investment retirement split. */
+export interface DrainLeg {
+	destination: string;
+	amount: number;
+}
+
+/**
+ * Open an investment account under a subtree. Share accounts hold tickers (unconstrained + seeded);
+ * a USD-only plan is tickerless. Refreshes the account lists. Returns an error message, or null.
+ */
+export async function addInvestment(body: {
+	subtree: 'Taxable' | 'TaxAdvantaged';
+	name: string;
+	holds_shares: boolean;
+	employer?: string | null;
+	labels?: string[];
+}): Promise<string | null> {
+	const { ok, error } = await postJson('/api/account/investment', body);
+	if (ok) await refreshAccounts();
+	return ok ? null : (error ?? 'add failed');
+}
+
+/** Current USD value of an account's holdings (for prefilling the retirement split). */
+export async function investmentValue(
+	account: string
+): Promise<{ value: number | null; error: string | null }> {
+	const { ok, data, error } = await getJson<{ value?: number }>(
+		`/api/account/value?account=${encodeURIComponent(account)}`
+	);
+	return ok ? { value: data.value ?? 0, error: null } : { value: null, error: error ?? 'failed' };
+}
+
+/**
+ * Retire an investment account: value its holdings and split that USD total across `legs`, then
+ * liquidate + close. Refreshes the account lists. Returns an error message, or null.
+ */
+export async function closeInvestment(account: string, legs: DrainLeg[]): Promise<string | null> {
+	const { ok, error } = await postJson('/api/account/investment-close', { account, legs });
+	if (ok) await refreshAccounts();
+	return ok ? null : (error ?? 'retire failed');
 }

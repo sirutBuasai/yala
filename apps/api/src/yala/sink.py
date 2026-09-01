@@ -17,13 +17,14 @@ from abc import ABC, abstractmethod
 from decimal import Decimal
 from pathlib import Path
 
-from beancount.core import data
+from beancount.core import data, prices
 from beancount.core.amount import Amount
 from beancount.parser import printer
 
 from yala import config
 from yala.ledger import Ledger
 from yala.ledger.constants import DROPPED_META, EXPENSES
+from yala.ledger.entities import leaf
 from yala.ledger.locators import find_entry
 from yala.money import round_cents
 
@@ -505,11 +506,34 @@ class FileLedgerSink(LedgerSink):
 
         self._commit(path, "".join(lines[:begin] + lines[end:]), original)
 
-    def open_account(self, account: str, date: dt.date | None = None) -> None:
+    def open_account(
+        self,
+        account: str,
+        date: dt.date | None = None,
+        *,
+        currency: str | None = "USD",
+        meta: dict[str, str] | None = None,
+    ) -> None:
         """Append an ``open`` directive to the account file that holds the account's siblings
-        (e.g. a new spending category joins ``accounts/expenses.beancount``)."""
+        (e.g. a new spending category joins ``accounts/expenses.beancount``).
+
+        ``currency=None`` opens the account unconstrained — required for share/equity accounts that
+        hold arbitrary tickers. Optional string ``meta`` (employer/labels/types) is written beneath
+        the header as indented meta lines."""
         date = date or dt.date.today()
-        self._append_account_directive(account, f"{date.isoformat()} open {account} USD")
+        header = f"{date.isoformat()} open {account}" + (f" {currency}" if currency else "")
+        metalines = "".join(f'\n  {k}: "{v}"' for k, v in (meta or {}).items())
+        self._append_account_directive(account, header + metalines)
+
+    def assert_balance(
+        self, account: str, amount: str, currency: str = "USD", date: dt.date | None = None
+    ) -> None:
+        """Append a ``balance`` assertion beside the account's open (e.g. the ``0.00 USD`` genesis
+        seed a share account needs so leftover historical USD can't double-count)."""
+        date = date or dt.date.today()
+        self._append_account_directive(
+            account, f"{date.isoformat()} balance {account} {amount} {currency}"
+        )
 
     def close_account(self, account: str, date: dt.date | None = None) -> None:
         """Append a ``close`` directive next to the account's own ``open``. Blocks new postings to
@@ -517,6 +541,65 @@ class FileLedgerSink(LedgerSink):
         rejects closing an unopened or already-closed account."""
         date = date or dt.date.today()
         self._append_account_directive(account, f"{date.isoformat()} close {account}")
+
+    def close_investment(
+        self, account: str, date: dt.date, legs: list[tuple[str, Decimal]], plug: str | None
+    ) -> None:
+        """Retire an investment account: liquidate every holding to USD at ``date`` prices, split
+        the total across ``legs`` [(destination, usd_amount)] as plain USD deposits, route the
+        sub-cent conversion residual to ``plug``, then close the account (and ``plug`` when given).
+
+        ``plug`` is the account's dedicated ``Equity:Adjustments:Investments:*`` (share accounts);
+        pass None for a USD-only plan that has none. Commodities are converted via ``@ price`` (no
+        cost basis / realized gain). Destinations receive USD only; their real post-rollover
+        holdings self-correct at the next monthly pad."""
+        ledger = Ledger(self.main_ledger, strict=True).load()
+        holdings = ledger.holdings(account, date)
+        price_map = prices.build_price_map(ledger.entries)
+        usd = ledger.currency
+
+        postings: list[data.Posting] = []
+        weight_out = Decimal(0)  # total USD weight leaving the account (positive)
+        for cur, qty in holdings.items():
+            if cur == usd:
+                amt = round_cents(qty)
+                postings.append(data.Posting(account, Amount(-amt, usd), None, None, None, None))
+                weight_out += amt
+            else:
+                priced = prices.get_price(price_map, (cur, usd), date)
+                if priced is None or priced[1] is None:
+                    raise ValueError(f"no price for {cur} on or before {date.isoformat()}")
+                price = priced[1]
+                postings.append(
+                    data.Posting(account, Amount(-qty, cur), None, Amount(price, usd), None, None)
+                )
+                weight_out += qty * price
+
+        for dest, amount in legs:
+            postings.append(_build_posting(dest, round_cents(amount)))
+
+        # Balance exactly: the plug carries the (sub-cent) gap between the precise liquidation value
+        # and the rounded USD split. Positive residual = liquidation slightly exceeded the split.
+        residual = weight_out - round_cents(sum((a for _, a in legs), Decimal(0)))
+        if residual != 0 and plug is not None:
+            postings.append(data.Posting(plug, Amount(residual, usd), None, None, None, None))
+
+        if postings:
+            entry = data.Transaction(
+                {"id": str(uuid.uuid4())},
+                date,
+                "*",
+                f"close {leaf(account)}",
+                None,
+                frozenset(),
+                frozenset(),
+                postings,
+            )
+            self._append_entry("transfers", entry)
+
+        self.close_account(account, date)
+        if plug is not None:
+            self.close_account(plug, date)
 
     def set_account_meta(self, account: str, key: str, value: str | None) -> None:
         """Set (or, when ``value`` is None, remove) a string meta key on an account's ``open``

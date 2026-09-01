@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from beancount import loader
-from beancount.core import data
+from beancount.core import data, prices
 
 from yala import config
 from yala.ledger.constants import INTERNAL_META
@@ -42,6 +42,7 @@ class Ledger:
         self._loaded = False
         self._txn_cache: list[Transaction] | None = None
         self._meta_cache: dict[str, dict] | None = None
+        self._price_cache = None
 
     def load(self) -> "Ledger":
         if not self.path.exists():
@@ -53,6 +54,7 @@ class Ledger:
         self._loaded = True
         self._txn_cache = None  # entries changed; drop the derived views
         self._meta_cache = None
+        self._price_cache = None
 
         if self.strict and errors:
             shown = "; ".join(str(getattr(e, "message", e)) for e in errors[:5])
@@ -140,6 +142,44 @@ class Ledger:
             for p in t.postings:
                 if p.account == account:
                     total += p.amount
+        return round_cents(total)
+
+    def holdings(self, account: str, as_of: dt.date | None = None) -> dict[str, Decimal]:
+        """Per-commodity balance of ``account`` up to ``as_of`` (currency → signed quantity),
+        excluding commodities that net to zero. Unlike :meth:`balance` this keeps each commodity
+        distinct (read from the raw postings' units), so a share account's tickers aren't summed as
+        if they were dollars."""
+        self._require()
+        inv: dict[str, Decimal] = {}
+        for e in self._entries:
+            if not isinstance(e, data.Transaction):
+                continue
+            if as_of is not None and e.date > as_of:
+                continue
+            for p in e.postings:
+                if p.account == account and p.units is not None and p.units.number is not None:
+                    inv[p.units.currency] = inv.get(p.units.currency, Decimal(0)) + p.units.number
+        return {c: q for c, q in inv.items() if q != 0}
+
+    def _price_map(self):
+        if self._price_cache is None:
+            self._price_cache = prices.build_price_map(self._entries)
+        return self._price_cache
+
+    def value(self, account: str, as_of: dt.date | None = None) -> Decimal:
+        """USD value of ``account``'s holdings at ``as_of``: Σ quantity × price for each ticker
+        (latest price on or before ``as_of``) plus USD legs at par. Raises :class:`LedgerError` if
+        a held ticker has no price at all."""
+        usd = self.currency
+        total = Decimal(0)
+        for cur, qty in self.holdings(account, as_of).items():
+            if cur == usd:
+                total += qty
+                continue
+            priced = prices.get_price(self._price_map(), (cur, usd), as_of)
+            if priced is None or priced[1] is None:
+                raise LedgerError(f"no price for {cur} on or before {as_of}")
+            total += qty * priced[1]
         return round_cents(total)
 
     def declared_accounts(self, prefix: str | None = None) -> list[str]:

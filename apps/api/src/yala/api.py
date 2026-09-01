@@ -30,19 +30,24 @@ from yala.ledger.constants import (
     CASH,
     CREDIT_CARDS,
     DEDUCTIONS,
+    EQUITY,
     EXPENSES,
+    INVESTMENTS,
     LIABILITIES,
     SWEEP_META,
 )
 from yala.ledger.entities import leaf
 from yala.ledger.locators import find_entry
 from yala.ledger.sweep import is_sweep, reconcile_months, resolve_terminal, retire_passthrough
+from yala.money import round_cents
 from yala.sink import FileLedgerSink
 
 app = FastAPI(title="Yala")
 
 _NAME_RE = re.compile(r"^[A-Za-z0-9:-]+$")
 _LEAF_RE = re.compile(r"^[A-Za-z0-9-]+$")
+# One account-path segment: beancount requires each to start uppercase (lowercase = parse error).
+_SEGMENT_RE = re.compile(r"^[A-Z][A-Za-z0-9-]*$")
 _CTRL_RE = re.compile(r"[\x00-\x1f\x7f]")  # C0 control chars incl. newline/tab, and DEL
 _WEB_DIR = Path(__file__).resolve().parents[4] / "apps" / "web" / "build"
 
@@ -273,6 +278,7 @@ def get_accounts() -> dict:
         ],
         "cash_accounts": cash,
         "credit_accounts": funding,
+        "investment_accounts": ledger.active_accounts(INVESTMENTS),
         "sweeps": {a: m[SWEEP_META] for a, m in ledger.account_meta().items() if m.get(SWEEP_META)},
     }
 
@@ -727,6 +733,126 @@ def post_account_drain_close(body: DrainCloseIn) -> dict:
         _reconcile_sweeps(date)
 
     return _ok(f"drained and closed {account}", account=account, drained=float(bal))
+
+
+# --- investment accounts ---
+
+
+def _invest_plug(account: str) -> str:
+    """The dedicated adjustments plug paired with a share account, mirroring its path under the
+    subtree (``Assets:Investments:TaxAdvantaged:HSA:Fidelity`` →
+    ``Equity:Adjustments:Investments:HSA:Fidelity``)."""
+    rest = account[len(INVESTMENTS) :].split(":", 1)[1]  # drop the Taxable/TaxAdvantaged segment
+    return f"{EQUITY}Adjustments:Investments:{rest}"
+
+
+def _valid_leaf_list(values: list[str], field: str) -> None:
+    for v in values:
+        if not _LEAF_RE.match(v):
+            raise HTTPException(status_code=422, detail=f"invalid {field}: {v!r}")
+
+
+class InvestmentIn(BaseModel):
+    subtree: Literal["Taxable", "TaxAdvantaged"]
+    name: str  # may be nested, e.g. "HSA:Fidelity"
+    holds_shares: bool = True  # False = a USD-only, tickerless plan (opened USD-constrained)
+    employer: str | None = None
+    labels: list[str] = Field(default=[], max_length=MAX_LEGS)
+
+
+@app.post("/api/account/investment")
+def post_investment(body: InvestmentIn) -> dict:
+    """Open an investment account under Taxable/TaxAdvantaged. Share accounts open unconstrained
+    (hold many tickers + USD) and get a ``0.00 USD`` genesis seed plus a paired adjustments plug;
+    a USD-only plan opens USD-constrained with neither. Payroll-contributable accounts carry
+    ``employer``/``labels`` meta."""
+    if not all(_SEGMENT_RE.match(s) for s in body.name.split(":")):
+        raise HTTPException(
+            status_code=422,
+            detail=f"invalid name (segments must start uppercase): {body.name!r}",
+        )
+    _valid_leaf_list(body.labels, "label")
+    if body.employer:
+        _valid_leaf_list([body.employer], "employer")
+
+    account = f"{INVESTMENTS}{body.subtree}:{body.name}"
+    meta: dict[str, str] = {}
+    if body.employer:
+        meta["employer"] = body.employer
+    if body.labels:
+        meta["labels"] = ",".join(body.labels)
+
+    with _api_errors():
+        sink = _sink()
+        sink.open_account(account, currency=None if body.holds_shares else "USD", meta=meta)
+        if body.holds_shares:
+            sink.assert_balance(account, "0.00", "USD")
+            sink.open_account(_invest_plug(account), currency=None)
+
+    return _ok(f"opened {account}", account=account)
+
+
+@app.get("/api/account/value")
+def get_account_value(account: str) -> dict:
+    """USD value of an account's holdings today (Σ shares × latest price + USD). Used to prefill the
+    investment-retirement split. 422 if a held ticker has no price."""
+    account = _valid_name(account)
+    with _api_errors():
+        return {"account": account, "value": float(_ledger().value(account))}
+
+
+class DrainLeg(BaseModel):
+    destination: str
+    amount: Amount
+
+
+class InvestmentCloseIn(BaseModel):
+    account: str
+    legs: list[DrainLeg] = Field(default=[], max_length=MAX_LEGS)
+    date: str | None = None
+
+
+@app.post("/api/account/investment-close")
+def post_investment_close(body: InvestmentCloseIn) -> dict:
+    """Retire an investment account: value its holdings in USD (latest price on/before the date),
+    split that total across the given USD legs, liquidate + close the account (and its plug). The
+    legs must sum to the account's USD value (both zero for an empty account)."""
+    account = _valid_name(body.account)
+    if not account.startswith(INVESTMENTS):
+        raise HTTPException(status_code=422, detail=f"not an investment account: {account!r}")
+
+    date = _parse_date(body.date)
+
+    with _api_errors():
+        ledger = _ledger()
+        for leg in body.legs:
+            _valid_transfer_account(leg.destination)
+            if leg.destination == account:
+                raise HTTPException(
+                    status_code=422, detail="a drain destination must differ from the account"
+                )
+            if leg.destination not in ledger.active_accounts():
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"destination is not an open account: {leg.destination!r}",
+                )
+
+        value = ledger.value(account, date)  # LedgerError (no price) → 422 via _api_errors
+        legs_total = round_cents(sum((_dec(leg.amount) for leg in body.legs), Decimal(0)))
+        if legs_total != value:
+            raise HTTPException(
+                status_code=422,
+                detail=f"legs must sum to the account's USD value {value}; got {legs_total}",
+            )
+
+        plug = _invest_plug(account)
+        plug = plug if plug in ledger.active_accounts() else None
+        _sink().close_investment(
+            account, date, [(leg.destination, _dec(leg.amount)) for leg in body.legs], plug
+        )
+        _reconcile_sweeps(date)
+
+    return _ok(f"retired {account}", account=account, value=float(value))
 
 
 # --- static frontend + entrypoint ---

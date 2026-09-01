@@ -1,10 +1,12 @@
 <script lang="ts">
 	import type { DashboardData } from '$lib/data/types';
-	import { addAccount, closeAccount, type AccountsInfo } from '$lib/data/load';
+	import { addAccount, addInvestment, closeAccount, type AccountsInfo } from '$lib/data/load';
 	import { formatAccount } from '$lib/utils/format';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import DeleteConfirm from '$lib/forms/fields/DeleteConfirm.svelte';
+	import Select from '$lib/forms/fields/Select.svelte';
 	import AccountRow from '$lib/manage/AccountRow.svelte';
+	import InvestmentRow from '$lib/manage/InvestmentRow.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -95,6 +97,51 @@
 		}
 		bankBusy = false;
 	}
+
+	// --- investment accounts ---
+	const investments = $derived(accounts?.investment_accounts ?? []);
+	// A retirement can drain to any money account or roll over into another investment.
+	const investDestinations = $derived([...(accounts?.credit_accounts ?? []), ...investments]);
+
+	let invSubtree = $state('Taxable');
+	let invName = $state('');
+	let invShares = $state(true);
+	let invContributable = $state(false);
+	let invEmployer = $state('');
+	let invLabels = $state('');
+	let invErr = $state('');
+	let invNote = $state('');
+	let invBusy = $state(false);
+
+	const splitCsv = (s: string) =>
+		s
+			.split(',')
+			.map((x) => x.trim())
+			.filter(Boolean);
+
+	async function addInvest() {
+		const name = invName.trim();
+		invNote = '';
+		if (!name) {
+			invErr = 'Enter an account name.';
+			return;
+		}
+		invBusy = true;
+		invErr = '';
+		const error = await addInvestment({
+			subtree: invSubtree as 'Taxable' | 'TaxAdvantaged',
+			name,
+			holds_shares: invShares,
+			employer: invContributable && invEmployer.trim() ? invEmployer.trim() : null,
+			labels: invContributable ? splitCsv(invLabels) : []
+		});
+		invBusy = false;
+		if (error) invErr = error;
+		else {
+			invNote = `Added ${invSubtree}:${name}.`;
+			invName = '';
+		}
+	}
 </script>
 
 <ViewHeader title="Manage">
@@ -183,6 +230,64 @@
 			<p class="hint">No bank accounts yet.</p>
 		{/if}
 	</section>
+
+	<section class="panel">
+		<h3>Add an investment account</h3>
+		<div class="addrow">
+			<div class="grow">
+				<Select
+					ariaLabel="investment subtree"
+					bind:value={invSubtree}
+					options={['Taxable', 'TaxAdvantaged']}
+				/>
+			</div>
+			<input
+				aria-label="investment name"
+				bind:value={invName}
+				placeholder="e.g. FidelityIndividual or HSA:Fidelity"
+				disabled={invBusy}
+				onkeydown={(e) => e.key === 'Enter' && addInvest()}
+			/>
+			<button type="button" class="btn" onclick={addInvest} disabled={invBusy}>Add</button>
+		</div>
+		<label class="chk"
+			><input type="checkbox" bind:checked={invShares} /> Holds tickers (shares)</label
+		>
+		<label class="chk">
+			<input type="checkbox" bind:checked={invContributable} /> Payroll-contributable
+		</label>
+		{#if invContributable}
+			<input aria-label="employer" bind:value={invEmployer} placeholder="employer (e.g. Amazon)" />
+			<input
+				aria-label="labels"
+				bind:value={invLabels}
+				placeholder="contribution options, comma-separated (e.g. Roth401k,Trad401k,AfterTax401k)"
+			/>
+		{/if}
+		<p class="hint">Share accounts open unconstrained + seeded; a USD-only plan is tickerless.</p>
+		{#if invErr}<span class="err" role="alert">{invErr}</span>{/if}
+		{#if invNote}<span class="note" role="status">{invNote}</span>{/if}
+	</section>
+
+	<section class="panel">
+		<h3>Your investments <span class="count">{investments.length}</span></h3>
+		<p class="hint">
+			Retire an account to value its holdings in USD and split that total across destinations.
+		</p>
+		{#if investments.length}
+			<ul class="cats">
+				{#each investments as account (account)}
+					<InvestmentRow
+						{account}
+						destinations={investDestinations}
+						onchanged={() => onsaved?.()}
+					/>
+				{/each}
+			</ul>
+		{:else}
+			<p class="hint">No investment accounts yet.</p>
+		{/if}
+	</section>
 {/if}
 
 <style>
@@ -213,6 +318,21 @@
 		display: flex;
 		gap: var(--gap-inline);
 		align-items: center;
+	}
+	.grow {
+		flex: 1;
+		min-width: 0;
+	}
+	.chk {
+		display: flex;
+		align-items: center;
+		gap: var(--gap-inline);
+		margin-top: var(--gap-row);
+		font-size: var(--text-control);
+		color: var(--ink-2);
+	}
+	.chk input {
+		flex: 0 0 auto;
 	}
 	input {
 		flex: 1;
