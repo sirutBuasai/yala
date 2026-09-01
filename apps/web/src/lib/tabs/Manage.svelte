@@ -1,21 +1,30 @@
 <script lang="ts">
 	import type { DashboardData } from '$lib/data/types';
 	import { addAccount, closeAccount, type AccountsInfo } from '$lib/data/load';
+	import { formatAccount } from '$lib/utils/format';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import DeleteConfirm from '$lib/forms/fields/DeleteConfirm.svelte';
+	import AccountRow from '$lib/manage/AccountRow.svelte';
 
 	interface Props {
 		data: DashboardData;
 		accounts: AccountsInfo | null;
 		edit: boolean;
+		/** Called after a change that alters ledger data (drain-close), to refresh the dashboard. */
+		onsaved?: () => void;
 	}
-	let { data, accounts, edit }: Props = $props();
+	let { accounts, edit, onsaved }: Props = $props();
 
-	// The API opens a category as Expenses:<leaf>, so a new name is a single leaf: letters,
-	// numbers, or hyphens (mirrors the backend's _LEAF_RE).
+	// The API opens a category as Expenses:<leaf> and a bank as Assets:Cash:<leaf>, so a new name
+	// is a single leaf: letters, numbers, or hyphens (mirrors the backend's _LEAF_RE).
 	const LEAF_RE = /^[A-Za-z0-9-]+$/;
 
 	const categories = $derived(accounts?.spending_categories ?? []);
+	const banks = $derived(accounts?.cash_accounts ?? []);
+	// The full money set (banks, Venmo, credit cards) is the candidate pool for sweep and drain
+	// destinations; each row filters out itself.
+	const destinations = $derived(accounts?.credit_accounts ?? []);
+	const sweeps = $derived(accounts?.sweeps ?? {});
 
 	let name = $state('');
 	let err = $state('');
@@ -57,16 +66,45 @@
 		if (error) err = error;
 		else note = `Closed ${cat}.`;
 	}
+
+	// --- bank accounts ---
+	let bankName = $state('');
+	let bankErr = $state('');
+	let bankNote = $state('');
+	let bankBusy = $state(false);
+
+	async function addBank() {
+		const leaf = bankName.trim();
+		bankNote = '';
+		if (!leaf) {
+			bankErr = 'Enter a bank account name.';
+			return;
+		}
+		if (!LEAF_RE.test(leaf)) {
+			bankErr = 'Use only letters, numbers, or hyphens.';
+			return;
+		}
+		bankBusy = true;
+		bankErr = '';
+		const { account, error } = await addAccount('funding_cash', leaf);
+		if (account) {
+			bankNote = `Added ${formatAccount(account)}.`;
+			bankName = '';
+		} else {
+			bankErr = error ?? 'Add failed.';
+		}
+		bankBusy = false;
+	}
 </script>
 
 <ViewHeader title="Manage">
-	<span class="sub">Spending categories</span>
+	<span class="sub">Categories &amp; accounts</span>
 </ViewHeader>
 
 {#if !edit}
 	<p class="hint">
-		Managing categories needs the local edit API. Start it with <code>make serve-api</code> and enable
-		edit mode.
+		Managing categories and accounts needs the local edit API. Start it with
+		<code>make serve-api</code> and enable edit mode.
 	</p>
 {:else}
 	<section class="panel">
@@ -104,6 +142,45 @@
 			</ul>
 		{:else}
 			<p class="hint">No spending categories yet.</p>
+		{/if}
+	</section>
+
+	<section class="panel">
+		<h3>Add a bank account</h3>
+		<div class="addrow">
+			<input
+				aria-label="new bank account name"
+				bind:value={bankName}
+				placeholder="e.g. Chase or Ally-Savings"
+				disabled={bankBusy}
+				onkeydown={(e) => e.key === 'Enter' && addBank()}
+			/>
+			<button type="button" class="btn" onclick={addBank} disabled={bankBusy}>Add</button>
+		</div>
+		<p class="hint">Opens <code>Assets:Cash:&lt;name&gt;</code>.</p>
+		{#if bankErr}<span class="err" role="alert">{bankErr}</span>{/if}
+		{#if bankNote}<span class="note" role="status">{bankNote}</span>{/if}
+	</section>
+
+	<section class="panel">
+		<h3>Your bank accounts <span class="count">{banks.length}</span></h3>
+		<p class="hint">
+			Set a passthrough's sweep destination, or retire an account (drain its balance to another
+			account, then close it).
+		</p>
+		{#if banks.length}
+			<ul class="cats">
+				{#each banks as account (account)}
+					<AccountRow
+						{account}
+						{destinations}
+						sweepDest={sweeps[account]}
+						onchanged={() => onsaved?.()}
+					/>
+				{/each}
+			</ul>
+		{:else}
+			<p class="hint">No bank accounts yet.</p>
 		{/if}
 	</section>
 {/if}

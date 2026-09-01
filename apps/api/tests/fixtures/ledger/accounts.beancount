@@ -10,6 +10,7 @@ option "operating_currency" "USD"
 2020-01-01 open Assets:Cash:BankB USD
 2020-01-01 open Assets:Cash:Wallet USD
 2020-01-01 open Assets:Cash:Venmo USD
+  sweep_to: "Assets:Cash:Wealthfront"
 2020-01-01 open Assets:Cash:Wealthfront USD
 2020-01-01 open Assets:Receivable:Friends USD
 

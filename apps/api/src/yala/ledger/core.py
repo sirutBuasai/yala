@@ -9,6 +9,7 @@ Python over the loaded directives, though domains needing cost-basis/price seman
 from __future__ import annotations
 
 import datetime as dt
+from decimal import Decimal
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -18,6 +19,7 @@ from beancount.core import data
 from yala import config
 from yala.ledger.constants import INTERNAL_META
 from yala.ledger.entities import Posting, Transaction
+from yala.money import round_cents
 
 if TYPE_CHECKING:
     from yala.ledger.income import Income
@@ -127,6 +129,18 @@ class Ledger:
             for t in txns
             if (year is None or t.date.year == year) and (month is None or t.date.month == month)
         ]
+
+    def balance(self, account: str, as_of: dt.date | None = None) -> Decimal:
+        """Summed USD posting amount for ``account`` up to ``as_of`` (inclusive; today if None).
+        Pad-generated postings are materialized on load, so this equals the asserted balance."""
+        total = Decimal(0)
+        for t in self.transactions():
+            if as_of is not None and t.date > as_of:
+                continue
+            for p in t.postings:
+                if p.account == account:
+                    total += p.amount
+        return round_cents(total)
 
     def declared_accounts(self, prefix: str | None = None) -> list[str]:
         """Ledger account names, optionally filtered by prefix (e.g. ``'Expenses:'``)."""

@@ -24,6 +24,8 @@ export interface AccountsInfo {
 	payroll_options: PayrollOption[];
 	cash_accounts: string[];
 	credit_accounts: string[];
+	/** Passthrough routing: account → its `sweep_to` destination. Always sent by the API. */
+	sweeps?: Record<string, string>;
 }
 
 export type Mode = 'view' | 'edit';
@@ -217,11 +219,35 @@ export async function addAccount(
 }
 
 /**
- * Close a spending category (full `Expenses:<leaf>` account) and refresh the account lists so it
- * drops out of the pickers. Returns an error message on failure, or null on success.
+ * Close an account by full name — a spending category (`Expenses:<leaf>`) or a bank account
+ * (`Assets:Cash:<leaf>`) — and refresh the account lists so it drops out of the pickers. Returns
+ * an error message on failure, or null on success.
  */
 export async function closeAccount(account: string): Promise<string | null> {
 	const { ok, error } = await postJson('/api/account/close', { account });
 	if (ok) await refreshAccounts();
 	return ok ? null : (error ?? 'close failed');
+}
+
+/**
+ * Declare `account` as a passthrough that sweeps to `dest`, or clear it when `dest` is null.
+ * Refreshes the account lists. Returns an error message on failure, or null on success.
+ */
+export async function setSweep(account: string, dest: string | null): Promise<string | null> {
+	const { ok, error } = await postJson('/api/account/sweep', { account, dest });
+	if (ok) await refreshAccounts();
+	return ok ? null : (error ?? 'sweep update failed');
+}
+
+/**
+ * Retire a balance-sheet account: move its balance to `destination`, then close it. Refreshes the
+ * account lists. Returns an error message on failure, or null on success.
+ */
+export async function drainCloseAccount(
+	account: string,
+	destination: string
+): Promise<string | null> {
+	const { ok, error } = await postJson('/api/account/drain-close', { account, destination });
+	if (ok) await refreshAccounts();
+	return ok ? null : (error ?? 'drain-close failed');
 }

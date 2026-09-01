@@ -17,9 +17,11 @@ INVESTMENTS = ASSETS + "Investments:"
 CASH = ASSETS + "Cash:"
 CREDIT_CARDS = LIABILITIES + "CC:"
 
-# Venmo is a passthrough for Wealthfront: money in/out of Venmo is really pulled from or pushed to
-# Wealthfront. The backend keeps Venmo balanced to zero each month with a single auto-maintained
-# sweep transfer between these two accounts (see yala.ledger.venmo_sweep).
+# A passthrough account holds no money of its own — every dollar through it is pulled from or
+# pushed to a destination declared as ``sweep_to`` meta on its ``open``. Venmo → Wealthfront is the
+# canonical instance. The backend keeps each passthrough balanced to zero with one auto-maintained
+# monthly sweep transfer to its (transitively resolved) destination (see yala.ledger.sweep).
+SWEEP_META = "sweep_to"
 VENMO = CASH + "Venmo"
 VENMO_PASSTHROUGH = CASH + "Wealthfront"
 SWEEP_PAYEE = "venmo sweep"

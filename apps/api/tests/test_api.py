@@ -40,6 +40,7 @@ def test_get_accounts_keys(client: TestClient):
         "payroll_options",
         "cash_accounts",
         "credit_accounts",
+        "sweeps",
     }
     # closed account is excluded from active funding accounts
     assert "Liabilities:CC:CardD" not in body["funding_accounts"]
@@ -227,8 +228,24 @@ def test_close_category_removes_it_from_pickers(client: TestClient):
     assert "Gifts" not in client.get("/api/accounts").json()["spending_categories"]
 
 
-def test_close_non_expense_account_is_422(client: TestClient):
+def test_close_bank_account_removes_it_from_pickers(client: TestClient):
+    assert "Assets:Cash:BankA" in client.get("/api/accounts").json()["cash_accounts"]
+
     r = client.post("/api/account/close", json={"account": "Assets:Cash:BankA"})
+    assert r.status_code == 200
+    assert r.json()["account"] == "Assets:Cash:BankA"
+    assert "Assets:Cash:BankA" not in client.get("/api/accounts").json()["cash_accounts"]
+
+
+def test_close_passthrough_account_succeeds(client: TestClient):
+    # Venmo is a passthrough (sweep_to Wealthfront) but is still closeable like any bank account.
+    r = client.post("/api/account/close", json={"account": "Assets:Cash:Venmo"})
+    assert r.status_code == 200
+    assert "Assets:Cash:Venmo" not in client.get("/api/accounts").json()["cash_accounts"]
+
+
+def test_close_non_closeable_account_is_422(client: TestClient):
+    r = client.post("/api/account/close", json={"account": "Assets:Investments:Brokerage"})
     assert r.status_code == 422
 
 

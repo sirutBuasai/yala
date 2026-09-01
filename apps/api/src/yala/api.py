@@ -25,9 +25,18 @@ from starlette.types import Scope
 from yala import config, projections
 from yala.builder import build_dict
 from yala.ledger import Ledger, payroll
-from yala.ledger.constants import ASSETS, CASH, CREDIT_CARDS, DEDUCTIONS, EXPENSES, LIABILITIES
+from yala.ledger.constants import (
+    ASSETS,
+    CASH,
+    CREDIT_CARDS,
+    DEDUCTIONS,
+    EXPENSES,
+    LIABILITIES,
+    SWEEP_META,
+)
+from yala.ledger.entities import leaf
 from yala.ledger.locators import find_entry
-from yala.ledger.venmo_sweep import is_sweep, reconcile_months
+from yala.ledger.sweep import is_sweep, reconcile_months, resolve_terminal, retire_passthrough
 from yala.sink import FileLedgerSink
 
 app = FastAPI(title="Yala")
@@ -226,12 +235,12 @@ def _entry_date(locator: str) -> dt.date | None:
 
 
 def _reject_if_sweep(entry: data.Transaction) -> None:
-    """The Venmo↔Wealthfront sweep is auto-managed — recomputed from the month's Venmo activity —
-    so a manual edit or delete is refused rather than silently overwritten or re-created."""
-    if is_sweep([p.account for p in entry.postings]):
+    """A passthrough sweep is auto-managed — recomputed from the month's activity — so a manual
+    edit or delete is refused rather than silently overwritten or re-created."""
+    if is_sweep([p.account for p in entry.postings], _ledger()):
         raise HTTPException(
             status_code=409,
-            detail="This Venmo sweep is auto-managed and can't be edited or deleted.",
+            detail="This sweep is auto-managed and can't be edited or deleted.",
         )
 
 
@@ -264,6 +273,7 @@ def get_accounts() -> dict:
         ],
         "cash_accounts": cash,
         "credit_accounts": funding,
+        "sweeps": {a: m[SWEEP_META] for a, m in ledger.account_meta().items() if m.get(SWEEP_META)},
     }
 
 
@@ -594,22 +604,129 @@ def post_account(body: AccountIn) -> dict:
     return _ok(f"opened {account}", account=account)
 
 
-class CategoryCloseIn(BaseModel):
+class AccountCloseIn(BaseModel):
     account: str
 
 
 @app.post("/api/account/close")
-def post_account_close(body: CategoryCloseIn) -> dict:
-    """Close a spending category (an ``Expenses:*`` account, excluding the Deductions subtree).
-    It drops out of the category picker but historical spending still reports against it."""
+def post_account_close(body: AccountCloseIn) -> dict:
+    """Close a spending category (an ``Expenses:*`` account, excluding the Deductions subtree) or a
+    bank/cash account (``Assets:Cash:*``). The account drops out of the pickers but historical
+    entries still report against it. Any account is closeable, including passthroughs like Venmo or
+    Wealthfront — use ``/api/account/drain-close`` first if it still carries a balance."""
     account = _valid_name(body.account)
-    if not account.startswith(EXPENSES) or account.startswith(DEDUCTIONS):
-        raise HTTPException(status_code=422, detail=f"not a spending category: {account!r}")
+
+    is_category = account.startswith(EXPENSES) and not account.startswith(DEDUCTIONS)
+    is_bank = account.startswith(CASH)
+    if not (is_category or is_bank):
+        raise HTTPException(
+            status_code=422, detail=f"not a spending category or bank account: {account!r}"
+        )
 
     with _api_errors():
-        _sink().close_account(account)
+        sink = _sink()
+        # Close first (so a future-dated auto-sweep makes this fail cleanly, nudging drain-close),
+        # then drop any ``sweep_to`` so reconciliation stops tracking the now-closed account.
+        sink.close_account(account)
+        if _ledger().account_meta().get(account, {}).get(SWEEP_META):
+            sink.set_account_meta(account, SWEEP_META, None)
 
     return _ok(f"closed {account}", account=account)
+
+
+# --- passthrough sweep configuration + account retirement ---
+
+
+class SweepIn(BaseModel):
+    account: str
+    dest: str | None = None  # a null/empty dest clears the passthrough
+
+
+@app.post("/api/account/sweep")
+def post_account_sweep(body: SweepIn) -> dict:
+    """Declare (or, with an empty ``dest``, clear) ``account`` as a passthrough that sweeps to
+    ``dest``. ``dest`` must be an open asset/liability account other than ``account`` and must not
+    create a sweep cycle."""
+    account = _valid_transfer_account(body.account)
+
+    if not body.dest:
+        with _api_errors():
+            _sink().set_account_meta(account, SWEEP_META, None)
+        return _ok(f"cleared sweep for {account}", account=account)
+
+    dest = _valid_transfer_account(body.dest)
+    if dest == account:
+        raise HTTPException(status_code=422, detail="a passthrough can't sweep to itself")
+
+    ledger = _ledger()
+    if dest not in ledger.active_accounts():
+        raise HTTPException(
+            status_code=422, detail=f"sweep destination is not an open account: {dest!r}"
+        )
+
+    # Reject a configuration that would cycle (e.g. A→B→A) before writing it.
+    edges = {a: m[SWEEP_META] for a, m in ledger.account_meta().items() if m.get(SWEEP_META)}
+    edges[account] = dest
+    try:
+        resolve_terminal(edges, account)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    with _api_errors():
+        _sink().set_account_meta(account, SWEEP_META, dest)
+
+    return _ok(f"{account} now sweeps to {dest}", account=account, dest=dest)
+
+
+class DrainCloseIn(BaseModel):
+    account: str
+    destination: str
+    date: str | None = None
+
+
+@app.post("/api/account/drain-close")
+def post_account_drain_close(body: DrainCloseIn) -> dict:
+    """Retire a balance-sheet account: transfer its residual balance to a caller-chosen
+    ``destination``, then close it. Leaves a zero balance so it never lingers in net worth."""
+    account = _valid_transfer_account(body.account)
+    destination = _valid_transfer_account(body.destination)
+    if destination == account:
+        raise HTTPException(
+            status_code=422, detail="drain destination must differ from the account"
+        )
+
+    date = _parse_date(body.date)
+
+    with _api_errors():
+        sink = _sink()
+        ledger = _ledger()
+        if destination not in ledger.active_accounts():
+            raise HTTPException(
+                status_code=422, detail=f"destination is not an open account: {destination!r}"
+            )
+
+        # A passthrough is kept near-zero by a month-end sweep; retire that first (delete the
+        # sweep, drop sweep_to) so its balance reflects only real activity and nothing is left
+        # dated after the close. Then the drain below is its true final sweep.
+        retire_passthrough(sink, account, date)
+        ledger = _ledger()
+
+        bal = ledger.balance(account, date)
+        if bal != 0:
+            # A positive asset balance moves out; a negative one (liability) is paid in.
+            from_account, to_account = (account, destination) if bal > 0 else (destination, account)
+            sink.append_transfer(
+                date=date,
+                from_account=from_account,
+                to_account=to_account,
+                amount=abs(bal),
+                payee=f"close {leaf(account)}",
+            )
+
+        sink.close_account(account, date)
+        _reconcile_sweeps(date)
+
+    return _ok(f"drained and closed {account}", account=account, drained=float(bal))
 
 
 # --- static frontend + entrypoint ---

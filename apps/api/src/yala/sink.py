@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import datetime as dt
 import os
+import re
 import tempfile
 import uuid
 from abc import ABC, abstractmethod
@@ -516,6 +517,36 @@ class FileLedgerSink(LedgerSink):
         rejects closing an unopened or already-closed account."""
         date = date or dt.date.today()
         self._append_account_directive(account, f"{date.isoformat()} close {account}")
+
+    def set_account_meta(self, account: str, key: str, value: str | None) -> None:
+        """Set (or, when ``value`` is None, remove) a string meta key on an account's ``open``
+        directive in place, then strict-reload. Raises ``KeyError`` for an unknown account."""
+        opens = [
+            e
+            for e in Ledger(self.main_ledger, strict=True).load().entries
+            if isinstance(e, data.Open) and e.account == account
+        ]
+        if not opens:
+            raise KeyError(account)
+
+        open_entry = opens[0]
+        path = Path(open_entry.meta["filename"])
+        begin = int(open_entry.meta["lineno"]) - 1
+
+        original = path.read_text()
+        lines = original.splitlines(keepends=True)
+
+        # The open's meta lines are the indented block right below its header.
+        end = begin + 1
+        while end < len(lines) and lines[end].startswith((" ", "\t")) and lines[end].strip():
+            end += 1
+
+        key_re = re.compile(rf"^\s*{re.escape(key)}\s*:")
+        block = [lines[begin]] + [m for m in lines[begin + 1 : end] if not key_re.match(m)]
+        if value is not None:
+            block.append(f'  {key}: "{value}"\n')
+
+        self._commit(path, "".join(lines[:begin] + block + lines[end:]), original)
 
     def _account_file(self, account: str) -> Path:
         """The ``.beancount`` file a directive for ``account`` belongs in, so it lands beside its
