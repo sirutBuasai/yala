@@ -618,10 +618,17 @@ class FileLedgerSink(LedgerSink):
         self, account: str, amount: Decimal, date: dt.date, counter_account: str
     ) -> None:
         """Snapshot ``account`` to ``amount`` USD as of ``date``, appended to
-        ``assets/<year>.beancount`` as a ``pad`` + ``balance`` pair.
+        ``assets/<year>.beancount`` as a ``balance`` assertion, preceded by a ``pad`` when one is
+        needed.
 
-        The ``pad`` (dated the day before, so it lands before the start-of-day assertion) routes
-        the untracked delta into ``counter_account`` (the account's ``Equity:Adjustments:*`` plug).
+        The ``balance`` is the snapshot: it is always written, so logging the same figure month
+        after month builds the history even when nothing moved. The ``pad`` (dated the day before,
+        so it lands before the start-of-day assertion) is only written when the account's projected
+        balance differs from ``amount``, routing that untracked delta into ``counter_account`` (the
+        account's ``Equity:Adjustments:*`` plug). beancount rejects a pad it doesn't need
+        ("Unused Pad entry"), so emitting one unconditionally would make an unchanged balance
+        impossible to log.
+
         If the account still holds share lots, they are first reclassified to USD at ``date``
         prices in place — a net-worth-neutral conversion — so the single USD assertion is
         authoritative and nothing double-counts."""
@@ -633,6 +640,10 @@ class FileLedgerSink(LedgerSink):
         usd = ledger.currency
         drain, _ = self._liquidate_postings(ledger, account, pad_date)
         share_legs = [p for p in drain if p.price is not None]  # non-USD legs carry an @ price
+
+        # What the account will hold once any share lots are reclassified: its USD component plus
+        # the converted share value. Compared against `amount` to decide whether a pad is needed.
+        projected = ledger.holdings(account, pad_date).get(usd, Decimal(0))
 
         blocks: list[str] = []
 
@@ -656,8 +667,10 @@ class FileLedgerSink(LedgerSink):
                 postings,
             )
             blocks.append(printer.format_entry(conversion).rstrip("\n"))
+            projected += usd_add
 
-        blocks.append(f"{pad_date.isoformat()} {PAD} {account} {counter_account}")
+        if projected != amount:
+            blocks.append(f"{pad_date.isoformat()} {PAD} {account} {counter_account}")
         blocks.append(f"{date.isoformat()} {BALANCE} {account}    {amount:,.2f} {DEFAULT_CURRENCY}")
 
         self._append(

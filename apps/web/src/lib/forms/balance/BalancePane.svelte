@@ -71,7 +71,7 @@
 
 	// A month later than the last logged snapshot has no real balance yet — the fetched value is
 	// only carried forward — so treat it as "future" and don't pre-fill the input from it.
-	const lastSnapMonth = $derived(data.networth?.series?.at(-1)?.month ?? '');
+	const lastSnapMonth = $derived(data.networth?.series?.at(-1)?.date ?? '');
 	const isFuture = $derived(!!monthKey && !!lastSnapMonth && monthKey > lastSnapMonth);
 
 	// An account's dot is green when it already has a balance for this month (a default fill) or was

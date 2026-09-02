@@ -374,8 +374,8 @@
     "NetWorthSnapshot": {
       "additionalProperties": false,
       "properties": {
-        "month": {
-          "title": "Month",
+        "date": {
+          "title": "Date",
           "type": "string"
         },
         "assets": {
@@ -399,7 +399,7 @@
         }
       },
       "required": [
-        "month",
+        "date",
         "assets",
         "liabilities",
         "net_worth",

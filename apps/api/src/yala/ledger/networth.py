@@ -10,7 +10,7 @@ surfaces as a per-account sanity check on flows that were never entered as trans
 from __future__ import annotations
 
 import datetime as dt
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -74,10 +74,10 @@ class AccountValue:
 
 @dataclass
 class NetWorthSnapshot:
-    """A net-worth snapshot for one month: assets, liabilities (positive drag), net, and the asset
-    split across allocation buckets."""
+    """A net-worth snapshot at one logged date: assets, liabilities (positive drag), net, and the
+    asset split across allocation buckets."""
 
-    month: str  # "YYYY-MM"
+    date: str  # "YYYY-MM-DD"
     assets: Decimal
     liabilities: Decimal
     net_worth: Decimal
@@ -111,9 +111,8 @@ class NetWorth:
             (self._led.balance(a, as_of) for a in self._led.declared_accounts(LIABILITIES)),
             Decimal(0),
         )
-        month = (as_of or dt.date.today()).strftime("%Y-%m")
         return NetWorthSnapshot(
-            month,
+            (as_of or dt.date.today()).isoformat(),
             round_cents(assets),
             round_cents(-liab_signed),
             round_cents(assets + liab_signed),
@@ -135,20 +134,25 @@ class NetWorth:
 
         return out
 
-    def _snapshot_months(self) -> dict[str, dt.date]:
-        """Latest ``balance``-assertion date per month — the trusted net-worth snapshot points."""
-        months: dict[str, dt.date] = {}
-        for e in self._led.entries:
-            if isinstance(e, data.Balance):
-                key = e.date.strftime("%Y-%m")
-                if key not in months or e.date > months[key]:
-                    months[key] = e.date
-        return months
+    def _snapshot_dates(self) -> list[dt.date]:
+        """Every distinct ``balance``-assertion date — the trusted net-worth snapshot points.
+
+        One point per logged *day*, not per month: a month may carry several snapshots (e.g. a
+        month-start balance plus a mid-month reclassification), and collapsing them would silently
+        drop the earlier ones."""
+        return sorted({e.date for e in self._led.entries if isinstance(e, data.Balance)})
 
     def series(self) -> list[NetWorthSnapshot]:
-        """Monthly net-worth trend over every snapshot month, oldest first."""
-        months = self._snapshot_months()
-        return [self.totals(months[key]) for key in sorted(months)]
+        """Net-worth trend over every logged snapshot date, oldest first.
+
+        Each point is the balance *as asserted* on its date. beancount evaluates a ``balance``
+        directive before that day's postings, so the snapshot value is the total at the end of the
+        preceding day — reading it at end-of-date would fold in transactions posted on the snapshot
+        day itself and drift the trend away from the logged figures."""
+        return [
+            replace(self.totals(d - dt.timedelta(days=1)), date=d.isoformat())
+            for d in self._snapshot_dates()
+        ]
 
     def adjustments(self, as_of: dt.date | None = None) -> list[Adjustment]:
         """Cumulative balance of each ``Equity:Adjustments:*`` plug (untracked-flow smoke alarm)."""

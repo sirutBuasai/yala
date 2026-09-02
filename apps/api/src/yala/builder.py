@@ -215,7 +215,7 @@ def _income(income) -> IncomeSection:
 
 def _networth_snapshot(p) -> NetWorthSnapshot:
     return NetWorthSnapshot(
-        month=p.month,
+        date=p.date,
         assets=money(p.assets),
         liabilities=money(p.liabilities),
         net_worth=money(p.net_worth),

@@ -1,4 +1,4 @@
-// Net-worth primitives over the `networth` section: the monthly trend (net worth + assets +
+// Net-worth primitives over the `networth` section: the snapshot trend (net worth + assets +
 // liabilities), the current per-account breakdown, the untracked-flow adjustments table, and
 // current-value scalars. Pure over the contract; colour is assigned by the chart registry.
 
@@ -16,14 +16,14 @@ function snapshots(data: DashboardData): NetWorthSnapshot[] {
 }
 
 function forYear(data: DashboardData, year: number): NetWorthSnapshot[] {
-	return snapshots(data).filter((p) => p.month.startsWith(`${year}-`));
+	return snapshots(data).filter((p) => p.date.startsWith(`${year}-`));
 }
 
-/** Net worth, assets, and liabilities as three overlaid lines over the snapshot months. */
+/** Net worth, assets, and liabilities as three overlaid lines over the logged snapshot dates. */
 export function netWorthTrend(data: DashboardData): MultiSeries {
 	const unit = MONEY(data.currency);
 	const points = data.networth?.series ?? [];
-	const labels = points.map((p) => p.month);
+	const labels = points.map((p) => p.date);
 
 	return {
 		kind: 'multiseries',
@@ -88,12 +88,12 @@ export function netWorthScalar(
 
 	const s: Scalar = { kind: 'scalar', unit, label, value };
 
-	// Change since the previous *distinct* snapshot: `current` is today's live total, whose month
+	// Change since the previous *distinct* snapshot: `current` is today's live total, whose date
 	// may or may not already be the last logged series point — skip that point when it is, so the
-	// delta never compares a month against itself.
+	// delta never compares a snapshot against itself.
 	const points = data.networth?.series ?? [];
 	const last = points[points.length - 1];
-	const prev = last && current && last.month === current.month ? points[points.length - 2] : last;
+	const prev = last && current && last.date === current.date ? points[points.length - 2] : last;
 	if (field === 'net_worth' && prev && value != null) {
 		const change = value - prev.net_worth;
 		s.dir = change >= 0 ? 'up' : 'down';
@@ -115,11 +115,11 @@ export function netWorthAllocation(data: DashboardData): Categorical {
 	);
 }
 
-/** Asset allocation over time — one line per bucket across the snapshot months. */
+/** Asset allocation over time — one line per bucket across the logged snapshot dates. */
 export function netWorthAllocationTrend(data: DashboardData): MultiSeries {
 	const unit = MONEY(data.currency);
 	const points = snapshots(data);
-	const labels = points.map((p) => p.month);
+	const labels = points.map((p) => p.date);
 	return {
 		kind: 'multiseries',
 		unit,
@@ -151,32 +151,32 @@ export function netWorthLiquid(data: DashboardData): Scalar {
 
 // --- yearly ---
 
-/** Net worth per snapshot month — lifetime (`year` omitted) or one year's months. */
+/** Net worth per logged snapshot — lifetime (`year` omitted) or one year's snapshots. */
 export function netWorthByMonth(data: DashboardData, year?: number): Series {
 	const points = year == null ? snapshots(data) : forYear(data, year);
 	return series(
 		'Net worth',
-		points.map((p) => p.month),
+		points.map((p) => p.date),
 		points.map((p) => p.net_worth),
 		MONEY(data.currency)
 	);
 }
 
-/** A year's monthly snapshots with month-over-month change (mirrors the spreadsheet table). */
+/** A year's snapshots with change since the previous one (mirrors the spreadsheet table). */
 export function netWorthMonthlyTable(data: DashboardData, year: number): Table {
 	const money = MONEY(data.currency);
 	const all = snapshots(data);
 	const rows = forYear(data, year).map((p) => {
-		const i = all.findIndex((q) => q.month === p.month);
+		const i = all.findIndex((q) => q.date === p.date);
 		const prev = i > 0 ? all[i - 1] : null;
 		const change = prev ? p.net_worth - prev.net_worth : 0;
 		const pct = prev && prev.net_worth ? (change / prev.net_worth) * 100 : 0;
-		return [p.month, p.net_worth, p.assets, p.liabilities, change, pct];
+		return [p.date, p.net_worth, p.assets, p.liabilities, change, pct];
 	});
 	return {
 		kind: 'table',
 		columns: [
-			{ label: 'Month' },
+			{ label: 'Date' },
 			{ label: 'Net worth', unit: money },
 			{ label: 'Assets', unit: money },
 			{ label: 'Liabilities', unit: money },

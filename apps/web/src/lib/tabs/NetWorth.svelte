@@ -23,7 +23,7 @@
 
 	// Years that have a logged snapshot, for the Yearly stepper.
 	const years = $derived([
-		...new Set((data.networth?.series ?? []).map((p) => Number(p.month.slice(0, 4))))
+		...new Set((data.networth?.series ?? []).map((p) => Number(p.date.slice(0, 4))))
 	]);
 	let year = $state<number>(0);
 	$effect(() => {

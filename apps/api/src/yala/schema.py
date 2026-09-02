@@ -127,7 +127,7 @@ class IncomeSection(_Base):
 
 
 class NetWorthSnapshot(_Base):
-    month: str  # "YYYY-MM"
+    date: str  # "YYYY-MM-DD" — one point per logged snapshot day
     assets: float
     liabilities: float  # positive = owed
     net_worth: float  # assets - liabilities
@@ -150,7 +150,7 @@ class NetWorthAdjustment(_Base):
 
 class NetWorthSection(_Base):
     current: NetWorthSnapshot | None  # latest snapshot, or null when none logged yet
-    series: list[NetWorthSnapshot]  # monthly trend, oldest first
+    series: list[NetWorthSnapshot]  # one point per logged snapshot date, oldest first
     accounts: list[NetWorthAccount]  # current per-account breakdown
     adjustments: list[NetWorthAdjustment]  # per-account untracked-flow sanity check
 

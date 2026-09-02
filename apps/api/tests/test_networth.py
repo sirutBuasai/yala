@@ -8,6 +8,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from beancount.core import data
 from fastapi.testclient import TestClient
 
 from yala import config
@@ -72,6 +73,34 @@ def test_log_balance_usd_account_pads_to_asserted_value(ledger_dir: Path):
     assert "2026-09-01 balance Assets:Cash:BankA" in text
 
 
+def test_log_balance_monthly_history_skips_unneeded_pads(ledger_dir: Path):
+    """Logging month after month keeps every snapshot, changed or not.
+
+    beancount rejects a pad it doesn't need ("Unused Pad entry"), so a pad is written only for the
+    months where the balance moved — otherwise re-logging an unchanged figure would fail."""
+    account = "Assets:Cash:BankA"
+    plug = adjustment_account(account)
+    sink = FileLedgerSink(ledger_dir)
+
+    for date, amount in [
+        (dt.date(2026, 9, 1), "1000.00"),
+        (dt.date(2026, 10, 1), "1000.00"),  # unchanged — no pad
+        (dt.date(2026, 11, 1), "1500.00"),  # moved — needs a pad
+    ]:
+        sink.log_balance(account, Decimal(amount), date, plug)
+
+    led = _load(ledger_dir)  # strict load: an unused pad would raise here
+    assert led.balance(account, dt.date(2026, 11, 1)) == Decimal("1500.00")
+
+    def dates(kind) -> list[dt.date]:
+        return sorted(e.date for e in led.entries if isinstance(e, kind) and e.account == account)
+
+    # every logged month is asserted ...
+    assert dates(data.Balance) == [dt.date(2026, 9, 1), dt.date(2026, 10, 1), dt.date(2026, 11, 1)]
+    # ... but only the seeding month and the month that moved carry a pad
+    assert dates(data.Pad) == [dt.date(2026, 8, 31), dt.date(2026, 10, 31)]
+
+
 # --- log_balance: share account (reclassify to USD, then assert) ---
 
 
@@ -122,7 +151,7 @@ def test_networth_series_and_adjustments(ledger_dir: Path):
 
     nw = _load(ledger_dir).net_worth
     series = nw.series()
-    assert [p.month for p in series] == ["2026-09"]
+    assert [p.date for p in series] == ["2026-09-01"]
     point = series[0]
     assert point.net_worth == point.assets - point.liabilities
 

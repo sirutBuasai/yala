@@ -66,7 +66,7 @@ export type Deductions1 = number;
 export type Contributions1 = number;
 export type ByYear1 = IncomeYear[];
 export type RecentPaychecks = PaycheckOut[];
-export type Month1 = string;
+export type Date3 = string;
 export type Assets = number;
 export type Liabilities = number;
 export type NetWorth = number;
@@ -276,7 +276,7 @@ export interface NetWorthSection {
  * via the `definition` "NetWorthSnapshot".
  */
 export interface NetWorthSnapshot {
-	month: Month1;
+	date: Date3;
 	assets: Assets;
 	liabilities: Liabilities;
 	net_worth: NetWorth;
