@@ -241,7 +241,7 @@
 			<input
 				aria-label="investment name"
 				bind:value={invName}
-				placeholder="e.g. FidelityIndividual or HSA:Fidelity"
+				placeholder="e.g. FidelityIndividual or FidelityHSA"
 				disabled={invBusy}
 				onkeydown={(e) => e.key === 'Enter' && addInvest()}
 			/>

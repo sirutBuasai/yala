@@ -43,8 +43,13 @@ def test_adjustment_account_mapping():
         == "Equity:Adjustments:Investments:Schwab"
     )
     assert (
-        adjustment_account("Assets:Investments:TaxAdvantaged:HSA:Fidelity")
-        == "Equity:Adjustments:Investments:HSA:Fidelity"
+        adjustment_account("Assets:Investments:TaxAdvantaged:FidelityHSA")
+        == "Equity:Adjustments:Investments:FidelityHSA"
+    )
+    # a colon-nested account keeps its full path below the tax tier
+    assert (
+        adjustment_account("Assets:Investments:TaxAdvantaged:HSA:Broker1")
+        == "Equity:Adjustments:Investments:HSA:Broker1"
     )
 
 
