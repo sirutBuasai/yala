@@ -23,6 +23,7 @@ from yala.money import round_cents
 
 if TYPE_CHECKING:
     from yala.ledger.income import Income
+    from yala.ledger.networth import NetWorth
     from yala.ledger.spending import Spending
     from yala.ledger.transfers import Transfers
 
@@ -241,3 +242,9 @@ class Ledger:
         from yala.ledger.transfers import Transfers
 
         return Transfers(self)
+
+    @property
+    def net_worth(self) -> "NetWorth":
+        from yala.ledger.networth import NetWorth
+
+        return NetWorth(self)

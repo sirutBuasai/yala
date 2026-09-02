@@ -11,6 +11,7 @@
 		refreshEditData
 	} from '$lib/data/load';
 	import OverviewView from '$lib/tabs/Overview.svelte';
+	import NetWorthView from '$lib/tabs/NetWorth.svelte';
 	import YearlyView from '$lib/tabs/Yearly.svelte';
 	import MonthlyView from '$lib/tabs/Monthly.svelte';
 	import CalendarView from '$lib/tabs/Calendar.svelte';
@@ -20,9 +21,10 @@
 	import Tooltip from '$lib/overlay/Tooltip.svelte';
 	import NavMenu from '$lib/nav/NavMenu.svelte';
 
-	type Tab = 'overview' | 'yearly' | 'monthly' | 'calendar' | 'manage';
+	type Tab = 'overview' | 'networth' | 'yearly' | 'monthly' | 'calendar' | 'manage';
 	const TABS: { id: Tab; label: string }[] = [
 		{ id: 'overview', label: 'Overview' },
+		{ id: 'networth', label: 'Net Worth' },
 		{ id: 'yearly', label: 'Yearly' },
 		{ id: 'monthly', label: 'Monthly' },
 		{ id: 'calendar', label: 'Calendar' },
@@ -47,7 +49,8 @@
 			const raw = localStorage.getItem(VIEW_KEY);
 			if (raw) {
 				const s = JSON.parse(raw);
-				if (['overview', 'yearly', 'monthly', 'calendar', 'manage'].includes(s.tab)) tab = s.tab;
+				if (['overview', 'networth', 'yearly', 'monthly', 'calendar', 'manage'].includes(s.tab))
+					tab = s.tab;
 				if (typeof s.year === 'number') year = s.year;
 				if (typeof s.monthKey === 'string') monthKey = s.monthKey;
 			}
@@ -192,6 +195,8 @@
 		<div id="view-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} tabindex="0">
 			{#if tab === 'overview'}
 				<OverviewView data={$data} />
+			{:else if tab === 'networth'}
+				<NetWorthView data={$data} accounts={$accounts} {edit} {onsaved} />
 			{:else if tab === 'yearly'}
 				<YearlyView data={$data} bind:year />
 			{:else if tab === 'monthly'}

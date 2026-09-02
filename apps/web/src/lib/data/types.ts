@@ -16,6 +16,7 @@ export type End = string;
 export type Categories = string[];
 export type Spending = boolean;
 export type Income = boolean;
+export type Networth = boolean;
 export type Year = number;
 export type Spent = number;
 export type Income1 = number;
@@ -65,6 +66,21 @@ export type Deductions1 = number;
 export type Contributions1 = number;
 export type ByYear1 = IncomeYear[];
 export type RecentPaychecks = PaycheckOut[];
+export type Month1 = string;
+export type Assets = number;
+export type Liabilities = number;
+export type NetWorth = number;
+export type Series = NetWorthSnapshot[];
+export type Account = string;
+export type Label = string;
+export type Group = string;
+export type Bucket = string;
+export type Value = number;
+export type Accounts = NetWorthAccount[];
+export type Account1 = string;
+export type Label1 = string;
+export type Value1 = number;
+export type Adjustments = NetWorthAdjustment[];
 
 export interface DashboardData {
 	schema_version: SchemaVersion;
@@ -75,6 +91,7 @@ export interface DashboardData {
 	years: Years1;
 	months: Months;
 	income: IncomeSection;
+	networth?: NetWorthSection | null;
 }
 /**
  * This interface was referenced by `DashboardData`'s JSON-Schema
@@ -105,6 +122,7 @@ export interface DateRange {
 export interface Domains {
 	spending: Spending;
 	income: Income;
+	networth?: Networth;
 }
 /**
  * This interface was referenced by `DashboardData`'s JSON-Schema
@@ -242,4 +260,48 @@ export interface IncomeYear {
 }
 export interface ByMonth {
 	[k: string]: number[];
+}
+/**
+ * This interface was referenced by `DashboardData`'s JSON-Schema
+ * via the `definition` "NetWorthSection".
+ */
+export interface NetWorthSection {
+	current: NetWorthSnapshot | null;
+	series: Series;
+	accounts: Accounts;
+	adjustments: Adjustments;
+}
+/**
+ * This interface was referenced by `DashboardData`'s JSON-Schema
+ * via the `definition` "NetWorthSnapshot".
+ */
+export interface NetWorthSnapshot {
+	month: Month1;
+	assets: Assets;
+	liabilities: Liabilities;
+	net_worth: NetWorth;
+	breakdown: Breakdown;
+}
+export interface Breakdown {
+	[k: string]: number;
+}
+/**
+ * This interface was referenced by `DashboardData`'s JSON-Schema
+ * via the `definition` "NetWorthAccount".
+ */
+export interface NetWorthAccount {
+	account: Account;
+	label: Label;
+	group: Group;
+	bucket: Bucket;
+	value: Value;
+}
+/**
+ * This interface was referenced by `DashboardData`'s JSON-Schema
+ * via the `definition` "NetWorthAdjustment".
+ */
+export interface NetWorthAdjustment {
+	account: Account1;
+	label: Label1;
+	value: Value1;
 }

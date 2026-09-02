@@ -87,10 +87,11 @@ def test_paychecks_carry_locator():
 
 def test_meta_helper_independently():
     spending, income, categories, all_years, all_months = _handles()
-    meta = _meta(spending, income, categories, all_years, all_months)
+    meta = _meta(spending, income, categories, all_years, all_months, False)
     assert meta.transaction_count == 5
     assert meta.categories == ["Grocery", "Subscription", "Takeouts"]
     assert meta.domains.income is True
+    assert meta.domains.networth is False
 
 
 def test_income_helper_independently():

@@ -28,6 +28,10 @@ from yala.schema import (
     Meta,
     MonthMatrixRow,
     MonthPage,
+    NetWorthAccount,
+    NetWorthAdjustment,
+    NetWorthSection,
+    NetWorthSnapshot,
     Overview,
     PaycheckOut,
     Transfer,
@@ -82,7 +86,7 @@ def _transfer_out(t) -> Transfer:
     )
 
 
-def _meta(spending, income, categories, all_years, all_months) -> Meta:
+def _meta(spending, income, categories, all_years, all_months, networth_has_data) -> Meta:
     date_range = spending.date_range()
 
     return Meta(
@@ -98,6 +102,7 @@ def _meta(spending, income, categories, all_years, all_months) -> Meta:
         domains=Domains(
             spending=spending.count() > 0,
             income=len(income.paychecks()) > 0,
+            networth=networth_has_data,
         ),
     )
 
@@ -208,11 +213,50 @@ def _income(income) -> IncomeSection:
     )
 
 
+def _networth_snapshot(p) -> NetWorthSnapshot:
+    return NetWorthSnapshot(
+        month=p.month,
+        assets=money(p.assets),
+        liabilities=money(p.liabilities),
+        net_worth=money(p.net_worth),
+        breakdown={k: money(v) for k, v in p.breakdown.items()},
+    )
+
+
+def _networth(networth) -> NetWorthSection:
+    series = networth.series()
+
+    return NetWorthSection(
+        current=_networth_snapshot(networth.totals()) if series else None,
+        series=[_networth_snapshot(p) for p in series],
+        accounts=sorted(
+            (
+                NetWorthAccount(
+                    account=a.account,
+                    label=a.label,
+                    group=a.group,
+                    bucket=a.bucket,
+                    value=money(a.value),
+                )
+                for a in networth.accounts()
+            ),
+            key=lambda a: a.value,
+            reverse=True,
+        ),
+        adjustments=[
+            NetWorthAdjustment(account=a.account, label=a.label, value=money(a.value))
+            for a in networth.adjustments()
+            if a.value != 0
+        ],
+    )
+
+
 def build(ledger: Ledger) -> DashboardData:
     """Query the ledger and validate / construct the dashboard contract."""
     spending = ledger.spending
     income = ledger.income
     transfers = ledger.transfers
+    networth = ledger.net_worth
 
     # The analytics category list (for meta, legends, per-category metrics) is every pickable
     # (active) category plus any category with lifetime spend — so a closed category with history
@@ -226,15 +270,20 @@ def build(ledger: Ledger) -> DashboardData:
         set(spending.years()) | set(income.years()) | {t.date.year for t in all_transfers}
     )
 
+    networth_section = _networth(networth)
+
     return DashboardData(
         schema_version=1,
         generated_at=_now_rfc3339(),
         currency=ledger.currency,
-        meta=_meta(spending, income, categories, all_years, all_months),
+        meta=_meta(
+            spending, income, categories, all_years, all_months, bool(networth_section.series)
+        ),
         overview=_overview(spending, income, all_years),
         years=_years(spending, income, all_years),
         months=_months(spending, income, transfers, all_months),
         income=_income(income),
+        networth=networth_section,
     )
 
 

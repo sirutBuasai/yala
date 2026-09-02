@@ -29,6 +29,7 @@ DEFAULT_CURRENCY = "USD"
 OPEN = "open"
 CLOSE = "close"
 BALANCE = "balance"
+PAD = "pad"
 
 SWEEP_META = "sweep_to"
 VENMO = CASH + "Venmo"

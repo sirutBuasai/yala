@@ -28,6 +28,7 @@ class Domains(_Base):
 
     spending: bool
     income: bool
+    networth: bool = False
 
 
 class Meta(_Base):
@@ -125,6 +126,35 @@ class IncomeSection(_Base):
     recent_paychecks: list[PaycheckOut]
 
 
+class NetWorthSnapshot(_Base):
+    month: str  # "YYYY-MM"
+    assets: float
+    liabilities: float  # positive = owed
+    net_worth: float  # assets - liabilities
+    breakdown: dict[str, float]  # allocation bucket -> asset USD
+
+
+class NetWorthAccount(_Base):
+    account: str
+    label: str
+    group: str  # "cash" | "investment" | "liability"
+    bucket: str  # allocation bucket: "Liquid" | "Taxable" | "Tax-advantaged" | "liability"
+    value: float
+
+
+class NetWorthAdjustment(_Base):
+    account: str  # the Equity:Adjustments:* plug
+    label: str
+    value: float  # cumulative untracked-flow plug
+
+
+class NetWorthSection(_Base):
+    current: NetWorthSnapshot | None  # latest snapshot, or null when none logged yet
+    series: list[NetWorthSnapshot]  # monthly trend, oldest first
+    accounts: list[NetWorthAccount]  # current per-account breakdown
+    adjustments: list[NetWorthAdjustment]  # per-account untracked-flow sanity check
+
+
 class DashboardData(_Base):
     schema_version: Literal[1]
     generated_at: str  # RFC 3339 UTC
@@ -135,6 +165,7 @@ class DashboardData(_Base):
     years: dict[str, YearPage]  # keyed "YYYY"
     months: dict[str, MonthPage]  # keyed "YYYY-MM"
     income: IncomeSection
+    networth: NetWorthSection | None = None
 
 
 def json_schema() -> dict:

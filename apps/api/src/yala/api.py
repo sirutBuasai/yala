@@ -32,7 +32,6 @@ from yala.ledger.constants import (
     DEDUCTIONS,
     DEFAULT_CURRENCY,
     EXPENSES,
-    INVEST_ADJUSTMENTS,
     INVEST_TAX_ADVANTAGED,
     INVEST_TAXABLE,
     INVESTMENTS,
@@ -41,6 +40,7 @@ from yala.ledger.constants import (
 )
 from yala.ledger.entities import leaf
 from yala.ledger.locators import find_entry
+from yala.ledger.networth import adjustment_account
 from yala.ledger.sweep import is_sweep, reconcile_months, resolve_terminal, retire_passthrough
 from yala.money import round_cents
 from yala.sink import FileLedgerSink
@@ -296,6 +296,7 @@ def get_accounts() -> dict:
         "cash_accounts": cash,
         "credit_accounts": funding,
         "investment_accounts": ledger.active_accounts(INVESTMENTS),
+        "balance_accounts": ledger.net_worth.loggable_accounts(),
         "sweeps": {a: m[SWEEP_META] for a, m in ledger.account_meta().items() if m.get(SWEEP_META)},
     }
 
@@ -729,10 +730,9 @@ def post_account_drain_close(body: DrainCloseIn) -> dict:
 
 
 def _invest_plug(account: str) -> str:
-    """The dedicated adjustments plug paired with a share account, mirroring its path below the
-    subtree segment under ``INVEST_ADJUSTMENTS``."""
-    rest = account[len(INVESTMENTS) :].split(":", 1)[1]
-    return f"{INVEST_ADJUSTMENTS}{rest}"
+    """The dedicated adjustments plug paired with a share account (see
+    :func:`~yala.ledger.networth.adjustment_account`)."""
+    return adjustment_account(account)
 
 
 def _valid_leaf_list(values: list[str], field: str) -> None:
@@ -831,6 +831,36 @@ def post_investment_close(body: InvestmentCloseIn) -> dict:
         _reconcile_sweeps(date)
 
     return _ok(f"retired {account}", account=account, value=float(value))
+
+
+# --- net worth ---
+
+
+class BalanceIn(BaseModel):
+    account: str
+    amount: NonNegAmount
+    date: str | None = None
+
+
+@app.post("/api/balance")
+def post_balance(body: BalanceIn) -> dict:
+    """Log a USD balance snapshot for a cash or investment account: a ``pad`` + ``balance`` pair
+    routing the untracked delta to the account's ``Equity:Adjustments:*`` plug. Any share lots are
+    reclassified to USD at that date's prices first, so the USD figure is authoritative."""
+    account = _valid_name(body.account)
+    if not account.startswith((CASH, INVESTMENTS)):
+        raise HTTPException(
+            status_code=422, detail=f"not a cash or investment account: {account!r}"
+        )
+
+    date = _parse_date(body.date)
+
+    with _api_errors():
+        counter = adjustment_account(account)
+        _sink().log_balance(account, _dec(body.amount), date, counter)
+        _reconcile_sweeps(date)
+
+    return _ok(f"logged balance for {account}", account=account)
 
 
 # --- static frontend + entrypoint ---

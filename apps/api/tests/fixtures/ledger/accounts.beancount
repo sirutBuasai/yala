@@ -56,6 +56,16 @@ option "operating_currency" "USD"
 2026-08-21 close Assets:Investments:TaxAdvantaged:LegacyPlan
 
 ; ------------------------------------------------
+; Equity — opening balances + per-account adjustment plugs (net-worth snapshots)
+; ------------------------------------------------
+2020-01-01 open Equity:Opening-Balances
+2020-01-01 open Equity:Adjustments:BankA
+2020-01-01 open Equity:Adjustments:BankB
+2020-01-01 open Equity:Adjustments:Wealthfront
+2020-01-01 open Equity:Adjustments:Investments:HSA:Broker1
+2020-01-01 open Equity:Adjustments:Investments:Employer401k
+
+; ------------------------------------------------
 ; Closed Accounts (exercise active-account filtering)
 ; ------------------------------------------------
 2020-01-01 open Liabilities:CC:CardD USD

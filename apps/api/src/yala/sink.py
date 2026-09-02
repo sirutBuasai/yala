@@ -23,7 +23,15 @@ from beancount.parser import printer
 
 from yala import config
 from yala.ledger import Ledger
-from yala.ledger.constants import BALANCE, CLOSE, DEFAULT_CURRENCY, DROPPED_META, EXPENSES, OPEN
+from yala.ledger.constants import (
+    BALANCE,
+    CLOSE,
+    DEFAULT_CURRENCY,
+    DROPPED_META,
+    EXPENSES,
+    OPEN,
+    PAD,
+)
 from yala.ledger.entities import leaf
 from yala.ledger.locators import find_entry
 from yala.money import round_cents
@@ -64,6 +72,7 @@ def _year_header(subdir: str, year: int) -> str:
         "spending": "Spending transactions",
         "income": "Income",
         "transfers": "Transfers",
+        "assets": "Asset balances",
     }
 
     return f"; {_file_titles[subdir]} for {year}"
@@ -539,19 +548,19 @@ class FileLedgerSink(LedgerSink):
         date = date or dt.date.today()
         self._append_account_directive(account, f"{date.isoformat()} {CLOSE} {account}")
 
-    def close_investment(
-        self, account: str, date: dt.date, legs: list[tuple[str, Decimal]], plug: str | None
-    ) -> None:
-        """Convert every holding to USD at ``date`` prices, split the total across ``legs``, then
-        close the account. ``plug`` absorbs the sub-cent rounding gap, or is None when there is
-        none."""
-        ledger = Ledger(self.main_ledger, strict=True).load()
+    def _liquidate_postings(
+        self, ledger: Ledger, account: str, date: dt.date
+    ) -> tuple[list[data.Posting], Decimal]:
+        """Postings that drain every holding of ``account`` to USD at ``date`` prices, plus the
+        total USD weight drained. Non-USD legs carry an ``@ price`` (``posting.price`` set); the
+        USD leg (if any) is a plain amount. Shared by :meth:`close_investment` (drain to legs) and
+        :meth:`log_balance` (reclassify share lots to USD in place)."""
         holdings = ledger.holdings(account, date)
         price_map = prices.build_price_map(ledger.entries)
         usd = ledger.currency
 
         postings: list[data.Posting] = []
-        weight_out = Decimal(0)  # USD leaving the account
+        weight_out = Decimal(0)  # USD value leaving the account
         for cur, qty in holdings.items():
             if cur == usd:
                 amt = round_cents(qty)
@@ -566,6 +575,19 @@ class FileLedgerSink(LedgerSink):
                     data.Posting(account, Amount(-qty, cur), None, Amount(price, usd), None, None)
                 )
                 weight_out += qty * price
+
+        return postings, weight_out
+
+    def close_investment(
+        self, account: str, date: dt.date, legs: list[tuple[str, Decimal]], plug: str | None
+    ) -> None:
+        """Convert every holding to USD at ``date`` prices, split the total across ``legs``, then
+        close the account. ``plug`` absorbs the sub-cent rounding gap, or is None when there is
+        none."""
+        ledger = Ledger(self.main_ledger, strict=True).load()
+        usd = ledger.currency
+
+        postings, weight_out = self._liquidate_postings(ledger, account, date)
 
         for dest, amount in legs:
             postings.append(_build_posting(dest, round_cents(amount)))
@@ -591,6 +613,56 @@ class FileLedgerSink(LedgerSink):
         self.close_account(account, date)
         if plug is not None:
             self.close_account(plug, date)
+
+    def log_balance(
+        self, account: str, amount: Decimal, date: dt.date, counter_account: str
+    ) -> None:
+        """Snapshot ``account`` to ``amount`` USD as of ``date``, appended to
+        ``assets/<year>.beancount`` as a ``pad`` + ``balance`` pair.
+
+        The ``pad`` (dated the day before, so it lands before the start-of-day assertion) routes
+        the untracked delta into ``counter_account`` (the account's ``Equity:Adjustments:*`` plug).
+        If the account still holds share lots, they are first reclassified to USD at ``date``
+        prices in place — a net-worth-neutral conversion — so the single USD assertion is
+        authoritative and nothing double-counts."""
+        amount = round_cents(amount)
+        pad_date = date - dt.timedelta(days=1)
+        self._assert_accounts_active(date, [account, counter_account])
+
+        ledger = Ledger(self.main_ledger, strict=True).load()
+        usd = ledger.currency
+        drain, _ = self._liquidate_postings(ledger, account, pad_date)
+        share_legs = [p for p in drain if p.price is not None]  # non-USD legs carry an @ price
+
+        blocks: list[str] = []
+
+        if share_legs:
+            shares_value = sum((-p.units.number * p.price.number for p in share_legs), Decimal(0))
+            usd_add = round_cents(shares_value)
+            postings = [*share_legs, _build_posting(account, usd_add)]
+            residual = shares_value - usd_add
+            if residual != 0:
+                postings.append(
+                    data.Posting(counter_account, Amount(residual, usd), None, None, None, None)
+                )
+            conversion = data.Transaction(
+                {"id": str(uuid.uuid4())},
+                pad_date,
+                "*",
+                None,
+                f"value {leaf(account)} to USD",
+                frozenset(),
+                frozenset(),
+                postings,
+            )
+            blocks.append(printer.format_entry(conversion).rstrip("\n"))
+
+        blocks.append(f"{pad_date.isoformat()} {PAD} {account} {counter_account}")
+        blocks.append(f"{date.isoformat()} {BALANCE} {account}    {amount:,.2f} {DEFAULT_CURRENCY}")
+
+        self._append(
+            "assets", date.year, _year_header("assets", date.year), "\n\n".join(blocks) + "\n"
+        )
 
     def set_account_meta(self, account: str, key: str, value: str | None) -> None:
         """Set (or, when ``value`` is None, remove) a string meta key on an account's ``open``

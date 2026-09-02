@@ -49,6 +49,11 @@
         "income": {
           "title": "Income",
           "type": "boolean"
+        },
+        "networth": {
+          "default": false,
+          "title": "Networth",
+          "type": "boolean"
         }
       },
       "required": [
@@ -262,6 +267,145 @@
         "paychecks"
       ],
       "title": "MonthPage",
+      "type": "object"
+    },
+    "NetWorthAccount": {
+      "additionalProperties": false,
+      "properties": {
+        "account": {
+          "title": "Account",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "group": {
+          "title": "Group",
+          "type": "string"
+        },
+        "bucket": {
+          "title": "Bucket",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "account",
+        "label",
+        "group",
+        "bucket",
+        "value"
+      ],
+      "title": "NetWorthAccount",
+      "type": "object"
+    },
+    "NetWorthAdjustment": {
+      "additionalProperties": false,
+      "properties": {
+        "account": {
+          "title": "Account",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "account",
+        "label",
+        "value"
+      ],
+      "title": "NetWorthAdjustment",
+      "type": "object"
+    },
+    "NetWorthSection": {
+      "additionalProperties": false,
+      "properties": {
+        "current": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NetWorthSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "series": {
+          "items": {
+            "$ref": "#/$defs/NetWorthSnapshot"
+          },
+          "title": "Series",
+          "type": "array"
+        },
+        "accounts": {
+          "items": {
+            "$ref": "#/$defs/NetWorthAccount"
+          },
+          "title": "Accounts",
+          "type": "array"
+        },
+        "adjustments": {
+          "items": {
+            "$ref": "#/$defs/NetWorthAdjustment"
+          },
+          "title": "Adjustments",
+          "type": "array"
+        }
+      },
+      "required": [
+        "current",
+        "series",
+        "accounts",
+        "adjustments"
+      ],
+      "title": "NetWorthSection",
+      "type": "object"
+    },
+    "NetWorthSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "month": {
+          "title": "Month",
+          "type": "string"
+        },
+        "assets": {
+          "title": "Assets",
+          "type": "number"
+        },
+        "liabilities": {
+          "title": "Liabilities",
+          "type": "number"
+        },
+        "net_worth": {
+          "title": "Net Worth",
+          "type": "number"
+        },
+        "breakdown": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Breakdown",
+          "type": "object"
+        }
+      },
+      "required": [
+        "month",
+        "assets",
+        "liabilities",
+        "net_worth",
+        "breakdown"
+      ],
+      "title": "NetWorthSnapshot",
       "type": "object"
     },
     "Overview": {
@@ -557,6 +701,17 @@
     },
     "income": {
       "$ref": "#/$defs/IncomeSection"
+    },
+    "networth": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NetWorthSection"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [

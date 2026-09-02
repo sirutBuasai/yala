@@ -1,5 +1,5 @@
 <script module lang="ts">
-	type EntryKind = 'transaction' | 'paycheck' | 'transfer';
+	type EntryKind = 'transaction' | 'paycheck' | 'transfer' | 'balance';
 
 	// Each entry type carries an icon + accent that drive the switcher pill and the Overlay's
 	// tinted band: transaction = spending outward (↑), paycheck = money coming in (↓), bill pay
@@ -33,6 +33,13 @@
 			icon: 'swap',
 			accent: 'var(--teal)',
 			accentText: 'var(--teal-text)'
+		},
+		{
+			value: 'balance',
+			label: 'Balance',
+			icon: 'swap',
+			accent: 'var(--lav)',
+			accentText: 'var(--lav-text)'
 		}
 	];
 	const KIND = Object.fromEntries(KINDS.map((k) => [k.value, k])) as Record<
@@ -53,6 +60,7 @@
 	import TransactionForm from '$lib/forms/transaction/TransactionForm.svelte';
 	import PaycheckForm from '$lib/forms/paycheck/PaycheckForm.svelte';
 	import TransferForm from '$lib/forms/transfer/TransferForm.svelte';
+	import BalanceForm from '$lib/forms/balance/BalanceForm.svelte';
 
 	interface Props {
 		accounts: AccountsInfo | null;
@@ -127,8 +135,10 @@
 			<TransactionForm {accounts} {presetDate} onsaved={afterSave} />
 		{:else if addKind === 'paycheck'}
 			<PaycheckForm {accounts} {presetDate} onsaved={afterSave} />
-		{:else}
+		{:else if addKind === 'transfer'}
 			<TransferForm {accounts} {presetDate} onsaved={afterSave} />
+		{:else}
+			<BalanceForm {accounts} {presetDate} onsaved={afterSave} />
 		{/if}
 	</Overlay>
 {/if}

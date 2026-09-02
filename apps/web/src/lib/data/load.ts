@@ -26,6 +26,8 @@ export interface AccountsInfo {
 	credit_accounts: string[];
 	/** Active `Assets:Investments:*` accounts. Always sent by the API. */
 	investment_accounts?: string[];
+	/** Cash + investment accounts with an `Equity:Adjustments:*` plug (loggable balances). */
+	balance_accounts?: string[];
 	/** Passthrough routing: account → its `sweep_to` destination. Always sent by the API. */
 	sweeps?: Record<string, string>;
 }
@@ -278,4 +280,21 @@ export async function closeInvestment(account: string, legs: DrainLeg[]): Promis
 	const { ok, error } = await postJson('/api/account/investment-close', { account, legs });
 	if (ok) await refreshAccounts();
 	return ok ? null : (error ?? 'retire failed');
+}
+
+/**
+ * Log a USD balance snapshot for a cash or investment account (pad + balance). Share lots are
+ * reclassified to USD first. Returns an error message, or null on success.
+ */
+export async function logBalance(
+	account: string,
+	amount: number,
+	date?: string
+): Promise<string | null> {
+	const { ok, error } = await postJson('/api/balance', {
+		account,
+		amount,
+		date: date || undefined
+	});
+	return ok ? null : (error ?? 'log failed');
 }

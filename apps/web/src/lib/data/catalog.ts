@@ -19,6 +19,18 @@ import {
 import { moneyFlow } from './flow';
 import { categoryByMonth } from './matrix';
 import { paychecks } from './table';
+import {
+	netWorthAdjustments,
+	netWorthAllocation,
+	netWorthAllocationTrend,
+	netWorthByAccount,
+	netWorthByMonth,
+	netWorthInvested,
+	netWorthLiquid,
+	netWorthMonthlyTable,
+	netWorthScalar,
+	netWorthTrend
+} from './networth';
 import { type Scope, type ScopeLevel, scopeYear } from './scope';
 import {
 	amount,
@@ -170,6 +182,91 @@ const CHART_DEFS: DataDef[] = [
 		kind: 'flow',
 		scopes: ['all'],
 		build: (data) => moneyFlow(data)
+	},
+	{
+		id: 'networth.trend',
+		label: 'Net worth over time',
+		kind: 'multiseries',
+		scopes: ['all'],
+		build: (data) => netWorthTrend(data)
+	},
+	{
+		id: 'networth.by_month',
+		label: 'Net worth by month',
+		kind: 'series',
+		scopes: ['all', 'year'],
+		build: (data, scope) =>
+			netWorthByMonth(data, scope.level === 'year' ? scopeYear(data, scope) : undefined)
+	},
+	{
+		id: 'networth.monthly_table',
+		label: 'Monthly net worth',
+		kind: 'table',
+		scopes: ['year'],
+		build: (data, scope) => netWorthMonthlyTable(data, scopeYear(data, scope))
+	},
+	{
+		id: 'networth.allocation',
+		label: 'Allocation',
+		kind: 'categorical',
+		scopes: ['all'],
+		build: (data) => netWorthAllocation(data)
+	},
+	{
+		id: 'networth.allocation_trend',
+		label: 'Allocation over time',
+		kind: 'multiseries',
+		scopes: ['all'],
+		build: (data) => netWorthAllocationTrend(data)
+	},
+	{
+		id: 'networth.investments',
+		label: 'Investments by account',
+		kind: 'categorical',
+		scopes: ['all'],
+		build: (data) => netWorthByAccount(data, 'investment')
+	},
+	{
+		id: 'networth.cash',
+		label: 'Cash by account',
+		kind: 'categorical',
+		scopes: ['all'],
+		build: (data) => netWorthByAccount(data, 'cash')
+	},
+	{
+		id: 'networth.adjustments',
+		label: 'Untracked adjustments',
+		kind: 'table',
+		scopes: ['all'],
+		build: (data) => netWorthAdjustments(data)
+	}
+];
+
+const NETWORTH_STATS: DataDef[] = [
+	...[
+		{ id: 'networth.current', label: 'Net worth', field: 'net_worth' as const },
+		{ id: 'networth.assets', label: 'Assets', field: 'assets' as const },
+		{ id: 'networth.liabilities', label: 'Liabilities', field: 'liabilities' as const }
+	].map((s) => ({
+		id: s.id,
+		label: s.label,
+		kind: 'scalar' as const,
+		scopes: ['all'] as ScopeLevel[],
+		build: (data: DashboardData) => netWorthScalar(data, s.field, s.label)
+	})),
+	{
+		id: 'networth.invested',
+		label: 'Invested',
+		kind: 'scalar',
+		scopes: ['all'],
+		build: (data) => netWorthInvested(data)
+	},
+	{
+		id: 'networth.liquid',
+		label: 'Liquid',
+		kind: 'scalar',
+		scopes: ['all'],
+		build: (data) => netWorthLiquid(data)
 	}
 ];
 
@@ -309,7 +406,7 @@ const STAT_DEFS: DataDef[] = [
 	)
 ];
 
-export const CATALOG: DataDef[] = [...CHART_DEFS, ...STAT_DEFS];
+export const CATALOG: DataDef[] = [...CHART_DEFS, ...STAT_DEFS, ...NETWORTH_STATS];
 
 export const CATALOG_BY_ID: Record<string, DataDef> = Object.fromEntries(
 	CATALOG.map((d) => [d.id, d])
