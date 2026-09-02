@@ -8,9 +8,11 @@ import {
 	data,
 	deleteTransaction,
 	enableEditMode,
+	invalidateDerivedCache,
 	loadState,
 	loadViewData,
-	mode
+	mode,
+	networthAt
 } from '$lib/data/load';
 import { makeData } from '$lib/data/__fixtures__/dashboard';
 
@@ -93,5 +95,52 @@ describe('deleteTransaction', () => {
 	it('returns a friendly message when the API is unreachable', async () => {
 		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
 		expect(await deleteTransaction('id:x')).toContain('API unreachable');
+	});
+});
+
+describe('networthAt caching', () => {
+	beforeEach(() => invalidateDerivedCache());
+
+	it('fetches a date once and serves repeats from cache', async () => {
+		const f = mockFetchOnce({ accounts: [], adjustments: [], logged: {} });
+		vi.stubGlobal('fetch', f);
+
+		await networthAt('2026-07-01');
+		await networthAt('2026-07-01');
+		expect(f).toHaveBeenCalledTimes(1);
+	});
+
+	it('caches each date separately', async () => {
+		const f = mockFetchOnce({ accounts: [], adjustments: [], logged: {} });
+		vi.stubGlobal('fetch', f);
+
+		await networthAt('2026-07-01');
+		await networthAt('2026-06-01');
+		expect(f).toHaveBeenCalledTimes(2);
+	});
+
+	it('does not cache a failed read', async () => {
+		vi.stubGlobal('fetch', mockFetchOnce({ detail: 'bad date' }, false, 422));
+		expect(await networthAt('nope')).toBeNull();
+
+		const ok = mockFetchOnce({ accounts: [], adjustments: [], logged: {} });
+		vi.stubGlobal('fetch', ok);
+		await networthAt('nope');
+		expect(ok).toHaveBeenCalledTimes(1);
+	});
+
+	it('a write clears the cache, so the next read refetches', async () => {
+		const first = mockFetchOnce({ accounts: [], adjustments: [], logged: {} });
+		vi.stubGlobal('fetch', first);
+		await networthAt('2026-07-01');
+
+		// deleteTransaction goes through postJson, the single write choke point
+		vi.stubGlobal('fetch', mockFetchOnce({ ok: true }));
+		await deleteTransaction('id:x');
+
+		const after = mockFetchOnce({ accounts: [], adjustments: [], logged: {} });
+		vi.stubGlobal('fetch', after);
+		await networthAt('2026-07-01');
+		expect(after).toHaveBeenCalledTimes(1);
 	});
 });

@@ -188,6 +188,15 @@ class NetWorth:
         candidates = self._led.active_accounts(CASH) + self._led.active_accounts(INVESTMENTS)
         return [a for a in candidates if _adjustment_or_none(a) in declared]
 
+    def loggable_liabilities(self) -> list[str]:
+        """Active liability accounts, which are snapshot-able but *verify-only*.
+
+        They carry no ``Equity:Adjustments:*`` plug on purpose: a card balance is fully determined
+        by the spending and bill payments already entered, so a figure that disagrees means an
+        entry is missing rather than that money moved untracked. Padding the gap would bury that,
+        so :meth:`FileLedgerSink.verify_balance` refuses it instead."""
+        return self._led.active_accounts(LIABILITIES)
+
 
 def _adjustment_or_none(account: str) -> str | None:
     try:

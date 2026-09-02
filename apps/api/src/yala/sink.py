@@ -31,6 +31,7 @@ from yala.ledger.constants import (
     DEFAULT_CURRENCY,
     DROPPED_META,
     EXPENSES,
+    LIABILITIES,
     OPEN,
     PAD,
 )
@@ -42,6 +43,14 @@ from yala.money import round_cents
 Credit = tuple[str, Decimal]
 DeductionLeg = tuple[str, Decimal]  # (account, amount)
 ContributionLeg = tuple[str, str | None, Decimal]  # (account, label or None, amount)
+
+
+def _stored_amount(account: str, amount: Decimal) -> Decimal:
+    """The signed figure a ``balance`` assertion carries for ``account``.
+
+    Liability balances are entered the way a bank app shows them — the amount *owed*, positive —
+    but beancount keeps them negative, so one rule flips them for every write path."""
+    return -abs(amount) if account.startswith(LIABILITIES) else amount
 
 
 def _build_posting(account: str, number: Decimal, meta: dict | None = None) -> data.Posting:
@@ -126,6 +135,7 @@ def _year_header(subdir: str, year: int) -> str:
         "income": "Income",
         "transfers": "Transfers",
         "assets": "Asset balances",
+        "liabilities": "Liability balances",
     }
 
     return f"; {_file_titles[subdir]} for {year}"
@@ -732,6 +742,41 @@ class FileLedgerSink(LedgerSink):
         )
         return entry_id
 
+    def verify_balance(self, account: str, amount: Decimal, date: dt.date) -> str:
+        """Snapshot an account that has no adjustment plug (a liability): ``balance`` only, never a
+        ``pad``.
+
+        Because nothing can absorb a difference, the figure has to agree with what the ledger
+        already computes. A card balance that disagrees means spending or a bill payment hasn't
+        been entered yet, so the gap is reported and nothing is written — the mismatch is the
+        signal, and padding it would hide it. (``_append`` strict-reloads and rolls back too, so a
+        stale projection can't slip a bad assertion through; this check just names the fix.)
+
+        ``amount`` is the figure owed, positive; it is stored negative."""
+        amount = _stored_amount(account, round_cents(amount))
+        self._assert_accounts_active(date, [account])
+
+        ledger = Ledger(self.main_ledger, strict=True).load()
+        # A start-of-day assertion is checked against the close of the day before — the same
+        # instant log_balance pads at.
+        standing = ledger.holdings(account, date - dt.timedelta(days=1)).get(
+            ledger.currency, Decimal(0)
+        )
+        if standing != amount:
+            raise ValueError(
+                f"{leaf(account)} computes to {standing} on {date.isoformat()}, not {amount}: "
+                f"enter the missing {abs(amount - standing)} of spending or bill pay first"
+            )
+
+        entry_id = str(uuid.uuid4())
+        self._append(
+            "liabilities",
+            date.year,
+            _year_header("liabilities", date.year),
+            _balance_directive(date, account, amount, entry_id) + "\n",
+        )
+        return entry_id
+
     def update_balance(self, locator: str, amount: Decimal) -> tuple[str, dt.date, str]:
         """Rewrite the amount on the existing ``balance`` assertion at ``locator``, reconciling its
         ``pad`` so the edited figure still loads. Returns ``(account, date, locator)``.
@@ -743,10 +788,12 @@ class FileLedgerSink(LedgerSink):
         reports it unused — which it pinpoints by source line.
 
         A migrated assertion carries no ``id``, so it is only addressable by source line; editing
-        one stamps an id on it and returns the stable locator to use from then on."""
-        amount = round_cents(amount)
+        one stamps an id on it and returns the stable locator to use from then on.
+
+        A liability's ``amount`` is the figure owed, positive, as on the way in."""
         entry = find_balance(Ledger(self.main_ledger, strict=True).load().entries, locator)
         account, date = entry.account, entry.date
+        amount = _stored_amount(account, round_cents(amount))
 
         if entry.amount.currency != DEFAULT_CURRENCY:
             raise ValueError(
@@ -773,7 +820,12 @@ class FileLedgerSink(LedgerSink):
             entry_id = str(uuid.uuid4())
             lines[i + 1 : i + 1] = [f'  id: "{entry_id}"\n']
 
-        self._settle_pads(account, {path: lines}, {path: original})
+        if account.startswith(LIABILITIES):
+            # Verify-only account: there is no plug to settle, so the edited figure simply has to
+            # hold — _commit rolls the file back if it doesn't.
+            self._commit(path, "".join(lines), original)
+        else:
+            self._settle_pads(account, {path: lines}, {path: original})
         return account, date, f"id:{entry_id}"
 
     def _settle_pads(

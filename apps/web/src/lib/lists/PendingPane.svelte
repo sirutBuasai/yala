@@ -11,28 +11,25 @@
 		transactions: TxnRow[];
 		edit: boolean;
 		onedit: (locator: string) => void;
-		/** Sub-caption under the title (e.g. name the scope: "across all months" / "this month"). */
+		/** Sub-caption under the title — only worth setting to name a narrower scope. */
 		caption?: string;
+		/** Fix the list to this many rows tall, then scroll (see RowList). */
+		fixedRows?: number;
 	}
-	let {
-		transactions,
-		edit,
-		onedit,
-		caption = 'Fronted entries — tap one to reconcile'
-	}: Props = $props();
+	let { transactions, edit, onedit, caption, fixedRows }: Props = $props();
 
 	const total = $derived(transactions.reduce((s, t) => s + t.amount, 0));
 </script>
 
 <div class="pendcard">
-	<Pane title="Waiting to be reconciled" cap={caption}>
+	<Pane title="Pending transactions" cap={caption}>
 		{#snippet actions()}
 			{#if transactions.length}
 				<span class="meta">{transactions.length} · {money(total)} out</span>
 			{/if}
 		{/snippet}
 		{#if transactions.length}
-			<TransactionList {transactions} {edit} {onedit} fields={['source']} />
+			<TransactionList {transactions} {edit} {onedit} {fixedRows} fields={['source']} />
 		{:else}
 			<Empty>Nothing pending — you're all reconciled.</Empty>
 		{/if}

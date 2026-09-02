@@ -29,6 +29,48 @@ export function categoryVar(category: string): string {
 	return `var(--${CATEGORY_TOKEN[category] ?? 'lav'})`;
 }
 
+/**
+ * Institution accents, keyed by a lowercase fragment matched against the account name — so
+ * `Liabilities:CC:AmexGold`, `Assets:Cash:Amex` and `Amex Gold` all resolve to the same hue.
+ * Longer keys are matched first, letting a specific brand win over a shorter substring.
+ */
+const INSTITUTION_TOKEN: Record<string, string> = {
+	amex: 'inst-amex',
+	americanexpress: 'inst-amex',
+	chase: 'inst-chase',
+	sapphire: 'inst-chase',
+	bofa: 'inst-bofa',
+	bankofamerica: 'inst-bofa',
+	citi: 'inst-citi',
+	wellsfargo: 'inst-wellsfargo',
+	ally: 'inst-ally',
+	marcus: 'inst-marcus',
+	discover: 'inst-discover',
+	capitalone: 'inst-capitalone',
+	schwab: 'inst-schwab',
+	charlesschwab: 'inst-schwab',
+	fidelity: 'inst-fidelity',
+	vanguard: 'inst-vanguard',
+	wealthfront: 'inst-wealthfront',
+	robinhood: 'inst-robinhood',
+	venmo: 'inst-venmo',
+	paypal: 'inst-paypal',
+	sofi: 'inst-sofi'
+};
+
+// Longest-first so "charlesschwab" and "bankofamerica" beat the shorter fragments they contain.
+const INSTITUTION_KEYS = Object.keys(INSTITUTION_TOKEN).sort((a, b) => b.length - a.length);
+
+/**
+ * CSS variable reference for an account's institution color, for the dot beside an account name.
+ * Falls back to a neutral so an unmapped institution still reads as "an account".
+ */
+export function accountVar(account: string | null | undefined): string {
+	const hay = (account ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+	const hit = INSTITUTION_KEYS.find((k) => hay.includes(k));
+	return `var(--${hit ? INSTITUTION_TOKEN[hit] : 'inst-other'})`;
+}
+
 function initialMode(): ThemeMode {
 	if (typeof document !== 'undefined') {
 		const attr = document.documentElement.getAttribute('data-theme');

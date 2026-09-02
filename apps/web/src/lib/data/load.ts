@@ -28,6 +28,9 @@ export interface AccountsInfo {
 	investment_accounts?: string[];
 	/** Cash + investment accounts with an `Equity:Adjustments:*` plug (loggable balances). */
 	balance_accounts?: string[];
+	/** Active liability accounts. Snapshot-able, but verify-only: they have no plug, so a figure
+	    that disagrees with the ledger is rejected rather than padded. */
+	liability_accounts?: string[];
 	/** Passthrough routing: account → its `sweep_to` destination. Always sent by the API. */
 	sweeps?: Record<string, string>;
 }
@@ -115,12 +118,28 @@ export async function postJson<T = Record<string, unknown>>(
 		});
 		const data = (await res.json().catch(() => ({}))) as T & { detail?: unknown };
 
+		// Every write can move a derived balance, so this single choke point drops the read cache
+		// rather than each caller having to remember to.
+		if (res.ok) invalidateDerivedCache();
+
 		return res.ok
 			? { ok: true, data, error: null }
 			: { ok: false, data, error: errorMessage(data, res.status) };
 	} catch (e) {
 		return { ok: false, data: {} as T, error: 'API unreachable: ' + (e as Error).message };
 	}
+}
+
+/**
+ * Cache for reads the ledger derives rather than stores. `/api/networth/at` is fetched twice per
+ * month on Home (this month's snapshot date and the previous one) and again on every month step, so
+ * paging back and forth otherwise re-walks the ledger for figures that cannot have changed.
+ */
+const derivedCache = new Map<string, unknown>();
+
+/** Drop every cached derived read. Called from the write path; exported for tests. */
+export function invalidateDerivedCache(): void {
+	derivedCache.clear();
 }
 
 /** Load the static snapshot (view mode). Sets loadState accordingly. */
@@ -181,6 +200,7 @@ export async function disableEditMode(): Promise<void> {
 
 /** Re-pull live data after a write in edit mode. */
 export async function refreshEditData(): Promise<void> {
+	invalidateDerivedCache();
 	try {
 		data.set(await fetchJson<DashboardData>('/api/data'));
 	} catch {
@@ -329,8 +349,14 @@ export interface NetWorthAt {
 }
 
 export async function networthAt(date: string): Promise<NetWorthAt | null> {
+	const key = `networth/at:${date}`;
+	const cached = derivedCache.get(key) as NetWorthAt | undefined;
+	if (cached) return cached;
+
 	const { ok, data } = await getJson<NetWorthAt>(
 		`/api/networth/at?date=${encodeURIComponent(date)}`
 	);
+	if (ok) derivedCache.set(key, data);
+
 	return ok ? data : null;
 }

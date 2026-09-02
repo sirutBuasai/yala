@@ -356,3 +356,71 @@ def test_patch_balance_rejects_an_unknown_locator(client: TestClient):
 def test_balance_accounts_listed_in_accounts(client: TestClient):
     body = client.get("/api/accounts").json()
     assert "Assets:Cash:BankA" in body["balance_accounts"]
+
+
+# --- liability balances: verify-only, no plug ---
+
+CARD = "Liabilities:CC:CardA"
+CARD_OWED = 83.20  # what the fixture ledger's spending leaves standing on 2026-09-01
+
+
+def test_loggable_liabilities_lists_active_cards(ledger_dir: Path):
+    loggable = _load(ledger_dir).net_worth.loggable_liabilities()
+    assert CARD in loggable
+    # CardD was closed in 2024
+    assert "Liabilities:CC:CardD" not in loggable
+
+
+def test_liability_accounts_listed_in_accounts(client: TestClient):
+    assert CARD in client.get("/api/accounts").json()["liability_accounts"]
+
+
+def test_post_liability_balance_stores_the_owed_figure_negative(client: TestClient):
+    """Owed goes in positive, the way a bank app shows it, and lands negative in the ledger."""
+    r = client.post(
+        "/api/balance", json={"account": CARD, "amount": CARD_OWED, "date": "2026-09-01"}
+    )
+    assert r.status_code == 200, r.text
+
+    at = client.get("/api/networth/at?date=2026-09-01").json()
+    assert dict((a["account"], a["value"]) for a in at["accounts"])[CARD] == -CARD_OWED
+    assert CARD in at["logged"]
+
+
+def test_post_liability_balance_writes_no_pad(client: TestClient):
+    """A card has no adjustment plug, so a snapshot must never pad — only assert."""
+    assert (
+        client.post(
+            "/api/balance", json={"account": CARD, "amount": CARD_OWED, "date": "2026-09-01"}
+        ).status_code
+        == 200
+    )
+    text = "".join(p.read_text() for p in (config.LEDGER_DIR / "liabilities").glob("*.beancount"))
+    assert f"balance {CARD}" in text
+    assert "pad" not in text
+
+
+def test_post_liability_balance_rejects_a_mismatch(client: TestClient):
+    """A figure that disagrees means an entry is missing; it is reported, not padded away."""
+    r = client.post("/api/balance", json={"account": CARD, "amount": 500.0, "date": "2026-09-01"})
+    assert r.status_code == 422, r.text
+    assert "spending or bill pay" in r.json()["detail"]
+
+    # nothing was written
+    assert CARD not in client.get("/api/networth/at?date=2026-09-01").json()["logged"]
+
+
+def test_patch_liability_balance_keeps_the_owed_sign(client: TestClient):
+    assert (
+        client.post(
+            "/api/balance", json={"account": CARD, "amount": CARD_OWED, "date": "2026-09-01"}
+        ).status_code
+        == 200
+    )
+    locator = client.get("/api/networth/at?date=2026-09-01").json()["logged"][CARD]
+
+    # editing to a figure that no longer holds is refused, leaving the original in place
+    edit = client.patch("/api/balance", json={"locator": locator, "amount": 999.0})
+    assert edit.status_code >= 400
+    at = client.get("/api/networth/at?date=2026-09-01").json()
+    assert dict((a["account"], a["value"]) for a in at["accounts"])[CARD] == -CARD_OWED

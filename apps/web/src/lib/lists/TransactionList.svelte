@@ -43,6 +43,8 @@
 		/** Field to order rows by; omit to keep the given order. Pair with TransactionSortMenu. */
 		sortKey?: TxnSort;
 		sortDir?: 'asc' | 'desc';
+		/** Fix the list to this many rows tall, then scroll (see RowList). */
+		fixedRows?: number;
 	}
 	let {
 		transactions,
@@ -51,7 +53,8 @@
 		showDate = true,
 		fields = ['source'],
 		sortKey,
-		sortDir = 'desc'
+		sortDir = 'desc',
+		fixedRows
 	}: Props = $props();
 
 	function column(t: TxnRow, f: TxnField): string {
@@ -97,6 +100,7 @@
 	{edit}
 	{onedit}
 	{cols}
+	{fixedRows}
 	dotColor={(t) => categoryVar(t.category)}
 	dateOf={showDate ? (t) => t.date : undefined}
 >

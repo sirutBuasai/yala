@@ -81,7 +81,7 @@
 			transactions={pending}
 			{edit}
 			onedit={(l) => modals.editTransaction(l)}
-			caption={`Fronted in ${monthLabel(monthKey)} — tap one to reconcile`}
+			caption={monthLabel(monthKey)}
 		/>
 	</div>
 {/if}

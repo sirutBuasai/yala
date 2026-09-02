@@ -12,6 +12,7 @@
 
 <script lang="ts">
 	import { money, formatAccount } from '$lib/utils/format';
+	import { accountVar } from '$lib/utils/theme';
 	import RowList from '$lib/lists/RowList.svelte';
 
 	interface Props {
@@ -33,7 +34,7 @@
 	{onedit}
 	{cols}
 	{fixedRows}
-	dotColor={() => 'var(--ink-3)'}
+	dotColor={(t) => accountVar(t.from_account)}
 	dateOf={showDate ? (t) => t.date : undefined}
 >
 	{#snippet main(t)}

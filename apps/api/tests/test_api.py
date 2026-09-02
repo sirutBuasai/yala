@@ -42,6 +42,7 @@ def test_get_accounts_keys(client: TestClient):
         "credit_accounts",
         "investment_accounts",
         "balance_accounts",
+        "liability_accounts",
         "sweeps",
     }
     # closed account is excluded from active funding accounts

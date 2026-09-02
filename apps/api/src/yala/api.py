@@ -297,6 +297,7 @@ def get_accounts() -> dict:
         "credit_accounts": funding,
         "investment_accounts": ledger.active_accounts(INVESTMENTS),
         "balance_accounts": ledger.net_worth.loggable_accounts(),
+        "liability_accounts": ledger.net_worth.loggable_liabilities(),
         "sweeps": {a: m[SWEEP_META] for a, m in ledger.account_meta().items() if m.get(SWEEP_META)},
     }
 
@@ -825,20 +826,28 @@ class BalanceIn(BaseModel):
 
 @app.post("/api/balance")
 def post_balance(body: BalanceIn) -> dict:
-    """Log a USD balance snapshot for a cash or investment account: a ``pad`` + ``balance`` pair
-    routing the untracked delta to the account's ``Equity:Adjustments:*`` plug. Any share lots are
-    reclassified to USD at that date's prices first, so the USD figure is authoritative."""
+    """Log a USD balance snapshot.
+
+    A cash or investment account gets a ``pad`` + ``balance`` pair routing the untracked delta to
+    its ``Equity:Adjustments:*`` plug; share lots are reclassified to USD at that date's prices
+    first, so the USD figure is authoritative.
+
+    A liability has no plug, so it is verify-only: ``amount`` is what is owed (positive, stored
+    negative) and must match the balance the ledger already computes — otherwise a bill payment or
+    some spending is still missing, and the mismatch is returned rather than padded away."""
     account = _valid_name(body.account)
-    if not account.startswith((CASH, INVESTMENTS)):
-        raise HTTPException(
-            status_code=422, detail=f"not a cash or investment account: {account!r}"
-        )
+    if not account.startswith((CASH, INVESTMENTS, LIABILITIES)):
+        raise HTTPException(status_code=422, detail=f"not a balance-loggable account: {account!r}")
 
     date = _parse_date(body.date)
 
     with _api_errors():
-        counter = adjustment_account(account)
-        entry_id = _sink().log_balance(account, _dec(body.amount), date, counter)
+        if account.startswith(LIABILITIES):
+            # Verify-only: the client sends what is owed; the sink stores it negative.
+            entry_id = _sink().verify_balance(account, _dec(body.amount), date)
+        else:
+            counter = adjustment_account(account)
+            entry_id = _sink().log_balance(account, _dec(body.amount), date, counter)
         _reconcile_sweeps(date)
 
     # the locator lets the client edit what it just logged without refetching the whole month

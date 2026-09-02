@@ -21,6 +21,17 @@ export function money(n: number | null | undefined): string {
 	return (r < 0 ? '-$' : '$') + Math.abs(r).toLocaleString();
 }
 
+/**
+ * Money to the cent. For reconciliation figures the user has to match exactly — rounding an
+ * expected balance to whole dollars makes a penny-perfect entry look wrong.
+ */
+export function moneyExact(n: number | null | undefined): string {
+	const v = n || 0;
+	const digits = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+
+	return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString(undefined, digits);
+}
+
 export function moneyK(n: number | null | undefined): string {
 	n = n || 0;
 
