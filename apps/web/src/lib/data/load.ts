@@ -104,11 +104,12 @@ export async function getJson<T = Record<string, unknown>>(url: string): Promise
 /** POST a JSON body and parse the response, normalizing errors into a `PostResult`. */
 export async function postJson<T = Record<string, unknown>>(
 	url: string,
-	body: unknown
+	body: unknown,
+	method: 'POST' | 'PATCH' = 'POST'
 ): Promise<PostResult<T>> {
 	try {
 		const res = await fetch(url, {
-			method: 'POST',
+			method,
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(body)
 		});
@@ -290,19 +291,41 @@ export async function logBalance(
 	account: string,
 	amount: number,
 	date?: string
-): Promise<string | null> {
-	const { ok, error } = await postJson('/api/balance', {
+): Promise<{ locator: string | null; error: string | null }> {
+	const { ok, data, error } = await postJson<{ locator?: string }>('/api/balance', {
 		account,
 		amount,
 		date: date || undefined
 	});
-	return ok ? null : (error ?? 'log failed');
+	return ok
+		? { locator: data.locator ?? null, error: null }
+		: { locator: null, error: error ?? 'log failed' };
+}
+
+/**
+ * Edit an existing balance snapshot in place, addressed by its locator. Returns the (possibly
+ * upgraded) locator — editing a migrated assertion stamps an id on it, replacing its line handle.
+ */
+export async function updateBalance(
+	locator: string,
+	amount: number
+): Promise<{ locator: string | null; error: string | null }> {
+	const { ok, data, error } = await postJson<{ locator?: string }>(
+		'/api/balance',
+		{ locator, amount },
+		'PATCH'
+	);
+	return ok
+		? { locator: data.locator ?? locator, error: null }
+		: { locator: null, error: error ?? 'edit failed' };
 }
 
 /** Per-account USD values + adjustment plugs as of a date (for the month-aware balance pane). */
 export interface NetWorthAt {
 	accounts: { account: string; value: number }[];
 	adjustments: { account: string; value: number }[];
+	/** account -> locator, only where that date already holds an editable USD assertion. */
+	logged: Record<string, string>;
 }
 
 export async function networthAt(date: string): Promise<NetWorthAt | null> {

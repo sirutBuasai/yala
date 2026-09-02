@@ -838,17 +838,49 @@ def post_balance(body: BalanceIn) -> dict:
 
     with _api_errors():
         counter = adjustment_account(account)
-        _sink().log_balance(account, _dec(body.amount), date, counter)
+        entry_id = _sink().log_balance(account, _dec(body.amount), date, counter)
         _reconcile_sweeps(date)
 
-    return _ok(f"logged balance for {account}", account=account)
+    # the locator lets the client edit what it just logged without refetching the whole month
+    return _ok(
+        f"logged balance for {account}",
+        account=account,
+        date=date.isoformat(),
+        locator=f"id:{entry_id}",
+    )
+
+
+class BalanceEditIn(BaseModel):
+    locator: str
+    amount: NonNegAmount
+
+
+@app.patch("/api/balance")
+def patch_balance(body: BalanceEditIn) -> dict:
+    """Edit an existing ``balance`` assertion in place, keeping one snapshot per logged date.
+
+    Re-logging the same date would stack a second assertion on it, so correcting a past month
+    rewrites its own line — located by the handle ``/api/networth/at`` reports for that date. The
+    assertion's ``pad`` is added or dropped as the new figure requires."""
+    with _api_errors():
+        account, date, locator = _sink().update_balance(body.locator, _dec(body.amount))
+        _reconcile_sweeps(date)
+
+    # echo the locator: editing a migrated assertion stamps an id, upgrading it from a line handle
+    return _ok(
+        f"updated balance for {account}",
+        account=account,
+        date=date.isoformat(),
+        locator=locator,
+    )
 
 
 @app.get("/api/networth/at")
 def get_networth_at(date: str) -> dict:
-    """Per-account USD values and adjustment-plug balances as of ``date`` — powers the balance
-    pane's month-aware view, so selecting a past month shows (and lets you edit) that month's
-    recorded balance and adjustment rather than only the current ones."""
+    """Per-account USD values, adjustment-plug balances, and editable-assertion locators as of
+    ``date`` — powers the balance pane's month-aware view, so selecting a past month shows that
+    month's recorded balance and adjustment rather than only the current ones, and offers the
+    handle to edit it in place."""
     as_of = _parse_date(date)
     nw = _ledger().net_worth
     return {
@@ -856,6 +888,8 @@ def get_networth_at(date: str) -> dict:
         "adjustments": [
             {"account": a.account, "value": float(a.value)} for a in nw.adjustments(as_of)
         ],
+        # account -> locator, present only where that date already holds an editable USD assertion
+        "logged": nw.logged_at(as_of),
     }
 
 

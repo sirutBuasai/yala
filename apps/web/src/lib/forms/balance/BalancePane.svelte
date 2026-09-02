@@ -4,8 +4,12 @@
 	// fixed selection box), and it reflects the SELECTED month. Changing the month (via the shared
 	// header stepper) shows that month's recorded balance + adjustment for each account and
 	// pre-fills the input with it; saving edits that account's balance for that month.
+	//
+	// A month's snapshot is its FIRST-of-month assertion — the convention the whole ledger follows
+	// (and the spreadsheet it was migrated from), where "July 2024" is the balance standing on
+	// 2024-07-01. Log a balance more than once in a month and the extra dates appear as chips.
 	import type { DashboardData } from '$lib/data/types';
-	import { type AccountsInfo, logBalance, networthAt } from '$lib/data/load';
+	import { type AccountsInfo, logBalance, networthAt, updateBalance } from '$lib/data/load';
 	import { formatAccount, money, monthLabel } from '$lib/utils/format';
 	import Wheel from '$lib/ui/Wheel.svelte';
 
@@ -23,39 +27,61 @@
 		accounts?.balance_accounts ?? (data.networth?.accounts ?? []).map((a) => a.account)
 	);
 
-	// Per-account values + adjustments AS OF the selected month (fetched live). Falls back to the
-	// current snapshot from data.json in view mode.
+	// Per-account values + adjustments AS OF the shown snapshot date (fetched live), plus the
+	// per-account locator of the assertion standing on it. Falls back to the current snapshot from
+	// data.json in view mode.
 	let asOfVals = $state<Map<string, number>>(new Map());
 	let asOfAdj = $state<Map<string, number>>(new Map());
+	let logged = $state<Map<string, string>>(new Map());
 	let loading = $state(false);
 
-	/** Last day of "YYYY-MM" as an ISO date — the snapshot's assertion date. */
-	function lastDayOf(key: string): string {
+	/** First day of "YYYY-MM" as an ISO date — where a month's snapshot is asserted. */
+	function firstDayOf(key: string): string {
 		const [y, m] = key.split('-').map(Number);
-		if (!y || !m) return '';
-		const d = new Date(y, m, 0).getDate();
-		return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+		return y && m ? `${y}-${String(m).padStart(2, '0')}-01` : '';
 	}
 
+	// Dates already logged inside the shown month, from the contract's snapshot series. Usually just
+	// the 1st; a month logged more than once lists each date so any of them can be viewed or edited.
+	const monthDates = $derived(
+		(data.networth?.series ?? []).map((p) => p.date).filter((d) => d.startsWith(`${monthKey}-`))
+	);
+
+	// Which snapshot the pane is showing. Empty follows the month's default (its 1st); picking a chip
+	// pins a specific date until the month changes.
+	let pinnedDate = $state('');
+	const shownDate = $derived(
+		pinnedDate && monthDates.includes(pinnedDate) ? pinnedDate : firstDayOf(monthKey)
+	);
+	const loggedCount = $derived(balAccounts.filter((a) => logged.has(a)).length);
+
 	async function fetchAsOf() {
-		if (!edit || !monthKey) {
+		if (!edit || !shownDate) {
 			asOfVals = new Map((data.networth?.accounts ?? []).map((a) => [a.account, a.value]));
 			asOfAdj = new Map((data.networth?.adjustments ?? []).map((a) => [a.account, a.value]));
+			logged = new Map();
 			return;
 		}
 		loading = true;
-		const res = await networthAt(lastDayOf(monthKey));
+		const res = await networthAt(shownDate);
 		if (res) {
 			asOfVals = new Map(res.accounts.map((a) => [a.account, a.value]));
 			asOfAdj = new Map(res.adjustments.map((a) => [a.account, a.value]));
+			logged = new Map(Object.entries(res.logged ?? {}));
 		}
 		loading = false;
 	}
-	// Refetch whenever the month or edit-mode changes.
+	// Refetch whenever the shown snapshot or edit-mode changes.
 	$effect(() => {
-		monthKey;
+		shownDate;
 		edit;
 		void fetchAsOf();
+	});
+
+	// Drop the pin when the month changes, so each month opens on its own default snapshot.
+	$effect(() => {
+		monthKey;
+		pinnedDate = '';
 	});
 
 	let curIdx = $state(0);
@@ -68,29 +94,32 @@
 	const current = $derived(balAccounts[curIdx] ?? null);
 	const recorded = $derived(current != null ? asOfVals.get(current) : undefined);
 	const adj = $derived(current != null ? asOfAdj.get(current) : undefined);
+	// The assertion to rewrite when this account already has one on the shown date; without it a
+	// save appends a new snapshot instead.
+	const locator = $derived(current != null ? logged.get(current) : undefined);
 
-	// A month later than the last logged snapshot has no real balance yet — the fetched value is
-	// only carried forward — so treat it as "future" and don't pre-fill the input from it.
-	const lastSnapMonth = $derived(data.networth?.series?.at(-1)?.date ?? '');
-	const isFuture = $derived(!!monthKey && !!lastSnapMonth && monthKey > lastSnapMonth);
+	// Whether this account's balance on the shown date was actually logged, as opposed to carried
+	// forward from an earlier snapshot. Every account reports a value on every date, so the value
+	// alone says nothing — only an assertion standing on the date does.
+	const isRecorded = (acct: string) => logged.has(acct);
 
-	// An account's dot is green when it already has a balance for this month (a default fill) or was
-	// just saved — persisting regardless of scroll. Otherwise the focal account is purple and the
-	// rest are grey (handled in CSS via .cur).
-	const filled = (acct: string) => saved.has(acct) || (!isFuture && asOfVals.get(acct) != null);
+	// An account's dot is green when the shown date holds a logged balance for it, or it was just
+	// saved — persisting regardless of scroll. Otherwise the focal account is purple and the rest
+	// are grey (handled in CSS via .lvl0).
+	const filled = (acct: string) => saved.has(acct) || isRecorded(acct);
 
-	// Reset the session ✓ cues when the month changes (a fresh month to log/edit).
+	// Reset the session ✓ cues when the shown snapshot changes (a fresh date to log/edit).
 	$effect(() => {
-		monthKey;
+		shownDate;
 		saved = new Set();
 	});
 
-	// Pre-fill the input with the selected account's recorded balance for the month, whenever the
-	// account or the fetched values change. (Doesn't read amountStr, so typing is never clobbered.)
+	// Pre-fill only from a genuinely logged balance, so hitting save never silently re-records a
+	// figure that was merely carried forward. (Doesn't read amountStr, so typing is never clobbered.)
 	$effect(() => {
 		const c = current;
-		const v = c != null ? asOfVals.get(c) : undefined;
-		amountStr = v != null && !isFuture ? String(v) : '';
+		const v = c != null && isRecorded(c) ? asOfVals.get(c) : undefined;
+		amountStr = v != null ? String(v) : '';
 	});
 
 	const entered = $derived(Number(amountStr));
@@ -108,10 +137,14 @@
 		}
 		busy = true;
 		err = '';
-		const e = await logBalance(current, n, lastDayOf(monthKey));
+		// Correct the snapshot standing on this date rather than stacking a second one on it; only a
+		// date with nothing logged yet gets a fresh assertion.
+		const { error } = locator
+			? await updateBalance(locator, n)
+			: await logBalance(current, n, shownDate);
 		busy = false;
-		if (e) {
-			err = e;
+		if (error) {
+			err = error;
 			return;
 		}
 		saved = new Set(saved).add(current);
@@ -134,10 +167,30 @@
 		<div class="balhead">
 			<div>
 				<h2 class="serif">Log balances</h2>
-				<p class="cap">Showing <b>{monthLabel(monthKey)}</b></p>
+				<!-- How much of the shown date is on record; the focal account's own state is in the
+				     Recorded/Carried fact below. -->
+				<p class="cap">
+					Showing <b>{monthLabel(monthKey)}</b>
+					· {loggedCount ? `${loggedCount} of ${balAccounts.length} logged` : 'nothing logged yet'}
+				</p>
 			</div>
 			{#if saved.size}<span class="progress">{saved.size} saved</span>{/if}
 		</div>
+
+		{#if monthDates.length > 1}
+			<!-- more than one snapshot this month: pick which one to view or correct -->
+			<div class="snaps" role="group" aria-label="Snapshots this month">
+				{#each monthDates as d (d)}
+					<button
+						type="button"
+						class="snap"
+						class:on={d === shownDate}
+						aria-pressed={d === shownDate}
+						onclick={() => (pinnedDate = d)}>{d.slice(8)} {monthLabel(monthKey).slice(0, 3)}</button
+					>
+				{/each}
+			</div>
+		{/if}
 
 		<div class="oneby">
 			<div class="wheelwrap">
@@ -168,15 +221,17 @@
 				{#if current}
 					<dl class="facts">
 						<div>
-							<dt>Recorded</dt>
-							<dd class:muted={isFuture || recorded == null}>
-								{#if loading}…{:else if !isFuture && recorded != null}{money(recorded)}{:else}—{/if}
+							<!-- Named for where the figure comes from: an assertion on this date, or the
+							     balance carried in from the last one. -->
+							<dt>{isRecorded(current) ? 'Recorded' : 'Carried'}</dt>
+							<dd class:muted={!isRecorded(current)}>
+								{#if loading}…{:else if recorded != null}{money(recorded)}{:else}—{/if}
 							</dd>
 						</div>
 						<div>
 							<dt>Adjustment</dt>
 							<dd class:muted={!(adj ?? 0)}>
-								{#if isFuture || adj == null || adj === 0}—{:else}{money(adj)}{/if}
+								{#if adj == null || adj === 0}—{:else}{money(adj)}{/if}
 							</dd>
 						</div>
 						<div class="grow">
@@ -188,7 +243,7 @@
 					</dl>
 					<div class="entryrow">
 						<label class="bal-field">
-							<span class="label">Balance · {monthLabel(monthKey)}</span>
+							<span class="label">Balance · {shownDate || monthLabel(monthKey)}</span>
 							<div class="binput">
 								<span class="cur-sym">$</span>
 								<input
@@ -200,8 +255,15 @@
 								/>
 							</div>
 						</label>
-						<button class="btn-primary save" onclick={save} disabled={busy}>
-							{busy ? 'Saving…' : 'Save →'}
+						<button
+							class="btn-primary save"
+							onclick={save}
+							disabled={busy}
+							title={locator
+								? `Rewrites the ${shownDate} assertion`
+								: `Logs a ${shownDate} snapshot`}
+						>
+							{busy ? 'Saving…' : locator ? 'Update →' : 'Save →'}
 						</button>
 					</div>
 					{#if err}<p class="err" role="alert">{err}</p>{/if}
@@ -236,6 +298,33 @@
 		font-size: var(--text-secondary);
 		font-variant-numeric: tabular-nums;
 		white-space: nowrap;
+	}
+	/* Only rendered when a month holds more than one snapshot. */
+	.snaps {
+		display: flex;
+		gap: var(--gap-inline);
+		flex-wrap: wrap;
+		margin-bottom: var(--space-8);
+	}
+	.snap {
+		border: 1px solid var(--border);
+		background: var(--inset);
+		color: var(--ink-2);
+		border-radius: var(--radius-pill);
+		padding: var(--space-2) var(--space-6);
+		font: inherit;
+		font-size: var(--text-caption);
+		font-variant-numeric: tabular-nums;
+		cursor: pointer;
+	}
+	.snap:hover {
+		color: var(--ink);
+		border-color: var(--lav);
+	}
+	.snap.on {
+		background: color-mix(in srgb, var(--lav) 20%, transparent);
+		border-color: var(--lav);
+		color: var(--ink);
 	}
 
 	/* Center the whole entry block so the card's residual width reads as symmetric margin

@@ -46,7 +46,7 @@
 			err = true;
 			return;
 		}
-		const error = await logBalance(account, amount!, date || undefined);
+		const { error } = await logBalance(account, amount!, date || undefined);
 		if (error) {
 			msg = error;
 			err = true;

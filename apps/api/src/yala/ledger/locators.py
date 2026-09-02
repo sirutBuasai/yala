@@ -57,32 +57,46 @@ def resolve_ledger_path(path: str) -> str:
     return os.path.realpath(absolute)
 
 
-def find_entry(entries: list, locator: str) -> data.Transaction:
-    """Resolve a locator (``id:<uuid>`` or ``line:<path>:<lineno>``) to a beancount transaction.
+def _find(entries: list, locator: str, directive: type, label: str):
+    """Resolve a locator against the ``directive``-typed entries, or raise ``KeyError``.
 
     ``line:`` paths are ledger-relative (see :func:`locator_of`); legacy absolute paths still
     resolve too."""
     kind, _, rest = locator.partition(":")
-    txns = [e for e in entries if isinstance(e, data.Transaction)]
+    candidates = [e for e in entries if isinstance(e, directive)]
 
     if kind == "id":
-        for e in txns:
+        for e in candidates:
             if (e.meta or {}).get("id") == rest:
                 return e
 
     elif kind == "line":
         path, _, lineno = rest.rpartition(":")
         target = resolve_ledger_path(path)
-        for e in txns:
-            filename = e.meta.get("filename")
+        for e in candidates:
+            meta = e.meta or {}
+            filename = meta.get("filename")
             if (
                 filename is not None
                 and os.path.realpath(filename) == target
-                and e.meta.get("lineno") == int(lineno)
+                and meta.get("lineno") == int(lineno)
             ):
                 return e
 
-    raise KeyError(f"no transaction found for locator {locator!r}")
+    raise KeyError(f"no {label} found for locator {locator!r}")
+
+
+def find_entry(entries: list, locator: str) -> data.Transaction:
+    """Resolve a locator (``id:<uuid>`` or ``line:<path>:<lineno>``) to a beancount transaction."""
+    return _find(entries, locator, data.Transaction, "transaction")
+
+
+def find_balance(entries: list, locator: str) -> data.Balance:
+    """Resolve a locator to a beancount ``balance`` assertion.
+
+    Assertions carry no ``id`` meta (they are written as bare directives, not transactions), so in
+    practice these are always ``line:`` locators."""
+    return _find(entries, locator, data.Balance, "balance assertion")
 
 
 def entry_locator(entry: data.Transaction) -> str:

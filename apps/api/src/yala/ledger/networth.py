@@ -20,12 +20,14 @@ from yala.ledger.constants import (
     ADJUSTMENTS,
     ASSETS,
     CASH,
+    DEFAULT_CURRENCY,
     INVEST_TAX_ADVANTAGED,
     INVEST_TAXABLE,
     INVESTMENTS,
     LIABILITIES,
 )
 from yala.ledger.entities import leaf
+from yala.ledger.locators import locator_of
 from yala.money import round_cents
 
 if TYPE_CHECKING:
@@ -153,6 +155,24 @@ class NetWorth:
             replace(self.totals(d - dt.timedelta(days=1)), date=d.isoformat())
             for d in self._snapshot_dates()
         ]
+
+    def logged_at(self, date: dt.date) -> dict[str, str]:
+        """Locator of each account's editable ``balance`` assertion dated ``date``.
+
+        An account is only listed when that day holds exactly one assertion for it and that
+        assertion is in USD — the shape :meth:`FileLedgerSink.update_balance` can rewrite. A
+        share-based snapshot (several commodity assertions plus a USD residual) is deliberately
+        omitted, since changing one leg of it is not a balance edit."""
+        by_account: dict[str, list[data.Balance]] = {}
+        for e in self._led.entries:
+            if isinstance(e, data.Balance) and e.date == date:
+                by_account.setdefault(e.account, []).append(e)
+
+        return {
+            account: locator_of(entries[0].meta)
+            for account, entries in by_account.items()
+            if len(entries) == 1 and entries[0].amount.currency == DEFAULT_CURRENCY
+        }
 
     def adjustments(self, as_of: dt.date | None = None) -> list[Adjustment]:
         """Cumulative balance of each ``Equity:Adjustments:*`` plug (untracked-flow smoke alarm)."""
