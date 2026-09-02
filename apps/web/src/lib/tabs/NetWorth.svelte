@@ -153,7 +153,7 @@
 		{/if}
 	{/if}
 	{#if edit && accounts}
-		<button class="log" onclick={() => modals.add('balance')}>+ Log balance</button>
+		<button class="btn-accent pill" onclick={() => modals.add('balance')}>+ Log balance</button>
 	{/if}
 </ViewHeader>
 
@@ -200,20 +200,6 @@
 	.seg button.active {
 		background: color-mix(in srgb, var(--lav) 20%, transparent);
 		color: var(--ink);
-	}
-	.log {
-		border: 1px solid var(--border);
-		background: color-mix(in srgb, var(--lav) 18%, transparent);
-		color: var(--ink);
-		border-radius: var(--radius-pill);
-		padding: var(--space-3) var(--space-8);
-		font: inherit;
-		font-size: var(--text-control);
-		font-weight: var(--fw-medium);
-		cursor: pointer;
-	}
-	.log:hover {
-		border-color: var(--lav);
 	}
 	.empty {
 		color: var(--ink-3);

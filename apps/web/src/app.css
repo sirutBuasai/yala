@@ -375,6 +375,30 @@ input[type='checkbox']:focus-visible {
 	border-color: var(--lav);
 	color: var(--ink);
 }
+/* Accent-tinted secondary action — louder than a ghost, quieter than the solid primary.
+   Used for "add"-style actions (inline beside an input, or as a pane/header action with .pill). */
+.btn-accent {
+	border: 1px solid var(--border);
+	background: color-mix(in srgb, var(--lav) 20%, transparent);
+	color: var(--ink);
+	border-radius: var(--radius-md);
+	padding: var(--pad-control);
+	font: inherit;
+	font-size: var(--text-control);
+	font-weight: var(--fw-medium);
+	cursor: pointer;
+}
+.btn-accent.pill {
+	border-radius: var(--radius-pill);
+	padding: var(--pad-pill);
+}
+.btn-accent:hover {
+	border-color: var(--lav);
+}
+.btn-accent:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
 /* small outline button for inline row/type actions */
 .btn-mini {
 	background: none;

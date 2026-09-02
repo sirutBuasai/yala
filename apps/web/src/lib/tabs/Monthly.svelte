@@ -13,7 +13,8 @@
 	import TransferList from '$lib/lists/TransferList.svelte';
 	import SortMenu from '$lib/lists/SortMenu.svelte';
 	import PaycheckList from '$lib/lists/PaycheckList.svelte';
-	import PendingQueue from '$lib/lists/PendingQueue.svelte';
+	import PendingPane from '$lib/lists/PendingPane.svelte';
+	import { pendingRows } from '$lib/data/pending';
 	import EditModals from '$lib/forms/EditModals.svelte';
 	import Empty from '$lib/layout/Empty.svelte';
 
@@ -49,16 +50,12 @@
 	]);
 
 	let modals: ReturnType<typeof EditModals>;
-	let refreshKey = $state(0);
 
 	let sortKey = $state<TxnSort>('date');
 	let sortDir = $state<'asc' | 'desc'>('desc');
 
-	// A save also refreshes the pending list (via refreshKey) on top of the page-level refresh.
-	function onSaved() {
-		refreshKey += 1;
-		onsaved();
-	}
+	// Pending for this month only; the pane is omitted entirely when the month is clean.
+	const pending = $derived(pendingRows(data, monthKey));
 </script>
 
 <ViewHeader title="Monthly">
@@ -75,7 +72,17 @@
 				<button class="btn-ghost" onclick={() => modals.add()}>+ Add entry</button>
 			</div>
 		</div>
-		<PendingQueue {refreshKey} onedit={(l) => modals.editTransaction(l)} />
+	</div>
+{/if}
+
+{#if pending.length}
+	<div class="pendsec">
+		<PendingPane
+			transactions={pending}
+			{edit}
+			onedit={(l) => modals.editTransaction(l)}
+			caption={`Fronted in ${monthLabel(monthKey)} — tap one to reconcile`}
+		/>
 	</div>
 {/if}
 
@@ -148,9 +155,17 @@
 	</Pane>
 </div>
 
-<EditModals bind:this={modals} {accounts} onsaved={onSaved} />
+<EditModals
+	bind:this={modals}
+	{accounts}
+	{onsaved}
+	kinds={['transaction', 'paycheck', 'transfer']}
+/>
 
 <style>
+	.pendsec {
+		margin-bottom: var(--space-9);
+	}
 	.editpanel {
 		margin-bottom: var(--space-9);
 		border-color: color-mix(in srgb, var(--lav) 30%, var(--border));

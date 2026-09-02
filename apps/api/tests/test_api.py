@@ -141,9 +141,6 @@ def test_update_transaction_flow(client: TestClient):
     )
     entry_id = r.json()["id"]
 
-    pending = client.get("/api/pending").json()["pending"]
-    assert any(p["locator"] == f"id:{entry_id}" for p in pending)
-
     detail = client.get("/api/transaction", params={"locator": f"id:{entry_id}"}).json()
     assert detail["pending"] is True
     assert detail["amount"] == 40.0

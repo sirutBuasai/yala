@@ -1,10 +1,11 @@
 <script lang="ts">
+	// The month calendar + day-detail panel, extracted so both the Home hub and the Calendar tab
+	// share one implementation. Owns its own month selection and selected-day state, and the
+	// EditModals overlay for adding/editing the selected day's entries.
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
 	import { MONTHS, money, moneyCompact } from '$lib/utils/format';
 	import { categoryVar } from '$lib/utils/theme';
-	import ViewHeader from '$lib/layout/ViewHeader.svelte';
-	import MonthNav from '$lib/nav/MonthNav.svelte';
 	import TransactionList from '$lib/lists/TransactionList.svelte';
 	import TransferList from '$lib/lists/TransferList.svelte';
 	import PaycheckList from '$lib/lists/PaycheckList.svelte';
@@ -16,15 +17,12 @@
 		edit: boolean;
 		accounts: AccountsInfo | null;
 		onsaved: () => void;
+		/** The month on screen, "YYYY-MM" — controlled by the parent so the scope can be shared. */
+		monthKey: string;
 	}
-	let { data, edit, accounts, onsaved }: Props = $props();
+	let { data, edit, accounts, onsaved, monthKey }: Props = $props();
 
-	const latestData = $derived([...data.meta.month_keys].sort().at(-1) ?? '');
-
-	// The month on screen. Empty `viewKey` means "follow the latest transaction month"; once the
-	// user navigates or picks, `viewKey` pins the choice. Recreating the tab resets to latest.
-	let viewKey = $state('');
-	const key = $derived(viewKey || latestData);
+	const key = $derived(monthKey);
 
 	const md = $derived(data.months[key]);
 
@@ -33,9 +31,6 @@
 
 	const yy = $derived(+key.slice(0, 4));
 	const mm = $derived(+key.slice(5, 7));
-	// getDay() on the numeric-arg Date is the real weekday of the 1st; days-in-month is day 0 of
-	// the following month. Transaction days come straight from the ISO string (no Date parsing),
-	// so a "YYYY-MM-DD" always lands on its true weekday cell.
 	const firstWeekday = $derived(new Date(yy, mm - 1, 1).getDay());
 	const daysInMonth = $derived(new Date(yy, mm, 0).getDate());
 
@@ -47,11 +42,8 @@
 		xfers: NonNullable<DashboardData['months'][string]['transfers']>;
 		spent: number;
 		income: number;
-		/** Up to 3 categories, ranked by that day's spend in each. */
 		cats: string[];
-		/** True when the day has more than 3 categories (render a "+" after the dots). */
 		more: boolean;
-		/** Has at least one not-yet-reconciled (pending) transaction. */
 		pending: boolean;
 	}
 
@@ -64,7 +56,6 @@
 			const xfers = (md?.transfers ?? []).filter((t) => dayOf(t.date) === d);
 			const spent = txns.reduce((a, t) => a + t.amount, 0);
 			const income = pays.reduce((a, p) => a + p.net, 0);
-			// Rank the day's categories by total spend, show the top 3 as dots, and flag any extra.
 			const catTotals = new Map<string, number>();
 			for (const t of txns) catTotals.set(t.category, (catTotals.get(t.category) ?? 0) + t.amount);
 			const ranked = [...catTotals.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
@@ -78,8 +69,8 @@
 
 	let selectedDay = $state<number | null>(null);
 
-	// Reset the selection to the month's most recent active day (or the 1st) whenever the shown
-	// month changes or the selection falls out of range.
+	// Reset selection to the month's most recent active day (or the 1st) when the month changes or
+	// the selection falls out of range.
 	$effect(() => {
 		const dim = daysInMonth;
 		let last = 0;
@@ -96,10 +87,6 @@
 
 	let modals: ReturnType<typeof EditModals>;
 </script>
-
-<ViewHeader title="Calendar">
-	<MonthNav value={key} monthKeys={data.meta.month_keys} onchange={(k) => (viewKey = k)} />
-</ViewHeader>
 
 <div class="calwrap">
 	<section class="card">
@@ -205,6 +192,7 @@
 	bind:this={modals}
 	{accounts}
 	{onsaved}
+	kinds={['transaction', 'paycheck', 'transfer']}
 	presetDate={selected?.iso}
 	addTitle={selected ? `Add entry · ${MONTHS[mm - 1]} ${selected.day}` : 'Add entry'}
 />
@@ -228,8 +216,6 @@
 		text-align: center;
 	}
 	.cal {
-		/* Role colors swap by theme: dark → purple selection / gold pending;
-		   light → gold selection / purple pending. */
 		--sel: var(--lav);
 		--pend: var(--gold);
 		display: grid;
@@ -264,8 +250,6 @@
 		cursor: default;
 		min-height: 0;
 	}
-	/* Pending (unreconciled) day: a persistent, filled color cue that survives hover.
-	   Declared before .cell.sel so a selected pending day still gets the selection ring. */
 	.cell.pending {
 		border-color: var(--pend);
 		background: color-mix(in srgb, var(--pend) 13%, var(--surface-2));
@@ -305,8 +289,6 @@
 		line-height: 1;
 		color: var(--ink-3);
 	}
-	/* Amounts stack in the bottom-right corner (income above spending) so a high-income,
-	   high-spending day never has the two figures collide. A day with only one shows just that. */
 	.cell .camounts {
 		position: absolute;
 		bottom: 8px;
@@ -317,8 +299,6 @@
 		gap: 1px;
 		line-height: var(--lh-tight);
 	}
-	/* Income and spending render identically — same size and weight — so the only signal is
-	   the color: income is green, spending inherits the default ink. */
 	.cell .camounts span {
 		font-size: var(--text-micro);
 		font-weight: var(--fw-semibold);

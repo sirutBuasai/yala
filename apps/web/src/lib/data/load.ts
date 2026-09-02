@@ -196,7 +196,7 @@ export async function deleteTransaction(locator: string): Promise<string | null>
 }
 
 /** Re-pull the account lists (after declaring a new deduction/contribution type). */
-export async function refreshAccounts(): Promise<void> {
+async function refreshAccounts(): Promise<void> {
 	try {
 		accounts.set(await fetchJson<AccountsInfo>('/api/accounts'));
 	} catch {
@@ -297,4 +297,17 @@ export async function logBalance(
 		date: date || undefined
 	});
 	return ok ? null : (error ?? 'log failed');
+}
+
+/** Per-account USD values + adjustment plugs as of a date (for the month-aware balance pane). */
+export interface NetWorthAt {
+	accounts: { account: string; value: number }[];
+	adjustments: { account: string; value: number }[];
+}
+
+export async function networthAt(date: string): Promise<NetWorthAt | null> {
+	const { ok, data } = await getJson<NetWorthAt>(
+		`/api/networth/at?date=${encodeURIComponent(date)}`
+	);
+	return ok ? data : null;
 }

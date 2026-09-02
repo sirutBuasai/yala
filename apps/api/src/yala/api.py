@@ -301,25 +301,6 @@ def get_accounts() -> dict:
     }
 
 
-@app.get("/api/pending")
-def get_pending() -> dict:
-    txns = [t for t in _ledger().spending.transactions() if t.pending]
-
-    return {
-        "pending": [
-            {
-                "locator": t.locator,
-                "date": t.date.isoformat(),
-                "payee": t.payee,
-                "amount": float(t.amount),
-                "category": t.category,
-                "funding_account": t.source,
-            }
-            for t in txns
-        ]
-    }
-
-
 # --- transactions ---
 
 
@@ -861,6 +842,21 @@ def post_balance(body: BalanceIn) -> dict:
         _reconcile_sweeps(date)
 
     return _ok(f"logged balance for {account}", account=account)
+
+
+@app.get("/api/networth/at")
+def get_networth_at(date: str) -> dict:
+    """Per-account USD values and adjustment-plug balances as of ``date`` — powers the balance
+    pane's month-aware view, so selecting a past month shows (and lets you edit) that month's
+    recorded balance and adjustment rather than only the current ones."""
+    as_of = _parse_date(date)
+    nw = _ledger().net_worth
+    return {
+        "accounts": [{"account": a.account, "value": float(a.value)} for a in nw.accounts(as_of)],
+        "adjustments": [
+            {"account": a.account, "value": float(a.value)} for a in nw.adjustments(as_of)
+        ],
+    }
 
 
 # --- static frontend + entrypoint ---

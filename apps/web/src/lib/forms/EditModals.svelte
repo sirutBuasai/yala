@@ -69,8 +69,20 @@
 		/** Add-mode date preset (e.g. the calendar day clicked). */
 		presetDate?: string;
 		addTitle?: string;
+		/** Entry kinds this page may add, in switcher order. Defaults to all four; a page passes a
+		    subset (e.g. the calendar omits `balance`). A single kind hides the switcher. */
+		kinds?: EntryKind[];
 	}
-	let { accounts, onsaved, presetDate, addTitle = 'New entry' }: Props = $props();
+	let {
+		accounts,
+		onsaved,
+		presetDate,
+		addTitle = 'New entry',
+		kinds = KINDS.map((k) => k.value)
+	}: Props = $props();
+
+	/** The switcher options, in the caller's requested order, restricted to known kinds. */
+	const allowedKinds = $derived(KINDS.filter((k) => kinds.includes(k.value)));
 
 	let showAdd = $state(false);
 	let addKind = $state<EntryKind>('transaction');
@@ -79,8 +91,9 @@
 	let editingPaycheck = $state<string | null>(null);
 	let editingTransfer = $state<string | null>(null);
 
-	export function add(kind: EntryKind = 'transaction') {
-		addKind = kind;
+	export function add(kind?: EntryKind) {
+		// Honour the requested kind when this page allows it; otherwise open the first allowed one.
+		addKind = kind && kinds.includes(kind) ? kind : (kinds[0] ?? 'transaction');
 		showAdd = true;
 	}
 	export function editTransaction(locator: string) {
@@ -111,25 +124,27 @@
 		onclose={() => (showAdd = false)}
 	>
 		{#snippet controls()}
-			<div class="switch" role="tablist" aria-label="Entry type">
-				{#each KINDS as k (k.value)}
-					<button
-						type="button"
-						role="tab"
-						aria-selected={addKind === k.value}
-						class:active={addKind === k.value}
-						style="--accent: {k.accent}"
-						onclick={() => (addKind = k.value)}
-					>
-						{#if k.icon === 'swap'}
-							<Swap size={14} />
-						{:else}
-							<Arrow dir={k.icon} size={14} />
-						{/if}
-						{k.label}
-					</button>
-				{/each}
-			</div>
+			{#if allowedKinds.length > 1}
+				<div class="switch" role="tablist" aria-label="Entry type">
+					{#each allowedKinds as k (k.value)}
+						<button
+							type="button"
+							role="tab"
+							aria-selected={addKind === k.value}
+							class:active={addKind === k.value}
+							style="--accent: {k.accent}"
+							onclick={() => (addKind = k.value)}
+						>
+							{#if k.icon === 'swap'}
+								<Swap size={14} />
+							{:else}
+								<Arrow dir={k.icon} size={14} />
+							{/if}
+							{k.label}
+						</button>
+					{/each}
+				</div>
+			{/if}
 		{/snippet}
 		{#if addKind === 'transaction'}
 			<TransactionForm {accounts} {presetDate} onsaved={afterSave} />

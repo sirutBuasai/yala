@@ -161,7 +161,7 @@
 				disabled={busy}
 				onkeydown={(e) => e.key === 'Enter' && add()}
 			/>
-			<button type="button" class="btn" onclick={add} disabled={busy}>Add</button>
+			<button type="button" class="btn-accent" onclick={add} disabled={busy}>Add</button>
 		</div>
 		{#if err}<span class="err" role="alert">{err}</span>{/if}
 		{#if note}<span class="note" role="status">{note}</span>{/if}
@@ -199,7 +199,7 @@
 				disabled={bankBusy}
 				onkeydown={(e) => e.key === 'Enter' && addBank()}
 			/>
-			<button type="button" class="btn" onclick={addBank} disabled={bankBusy}>Add</button>
+			<button type="button" class="btn-accent" onclick={addBank} disabled={bankBusy}>Add</button>
 		</div>
 		<p class="hint">Opens <code>Assets:Cash:&lt;name&gt;</code>.</p>
 		{#if bankErr}<span class="err" role="alert">{bankErr}</span>{/if}
@@ -245,7 +245,7 @@
 				disabled={invBusy}
 				onkeydown={(e) => e.key === 'Enter' && addInvest()}
 			/>
-			<button type="button" class="btn" onclick={addInvest} disabled={invBusy}>Add</button>
+			<button type="button" class="btn-accent" onclick={addInvest} disabled={invBusy}>Add</button>
 		</div>
 		<label class="chk"
 			><input type="checkbox" bind:checked={invShares} /> Holds tickers (shares)</label
@@ -341,20 +341,6 @@
 		padding: var(--pad-control);
 		font-size: var(--text-control);
 		font-family: inherit;
-	}
-	.btn {
-		border: 1px solid var(--border);
-		background: color-mix(in srgb, var(--lav) 20%, transparent);
-		color: var(--ink);
-		border-radius: var(--radius-md);
-		padding: var(--pad-control);
-		font-size: var(--text-control);
-		font-weight: var(--fw-medium);
-		cursor: pointer;
-	}
-	.btn:disabled {
-		opacity: 0.6;
-		cursor: default;
 	}
 	.err,
 	.note {

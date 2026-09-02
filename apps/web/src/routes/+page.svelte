@@ -10,27 +10,27 @@
 		enableEditMode,
 		refreshEditData
 	} from '$lib/data/load';
+	import HomeView from '$lib/tabs/Home.svelte';
 	import OverviewView from '$lib/tabs/Overview.svelte';
 	import NetWorthView from '$lib/tabs/NetWorth.svelte';
 	import YearlyView from '$lib/tabs/Yearly.svelte';
 	import MonthlyView from '$lib/tabs/Monthly.svelte';
-	import CalendarView from '$lib/tabs/Calendar.svelte';
 	import ManageView from '$lib/tabs/Manage.svelte';
 	import ThemeToggle from '$lib/forms/ThemeToggle.svelte';
 	import EditToggle from '$lib/forms/EditToggle.svelte';
 	import Tooltip from '$lib/overlay/Tooltip.svelte';
 	import NavMenu from '$lib/nav/NavMenu.svelte';
 
-	type Tab = 'overview' | 'networth' | 'yearly' | 'monthly' | 'calendar' | 'manage';
+	type Tab = 'home' | 'overview' | 'networth' | 'yearly' | 'monthly' | 'manage';
 	const TABS: { id: Tab; label: string }[] = [
+		{ id: 'home', label: 'Home' },
 		{ id: 'overview', label: 'Overview' },
 		{ id: 'networth', label: 'Net Worth' },
 		{ id: 'yearly', label: 'Yearly' },
 		{ id: 'monthly', label: 'Monthly' },
-		{ id: 'calendar', label: 'Calendar' },
 		{ id: 'manage', label: 'Manage' }
 	];
-	let tab = $state<Tab>('overview');
+	let tab = $state<Tab>('home');
 	let year = $state<number>(0); // 0 = unset; the default-scope effect fills it once data loads
 	let monthKey = $state<string>('');
 	let hint = $state('');
@@ -49,7 +49,7 @@
 			const raw = localStorage.getItem(VIEW_KEY);
 			if (raw) {
 				const s = JSON.parse(raw);
-				if (['overview', 'networth', 'yearly', 'monthly', 'calendar', 'manage'].includes(s.tab))
+				if (['home', 'overview', 'networth', 'yearly', 'monthly', 'manage'].includes(s.tab))
 					tab = s.tab;
 				if (typeof s.year === 'number') year = s.year;
 				if (typeof s.monthKey === 'string') monthKey = s.monthKey;
@@ -193,7 +193,9 @@
 
 	{#if $data && $loadState.status === 'ready'}
 		<div id="view-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} tabindex="0">
-			{#if tab === 'overview'}
+			{#if tab === 'home'}
+				<HomeView data={$data} accounts={$accounts} {edit} {onsaved} />
+			{:else if tab === 'overview'}
 				<OverviewView data={$data} />
 			{:else if tab === 'networth'}
 				<NetWorthView data={$data} accounts={$accounts} {edit} {onsaved} />
@@ -201,8 +203,6 @@
 				<YearlyView data={$data} bind:year />
 			{:else if tab === 'monthly'}
 				<MonthlyView data={$data} bind:monthKey {edit} accounts={$accounts} {onsaved} />
-			{:else if tab === 'calendar'}
-				<CalendarView data={$data} {edit} accounts={$accounts} {onsaved} />
 			{:else}
 				<ManageView data={$data} accounts={$accounts} {edit} {onsaved} />
 			{/if}
