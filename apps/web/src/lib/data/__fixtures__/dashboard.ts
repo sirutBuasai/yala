@@ -182,6 +182,12 @@ export function makeNetWorthData(): DashboardData {
 		],
 		adjustments: []
 	};
-	data.settings = { swr: 4, real_return: 5, retire_age: 60, birth_year: null };
+	data.settings = {
+		swr: 4,
+		real_return: 5,
+		retire_age: 60,
+		runway_target: 6,
+		birth_year: null
+	};
 	return data;
 }

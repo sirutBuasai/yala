@@ -21,14 +21,27 @@
 		log?: boolean;
 		/** Label lines at their right edge instead of drawing a legend. */
 		endLabels?: boolean;
+		/** Series names to draw dotted — a secondary reading against a primary one. */
+		dashed?: string[];
 		/** Heatmap scaling: per row (default) or one scale for the whole grid. */
 		normalize?: 'row' | 'global';
 	}
-	let { primitive, chart, layers, area, legend, color, total, log, endLabels, normalize }: Props =
-		$props();
+	let {
+		primitive,
+		chart,
+		layers,
+		area,
+		legend,
+		color,
+		total,
+		log,
+		endLabels,
+		dashed,
+		normalize
+	}: Props = $props();
 
 	const def = $derived(chart ? CHARTS_BY_ID[chart] : defaultChart(primitive.kind));
-	const opts = $derived({ layers, area, legend, color, total, log, endLabels, normalize });
+	const opts = $derived({ layers, area, legend, color, total, log, endLabels, dashed, normalize });
 	const chartProps = $derived(def ? def.adapt(primitive, opts) : null);
 </script>
 

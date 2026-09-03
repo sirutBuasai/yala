@@ -37,11 +37,10 @@
 		{
 			id: 'networth.allocation_share',
 			scope: yr,
-			chart: 'line',
+			chart: 'stacked-area',
 			title: 'Allocation mix',
 			cap: 'Share of assets · liquid · taxable · tax-advantaged',
-			span: 3,
-			endLabels: true
+			span: 3
 		}
 	]);
 

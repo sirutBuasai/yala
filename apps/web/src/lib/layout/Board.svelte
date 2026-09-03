@@ -27,6 +27,8 @@
 		log?: boolean;
 		/** Label lines at their right edge instead of drawing a legend. */
 		endLabels?: boolean;
+		/** Series names to draw dotted — a secondary reading against a primary one. */
+		dashed?: string[];
 		/** Heatmap scaling: per row (default) or one scale for the whole grid. */
 		normalize?: 'row' | 'global';
 	}
@@ -56,6 +58,7 @@
 					total={c.total}
 					log={c.log}
 					endLabels={c.endLabels}
+					dashed={c.dashed}
 					normalize={c.normalize}
 				/>
 			</Pane>

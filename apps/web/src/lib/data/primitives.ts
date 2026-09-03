@@ -50,7 +50,7 @@ export function formatUnit(value: number, unit: Unit): string {
 // --- primitive kinds ---
 
 export type PrimitiveKind =
-	'scalar' | 'categorical' | 'series' | 'multiseries' | 'flow' | 'matrix' | 'table';
+	'scalar' | 'categorical' | 'series' | 'multiseries' | 'flow' | 'matrix' | 'table' | 'bullet';
 
 /** Ordered axis a series is plotted against. */
 export type Axis = 'time' | 'ordinal';
@@ -154,13 +154,40 @@ export interface Table {
 	rows: (string | number)[][];
 }
 
-export type Primitive = Scalar | Categorical | Series | MultiSeries | Flow | Matrix | Table;
+/**
+ * One measured value against the threshold it's being judged by.
+ *
+ * Each row carries its own unit and is scaled independently, because the rows in one bullet set
+ * usually answer the same *question* ("how close am I?") in different measures — months of runway
+ * beside a percentage of a target. Bands are optional qualitative cut-points along the row's own
+ * scale (ascending), for shading "lean / adequate / comfortable" behind the bar.
+ */
+export interface BulletRow {
+	label: string;
+	unit: Unit;
+	value: number | null;
+	/** The threshold to compare against; drawn as a marker, and reached at 100%. */
+	target: number;
+	/** Ascending cut-points along the scale, shaded from weakest to strongest. */
+	bands?: number[];
+	/** Free-text footnote (already localized). */
+	note?: string;
+}
+
+/** Several value-against-threshold rows — powers bullet graphs. */
+export interface Bullet {
+	kind: 'bullet';
+	rows: BulletRow[];
+}
+
+export type Primitive =
+	Scalar | Categorical | Series | MultiSeries | Flow | Matrix | Table | Bullet;
 
 // --- introspection helpers ---
 
-/** The unit of any primitive, or null for the unitless Table. */
+/** The unit of any primitive, or null when its parts carry their own (Table, Bullet). */
 export function unitOf(p: Primitive): Unit | null {
-	return p.kind === 'table' ? null : p.unit;
+	return p.kind === 'table' || p.kind === 'bullet' ? null : p.unit;
 }
 
 export function isSeriesLike(p: Primitive): p is Series | MultiSeries {

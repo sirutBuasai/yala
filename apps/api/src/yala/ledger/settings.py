@@ -38,7 +38,7 @@ class SettingSpec:
 
     key: str
     label: str  # how the field is named in an error message and in the UI
-    kind: str  # "percent" | "age" | "year" — drives both coercion and how the UI renders it
+    kind: str  # "percent" | "age" | "year" | "months" — drives coercion and how the UI renders it
     minimum: Decimal
     maximum: Decimal
     default: Decimal | None  # None = no sensible default; dependent features stay hidden
@@ -46,8 +46,8 @@ class SettingSpec:
 
     @property
     def is_integer(self) -> bool:
-        """Ages and years are whole numbers; rates carry decimals."""
-        return self.kind in ("age", "year")
+        """Ages, years, and month counts are whole numbers; rates carry decimals."""
+        return self.kind in ("age", "year", "months")
 
 
 SETTINGS: tuple[SettingSpec, ...] = (
@@ -83,6 +83,18 @@ SETTINGS: tuple[SettingSpec, ...] = (
         maximum=Decimal(100),
         default=Decimal(60),
         help="The age the projection aims at.",
+    ),
+    SettingSpec(
+        key="runway-target",
+        label="Target cash runway",
+        kind="months",
+        minimum=Decimal(1),
+        maximum=Decimal(120),
+        default=Decimal(6),
+        help=(
+            "Months of spending you want held in cash. Marks the threshold on the runway gauge; "
+            "three to six months is the usual advice."
+        ),
     ),
     SettingSpec(
         key="birth-year",

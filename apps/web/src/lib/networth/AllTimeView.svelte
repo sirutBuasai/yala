@@ -23,28 +23,31 @@
 		{ id: 'networth.top_account', scope: all }
 	]);
 
-	// Distance to the thresholds that matter, every one sized from your own spending. The FI number
-	// itself isn't a tile — it's the denominator, and it already reads in FI progress's note.
-	const targets = $derived([
-		{ id: 'networth.fi_progress', scope: all },
-		{ id: 'networth.years_of_freedom', scope: all },
-		{ id: 'networth.runway', scope: all },
-		{ id: 'networth.coast_fi', scope: all }
-	]);
-
-	// One net-worth line, not net worth beside assets: with liabilities at a fraction of a percent
-	// the two trace the same path, so the second line restates the first. Liabilities get their own
-	// pane where their own scale makes them legible.
+	// Net worth against assets: the gap between the lines is what you owe. Assets dashed so net
+	// worth stays the primary reading. Beside it, the same page's targets as gauges — the bullets
+	// carry value, target and bands, so the numbers don't also need tiles of their own.
 	const trend = $derived([
 		{
-			id: 'networth.by_month',
+			id: 'networth.vs_assets',
 			scope: all,
 			chart: 'line',
 			area: true,
-			title: 'Net worth over time',
-			cap: 'Every logged snapshot',
+			dashed: ['Assets'],
+			title: 'Net worth & assets over time',
+			cap: 'Every logged snapshot — the gap between them is what you owe',
 			span: 4
 		},
+		{
+			id: 'networth.thresholds',
+			scope: all,
+			chart: 'bullet',
+			title: 'Progress to thresholds',
+			cap: 'Value, its target, and the bands either side',
+			span: 2
+		}
+	]);
+
+	const forces = $derived([
 		{
 			id: 'networth.liabilities_trend',
 			scope: all,
@@ -53,30 +56,28 @@
 			title: 'Liabilities',
 			cap: 'What you owe, on a scale you can read',
 			span: 2
-		}
-	]);
-
-	const forces = $derived([
+		},
 		{
 			id: 'networth.saved_vs_other',
 			scope: all,
 			chart: 'bar',
 			title: 'You vs the market, by year',
 			cap: 'What you saved against everything else that moved the balance',
-			span: 3
-		},
-		{
-			id: 'networth.allocation_share',
-			scope: all,
-			chart: 'line',
-			title: 'Allocation mix over time',
-			cap: 'Share of assets — the level is already in the trend above',
-			span: 3,
-			endLabels: true
+			span: 4
 		}
 	]);
 
-	const where = $derived([
+	// Stacked rather than overlaid: the question is the mix, and a band's thickness answers it
+	// directly where three crossing lines make you compare heights by eye.
+	const mix = $derived([
+		{
+			id: 'networth.allocation_share',
+			scope: all,
+			chart: 'stacked-area',
+			title: 'Allocation mix over time',
+			cap: 'Share of assets — the level is already in the trend above',
+			span: 3
+		},
 		{
 			id: 'networth.accounts',
 			scope: all,
@@ -84,27 +85,28 @@
 			title: 'Where the money sits',
 			cap: 'Every asset account, largest first — concentration at a glance',
 			span: 3
-		},
+		}
+	]);
+
+	const detail = $derived([
 		{
 			id: 'networth.year_table',
 			scope: all,
 			chart: 'table',
 			title: 'Year by year',
 			cap: 'The audit trail behind every chart above',
-			span: 3
+			span: 6
 		}
 	]);
 </script>
 
-<div class="panes two">
+<div class="panes">
 	<Pane title="Where this has got you" cap="Position and pace across every logged snapshot">
 		<StatStrip {data} cells={standing} />
-	</Pane>
-	<Pane title="How far to go" cap="Each figure sized from your own spending, at your stated rate">
-		<StatStrip {data} cells={targets} />
 	</Pane>
 </div>
 
 <Board {data} cells={trend} />
 <Board {data} cells={forces} />
-<Board {data} cells={where} />
+<Board {data} cells={mix} />
+<Board {data} cells={detail} />

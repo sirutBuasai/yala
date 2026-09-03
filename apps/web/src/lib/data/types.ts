@@ -84,6 +84,7 @@ export type Adjustments = NetWorthAdjustment[];
 export type Swr = number;
 export type RealReturn = number;
 export type RetireAge = number;
+export type RunwayTarget = number;
 export type BirthYear = number | null;
 
 export interface DashboardData {
@@ -324,5 +325,6 @@ export interface SettingsSection {
 	swr: Swr;
 	real_return: RealReturn;
 	retire_age: RetireAge;
+	runway_target: RunwayTarget;
 	birth_year?: BirthYear;
 }

@@ -166,6 +166,7 @@ class SettingsSection(_Base):
     swr: float  # withdrawal rate, percent
     real_return: float  # expected return above inflation, percent
     retire_age: float  # target retirement age
+    runway_target: float  # months of spending to hold in cash
     birth_year: float | None = None  # unset → age-based projections hidden
 
 

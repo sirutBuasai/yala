@@ -7,6 +7,7 @@
 
 import type { Component } from 'svelte';
 import type {
+	Bullet,
 	Categorical,
 	Flow,
 	Matrix,
@@ -26,6 +27,8 @@ import LineChart from '$lib/charts/LineChart.svelte';
 import BarChart from '$lib/charts/BarChart.svelte';
 import Sankey from '$lib/charts/Sankey.svelte';
 import DivergingBars from '$lib/charts/DivergingBars.svelte';
+import StackedArea from '$lib/charts/StackedArea.svelte';
+import BulletChart from '$lib/charts/BulletChart.svelte';
 import Heatmap from './Heatmap.svelte';
 import DataTable from './Table.svelte';
 import StatTile from './StatTile.svelte';
@@ -48,6 +51,8 @@ interface AdaptOpts {
 	endLabels?: boolean;
 	/** Heatmap scaling: per row (default) or one scale for the whole grid. */
 	normalize?: 'row' | 'global';
+	/** Series names to draw as a dotted line — a secondary reading against a primary one. */
+	dashed?: string[];
 }
 
 export interface ChartDef<P extends Record<string, unknown> = Record<string, unknown>> {
@@ -144,8 +149,10 @@ function toChartSeries(list: Series[], opts: AdaptOpts) {
 		name: s.name,
 		values: s.points.map((pt) => pt.value),
 		color: seriesColor(s.name, i),
-		area: opts.area && list.length === 1 ? true : undefined,
-		dashed: undefined as boolean | undefined
+		// The area belongs to the primary reading, so it fills the first series whether or not
+		// others are plotted alongside it.
+		area: opts.area && i === 0 ? true : undefined,
+		dashed: opts.dashed?.includes(s.name) || undefined
 	}));
 }
 
@@ -236,6 +243,36 @@ export const CHARTS: ChartDef[] = [
 		adapt(p) {
 			const c = p as Categorical;
 			return { items: c.points.map((pt) => ({ label: pt.key, value: pt.value })) };
+		}
+	}),
+	def({
+		id: 'stacked-area',
+		label: 'Stacked area',
+		accepts: ['multiseries'],
+		layerable: false,
+		component: StackedArea,
+		adapt(p, opts = {}) {
+			const m = p as MultiSeries;
+			return {
+				labels: m.labels,
+				series: m.series.map((s, i) => ({
+					name: s.name,
+					values: s.points.map((pt) => pt.value ?? 0),
+					color: seriesColor(s.name, i)
+				})),
+				unit: m.unit,
+				legend: opts.legend
+			};
+		}
+	}),
+	def({
+		id: 'bullet',
+		label: 'Bullet',
+		accepts: ['bullet'],
+		layerable: false,
+		component: BulletChart,
+		adapt(p) {
+			return { rows: (p as Bullet).rows };
 		}
 	}),
 	def({

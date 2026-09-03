@@ -516,6 +516,10 @@
           "title": "Retire Age",
           "type": "number"
         },
+        "runway_target": {
+          "title": "Runway Target",
+          "type": "number"
+        },
         "birth_year": {
           "anyOf": [
             {
@@ -532,7 +536,8 @@
       "required": [
         "swr",
         "real_return",
-        "retire_age"
+        "retire_age",
+        "runway_target"
       ],
       "title": "SettingsSection",
       "type": "object"

@@ -51,3 +51,30 @@ export function logYScale(
 
 	return { y, ticks: ticks.sort((a, b) => a - b) };
 }
+
+/**
+ * Which x-label indices to draw, given how much room there is.
+ *
+ * Thinning by count alone crams a narrow pane; thinning without protecting the final label loses
+ * the series' end date, which is the one readers look for. So: budget each label the width of the
+ * longest one, keep every nth, always keep the last — and drop the neighbour before it when the two
+ * would sit on top of each other, which is what made "2026-02-01" and "2026-08-26" overlap.
+ */
+export function labelIndices(count: number, innerWidth: number, labels: string[]): number[] {
+	if (count <= 1) return count === 1 ? [0] : [];
+
+	const room = Math.max(...labels.map((l) => l.length), 1) * 6.2 + 12;
+	const fits = Math.max(2, Math.min(12, Math.floor(innerWidth / room)));
+	const stride = Math.max(1, Math.ceil(count / fits));
+
+	const out: number[] = [];
+	for (let i = 0; i < count - 1; i += stride) out.push(i);
+
+	const last = count - 1;
+	const prev = out[out.length - 1];
+	// Half a stride is the crowding threshold: closer than that and the two labels touch.
+	if (prev !== undefined && last - prev < stride * 0.5) out.pop();
+	out.push(last);
+
+	return out;
+}

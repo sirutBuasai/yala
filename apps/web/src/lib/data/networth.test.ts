@@ -232,3 +232,64 @@ describe('duration formatting', () => {
 		expect(formatUnit(1, MONTHS)).not.toBe(formatUnit(1, YEARS));
 	});
 });
+
+// --- the chart treatments the page relies on ---
+
+describe('thresholds bullet', () => {
+	it('measures runway against the target from settings, not a constant', () => {
+		const data = makeNetWorthData();
+		data.settings!.runway_target = 9;
+		const p = build(data, 'networth.thresholds', { level: 'all' });
+		if (p.kind !== 'bullet') throw new Error('expected bullet');
+
+		const runway = p.rows.find((r) => r.label === 'Cash runway')!;
+		expect(runway.target).toBe(9);
+		// bands track the target, so changing it moves the shading with it
+		expect(runway.bands).toEqual([4.5, 9]);
+	});
+
+	it('reuses the same figures as the tiles, so a gauge cannot disagree with them', () => {
+		const data = makeNetWorthData();
+		const p = build(data, 'networth.thresholds', { level: 'all' });
+		if (p.kind !== 'bullet') throw new Error('expected bullet');
+
+		const runway = p.rows.find((r) => r.label === 'Cash runway')!;
+		const tile = build(data, 'networth.runway', { level: 'all' }) as Scalar;
+		expect(runway.value).toBe(tile.value);
+		expect(runway.unit).toEqual(MONTHS);
+	});
+
+	it('drops a row it cannot compute rather than drawing it empty', () => {
+		// Coast FI needs a birth year; the fixture leaves it unset.
+		const withoutBirthYear = build(makeNetWorthData(), 'networth.thresholds', { level: 'all' });
+		if (withoutBirthYear.kind !== 'bullet') throw new Error('expected bullet');
+		expect(withoutBirthYear.rows.map((r) => r.label)).toEqual(['Cash runway', 'FI number']);
+
+		const data = makeNetWorthData();
+		data.settings!.birth_year = 1990;
+		const withIt = build(data, 'networth.thresholds', { level: 'all' });
+		if (withIt.kind !== 'bullet') throw new Error('expected bullet');
+		expect(withIt.rows.map((r) => r.label)).toContain('Coast FI');
+	});
+
+	it('measures percentage rows against a full 100', () => {
+		const p = build(makeNetWorthData(), 'networth.thresholds', { level: 'all' });
+		if (p.kind !== 'bullet') throw new Error('expected bullet');
+
+		const fi = p.rows.find((r) => r.label === 'FI number')!;
+		expect(fi.unit).toEqual(PERCENT);
+		expect(fi.target).toBe(100);
+	});
+});
+
+describe('net worth against assets', () => {
+	it('plots both readings so the gap reads as what is owed', () => {
+		const p = build(makeNetWorthData(), 'networth.vs_assets', { level: 'all' });
+		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
+
+		expect(p.series.map((s) => s.name)).toEqual(['Net worth', 'Assets']);
+		// the fixture's last snapshot owes 500, so assets sit exactly that far above net worth
+		const [nw, assets] = p.series;
+		expect(assets!.points[2]!.value! - nw!.points[2]!.value!).toBe(500);
+	});
+});

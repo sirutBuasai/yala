@@ -3,7 +3,15 @@
 // colour is assigned by the chart registry.
 
 import type { DashboardData, NetWorthSnapshot } from '$lib/data/types';
-import type { Categorical, MultiSeries, Scalar, Series, Table } from './primitives';
+import type {
+	Bullet,
+	BulletRow,
+	Categorical,
+	MultiSeries,
+	Scalar,
+	Series,
+	Table
+} from './primitives';
 import { MONEY, MONTHS, PERCENT, YEARS } from './primitives';
 import { categorical } from './categorical';
 import { series } from './series';
@@ -58,6 +66,38 @@ export function netWorthByMonth(data: DashboardData, year?: number): Series {
 		points.map((p) => p.net_worth),
 		MONEY(data.currency)
 	);
+}
+
+/**
+ * Net worth and assets over time. Two readings of the same axis whose *gap* is the point: it is
+ * what you owe, so the lines converging says the debt is small and diverging says it isn't. The
+ * page draws assets dashed to keep net worth the primary line.
+ */
+export function netWorthVsAssets(data: DashboardData): MultiSeries {
+	const unit = MONEY(data.currency);
+	const points = snapshots(data);
+	const labels = points.map((p) => p.date);
+
+	return {
+		kind: 'multiseries',
+		unit,
+		axis: 'time',
+		labels,
+		series: [
+			series(
+				'Net worth',
+				labels,
+				points.map((p) => p.net_worth),
+				unit
+			),
+			series(
+				'Assets',
+				labels,
+				points.map((p) => p.assets),
+				unit
+			)
+		]
+	};
 }
 
 /** Liabilities over time on their own — illegible as a third line against a net-worth axis. */
@@ -451,4 +491,50 @@ export function topAccountShare(data: DashboardData): Scalar {
 		value: top && total ? (top.value / total) * 100 : null,
 		note: top ? `${top.label} of ${money(total)} assets` : undefined
 	};
+}
+
+/**
+ * The thresholds this page measures you against, as one bullet set: cash runway, the FI number, and
+ * Coast FI. Each row reuses the scalar that already computes it, so a gauge can't disagree with the
+ * tile beside it. Rows whose value can't be computed (Coast FI without a birth year) are dropped
+ * rather than drawn empty.
+ *
+ * Targets come from the ledger's own settings, never from a constant here.
+ */
+export function netWorthThresholds(data: DashboardData): Bullet {
+	const runway = liquidRunway(data);
+	const fi = fiProgress(data);
+	const coast = coastFi(data);
+	const target = data.settings?.runway_target ?? 6;
+
+	const rows: BulletRow[] = [
+		{
+			label: 'Cash runway',
+			unit: MONTHS,
+			value: runway.value,
+			target,
+			// Half the target reads as lean, the target itself as adequate — the shading is relative
+			// to what you asked for, so changing the setting moves the bands with it.
+			bands: [target / 2, target],
+			note: runway.note
+		},
+		{
+			label: 'FI number',
+			unit: PERCENT,
+			value: fi.value,
+			target: 100,
+			bands: [25, 50, 100],
+			note: fi.note
+		},
+		{
+			label: 'Coast FI',
+			unit: PERCENT,
+			value: coast.value,
+			target: 100,
+			bands: [50, 100],
+			note: coast.note
+		}
+	];
+
+	return { kind: 'bullet', rows: rows.filter((r) => r.value !== null) };
 }

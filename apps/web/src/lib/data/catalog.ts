@@ -35,6 +35,8 @@ import {
 	netWorthOther,
 	netWorthSaved,
 	netWorthScalar,
+	netWorthThresholds,
+	netWorthVsAssets,
 	netWorthYearTable,
 	savedVsOther,
 	topAccountShare,
@@ -225,6 +227,20 @@ const CHART_DEFS: DataDef[] = [
 		kind: 'table',
 		scopes: ['year'],
 		build: (data, scope) => netWorthMonthlyTable(data, scopeYear(data, scope))
+	},
+	{
+		id: 'networth.vs_assets',
+		label: 'Net worth & assets over time',
+		kind: 'multiseries',
+		scopes: ['all'],
+		build: (data) => netWorthVsAssets(data)
+	},
+	{
+		id: 'networth.thresholds',
+		label: 'Progress to thresholds',
+		kind: 'bullet',
+		scopes: ['all'],
+		build: (data) => netWorthThresholds(data)
 	},
 	{
 		id: 'networth.liabilities_trend',

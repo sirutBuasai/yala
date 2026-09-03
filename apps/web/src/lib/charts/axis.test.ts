@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { moneyYScale } from './axis';
+import { labelIndices, moneyYScale } from './axis';
 
 describe('moneyYScale', () => {
 	it('anchors the domain at zero for all-positive values', () => {
@@ -33,5 +33,38 @@ describe('moneyYScale', () => {
 		const { y, ticks } = moneyYScale([], 300);
 		expect(Number.isFinite(y(0))).toBe(true);
 		expect(ticks).toContain(0);
+	});
+});
+
+describe('labelIndices', () => {
+	const dates = (n: number) =>
+		Array.from({ length: n }, (_, i) => `2026-${String((i % 12) + 1).padStart(2, '0')}-01`);
+
+	it('shows every label when they all fit', () => {
+		expect(labelIndices(4, 900, dates(4))).toEqual([0, 1, 2, 3]);
+	});
+
+	it('thins to what the width allows, not to a fixed count', () => {
+		const wide = labelIndices(24, 900, dates(24));
+		const narrow = labelIndices(24, 260, dates(24));
+		expect(narrow.length).toBeLessThan(wide.length);
+	});
+
+	it('always keeps the last label — it is the one readers look for', () => {
+		for (const n of [7, 9, 13, 24, 38]) {
+			expect(labelIndices(n, 400, dates(n)).at(-1)).toBe(n - 1);
+		}
+	});
+
+	it('drops the neighbour that would collide with the last label', () => {
+		// 9 points in a narrow box: a plain stride would place one right beside the final label.
+		const shown = labelIndices(9, 300, dates(9));
+		const [secondLast, last] = shown.slice(-2);
+		expect(last! - secondLast!).toBeGreaterThan(1);
+	});
+
+	it('handles degenerate series', () => {
+		expect(labelIndices(0, 500, [])).toEqual([]);
+		expect(labelIndices(1, 500, ['2026-01-01'])).toEqual([0]);
 	});
 });
