@@ -11,23 +11,20 @@
 		refreshEditData
 	} from '$lib/data/load';
 	import HomeView from '$lib/tabs/Home.svelte';
-	import OverviewView from '$lib/tabs/Overview.svelte';
+	import ActivityView from '$lib/tabs/Activity.svelte';
 	import NetWorthView from '$lib/tabs/NetWorth.svelte';
-	import YearlyView from '$lib/tabs/Yearly.svelte';
-	import MonthlyView from '$lib/tabs/Monthly.svelte';
 	import ManageView from '$lib/tabs/Manage.svelte';
 	import ThemeToggle from '$lib/forms/ThemeToggle.svelte';
 	import EditToggle from '$lib/forms/EditToggle.svelte';
 	import Tooltip from '$lib/overlay/Tooltip.svelte';
 	import NavMenu from '$lib/nav/NavMenu.svelte';
+	import { tablistKeydown } from '$lib/utils/tablist';
 
-	type Tab = 'home' | 'overview' | 'networth' | 'yearly' | 'monthly' | 'manage';
+	type Tab = 'home' | 'activity' | 'networth' | 'manage';
 	const TABS: { id: Tab; label: string }[] = [
 		{ id: 'home', label: 'Home' },
-		{ id: 'overview', label: 'Overview' },
+		{ id: 'activity', label: 'Activity' },
 		{ id: 'networth', label: 'Net Worth' },
-		{ id: 'yearly', label: 'Yearly' },
-		{ id: 'monthly', label: 'Monthly' },
 		{ id: 'manage', label: 'Manage' }
 	];
 	let tab = $state<Tab>('home');
@@ -49,8 +46,7 @@
 			const raw = localStorage.getItem(VIEW_KEY);
 			if (raw) {
 				const s = JSON.parse(raw);
-				if (['home', 'overview', 'networth', 'yearly', 'monthly', 'manage'].includes(s.tab))
-					tab = s.tab;
+				if (['home', 'activity', 'networth', 'manage'].includes(s.tab)) tab = s.tab;
 				if (typeof s.year === 'number') year = s.year;
 				if (typeof s.monthKey === 'string') monthKey = s.monthKey;
 			}
@@ -113,24 +109,14 @@
 		void refreshEditData();
 	}
 
-	// Tablist keyboard model (ARIA APG): arrows move selection + focus, Home/End jump to ends.
+	// Tablist keyboard model (ARIA APG) — shared with the segmented range switches.
 	function onTabKeydown(e: KeyboardEvent) {
-		const i = TABS.findIndex((t) => t.id === tab);
-		let next = i;
-		if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % TABS.length;
-		else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp')
-			next = (i - 1 + TABS.length) % TABS.length;
-		else if (e.key === 'Home') next = 0;
-		else if (e.key === 'End') next = TABS.length - 1;
-		else return;
-		const chosen = TABS[next];
-		if (!chosen) return;
-		e.preventDefault();
-		tab = chosen.id;
-		const tabs = (e.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>(
-			'[role="tab"]'
+		tablistKeydown(
+			e,
+			TABS.length,
+			TABS.findIndex((t) => t.id === tab),
+			(i) => (tab = TABS[i]!.id)
 		);
-		tabs[next]?.focus();
 	}
 </script>
 
@@ -195,14 +181,10 @@
 		<div id="view-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} tabindex="0">
 			{#if tab === 'home'}
 				<HomeView data={$data} accounts={$accounts} {edit} {onsaved} />
-			{:else if tab === 'overview'}
-				<OverviewView data={$data} />
+			{:else if tab === 'activity'}
+				<ActivityView data={$data} bind:monthKey bind:year {edit} accounts={$accounts} {onsaved} />
 			{:else if tab === 'networth'}
 				<NetWorthView data={$data} accounts={$accounts} {edit} {onsaved} />
-			{:else if tab === 'yearly'}
-				<YearlyView data={$data} bind:year />
-			{:else if tab === 'monthly'}
-				<MonthlyView data={$data} bind:monthKey {edit} accounts={$accounts} {onsaved} />
 			{:else}
 				<ManageView data={$data} accounts={$accounts} {edit} {onsaved} />
 			{/if}

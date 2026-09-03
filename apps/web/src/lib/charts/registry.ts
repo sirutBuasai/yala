@@ -18,13 +18,14 @@ import type {
 	Table
 } from '$lib/data/primitives';
 import { compatible } from '$lib/data/primitives';
-import { categoryVar } from '$lib/utils/theme';
+import { CATEGORY_TOKEN, categoryVar } from '$lib/utils/theme';
 
 import Donut from '$lib/charts/Donut.svelte';
 import HBarChart from '$lib/charts/HBarChart.svelte';
 import LineChart from '$lib/charts/LineChart.svelte';
 import BarChart from '$lib/charts/BarChart.svelte';
 import Sankey from '$lib/charts/Sankey.svelte';
+import DivergingBars from '$lib/charts/DivergingBars.svelte';
 import Heatmap from './Heatmap.svelte';
 import DataTable from './Table.svelte';
 import StatTile from './StatTile.svelte';
@@ -41,6 +42,12 @@ interface AdaptOpts {
 	color?: string;
 	/** Total for ranked-bar percentage tooltips. */
 	total?: number;
+	/** Log-scale a line chart's value axis (series spanning orders of magnitude). */
+	log?: boolean;
+	/** Label each line at its right edge instead of drawing a legend. */
+	endLabels?: boolean;
+	/** Heatmap scaling: per row (default) or one scale for the whole grid. */
+	normalize?: 'row' | 'global';
 }
 
 export interface ChartDef<P extends Record<string, unknown> = Record<string, unknown>> {
@@ -94,7 +101,13 @@ const PALETTE = [
 ];
 
 function seriesColor(name: string, index: number): string {
-	return SERIES_ACCENT[name] ?? PALETTE[index % PALETTE.length]!;
+	// A series named after a spending category takes that category's accent, so the same
+	// category reads the same colour across the donut, the ranked bars and the category lines.
+	return (
+		SERIES_ACCENT[name] ??
+		(CATEGORY_TOKEN[name] ? categoryVar(name) : null) ??
+		PALETTE[index % PALETTE.length]!
+	);
 }
 
 function categoryColor(key: string): string {
@@ -207,8 +220,22 @@ export const CHARTS: ChartDef[] = [
 				labels,
 				series: toChartSeries(list, opts),
 				percent,
-				legend: opts.legend ?? list.length > 1
+				log: opts.log,
+				endLabels: opts.endLabels,
+				// End labels replace the legend; showing both would say the same thing twice.
+				legend: opts.legend ?? (!opts.endLabels && list.length > 1)
 			};
+		}
+	}),
+	def({
+		id: 'diverging-bars',
+		label: 'Diverging bars',
+		accepts: ['categorical'],
+		layerable: false,
+		component: DivergingBars,
+		adapt(p) {
+			const c = p as Categorical;
+			return { items: c.points.map((pt) => ({ label: pt.key, value: pt.value })) };
 		}
 	}),
 	def({
@@ -234,9 +261,9 @@ export const CHARTS: ChartDef[] = [
 		accepts: ['matrix'],
 		layerable: false,
 		component: Heatmap,
-		adapt(p) {
+		adapt(p, opts = {}) {
 			const m = p as Matrix;
-			return { rows: m.rows, cols: m.cols, values: m.values };
+			return { rows: m.rows, cols: m.cols, values: m.values, normalize: opts.normalize };
 		}
 	}),
 	def({

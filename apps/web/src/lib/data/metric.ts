@@ -7,6 +7,7 @@
 import type { DashboardData, MonthPage, PaycheckOut, Txn } from '$lib/data/types';
 import type { Scalar } from './primitives';
 import { MONEY, PERCENT, COUNT } from './primitives';
+import { money } from '$lib/utils/format';
 import { sumValues } from '$lib/utils/num';
 import { addMonths } from '$lib/utils/period';
 import { type Scope, latestYear, scopeYear, scopeKey } from './scope';
@@ -423,6 +424,44 @@ export function extremum(
  * prior month (`at` = a "YYYY-MM" key). The delta is a percentage; it's omitted when the
  * prior period is 0 (no meaningful ratio).
  */
+/**
+ * How far a month sits from its own recent norm: the measure this month minus the average of the
+ * prior `window` months that have data. Answers "is this month normal?", which neither the raw
+ * total nor a month-over-month delta does — one noisy previous month makes MoM meaningless, while
+ * a trailing average is stable. `null` when there's no history to form a norm from.
+ *
+ * Direction is spending-shaped by default (over the norm reads as bad); pass `higherIsBetter` for
+ * measures like income where exceeding the norm is good.
+ */
+export function vsTypical(
+	data: DashboardData,
+	monthKey: string,
+	m: Measure,
+	opts: Opts & { window?: number; higherIsBetter?: boolean } = {}
+): Scalar {
+	const window = opts.window ?? 12;
+	const prior = data.meta.month_keys.filter((k) => k < monthKey && data.months[k]).slice(-window);
+	const label = opts.label ?? measureLabel(m);
+	if (!prior.length) {
+		return { kind: 'scalar', unit: MONEY(data.currency), label, value: null, note: opts.note };
+	}
+
+	const avg =
+		prior.reduce((a, k) => a + measureValue(data, { level: 'month', monthKey: k }, m), 0) /
+		prior.length;
+	const delta = measureValue(data, { level: 'month', monthKey }, m) - avg;
+	const better = opts.higherIsBetter ? delta >= 0 : delta <= 0;
+
+	return {
+		kind: 'scalar',
+		unit: MONEY(data.currency),
+		label,
+		value: delta,
+		dir: better ? 'up' : 'down',
+		note: opts.note ?? `vs your ${money(avg)} / mo average`
+	};
+}
+
 export function change(
 	data: DashboardData,
 	m: Measure,

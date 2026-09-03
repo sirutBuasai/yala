@@ -89,12 +89,14 @@ describe('income.paychecks table', () => {
 });
 
 describe('spending.category_by_month matrix', () => {
-	it('produces a 12-month × categories value grid', () => {
+	it('produces a categories × 12-month value grid', () => {
 		const p = build(makeData(), 'spending.category_by_month', { level: 'year', year: 2025 });
 		if (p.kind !== 'matrix') throw new Error('expected matrix');
-		expect(p.rows).toHaveLength(12); // months
-		expect(p.cols).toEqual(['Grocery', 'Takeouts']);
-		expect(p.values[0]).toEqual([30, 15.5]); // January: Grocery, Takeouts
+		expect(p.cols).toHaveLength(12); // months across
+		expect(p.rows).toEqual(['Grocery', 'Takeouts']); // biggest first
+		// values[categoryIndex][monthIndex] — January holds the fixture's only spend.
+		expect(p.values[0]![0]).toBe(30); // Grocery, January
+		expect(p.values[1]![0]).toBe(15.5); // Takeouts, January
 	});
 });
 

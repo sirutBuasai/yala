@@ -46,6 +46,21 @@
 		EntryKind,
 		(typeof KINDS)[number]
 	>;
+
+	/**
+	 * Which kinds one `add()` call should offer: the requested ones intersected with what the page
+	 * permits, falling back to the page's whole set when the request is absent or entirely
+	 * disallowed. Pure and exported so the rule is unit-testable without mounting the overlay.
+	 */
+	export function resolveKinds(
+		requested: EntryKind | EntryKind[] | undefined,
+		permitted: EntryKind[]
+	): EntryKind[] {
+		if (requested == null) return permitted;
+		const asked = Array.isArray(requested) ? requested : [requested];
+		const allowed = asked.filter((k) => permitted.includes(k));
+		return allowed.length ? allowed : permitted;
+	}
 </script>
 
 <script lang="ts">
@@ -81,19 +96,27 @@
 		kinds = KINDS.map((k) => k.value)
 	}: Props = $props();
 
-	/** The switcher options, in the caller's requested order, restricted to known kinds. */
-	const allowedKinds = $derived(KINDS.filter((k) => kinds.includes(k.value)));
-
 	let showAdd = $state(false);
 	let addKind = $state<EntryKind>('transaction');
+	// Kinds offered by the CURRENT add invocation. `null` falls back to the page's whole set, so a
+	// bare `add()` still behaves as before.
+	let openKinds = $state<EntryKind[] | null>(null);
+	/** Switcher options for this invocation, in the caller's order, restricted to known kinds. */
+	const allowedKinds = $derived(KINDS.filter((k) => (openKinds ?? kinds).includes(k.value)));
 	const addMeta = $derived(KIND[addKind]);
 	let editingTxn = $state<string | null>(null);
 	let editingPaycheck = $state<string | null>(null);
 	let editingTransfer = $state<string | null>(null);
 
-	export function add(kind?: EntryKind) {
-		// Honour the requested kind when this page allows it; otherwise open the first allowed one.
-		addKind = kind && kinds.includes(kind) ? kind : (kinds[0] ?? 'transaction');
+	/**
+	 * Open the add overlay. Pass one kind to go straight into that form (no switcher — the button
+	 * that opened it already said what it adds), or several to offer a choice between them. Omit
+	 * for the page's full set. Requests are intersected with the `kinds` prop, so a page can never
+	 * be talked into an entry type it doesn't allow.
+	 */
+	export function add(only?: EntryKind | EntryKind[]) {
+		openKinds = resolveKinds(only, kinds);
+		addKind = openKinds[0] ?? 'transaction';
 		showAdd = true;
 	}
 	export function editTransaction(locator: string) {
@@ -106,8 +129,14 @@
 		editingTransfer = locator;
 	}
 
-	function afterSave() {
+	function closeAdd() {
 		showAdd = false;
+		// Drop the per-invocation kind set so the next bare add() offers the page's full set again.
+		openKinds = null;
+	}
+
+	function afterSave() {
+		closeAdd();
 		editingTxn = null;
 		editingPaycheck = null;
 		editingTransfer = null;
@@ -121,7 +150,7 @@
 		kicker={addTitle}
 		accent={addMeta.accent}
 		accentText={addMeta.accentText}
-		onclose={() => (showAdd = false)}
+		onclose={closeAdd}
 	>
 		{#snippet controls()}
 			{#if allowedKinds.length > 1}

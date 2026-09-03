@@ -141,6 +141,36 @@ export function incomeSpentSaved(data: DashboardData, year?: number): MultiSerie
 	};
 }
 
+/**
+ * One series per spending category, plotted across the tracked years. Ordered by lifetime
+ * total (biggest first) so the right-edge labels and tooltip read by magnitude. Categories
+ * span orders of magnitude, so this is drawn on a log axis — see `logYScale`.
+ */
+export function categorySpendByYear(data: DashboardData): MultiSeries {
+	const unit = MONEY(data.currency);
+	const years = data.meta.years;
+	const labels = years.map(String);
+
+	const totalFor = (year: number, cat: string) =>
+		(data.years[String(year)]?.matrix ?? []).reduce((s, row) => s + (row.spent[cat] ?? 0), 0);
+
+	// Only categories with real spend somewhere in the range; a closed category still shows its
+	// history, and one that never had spend never draws a flat line along the axis.
+	const cats = data.meta.categories
+		.map((c) => ({ c, values: years.map((y) => totalFor(y, c)) }))
+		.map((e) => ({ ...e, lifetime: e.values.reduce((a, b) => a + b, 0) }))
+		.filter((e) => e.lifetime > 0)
+		.sort((a, b) => b.lifetime - a.lifetime);
+
+	return {
+		kind: 'multiseries',
+		unit,
+		axis: 'ordinal',
+		labels,
+		series: cats.map((e) => series(e.c, labels, e.values, unit, 'ordinal'))
+	};
+}
+
 /** Running total of yearly savings. */
 export function cumulativeSaved(data: DashboardData): Series {
 	let run = 0;

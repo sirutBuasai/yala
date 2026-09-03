@@ -6,8 +6,9 @@
 import type { DashboardData } from '$lib/data/types';
 import type { Primitive, PrimitiveKind } from './primitives';
 import { MONEY } from './primitives';
-import { categorical, whereItWent } from './categorical';
+import { categorical, categoryDeviation, whereItWent } from './categorical';
 import {
+	categorySpendByYear,
 	cumulativeSaved,
 	incomeByMonth,
 	incomeByYear,
@@ -43,6 +44,7 @@ import {
 	extremum,
 	ratio,
 	signed,
+	vsTypical,
 	type Countable,
 	type ExtremumOf,
 	type Measure
@@ -127,6 +129,23 @@ const CHART_DEFS: DataDef[] = [
 		build: (data, scope) => categoryByMonth(data, scopeYear(data, scope))
 	},
 	{
+		id: 'spending.category_by_year',
+		label: 'Category by year',
+		kind: 'multiseries',
+		scopes: ['all'],
+		build: (data) => categorySpendByYear(data)
+	},
+	{
+		id: 'spending.vs_average',
+		label: 'Unusual this month',
+		kind: 'categorical',
+		scopes: ['month'],
+		build: (data, scope) =>
+			scope.monthKey
+				? categoryDeviation(data, scope.monthKey)
+				: { kind: 'categorical', unit: MONEY(data.currency), points: [] }
+	},
+	{
 		id: 'income.by_month',
 		label: 'Income by month',
 		kind: 'series',
@@ -180,8 +199,9 @@ const CHART_DEFS: DataDef[] = [
 		id: 'money.flow',
 		label: 'Money flow',
 		kind: 'flow',
-		scopes: ['all'],
-		build: (data) => moneyFlow(data)
+		scopes: ['all', 'year'],
+		build: (data, scope) =>
+			moneyFlow(data, scope.level === 'year' ? scopeYear(data, scope) : undefined)
 	},
 	{
 		id: 'networth.trend',
@@ -365,6 +385,20 @@ const CHANGES: {
 	}
 ];
 
+// A month against its own trailing norm — the "is this month normal?" tile.
+const VS_TYPICAL: DataDef[] = [
+	scalarDef('spending.vs_typical', 'vs your average', ['month'], (data, scope) =>
+		scope.monthKey
+			? vsTypical(data, scope.monthKey, 'spending', { label: 'vs your average' })
+			: {
+					kind: 'scalar',
+					unit: MONEY(data.currency),
+					label: 'vs your average',
+					value: null
+				}
+	)
+];
+
 const STAT_DEFS: DataDef[] = [
 	...AMOUNTS.map((a) =>
 		scalarDef(a.id, a.label, ALL_SCOPES, (data, scope) => {
@@ -406,7 +440,7 @@ const STAT_DEFS: DataDef[] = [
 	)
 ];
 
-export const CATALOG: DataDef[] = [...CHART_DEFS, ...STAT_DEFS, ...NETWORTH_STATS];
+export const CATALOG: DataDef[] = [...CHART_DEFS, ...STAT_DEFS, ...VS_TYPICAL, ...NETWORTH_STATS];
 
 export const CATALOG_BY_ID: Record<string, DataDef> = Object.fromEntries(
 	CATALOG.map((d) => [d.id, d])

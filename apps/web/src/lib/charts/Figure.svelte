@@ -17,11 +17,18 @@
 		legend?: boolean;
 		color?: string;
 		total?: number;
+		/** Log-scale a line chart's value axis. */
+		log?: boolean;
+		/** Label lines at their right edge instead of drawing a legend. */
+		endLabels?: boolean;
+		/** Heatmap scaling: per row (default) or one scale for the whole grid. */
+		normalize?: 'row' | 'global';
 	}
-	let { primitive, chart, layers, area, legend, color, total }: Props = $props();
+	let { primitive, chart, layers, area, legend, color, total, log, endLabels, normalize }: Props =
+		$props();
 
 	const def = $derived(chart ? CHARTS_BY_ID[chart] : defaultChart(primitive.kind));
-	const opts = $derived({ layers, area, legend, color, total });
+	const opts = $derived({ layers, area, legend, color, total, log, endLabels, normalize });
 	const chartProps = $derived(def ? def.adapt(primitive, opts) : null);
 </script>
 

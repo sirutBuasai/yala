@@ -621,6 +621,16 @@ svg.chart {
 	stroke: var(--grid);
 	stroke-width: 1;
 }
+/* Right-edge series labels: direct labelling beats a legend once a chart carries many lines,
+   because it removes the colour→name lookup entirely. */
+.chart .endlab {
+	fill: var(--ink-2);
+	font-size: var(--text-caption);
+}
+.chart .endval {
+	fill: var(--ink-3);
+	font-variant-numeric: tabular-nums;
+}
 .legend {
 	display: flex;
 	gap: var(--space-8);

@@ -23,6 +23,12 @@
 		area?: boolean;
 		color?: string;
 		total?: number;
+		/** Log-scale a line chart's value axis. */
+		log?: boolean;
+		/** Label lines at their right edge instead of drawing a legend. */
+		endLabels?: boolean;
+		/** Heatmap scaling: per row (default) or one scale for the whole grid. */
+		normalize?: 'row' | 'global';
 	}
 
 	interface Props {
@@ -42,7 +48,16 @@
 		{@const p = build(data, c.id, c.scope)}
 		<div class="cell" style:grid-column={`span ${c.span ?? 1}`}>
 			<Pane title={titleOf(c, p)} cap={capOf(c, p)}>
-				<Figure primitive={p} chart={c.chart} area={c.area} color={c.color} total={c.total} />
+				<Figure
+					primitive={p}
+					chart={c.chart}
+					area={c.area}
+					color={c.color}
+					total={c.total}
+					log={c.log}
+					endLabels={c.endLabels}
+					normalize={c.normalize}
+				/>
 			</Pane>
 		</div>
 	{/each}
