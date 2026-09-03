@@ -75,11 +75,11 @@ describe('TransactionForm (edit)', () => {
 		// First click only arms the confirmation — no delete request yet.
 		await fireEvent.click(screen.getByText('Delete transaction'));
 		expect(screen.getByText('Delete this transaction?')).toBeInTheDocument();
-		expect(fetchSpy.mock.calls.some((c) => c[0] === '/api/transaction/delete')).toBe(false);
+		expect(fetchSpy.mock.calls.some((c) => c[0] === '/api/entry/delete')).toBe(false);
 
 		await fireEvent.click(screen.getByText('Yes, delete'));
 		await waitFor(() => expect(onsaved).toHaveBeenCalledOnce());
-		const del = fetchSpy.mock.calls.find((c) => c[0] === '/api/transaction/delete');
+		const del = fetchSpy.mock.calls.find((c) => c[0] === '/api/entry/delete');
 		expect(JSON.parse(del![1].body as string)).toEqual({ locator: 'id:abc' });
 	});
 

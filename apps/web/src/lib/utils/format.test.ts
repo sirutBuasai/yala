@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { setAccountDirectory } from '$lib/data/directory.svelte';
 import {
 	MONTHS,
 	accountLeaf,
@@ -95,10 +96,27 @@ describe('accountLeaf', () => {
 });
 
 describe('formatAccount', () => {
-	it('takes the leaf and de-CamelCases it', () => {
-		expect(formatAccount('Assets:Cash:Bank1Checking')).toBe('Bank1 Checking');
-		// a run of caps before a capitalized word splits once (acronym stays together)
-		expect(formatAccount('Assets:Cash:ABBank')).toBe('AB Bank');
+	afterEach(() => setAccountDirectory({}));
+
+	it('reads the name the ledger resolved, rather than deriving one', () => {
+		setAccountDirectory({
+			'Liabilities:CC:BankOfExampleCashRewards': {
+				name: 'BoE Cash Rewards',
+				institution: 'Bank of Example'
+			},
+			'Assets:Cash:BankOfExample': { name: 'Bank of Example', institution: 'Bank of Example' }
+		});
+
+		// Neither of these is derivable from the path here: one is shortened by a declared alias, the
+		// other needs a lowercase particle that de-CamelCasing alone would capitalize.
+		expect(formatAccount('Liabilities:CC:BankOfExampleCashRewards')).toBe('BoE Cash Rewards');
+		expect(formatAccount('Assets:Cash:BankOfExample')).toBe('Bank of Example');
+	});
+
+	it('falls back to the raw leaf for an account the directory has never heard of', () => {
+		// Deliberately not a second formatting rule: a miss means the account was opened after this
+		// document loaded, and showing the leaf makes that visible instead of inventing a name.
+		expect(formatAccount('Assets:Cash:Bank1Checking')).toBe('Bank1Checking');
 	});
 
 	it('returns empty string for nullish', () => {

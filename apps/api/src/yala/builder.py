@@ -17,8 +17,10 @@ from pathlib import Path
 
 from yala.ledger import Ledger
 from yala.ledger.income import Paycheck
+from yala.ledger.naming import account_name, institution_of
 from yala.money import money
 from yala.schema import (
+    AccountInfo,
     CategoryAmount,
     DashboardData,
     DateRange,
@@ -87,7 +89,25 @@ def _transfer_out(t) -> Transfer:
     )
 
 
-def _meta(spending, income, categories, all_years, all_months, networth_has_data) -> Meta:
+def _accounts(ledger) -> dict[str, AccountInfo]:
+    """The account directory: display name and institution for every account the ledger declares.
+
+    Every declared account, not just the active or balance-sheet ones — a closed card still appears
+    in historical rows, and a directory with gaps would force callers to keep a fallback naming rule
+    of their own, which is the duplication this exists to remove.
+    """
+    account_meta = ledger.account_meta()
+
+    return {
+        account: AccountInfo(
+            name=account_name(account, meta),
+            institution=institution_of(meta),
+        )
+        for account, meta in sorted(account_meta.items())
+    }
+
+
+def _meta(ledger, spending, income, categories, all_years, all_months, networth_has_data) -> Meta:
     date_range = spending.date_range()
 
     return Meta(
@@ -100,6 +120,7 @@ def _meta(spending, income, categories, all_years, all_months, networth_has_data
             else None
         ),
         categories=categories,
+        accounts=_accounts(ledger),
         domains=Domains(
             spending=spending.count() > 0,
             income=len(income.paychecks()) > 0,
@@ -290,7 +311,13 @@ def build(ledger: Ledger) -> DashboardData:
         generated_at=_now_rfc3339(),
         currency=ledger.currency,
         meta=_meta(
-            spending, income, categories, all_years, all_months, bool(networth_section.series)
+            ledger,
+            spending,
+            income,
+            categories,
+            all_years,
+            all_months,
+            bool(networth_section.series),
         ),
         overview=_overview(spending, income, all_years),
         years=_years(spending, income, all_years),

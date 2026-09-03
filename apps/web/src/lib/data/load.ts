@@ -5,6 +5,7 @@
 
 import { writable } from 'svelte/store';
 import { asset } from '$app/paths';
+import { setAccountDirectory } from '$lib/data/directory.svelte';
 import type { DashboardData } from '$lib/data/types';
 
 const EXPECTED_SCHEMA = 1;
@@ -46,6 +47,12 @@ export const data = writable<DashboardData | null>(null);
 export const accounts = writable<AccountsInfo | null>(null);
 export const mode = writable<Mode>('view');
 export const loadState = writable<LoadState>({ status: 'loading' });
+
+// Account display names and institutions live in the document, but are read by pure helpers
+// (`formatAccount`, `accountVar`) that have no access to a store. Syncing here rather than at each
+// `data.set` means a future loader can't forget to, and the directory can never describe a document
+// that is no longer loaded.
+data.subscribe((doc) => setAccountDirectory(doc?.meta.accounts));
 
 function checkSchema(doc: DashboardData): string | null {
 	if (doc.schema_version !== EXPECTED_SCHEMA) {
@@ -112,15 +119,17 @@ export async function getJson<T = Record<string, unknown>>(url: string): Promise
 	}
 }
 
-/** POST a JSON body and parse the response, normalizing errors into a `PostResult`. */
+/** POST a JSON body and parse the response, normalizing errors into a `PostResult`.
+ *
+ * Every write is a POST to a verb-suffixed path (`/api/balance/update`, `/api/entry/delete`) rather
+ * than a method on a resource, so there is no method to choose. */
 export async function postJson<T = Record<string, unknown>>(
 	url: string,
-	body: unknown,
-	method: 'POST' | 'PATCH' = 'POST'
+	body: unknown
 ): Promise<PostResult<T>> {
 	try {
 		const res = await fetch(url, {
-			method,
+			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(body)
 		});
@@ -144,7 +153,7 @@ export async function postJson<T = Record<string, unknown>>(
 }
 
 /**
- * Cache for reads the ledger derives rather than stores. `/api/networth/at` is fetched twice per
+ * Cache for reads the ledger derives rather than stores. `/api/networth` is fetched twice per
  * month on Home (this month's snapshot date and the previous one) and again on every month step, so
  * paging back and forth otherwise re-walks the ledger for figures that cannot have changed.
  */
@@ -226,11 +235,19 @@ export async function refreshEditData(): Promise<void> {
  * error message on failure, or null on success.
  */
 export async function deleteTransaction(locator: string): Promise<string | null> {
-	return (await postJson('/api/transaction/delete', { locator })).error;
+	return (await postJson('/api/entry/delete', { locator })).error;
 }
 
-/** Re-pull the account lists (after declaring a new deduction/contribution type). */
+/**
+ * Re-pull the account lists (after declaring a new deduction/contribution type).
+ *
+ * The document goes first, then the lists. Opening an account changes both, and the lists are what
+ * put a new row on screen — refreshing them first would render that row for one frame before the
+ * directory knew its display name, so it would flash its raw leaf.
+ */
 async function refreshAccounts(): Promise<void> {
+	await refreshEditData();
+
 	try {
 		accounts.set(await fetchJson<AccountsInfo>('/api/accounts'));
 	} catch {
@@ -243,17 +260,45 @@ export type CreatableAccountKind =
 	'category' | 'deduction' | 'contribution' | 'funding_credit' | 'funding_cash';
 
 /**
+ * How an account is to be named. Either a `leaf` written directly (categories, and the quick-add
+ * inside an entry form), or the descriptive form the Manage panels use — the institution and account
+ * name as a person writes them, which the API joins into the leaf so the two cannot disagree. The
+ * aliases are the short forms, consulted only when the rendered name overruns the display budget.
+ */
+export interface AccountNaming {
+	leaf?: string;
+	institution?: string;
+	account_name?: string;
+	bank_alias?: string;
+	account_alias?: string;
+}
+
+/**
+ * What opening an account returns. `name` is the display name the API resolved — the only authority
+ * on it, since the naming rule and its alias substitutions live server-side.
+ */
+export interface OpenedAccount {
+	account: string | null;
+	name: string | null;
+	error: string | null;
+}
+
+/**
  * Open a new ledger account (spending category or funding account) and refresh the account lists
- * so the new one appears everywhere. Returns the created full account name, or an error message.
+ * so the new one appears everywhere. A bare string is shorthand for `{ leaf }`.
  */
 export async function addAccount(
 	kind: CreatableAccountKind,
-	leaf: string
-): Promise<{ account: string | null; error: string | null }> {
-	const { ok, data, error } = await postJson<{ account?: string }>('/api/account', { kind, leaf });
-	if (!ok) return { account: null, error: error ?? 'add failed' };
+	naming: string | AccountNaming
+): Promise<OpenedAccount> {
+	const body = typeof naming === 'string' ? { leaf: naming } : naming;
+	const { ok, data, error } = await postJson<{ account?: string; name?: string }>('/api/account', {
+		kind,
+		...body
+	});
+	if (!ok) return { account: null, name: null, error: error ?? 'add failed' };
 	await refreshAccounts();
-	return { account: data.account ?? leaf, error: null };
+	return { account: data.account ?? null, name: data.name ?? null, error: null };
 }
 
 /** Close an account by full name and refresh the lists. Returns an error message, or null. */
@@ -287,16 +332,21 @@ export interface DrainLeg {
 }
 
 /** Open an investment account (Taxable or TaxAdvantaged), then refresh the lists; returns an error, or null. */
-export async function addInvestment(body: {
-	subtree: 'Taxable' | 'TaxAdvantaged';
-	name: string;
-	holds_shares: boolean;
-	employer?: string | null;
-	labels?: string[];
-}): Promise<string | null> {
-	const { ok, error } = await postJson('/api/account/investment', body);
-	if (ok) await refreshAccounts();
-	return ok ? null : (error ?? 'add failed');
+export async function addInvestment(
+	body: {
+		subtree: 'Taxable' | 'TaxAdvantaged';
+		holds_shares: boolean;
+		employer?: string | null;
+		labels?: string[];
+	} & AccountNaming
+): Promise<OpenedAccount> {
+	const { ok, data, error } = await postJson<{ account?: string; name?: string }>(
+		'/api/investment',
+		body
+	);
+	if (!ok) return { account: null, name: null, error: error ?? 'add failed' };
+	await refreshAccounts();
+	return { account: data.account ?? null, name: data.name ?? null, error: null };
 }
 
 /** Current USD value of an account's holdings (for prefilling the retirement split). */
@@ -304,14 +354,14 @@ export async function investmentValue(
 	account: string
 ): Promise<{ value: number | null; error: string | null }> {
 	const { ok, data, error } = await getJson<{ value?: number }>(
-		`/api/account/value?account=${encodeURIComponent(account)}`
+		`/api/investment/value?account=${encodeURIComponent(account)}`
 	);
 	return ok ? { value: data.value ?? 0, error: null } : { value: null, error: error ?? 'failed' };
 }
 
 /** Split an investment account's USD value across `legs`, then close it; returns an error, or null. */
 export async function closeInvestment(account: string, legs: DrainLeg[]): Promise<string | null> {
-	const { ok, error } = await postJson('/api/account/investment-close', { account, legs });
+	const { ok, error } = await postJson('/api/investment/close', { account, legs });
 	if (ok) await refreshAccounts();
 	return ok ? null : (error ?? 'retire failed');
 }
@@ -343,11 +393,10 @@ export async function updateBalance(
 	locator: string,
 	amount: number
 ): Promise<{ locator: string | null; error: string | null }> {
-	const { ok, data, error } = await postJson<{ locator?: string }>(
-		'/api/balance',
-		{ locator, amount },
-		'PATCH'
-	);
+	const { ok, data, error } = await postJson<{ locator?: string }>('/api/balance/update', {
+		locator,
+		amount
+	});
 	return ok
 		? { locator: data.locator ?? locator, error: null }
 		: { locator: null, error: error ?? 'edit failed' };
@@ -362,13 +411,11 @@ export interface NetWorthAt {
 }
 
 export async function networthAt(date: string): Promise<NetWorthAt | null> {
-	const key = `networth/at:${date}`;
+	const key = `networth:${date}`;
 	const cached = derivedCache.get(key) as NetWorthAt | undefined;
 	if (cached) return cached;
 
-	const { ok, data } = await getJson<NetWorthAt>(
-		`/api/networth/at?date=${encodeURIComponent(date)}`
-	);
+	const { ok, data } = await getJson<NetWorthAt>(`/api/networth?date=${encodeURIComponent(date)}`);
 	if (ok) derivedCache.set(key, data);
 
 	return ok ? data : null;

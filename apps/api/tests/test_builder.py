@@ -6,6 +6,7 @@ from pathlib import Path
 
 from yala.builder import _income, _meta, build
 from yala.ledger import Ledger
+from yala.ledger.naming import account_name, institution_of
 
 FIXTURE_MAIN = Path(__file__).parent / "fixtures" / "ledger" / "main.beancount"
 
@@ -21,7 +22,7 @@ def _handles():
     income_months = {(p.date.year, p.date.month) for p in income.paychecks()}
     all_months = sorted(set(spending.months()) | income_months)
     all_years = sorted(set(spending.years()) | set(income.years()))
-    return spending, income, categories, all_years, all_months
+    return ledger, spending, income, categories, all_years, all_months
 
 
 def test_canonical_sections_present():
@@ -86,16 +87,35 @@ def test_paychecks_carry_locator():
 
 
 def test_meta_helper_independently():
-    spending, income, categories, all_years, all_months = _handles()
-    meta = _meta(spending, income, categories, all_years, all_months, False)
+    ledger, spending, income, categories, all_years, all_months = _handles()
+    meta = _meta(ledger, spending, income, categories, all_years, all_months, False)
     assert meta.transaction_count == 5
     assert meta.categories == ["Grocery", "Subscription", "Takeouts"]
     assert meta.domains.income is True
     assert meta.domains.networth is False
 
 
+def test_account_directory_covers_every_declared_account():
+    """A directory with gaps would push callers back onto a naming rule of their own, so it holds
+    every account the ledger declares — closed ones included, since they still appear in history."""
+    ledger, *rest = _handles()
+    meta = _meta(ledger, *rest, False)
+
+    assert set(meta.accounts) == set(ledger.account_meta())
+    assert all(info.name for info in meta.accounts.values())
+
+
+def test_account_directory_names_match_the_naming_rule():
+    ledger, *rest = _handles()
+    meta = _meta(ledger, *rest, False)
+
+    for account, info in meta.accounts.items():
+        assert info.name == account_name(account, ledger.account_meta()[account])
+        assert info.institution == institution_of(ledger.account_meta()[account])
+
+
 def test_income_helper_independently():
-    _, income, *_ = _handles()
+    _, _, income, *_ = _handles()
     section = _income(income)
     assert section.by_year
     assert all(iy.gross >= iy.net for iy in section.by_year)

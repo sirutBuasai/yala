@@ -3,6 +3,7 @@
 // via the :root[data-theme] swap in app.css — no JS palette object needed.
 
 import { writable } from 'svelte/store';
+import { accountInfo } from '$lib/data/directory.svelte';
 
 type ThemeMode = 'dark' | 'light';
 
@@ -30,51 +31,51 @@ export function categoryVar(category: string): string {
 }
 
 /**
- * Institution accents, keyed by a lowercase fragment matched against the account name — so
- * `Liabilities:CC:AmexGold`, `Assets:Cash:Amex` and `Amex Gold` all resolve to the same hue.
- * Longer keys are matched first, letting a specific brand win over a shorter substring.
+ * Institution accents, keyed by the `institution:` the ledger declares, slugified.
+ *
+ * Keyed by the declaration rather than by matching the account name, which is a correctness fix
+ * rather than a tidy-up. Matching is wrong in four common shapes: an employer-sponsored plan named
+ * for the employer but held at a custodian, a co-brand card whose name contains *two* institutions,
+ * a card issued by one bank and branded by another, and a salary account whose employer shares a
+ * name with an institution. Longest-substring matching resolved those by accident of key length —
+ * and when two candidate names are the same length, by coin toss.
+ *
+ * Adding an institution means one line here plus one `--inst-*` token in app.css. That stays in code
+ * on purpose: which colour a brand gets is a design decision, unlike what an account is called.
  */
-const INSTITUTION_TOKEN: Record<string, string> = {
-	amex: 'inst-amex',
+export const INSTITUTION_TOKEN: Record<string, string> = {
 	americanexpress: 'inst-amex',
-	chase: 'inst-chase',
-	sapphire: 'inst-chase',
-	bofa: 'inst-bofa',
-	bankofamerica: 'inst-bofa',
-	citi: 'inst-citi',
-	wellsfargo: 'inst-wellsfargo',
-	// Card names are often abbreviated in a ledger path ("WFAutograph", "C1VentureX"), so the
-	// abbreviation is mapped alongside the full brand. Short keys are safe because the list is
-	// matched longest-first — "capitalone" wins over "c1" whenever both would hit.
-	wf: 'inst-wellsfargo',
-	c1: 'inst-capitalone',
-	usbank: 'inst-usbank',
-	ally: 'inst-ally',
-	marcus: 'inst-marcus',
-	discover: 'inst-discover',
-	capitalone: 'inst-capitalone',
-	schwab: 'inst-schwab',
 	charlesschwab: 'inst-schwab',
-	fidelity: 'inst-fidelity',
-	vanguard: 'inst-vanguard',
-	wealthfront: 'inst-wealthfront',
-	robinhood: 'inst-robinhood',
 	venmo: 'inst-venmo',
-	paypal: 'inst-paypal',
-	sofi: 'inst-sofi'
+	wealthfront: 'inst-wealthfront',
+	ally: 'inst-ally',
+	bankofamerica: 'inst-bofa',
+	usbank: 'inst-usbank',
+	capitalone: 'inst-capitalone',
+	discover: 'inst-discover',
+	wellsfargo: 'inst-wellsfargo',
+	amazon: 'inst-amazon',
+	fidelity: 'inst-fidelity',
+	tdbank: 'inst-tdbank',
+	chase: 'inst-chase',
+	bilt: 'inst-bilt'
 };
 
-// Longest-first so "charlesschwab" and "bankofamerica" beat the shorter fragments they contain.
-const INSTITUTION_KEYS = Object.keys(INSTITUTION_TOKEN).sort((a, b) => b.length - a.length);
+/** An institution name as a palette key: lowercase, punctuation and spaces removed. */
+export function institutionSlug(institution: string): string {
+	return institution.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
 
 /**
  * CSS variable reference for an account's institution color, for the dot beside an account name.
- * Falls back to a neutral so an unmapped institution still reads as "an account".
+ * Falls back to a neutral so an account with no declared institution — or one whose institution
+ * has no token yet — still reads as "an account" rather than vanishing.
  */
 export function accountVar(account: string | null | undefined): string {
-	const hay = (account ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
-	const hit = INSTITUTION_KEYS.find((k) => hay.includes(k));
-	return `var(--${hit ? INSTITUTION_TOKEN[hit] : 'inst-other'})`;
+	const institution = accountInfo(account)?.institution;
+	const token = institution ? INSTITUTION_TOKEN[institutionSlug(institution)] : undefined;
+
+	return `var(--${token ?? 'inst-other'})`;
 }
 
 function initialMode(): ThemeMode {

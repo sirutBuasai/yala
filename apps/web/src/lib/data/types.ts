@@ -14,6 +14,8 @@ export type TransactionCount = number;
 export type Start = string;
 export type End = string;
 export type Categories = string[];
+export type Name = string;
+export type Institution = string | null;
 export type Spending = boolean;
 export type Income = boolean;
 export type Networth = boolean;
@@ -76,7 +78,7 @@ export type Label = string;
 export type Group = string;
 export type Bucket = string;
 export type Value = number;
-export type Accounts = NetWorthAccount[];
+export type Accounts1 = NetWorthAccount[];
 export type Account1 = string;
 export type Label1 = string;
 export type Value1 = number;
@@ -109,6 +111,7 @@ export interface Meta {
 	transaction_count: TransactionCount;
 	date_range: DateRange | null;
 	categories: Categories;
+	accounts: Accounts;
 	domains: Domains;
 }
 /**
@@ -118,6 +121,24 @@ export interface Meta {
 export interface DateRange {
 	start: Start;
 	end: End;
+}
+export interface Accounts {
+	[k: string]: AccountInfo;
+}
+/**
+ * How one account presents itself: its display name and who holds it.
+ *
+ * Both are resolved from ledger metadata by :mod:`yala.ledger.naming`, so the frontend looks a
+ * name up rather than deriving it. That keeps one implementation of the naming rule instead of
+ * one per language, and it means the ledger stays the only place that decides what an account is
+ * called.
+ *
+ * This interface was referenced by `DashboardData`'s JSON-Schema
+ * via the `definition` "AccountInfo".
+ */
+export interface AccountInfo {
+	name: Name;
+	institution?: Institution;
 }
 /**
  * Which domains carry data.
@@ -274,7 +295,7 @@ export interface ByMonth {
 export interface NetWorthSection {
 	current: NetWorthSnapshot | null;
 	series: Series;
-	accounts: Accounts;
+	accounts: Accounts1;
 	adjustments: Adjustments;
 }
 /**

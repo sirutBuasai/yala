@@ -18,7 +18,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import AfterValidator, BaseModel, Field, model_validator
+from pydantic import AfterValidator, BaseModel, BeforeValidator, Field, model_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
 
@@ -40,6 +40,13 @@ from yala.ledger.constants import (
 )
 from yala.ledger.entities import leaf
 from yala.ledger.locators import find_entry
+from yala.ledger.naming import (
+    ACCOUNT_ALIAS_META,
+    BANK_ALIAS_META,
+    INSTITUTION_META,
+    account_name,
+    to_leaf,
+)
 from yala.ledger.networth import adjustment_account
 from yala.ledger.settings import SETTINGS, SETTINGS_BY_KEY
 from yala.ledger.sweep import is_sweep, reconcile_months, resolve_terminal, retire_passthrough
@@ -112,12 +119,33 @@ def _clean_text(value: str) -> str:
     return text
 
 
+def _clean_optional_text(value: object) -> str | None:
+    """Same normalization as :func:`_clean_text`, but blank means "not given".
+
+    A form binds an empty string to an untouched input, so an optional field has to read that as
+    absent rather than rejecting it — otherwise leaving a genuinely optional box alone fails the
+    whole request.
+    """
+    if value is None:
+        return None
+
+    text = " ".join(_CTRL_RE.sub(" ", str(value)).split())
+    if not text:
+        return None
+    if len(text) > MAX_TEXT:
+        raise ValueError(f"must be at most {MAX_TEXT} characters")
+
+    return text
+
+
 # A transaction/transfer amount must be positive; a credit or payroll line item may be zero
 # (e.g. a $0 deduction) but never negative. Both are finite and bounded (see MAX_AMOUNT).
 Amount = Annotated[float, Field(gt=0, le=MAX_AMOUNT, allow_inf_nan=False)]
 NonNegAmount = Annotated[float, Field(ge=0, le=MAX_AMOUNT, allow_inf_nan=False)]
 # A required, single-line free-text field.
 Text = Annotated[str, AfterValidator(_clean_text)]
+# The optional counterpart: blank or missing both arrive as None.
+OptionalText = Annotated[str | None, BeforeValidator(_clean_optional_text)]
 
 
 # --- shared helpers ---
@@ -392,8 +420,8 @@ def post_transaction_update(body: TransactionUpdateIn) -> dict:
     return _ok(f"updated transaction for {body.payee}", id=entry_id)
 
 
-@app.post("/api/transaction/delete")
-def post_transaction_delete(body: TransactionDeleteIn) -> dict:
+@app.post("/api/entry/delete")
+def post_entry_delete(body: TransactionDeleteIn) -> dict:
     """Delete a located entry (spending transaction, paycheck, or transfer) from the ledger."""
     with _api_errors():
         entry = find_entry(_ledger().entries, body.locator)
@@ -590,25 +618,78 @@ def post_transfer_update(body: TransferUpdateIn) -> dict:
 # --- accounts ---
 
 
-class AccountIn(BaseModel):
+class NamedAccountIn(BaseModel):
+    """The naming half of any request that opens an account.
+
+    Two ways to name one. ``leaf`` is the direct form, used for categories and the quick-add inside
+    an entry form. ``institution`` (with ``account_name`` where the account has a product half) is
+    the descriptive form: the caller sends the words as a person writes them and the server joins
+    them into the leaf, so the display name and the stored name cannot disagree. The aliases are
+    only consulted when the rendered name overruns; see :mod:`yala.ledger.naming`.
+
+    Shared by every open-account request so the fields, their normalization, and the composition
+    rule are stated once — a card and an investment are named the same way even though opening them
+    does different things.
+    """
+
+    leaf: str | None = None
+    institution: OptionalText = None
+    account_name: OptionalText = None  # the product half; cash is named by institution alone
+    bank_alias: OptionalText = None
+    account_alias: OptionalText = None
+
+    @property
+    def naming_meta(self) -> dict[str, str]:
+        """The naming metadata to write, dropping the keys the request left unset."""
+        pairs = {
+            INSTITUTION_META: self.institution,
+            BANK_ALIAS_META: self.bank_alias,
+            ACCOUNT_ALIAS_META: self.account_alias,
+        }
+        return {key: value for key, value in pairs.items() if value}
+
+    def composed_leaf(self) -> str:
+        """The leaf this request asks for, by whichever of the two forms it used."""
+        if self.institution:
+            return to_leaf(self.institution) + to_leaf(self.account_name or "")
+        if self.leaf:
+            return self.leaf
+
+        raise HTTPException(status_code=422, detail="give either a name or an institution")
+
+
+class AccountIn(NamedAccountIn):
+    """Open a spending category, bank account, or credit card."""
+
     kind: Literal["category", "funding_credit", "funding_cash"]
-    leaf: str
+
+
+def _opened(account: str, meta: dict[str, str]) -> dict:
+    """The success body every open-account endpoint returns.
+
+    Carries the resolved display name so a form can confirm what the account will actually be
+    called, rather than reimplementing the naming rule to preview it.
+    """
+    return _ok(f"opened {account}", account=account, name=account_name(account, meta))
 
 
 @app.post("/api/account")
 def post_account(body: AccountIn) -> dict:
-    if not _LEAF_RE.match(body.leaf):
+    leaf = body.composed_leaf()
+
+    if not _LEAF_RE.match(leaf):
         raise HTTPException(
             status_code=422,
-            detail=f"account name must use only letters, numbers, or hyphens: {body.leaf!r}",
+            detail=f"account name must use only letters, numbers, or hyphens: {leaf!r}",
         )
 
-    account = f"{_ACCOUNT_PREFIX[body.kind]}{body.leaf}"
+    account = f"{_ACCOUNT_PREFIX[body.kind]}{leaf}"
+    meta = body.naming_meta
 
     with _api_errors():
-        _sink().open_account(account)
+        _sink().open_account(account, meta=meta)
 
-    return _ok(f"opened {account}", account=account)
+    return _opened(account, meta)
 
 
 class AccountCloseIn(BaseModel):
@@ -724,29 +805,32 @@ def _valid_leaf_list(values: list[str], field: str) -> None:
             raise HTTPException(status_code=422, detail=f"invalid {field}: {v!r}")
 
 
-class InvestmentIn(BaseModel):
+class InvestmentIn(NamedAccountIn):
+    """Open an investment account. Named like any other; opened differently."""
+
     subtree: Literal["Taxable", "TaxAdvantaged"]
-    name: str  # may be colon-nested
     holds_shares: bool = True  # True holds tickers; False is a cash-only plan
     employer: str | None = None
     labels: list[str] = Field(default=[], max_length=MAX_LEGS)
 
 
-@app.post("/api/account/investment")
+@app.post("/api/investment")
 def post_investment(body: InvestmentIn) -> dict:
     """Open an investment account. A share account can hold any ticker and gets a 0.00 starting
     balance plus a paired Equity:Adjustments account; a cash-only plan gets neither."""
-    if not all(_SEGMENT_RE.match(s) for s in body.name.split(":")):
+    # Investments may be colon-nested, so each segment is checked rather than the whole leaf.
+    leaf = body.composed_leaf()
+    if not all(_SEGMENT_RE.match(s) for s in leaf.split(":")):
         raise HTTPException(
             status_code=422,
-            detail=f"invalid name (segments must start uppercase): {body.name!r}",
+            detail=f"invalid name (segments must start uppercase): {leaf!r}",
         )
     _valid_leaf_list(body.labels, "label")
     if body.employer:
         _valid_leaf_list([body.employer], "employer")
 
-    account = f"{_INVEST_SUBTREE[body.subtree]}{body.name}"
-    meta: dict[str, str] = {}
+    account = f"{_INVEST_SUBTREE[body.subtree]}{leaf}"
+    meta = body.naming_meta
     if body.employer:
         meta["employer"] = body.employer
     if body.labels:
@@ -761,10 +845,10 @@ def post_investment(body: InvestmentIn) -> dict:
             sink.assert_balance(account, "0.00")
             sink.open_account(_invest_plug(account), currency=None)
 
-    return _ok(f"opened {account}", account=account)
+    return _opened(account, meta)
 
 
-@app.get("/api/account/value")
+@app.get("/api/investment/value")
 def get_account_value(account: str) -> dict:
     """USD value of an account's holdings today; 422 if a held ticker has no price."""
     account = _valid_name(account)
@@ -783,7 +867,7 @@ class InvestmentCloseIn(BaseModel):
     date: str | None = None
 
 
-@app.post("/api/account/investment-close")
+@app.post("/api/investment/close")
 def post_investment_close(body: InvestmentCloseIn) -> dict:
     """Value an investment account in USD, split it across the legs, then liquidate and close it.
     The legs must sum to that value (both zero for an empty account)."""
@@ -865,12 +949,12 @@ class BalanceEditIn(BaseModel):
     amount: NonNegAmount
 
 
-@app.patch("/api/balance")
-def patch_balance(body: BalanceEditIn) -> dict:
+@app.post("/api/balance/update")
+def post_balance_update(body: BalanceEditIn) -> dict:
     """Edit an existing ``balance`` assertion in place, keeping one snapshot per logged date.
 
     Re-logging the same date would stack a second assertion on it, so correcting a past month
-    rewrites its own line — located by the handle ``/api/networth/at`` reports for that date. The
+    rewrites its own line — located by the handle ``/api/networth`` reports for that date. The
     assertion's ``pad`` is added or dropped as the new figure requires."""
     with _api_errors():
         account, date, locator = _sink().update_balance(body.locator, _dec(body.amount))
@@ -885,7 +969,7 @@ def patch_balance(body: BalanceEditIn) -> dict:
     )
 
 
-@app.get("/api/networth/at")
+@app.get("/api/networth")
 def get_networth_at(date: str) -> dict:
     """Per-account USD values, adjustment-plug balances, and editable-assertion locators as of
     ``date`` — powers the balance pane's month-aware view, so selecting a past month shows that

@@ -218,6 +218,117 @@ def test_post_account_declares_funding_credit_and_cash(client: TestClient):
     assert "Assets:Cash:BankZ" in funding
 
 
+def test_post_account_composes_the_leaf_from_institution_and_name(client: TestClient):
+    """The descriptive form: the caller sends the words a person writes and the server joins them,
+    so the stored name and the display name cannot disagree."""
+    r = client.post(
+        "/api/account",
+        json={
+            "kind": "funding_credit",
+            "institution": "Bank of Example",
+            "account_name": "Cash Rewards",
+        },
+    )
+
+    assert r.status_code == 200
+    assert r.json()["account"] == "Liabilities:CC:BankOfExampleCashRewards"
+    # Over the 20-char cap with no alias on file, so it comes back in full (step 5).
+    assert r.json()["name"] == "Bank of Example Cash Rewards"
+
+
+def test_post_account_writes_naming_metadata_and_applies_the_alias(client: TestClient):
+    r = client.post(
+        "/api/account",
+        json={
+            "kind": "funding_credit",
+            "institution": "Bank of Example",
+            "account_name": "Cash Rewards",
+            "bank_alias": "BoE",
+        },
+    )
+
+    assert r.status_code == 200
+    assert r.json()["name"] == "BoE Cash Rewards"
+
+    meta = client.get("/api/data").json()["meta"]["accounts"]
+    entry = meta["Liabilities:CC:BankOfExampleCashRewards"]
+    assert entry["name"] == "BoE Cash Rewards"
+    assert entry["institution"] == "Bank of Example"
+
+
+def test_post_account_cash_is_named_by_institution_alone(client: TestClient):
+    r = client.post("/api/account", json={"kind": "funding_cash", "institution": "Bank of Example"})
+
+    assert r.json()["account"] == "Assets:Cash:BankOfExample"
+    # 15 characters, so the alias would not fire even if one were declared.
+    assert r.json()["name"] == "Bank of Example"
+
+
+def test_post_account_accepts_blank_optional_aliases(client: TestClient):
+    """A form binds "" to an untouched input, so a blank alias has to mean "not given". Rejecting it
+    made the whole request fail whenever the optional short-form boxes were left alone."""
+    r = client.post(
+        "/api/account",
+        json={
+            "kind": "funding_credit",
+            "institution": "Bank of Example",
+            "account_name": "Cash Rewards",
+            "bank_alias": "",
+            "account_alias": "   ",
+        },
+    )
+
+    assert r.status_code == 200
+    assert r.json()["name"] == "Bank of Example Cash Rewards"
+
+    # A blank alias must not be written as an empty metadata value either.
+    opened = client.get("/api/data").json()["meta"]["accounts"][
+        "Liabilities:CC:BankOfExampleCashRewards"
+    ]
+    assert opened["institution"] == "Bank of Example"
+
+
+def test_post_account_needs_a_name_or_an_institution(client: TestClient):
+    r = client.post("/api/account", json={"kind": "funding_cash"})
+
+    assert r.status_code == 422
+    assert "institution" in r.json()["detail"]
+
+
+def test_post_investment_composes_the_leaf_and_keeps_employer_metadata(client: TestClient):
+    r = client.post(
+        "/api/investment",
+        json={
+            "subtree": "TaxAdvantaged",
+            "institution": "Example Brokerage",
+            "account_name": "Roth IRA",
+            "bank_alias": "EB",
+            "holds_shares": False,
+            "employer": "Employer1",
+        },
+    )
+
+    assert r.status_code == 200
+    assert r.json()["account"] == "Assets:Investments:TaxAdvantaged:ExampleBrokerageRothIRA"
+    # "Example Brokerage Roth IRA" is 26, so the institution's short form stands in.
+    assert r.json()["name"] == "EB Roth IRA"
+
+    meta = client.get("/api/data").json()["meta"]["accounts"]
+    entry = meta["Assets:Investments:TaxAdvantaged:ExampleBrokerageRothIRA"]
+    assert entry["institution"] == "Example Brokerage"
+
+
+def test_post_investment_without_an_institution_keeps_the_old_shape(client: TestClient):
+    """The pre-existing form still works: `name` is taken as the leaf verbatim."""
+    r = client.post(
+        "/api/investment",
+        json={"subtree": "Taxable", "leaf": "BrokerStocks", "holds_shares": False},
+    )
+
+    assert r.json()["account"] == "Assets:Investments:Taxable:BrokerStocks"
+    assert r.json()["name"] == "Broker Stocks"
+
+
 def test_close_category_removes_it_from_pickers(client: TestClient):
     client.post("/api/account", json={"kind": "category", "leaf": "Gifts"})
     assert "Gifts" in client.get("/api/accounts").json()["spending_categories"]
@@ -525,7 +636,7 @@ def test_delete_transaction_flow(client: TestClient):
     )
     entry_id = r.json()["id"]
 
-    d = client.post("/api/transaction/delete", json={"locator": f"id:{entry_id}"})
+    d = client.post("/api/entry/delete", json={"locator": f"id:{entry_id}"})
     assert d.status_code == 200
     assert d.json()["ok"] is True
 
@@ -534,7 +645,7 @@ def test_delete_transaction_flow(client: TestClient):
 
 
 def test_delete_unknown_locator_is_404(client: TestClient):
-    r = client.post("/api/transaction/delete", json={"locator": "id:does-not-exist"})
+    r = client.post("/api/entry/delete", json={"locator": "id:does-not-exist"})
     assert r.status_code == 404
     assert "no transaction found" in r.json()["detail"]
 
@@ -623,7 +734,7 @@ def test_transfer_update_and_delete(client: TestClient):
     assert upd.status_code == 200
     assert client.get("/api/transfer", params={"locator": locator}).json()["amount"] == 300.0
 
-    d = client.post("/api/transaction/delete", json={"locator": locator})
+    d = client.post("/api/entry/delete", json={"locator": locator})
     assert d.status_code == 200
     assert client.get("/api/data").json()["months"].get("2026-03", {}).get("transfers", []) == []
 

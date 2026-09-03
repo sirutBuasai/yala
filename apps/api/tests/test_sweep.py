@@ -158,7 +158,7 @@ def test_deleting_the_sweep_directly_is_rejected(client: TestClient):
     _spend_venmo(client, "2026-02-10", 30.00)
     sweep = _sweeps(client, "2026-02")[0]
 
-    d = client.post("/api/transaction/delete", json={"locator": sweep["locator"]})
+    d = client.post("/api/entry/delete", json={"locator": sweep["locator"]})
     assert d.status_code == 409
     assert "auto-managed" in d.json()["detail"]
 
@@ -170,7 +170,7 @@ def test_deleting_the_last_venmo_payment_removes_the_sweep(client: TestClient):
     locator = f"id:{add.json()['id']}"
     assert _sweeps(client, "2026-02")
 
-    client.post("/api/transaction/delete", json={"locator": locator})
+    client.post("/api/entry/delete", json={"locator": locator})
 
     assert _sweeps(client, "2026-02") == []
     assert _venmo_balance(client) == 0

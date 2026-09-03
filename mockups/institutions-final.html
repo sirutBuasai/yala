@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Yala · Institution names + colours (verbose ledger rule)</title>
+<style>
+  :root{
+    --bg:#16161f; --surface:#1f1f2b; --surface-2:#26263a; --inset:#2a2a3c; --border:#33334a;
+    --ink:#e6e0c8; --ink-2:#a8a28c; --ink-3:#969380;
+    --lav:#bb9af7; --salmon:#f7768e; --green:#9ece6a; --teal:#7dcfff; --gold:#e0af68; --orange:#ff9e64;
+    --blue:#6f8fe8; --aqua:#4cc9b0; --magenta:#de85c8; --berry:#c56b9a;
+    --good-text:#9ece6a; --crit-text:#e56c7a; --gold-text:#e0af68; --lav-text:#bb9af7;
+    --on-accent:#1a1522;
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 14px 34px -18px rgba(0,0,0,.7);
+    --font-serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --font-sans:ui-sans-serif,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --radius-xs:3px; --radius-sm:6px; --radius-md:9px; --radius-lg:12px; --radius-xl:16px; --radius-pill:999px;
+  }
+  /* Each skin restates `color` as well as the tokens: redefining --ink alone does nothing to text
+     that inherited an already-computed colour from <body>. */
+  .skin-dark{
+    color-scheme:dark;
+    --bg:#16161f; --surface:#1f1f2b; --surface-2:#26263a; --inset:#2a2a3c; --border:#33334a;
+    --ink:#e6e0c8; --ink-2:#a8a28c; --ink-3:#969380;
+    --good-text:#9ece6a; --crit-text:#e56c7a; --gold-text:#e0af68;
+    color:var(--ink);
+  }
+  .skin-light{
+    color-scheme:light;
+    --bg:#f0ebdd; --surface:#faf6ec; --surface-2:#f1ead9; --inset:#ece4d2; --border:#ddd2bb;
+    --ink:#2e2a22; --ink-2:#5c5443; --ink-3:#6e6652;
+    --good-text:#457124; --crit-text:#bb324a; --gold-text:#806211;
+    color:var(--ink);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0f0f16;color:var(--ink);font-family:var(--font-sans);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1500px;margin:0 auto;padding:24px 24px 120px}
+  h1{font-family:var(--font-serif);font-size:26px;margin:0 0 4px;letter-spacing:-.3px}
+  h2{font-family:var(--font-serif);font-size:16px;font-weight:600;margin:0 0 2px;letter-spacing:-.2px}
+  h3{font-size:11px;text-transform:uppercase;letter-spacing:.9px;color:var(--ink-3);font-weight:600;margin:0 0 10px}
+  .cap{color:var(--ink-3);font-size:12px;margin:0}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:18px 20px;box-shadow:var(--shadow);margin-bottom:14px}
+  .head{margin-bottom:14px}
+  .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(30rem,100%),1fr));gap:14px;align-items:start}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-3);font-weight:600;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:7px 8px;border-bottom:1px solid color-mix(in srgb,var(--border) 55%,transparent);vertical-align:middle}
+  tr:hover td{background:color-mix(in srgb,var(--inset) 55%,transparent)}
+  .grouphead td{font-size:11px;text-transform:uppercase;letter-spacing:.9px;color:var(--ink-3);border-bottom:1px solid var(--border);padding-top:16px}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+  .path{color:var(--ink-2)}
+  .dot{width:10px;height:10px;border-radius:var(--radius-pill);display:inline-block;flex:0 0 auto}
+  .sw{width:44px;height:20px;border-radius:var(--radius-xs);display:inline-block;border:1px solid color-mix(in srgb,var(--ink) 14%,transparent);vertical-align:-5px}
+  .tag{display:inline-block;font-size:10px;padding:2px 6px;border-radius:var(--radius-sm);border:1px solid var(--border);color:var(--ink-3);white-space:nowrap}
+  .tag.ok{color:var(--good-text);border-color:color-mix(in srgb,var(--green) 40%,var(--border))}
+  .tag.warn{color:var(--gold-text);border-color:color-mix(in srgb,var(--gold) 45%,var(--border))}
+  .tag.bad{color:var(--crit-text);border-color:color-mix(in srgb,var(--crit-text) 45%,var(--border))}
+  .tag.closed{opacity:.7;font-style:italic}
+  .len{font-variant-numeric:tabular-nums;font-size:11px;color:var(--ink-3)}
+  .len.over{color:var(--crit-text);font-weight:700}
+  .strike{text-decoration:line-through;opacity:.55}
+  .board{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+  .chip{border-radius:var(--radius-md);padding:9px 10px;border:1px solid color-mix(in srgb,var(--ink) 12%,transparent);min-height:58px;display:flex;flex-direction:column;justify-content:space-between}
+  .chip .n{font-size:11px;font-weight:700;line-height:1.25}
+  .chip .h{font-size:9.5px;font-family:ui-monospace,Menlo,monospace;opacity:.8}
+  .row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid color-mix(in srgb,var(--border) 50%,transparent)}
+  .row:last-child{border-bottom:0}
+  .row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .sub{font-size:11px;color:var(--ink-3)}
+  .row .amt{font-variant-numeric:tabular-nums;color:var(--ink-2)}
+  ul.notes{margin:0;padding-left:18px;font-size:13px;color:var(--ink-2)}
+  ul.notes li{margin-bottom:8px}
+  ul.notes b{color:var(--ink)}
+  ol.pipe{margin:0;padding-left:20px;font-size:13px;color:var(--ink-2)}
+  ol.pipe li{margin-bottom:6px}
+  ol.pipe b{color:var(--ink)}
+  pre{background:var(--inset);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;overflow:auto;font-size:11.5px;line-height:1.55;margin:0;color:var(--ink-2)}
+  .banner{background:color-mix(in srgb,var(--green) 12%,transparent);border:1px solid var(--border);color:var(--ink-2);border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:14px;font-size:13px}
+  .banner b{color:var(--ink)}
+  .scroller{overflow-x:auto;scrollbar-width:thin}
+</style>
+</head>
+<body class="skin-dark">
+<div class="wrap">
+
+  <div style="margin-bottom:18px">
+    <h1>Institution names + colours — verbose-ledger rule</h1>
+    <p class="cap">The ledger now holds the real, verbose name; shortening happens at read time. Palette-first
+      colours, 20-character soft target. Light and dark sit side by side so nothing hides in one theme.</p>
+  </div>
+
+  <div class="banner">
+    <b>Applied and verified.</b> 13 accounts renamed to their verbose real names; <code>institution:</code> on all 26
+    balance-sheet accounts; <code>bank_alias</code> on 6 and <code>account_alias</code> on 5.
+    <code>bean-check</code> is clean, and I ran your five-step rule in Python over the actual ledger — <b>all 26
+    accounts land at 20 characters or under</b>, so step 5 never has to fire. Splitting the alias into halves means
+    <code>institution:</code> is now required rather than optional: it is what tells the code where the bank half of
+    the name ends.
+  </div>
+
+  <!-- ─────────────────────────── pipeline ─────────────────────────── -->
+  <div class="card skin-dark">
+    <div class="head">
+      <h2>1 · <code>get_account_name()</code></h2>
+    </div>
+    <p class="cap" style="margin:-4px 0 12px">Naming rules now settled, per your answers: <b>cash</b> accounts are
+      named by institution alone; <b>investments</b> and <b>credit cards</b> are
+      <code>Institution&nbsp;+&nbsp;AccountName</code>, with the account/card type spelled out. The add-investment
+      form takes those as <b>two fields</b> — institution and account name — and the backend concatenates them into
+      the leaf, so you decide the name and the code never infers it.</p>
+    <ol class="pipe">
+      <li><b>Parse the leaf</b> — de-CamelCase, lowercase interior particles, split letter→digit.
+        <code>BankOfAmericaCashRewards</code> → “Bank of America Cash Rewards”.</li>
+      <li><b>Under 20 characters? Done.</b> 13 of 26 accounts stop here.</li>
+      <li><b>Over 20, and both aliases exist? Apply <code>bank_alias</code> first, then re-check.</b>
+        “Bank of America Cash Rewards” → “BofA Cash Rewards” (17), which fits, so stop. Only if it were
+        <i>still</i> over would <code>account_alias</code> also go in.</li>
+      <li><b>No <code>bank_alias</code>? Apply <code>account_alias</code>.</b>
+        “Chase Ink Business Unlimited” → “Chase Ink Unlimited” (19).</li>
+      <li><b>No alias at all? Fall back to the parsed leaf</b> at full length.</li>
+    </ol>
+    <p class="cap" style="margin-top:12px">The aliases are the two <i>halves</i> of the name, substituted
+      independently — not a full-name override. The boundary between them is found by matching
+      <code>institution:</code> as a prefix of the parsed name, which is why that key is now load-bearing rather
+      than just a colour lookup. Every one of the 26 accounts currently lands at 20 characters or under, so step 5
+      never fires today — but a name with no alias would render at full length, so list rows must still ellipsize.</p>
+    <p class="cap" style="margin-top:12px">Steps 2–3 live in <b>Python</b>, not the frontend:
+      <code>networth.py</code> already emits a <code>label</code> per account (currently the raw leaf), and
+      <code>format.ts</code> separately de-CamelCases it. Putting the pipeline in the API makes
+      <code>data.json</code>’s <code>label</code> the finished display name, and
+      <code>formatAccount()</code> collapses to a passthrough — one implementation instead of two languages
+      drifting.</p>
+  </div>
+
+  <!-- ─────────────────────────── names ─────────────────────────── -->
+  <div class="card skin-dark">
+    <div class="head">
+      <h2>2 · Every account through the pipeline</h2>
+      <p class="cap">Ledger paths shown are the ones now committed. “Rendered” is step 2; where it exceeds 20 the
+        abbreviation from step 4 is applied and the result is in <b>Final</b>.</p>
+    </div>
+    <div class="scroller">
+      <table id="tblAcct">
+        <thead><tr>
+          <th style="width:28%">Ledger path</th><th>Institution</th>
+          <th>Rendered (step 2)</th><th>Len</th><th>Final</th><th>Len</th><th>Note</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────── aliases ─────────────────────────── -->
+  <div class="two">
+    <div class="card skin-dark">
+      <div class="head">
+        <h2>3 · Every alias now in the ledger</h2>
+        <p class="cap">Written onto each account’s own <code>open</code> directive. Generated from the accounts that
+          carry one, so the table can’t claim an alias the ledger doesn’t have.</p>
+      </div>
+      <div class="scroller">
+        <table id="tblAlias">
+          <thead><tr><th>Account</th><th><code>bank_alias</code></th><th><code>account_alias</code></th>
+            <th>Result</th><th>Len</th><th>Step</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="cap" style="margin-top:12px">Note the two rows where an alias is declared but never fires: the
+        <b>cash</b> Bank of America account is only 15 characters, so it keeps its full name while the card of the
+        same bank shortens. That is the rule working — an alias is a remedy for overflow, not a preference.</p>
+    </div>
+    <div class="card skin-dark">
+      <div class="head">
+        <h2>4 · Two renderer bugs, not alias cases</h2>
+      </div>
+      <table>
+        <thead><tr><th>Leaf</th><th>Today</th><th>Fixed rule</th></tr></thead>
+        <tbody>
+          <tr><td><code>BankOfAmerica</code></td><td class="strike">Bank Of America</td><td><b>Bank of America</b></td></tr>
+          <tr><td><code>Amazon401k</code></td><td class="strike">Amazon401k</td><td><b>Amazon 401k</b></td></tr>
+          <tr><td><code>Roth401k</code> (a 401k label)</td><td class="strike">Roth401k</td><td><b>Roth 401k</b></td></tr>
+          <tr><td><code>AfterTax401k</code> (ditto)</td><td class="strike">After Tax401k</td><td><b>After Tax 401k</b></td></tr>
+        </tbody>
+      </table>
+      <p class="cap" style="margin-top:12px">Both are under the 20-char cap, so a length-triggered alias would never
+        fire on them. Two extra lines in the render step fix them for every future account at once — which is why
+        your rule is the better one: it leaves aliasing to do exactly one job, shortening.</p>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────── palette ─────────────────────────── -->
+  <div class="card skin-dark">
+    <div class="head">
+      <h2>5 · The 15 institutions</h2>
+      <p class="cap">Unchanged from your approval — palette-first, with the institution’s <b>secondary</b> brand
+        colour where a closer brand already held the accent. Contrast is against the card surface in each theme.</p>
+    </div>
+    <div class="scroller">
+      <table id="tblInst">
+        <thead><tr>
+          <th>Institution</th><th>Colour</th><th>Hex</th><th>Source</th>
+          <th>vs dark</th><th>vs light</th><th>Nearest sibling</th><th>Accts</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="two">
+    <div class="card skin-dark">
+      <h3>Accounts at 10px · dark</h3>
+      <div id="listDark"></div>
+    </div>
+    <div class="card skin-light">
+      <h3>Accounts at 10px · light</h3>
+      <div id="listLight"></div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────── decisions ─────────────────────────── -->
+  <div class="card skin-dark">
+    <div class="head">
+      <h2>6 · Decisions and open items</h2>
+    </div>
+    <ul class="notes">
+      <li><b>Declaring the institution also fixed five colours that guessing gets wrong.</b>
+        <code>FidelityAmazon401k</code> is held at Fidelity but named Amazon. The Amazon co-brands each contain
+        <b>two</b> institution fragments — <code>USBankPrimeBusiness</code> and
+        <code>AmericanExpressAmazon</code> — and <code>USBank</code> and <code>Amazon</code> are both six
+        characters, so the longest-substring match in <code>theme.ts</code> resolved them by coin toss.
+        <code>BiltMastercard</code> is issued by Wells Fargo but coloured as Bilt, and
+        <code>Income:Salary:Amazon</code> is an <i>employer</i> that would match the Amazon institution outright.
+        All of that goes away, and the <code>wf</code> / <code>c1</code> abbreviation keys can be
+        <b>deleted</b> from the guess map.</li>
+      <li><b><code>institution:</code> is no longer optional.</b> Splitting the alias into halves means the code has
+        to know where the bank half ends, and the only non-guessing way to know is the metadata. It happens to be
+        the same key the colour lookup wanted, so one addition settles both — I have written it onto all 26
+        balance-sheet accounts.</li>
+      <li><b><code>bank_alias</code> repeats across an institution’s accounts, which can drift.</b> “Amex” is now
+        stated twice, on the Gold and the Amazon card; a third Amex card could arrive spelled “AmEx” and the two
+        would disagree in one list. Cheap guard: when the form sees a known institution, pre-fill
+        <code>bank_alias</code> from a sibling account rather than asking again. Worth doing before you add card
+        number three, not now.</li>
+      <li><b>Step 3’s second half never fires today.</b> Every account that overruns is rescued by
+        <code>bank_alias</code> alone, so nothing currently needs both aliases at once. The branch is still worth
+        having — “American Express Business Platinum” would need it — but it is untested by real data, so it wants a
+        unit test rather than trust.</li>
+      <li><b>The cap stays advisory.</b> Step 5 returns the parsed leaf at full length, so no list row may assume 20
+        characters even though all 26 accounts happen to fit today. The row lists here ellipsize; anything new
+        must too.</li>
+      <li id="lightFail"></li>
+      <li id="siblingFail"></li>
+      <li id="themeSplit"></li>
+      <li><b>Six Fidelity accounts still share one hue.</b> Unchanged and unfixable by palette choice — it needs the
+        chart-level fix (colour investments by tax role) that you deferred.</li>
+    </ul>
+  </div>
+
+  <!-- ─────────────────────────── applied ─────────────────────────── -->
+  <div class="card skin-dark">
+    <div class="head">
+      <h2>7 · What is already in the ledger</h2>
+      <p class="cap">Applied to <code>yala-private-data</code>; <code>bean-check</code> is clean and
+        <code>git checkout .</code> reverts all of it.</p>
+    </div>
+    <pre id="plan"></pre>
+  </div>
+
+  <div class="card skin-dark">
+    <div class="head">
+      <h2>8 · Code not applied yet, awaiting sign-off</h2>
+    </div>
+    <pre id="code"></pre>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   PALETTE — unchanged from the approved version
+   ═══════════════════════════════════════════════════════════════════════════ */
+const INST = [
+  {key:'amex',        name:'American Express', abbr:'Amex',   hex:'#6f8fe8', token:'--blue',         from:'primary blue #016FD0'},
+  {key:'schwab',      name:'Charles Schwab',   abbr:'Schwab', hex:'#7dcfff', token:'--teal',         from:'primary blue #009DDB'},
+  {key:'venmo',       name:'Venmo',                           hex:'#b4f4ff', token:'yours',          from:'primary blue #008CFF', flag:'yours'},
+  {key:'wealthfront', name:'Wealthfront',                     hex:'#bb9af7', token:'--lav',          from:'primary violet #4840BB'},
+  {key:'ally',        name:'Ally',                            hex:'#de85c8', token:'--magenta',      from:'primary purple #650360'},
+  {key:'bofa',        name:'Bank of America',  abbr:'BofA',   hex:'#f7768e', token:'--salmon',       from:'primary red #E31837'},
+  {key:'usbank',      name:'US Bank',                         hex:'#4a6f9e', token:'yours',          from:'primary navy #0C2074', flag:'yours'},
+  {key:'capitalone',  name:'Capital One',      abbr:'C1',     hex:'#c0794f', token:'--cat-misc',     from:'primary red #D22E1E'},
+  {key:'discover',    name:'Discover',                        hex:'#ff9e64', token:'--orange',       from:'primary orange #EA4209'},
+  {key:'wellsfargo',  name:'Wells Fargo',      abbr:'WF',     hex:'#d94c4c', token:'yours',          from:'PRIMARY red #D41C2C', flag:'yours'},
+  {key:'amazon',      name:'Amazon',                          hex:'#ffd27f', token:'--cat-transport',from:'primary orange #FF9900'},
+  {key:'fidelity',    name:'Fidelity',                        hex:'#9ece6a', token:'--green',        from:'primary green #368727'},
+  {key:'tdbank',      name:'TD Bank',                         hex:'#2bb673', token:'--cat-health',   from:'primary green #54B848'},
+  {key:'chase',       name:'Chase',                           hex:'#639cc3', token:'yours',          from:'primary blue #005EB8', flag:'yours'},
+  {key:'bilt',        name:'Bilt Rewards',                    hex:'#595959', token:'yours',          from:'brand black #141414', flag:'yours'},
+  {key:'other',       name:'Unmapped',                        hex:'#8f86a8', token:'--inst-other',   from:'neutral fallback'}
+];
+const BY_KEY = Object.fromEntries(INST.map(i => [i.key, i]));
+const CAP = 20;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ACCOUNTS — paths as committed. `inst` is what the proposed `institution:` metadata would carry;
+   note that Amazon401k and Bilt are the two no name-matching scheme can ever derive.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const ACCOUNTS = [
+  {g:'Cash', path:'Assets:Cash:Ally',                 inst:'ally',        institution:'Ally',            bal:18400},
+  {g:'Cash', path:'Assets:Cash:BankOfAmerica',        inst:'bofa',        institution:'Bank of America', bank_alias:'BofA', bal:3250, was:'BofA', note:'15 chars — under cap, so bank_alias never fires here'},
+  {g:'Cash', path:'Assets:Cash:Wealthfront',          inst:'wealthfront', institution:'Wealthfront',     bal:42700},
+  {g:'Cash', path:'Assets:Cash:Venmo',                inst:'venmo',       institution:'Venmo',           bal:180, note:'sweeps to Wealthfront'},
+  {g:'Cash', path:'Assets:Cash:TDBank',               inst:'tdbank',      institution:'TD Bank',         bal:0, closed:'2023-03-01'},
+  {g:'Cash', path:'Assets:Cash:Chase',                inst:'chase',       institution:'Chase',           bal:0, closed:'2024-10-01'},
+  {g:'Cash', path:'Assets:GiftCard:Amazon',           inst:'amazon',      institution:'Amazon',          bal:0, closed:'2023-12-02'},
+
+  {g:'Credit cards', path:'Liabilities:CC:AmericanExpressGold',      inst:'amex',       institution:'American Express', bank_alias:'Amex', bal:-1240, was:'AmexGold'},
+  {g:'Credit cards', path:'Liabilities:CC:BankOfAmericaCashRewards', inst:'bofa',       institution:'Bank of America', bank_alias:'BofA', bal:-310, was:'BofACash'},
+  {g:'Credit cards', path:'Liabilities:CC:DiscoverItCashBack',       inst:'discover',   institution:'Discover', account_alias:'Cash Back', bal:-95, was:'Discover'},
+  {g:'Credit cards', path:'Liabilities:CC:CapitalOneVentureX',       inst:'capitalone', institution:'Capital One', bank_alias:'C1', bal:-2180, was:'C1VentureX'},
+  {g:'Credit cards', path:'Liabilities:CC:WellsFargoAutograph',      inst:'wellsfargo', institution:'Wells Fargo', bank_alias:'WF', bal:-640, was:'WFAutograph'},
+  {g:'Credit cards', path:'Liabilities:CC:USBankPrimeBusiness',      inst:'usbank',     institution:'US Bank', account_alias:'Prime', bal:-420, was:'USBankAmazon'},
+  {g:'Credit cards', path:'Liabilities:CC:ChasePrimeVisa',           inst:'chase',      institution:'Chase', bal:0, closed:'2024-10-01', was:'ChaseAmazon', note:'16 chars — no alias needed'},
+  {g:'Credit cards', path:'Liabilities:CC:ChaseInkBusinessUnlimited',inst:'chase',      institution:'Chase', account_alias:'Ink Unlimited', bal:0, closed:'2024-10-01', was:'ChaseInkUnlimited'},
+  {g:'Credit cards', path:'Liabilities:CC:ChaseInkBusinessCash',     inst:'chase',      institution:'Chase', account_alias:'Ink Cash', bal:0, closed:'2025-07-01', was:'ChaseInkCash'},
+  {g:'Credit cards', path:'Liabilities:CC:BiltMastercard',           inst:'bilt',       institution:'Bilt', bal:0, closed:'2026-03-01', was:'Bilt', note:'“Mastercard” is one word as a trademark; 15 chars, no alias'},
+  {g:'Credit cards', path:'Liabilities:CC:AmericanExpressAmazon',    inst:'amex',       institution:'American Express', bank_alias:'Amex', bal:0, closed:'2026-08-14', was:'AmexAmazon'},
+
+  {g:'Investments', path:'Assets:Investments:TaxAdvantaged:FidelityHSA',            inst:'fidelity', institution:'Fidelity', bal:12900},
+  {g:'Investments', path:'Assets:Investments:TaxAdvantaged:FidelityAmazon401k',     inst:'fidelity', institution:'Fidelity', bal:128000, was:'Amazon401k', note:'lands on 20 exactly'},
+  {g:'Investments', path:'Assets:Investments:TaxAdvantaged:FidelityRothIRA',        inst:'fidelity', institution:'Fidelity', bal:46300, was:'RothIRA'},
+  {g:'Investments', path:'Assets:Investments:TaxAdvantaged:FidelityTraditionalIRA', inst:'fidelity', institution:'Fidelity', account_alias:'Trad IRA', bal:21800, was:'TraditionalIRA'},
+  {g:'Investments', path:'Assets:Investments:Taxable:FidelityIndividual',           inst:'fidelity', institution:'Fidelity', bal:63500},
+  {g:'Investments', path:'Assets:Investments:Taxable:FidelityStocks',               inst:'fidelity', institution:'Fidelity', bal:14200},
+  {g:'Investments', path:'Assets:Investments:Taxable:CharlesSchwabIndividual',      inst:'schwab',   institution:'Charles Schwab', bank_alias:'Schwab', bal:27600},
+
+  {g:'Employers (no institution)', path:'Income:Salary:Amazon',     inst:'amazon', bal:0},
+  {g:'Employers (no institution)', path:'Income:Salary:Simplisafe', inst:'other',  bal:0, closed:'2022-01-01'}
+];
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   get_account_name() — the pipeline, as it would be implemented
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Step 2. The two added rules over today's `formatAccount`: interior particles drop to lowercase,
+   and a letter→digit boundary gets a space. Neither is length-related, which is why neither can be
+   solved by an alias. */
+const PARTICLES = /\b(Of|And|The|For)\b/g;
+function render(leaf) {
+  const spaced = leaf
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/([A-Za-z])(\d)/g, '$1 $2')
+    .trim();
+  return spaced.replace(PARTICLES, (word, w, at) => at === 0 ? word : w.toLowerCase());
+}
+
+const leafOf = a => a.path.split(':').pop();
+
+/* The five-step rule. `bank_alias` and `account_alias` are the two HALVES of the name, substituted
+   independently and only when the parsed name overruns. The split point comes from matching
+   `institution:` as a prefix of the parsed name — which is the reason that key has to exist.
+   Mirrors the Python in apps/api exactly; both were run against the real ledger. */
+function accountName(a) {
+  const full = render(leafOf(a));
+  if (full.length <= CAP) return { full, final: full, via: 'parsed leaf' };
+
+  const tail = a.institution && full.startsWith(a.institution)
+    ? full.slice(a.institution.length).trim() : null;
+
+  if (a.bank_alias && tail !== null) {
+    const name = `${a.bank_alias} ${tail}`.trim();
+    if (name.length <= CAP) return { full, final: name, via: 'bank_alias' };
+    if (a.account_alias)
+      return { full, final: `${a.bank_alias} ${a.account_alias}`.trim(), via: 'both aliases' };
+    return { full, final: name, via: 'bank_alias (still over)' };
+  }
+  if (a.account_alias && a.institution)
+    return { full, final: `${a.institution} ${a.account_alias}`.trim(), via: 'account_alias' };
+
+  return { full, final: full, via: 'no alias — full name' };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════════════════════════════════ */
+const srgb = c => { c /= 255; return c <= 0.03928 ? c/12.92 : ((c+0.055)/1.055)**2.4; };
+const lum = hex => { const n = parseInt(hex.slice(1), 16);
+  return 0.2126*srgb(n>>16&255) + 0.7152*srgb(n>>8&255) + 0.0722*srgb(n&255); };
+const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+  return (x + 0.05) / (y + 0.05); };
+const money = n => (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US');
+const crTag = cr => cr >= 3 ? 'ok' : cr >= 2.2 ? 'warn' : 'bad';
+const DARK_SURFACE = '#1f1f2b', LIGHT_SURFACE = '#faf6ec';
+
+/* Contrast against the surface says whether a dot is VISIBLE; it says nothing about whether two dots
+   are TELLABLE APART. WCAG contrast is the wrong tool for that — it is a pure luminance ratio, so it
+   scores salmon against green at 1.01:1 despite them being obviously different colours. Distance
+   between two fills needs a perceptual metric, so this converts to CIELAB and takes ΔE*ab. */
+function lab(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [n >> 16 & 255, n >> 8 & 255, n & 255].map(srgb);
+  // sRGB → XYZ (D65), then XYZ → Lab
+  const X = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047;
+  const Y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const Z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883;
+  const f = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116;
+  const [fx, fy, fz] = [f(X), f(Y), f(Z)];
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+function deltaE(h1, h2) {
+  const [a, b] = [lab(h1), lab(h2)];
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+}
+
+/* Each institution's closest sibling in perceptual terms. Below ~12 two 10px dots read as the same
+   colour; 12–20 is "only if they are adjacent"; above 20 is comfortable. */
+function nearest(inst) {
+  return INST.filter(i => i.key !== inst.key && i.key !== 'other')
+    .map(i => ({ i, de: deltaE(inst.hex, i.hex) }))
+    .sort((a, b) => a.de - b.de)[0];
+}
+const nearTag = de => de >= 20 ? 'ok' : de >= 12 ? 'warn' : 'bad';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RENDER
+   ═══════════════════════════════════════════════════════════════════════════ */
+let lastG = null;
+document.querySelector('#tblAcct tbody').innerHTML = ACCOUNTS.map(a => {
+  const head = a.g !== lastG ? `<tr class="grouphead"><td colspan="7">${a.g}</td></tr>` : '';
+  lastG = a.g;
+  const { full, final, via } = accountName(a);
+  const hasAlias = via !== 'parsed leaf';
+  const notes = [
+    a.was ? `renamed from <code>${a.was}</code>` : '',
+    a.undecidable ? `<span class="tag warn">declare</span> ${a.undecidable}` : '',
+    a.note ?? '',
+    a.closed ? `<span class="tag closed">closed ${a.closed}</span>` : ''
+  ].filter(Boolean).join('<br>');
+  return head + `<tr>
+    <td><code class="path">${a.path.replace(/:([^:]+)$/, ':<b style="color:var(--ink)">$1</b>')}</code></td>
+    <td><span style="display:inline-flex;align-items:center;gap:6px">
+      <span class="dot" style="background:${BY_KEY[a.inst].hex}"></span>${BY_KEY[a.inst].name}</span></td>
+    <td${hasAlias ? ' class="strike"' : ''}>${full}</td>
+    <td><span class="len${full.length > CAP ? ' over' : ''}">${full.length}</span></td>
+    <td><b>${final}</b>${hasAlias ? ` <span class="tag ok">${via}</span>` : ''}</td>
+    <td><span class="len${final.length > CAP ? ' over' : ''}">${final.length}</span></td>
+    <td class="cap" style="font-size:11.5px">${notes}</td>
+  </tr>`;
+}).join('');
+
+/* Derived from the accounts that actually carry an alias, so the table can't drift from the ledger. */
+const aliased = ACCOUNTS.filter(a => a.bank_alias || a.account_alias);
+document.querySelector('#tblAlias tbody').innerHTML = aliased.map(a => {
+  const { full, final, via } = accountName(a);
+  const fires = via !== 'parsed leaf';
+  return `<tr>
+    <td><code class="path">${leafOf(a)}</code></td>
+    <td>${a.bank_alias ? `<code>${a.bank_alias}</code>` : '<span class="cap">—</span>'}</td>
+    <td>${a.account_alias ? `<code>${a.account_alias}</code>` : '<span class="cap">—</span>'}</td>
+    <td${fires ? '' : ' class="cap"'}>${fires ? `<b>${final}</b>` : `${final} (fits already)`}</td>
+    <td><span class="len">${final.length}</span></td>
+    <td class="cap" style="font-size:11px">${via}</td>
+  </tr>`;
+}).join('');
+
+document.querySelector('#tblInst tbody').innerHTML = INST.map(i => {
+  const d = contrast(i.hex, DARK_SURFACE), l = contrast(i.hex, LIGHT_SURFACE);
+  const n = ACCOUNTS.filter(a => a.inst === i.key).length;
+  const flag = i.flag === 'yours' ? '<span class="tag ok">your pick</span>'
+             : i.flag ? `<span class="tag warn">${i.flag}</span>` : '';
+  const near = i.key === 'other' ? null : nearest(i);
+  return `<tr>
+    <td><b>${i.name}</b>${i.abbr ? ` <span class="tag ok">→ ${i.abbr}</span>` : ''}</td>
+    <td><span class="sw" style="background:${i.hex}"></span></td>
+    <td><code>${i.hex}</code></td>
+    <td class="cap" style="font-size:11.5px">${i.from} ${flag}</td>
+    <td><span class="tag ${crTag(d)}">${d.toFixed(1)}:1</span></td>
+    <td><span class="tag ${crTag(l)}">${l.toFixed(1)}:1</span></td>
+    <td>${near ? `<span class="tag ${nearTag(near.de)}">ΔE ${near.de.toFixed(0)}</span>
+        <span class="cap" style="font-size:11px"> ${near.i.name}</span>` : '—'}</td>
+    <td>${n || '—'}</td>
+  </tr>`;
+}).join('');
+
+const rows = ACCOUNTS.filter(a => a.bal !== 0);
+const rowHTML = a => `<div class="row">
+    <span class="dot" style="background:${BY_KEY[a.inst].hex}"></span>
+    <span class="nm">${accountName(a).final}<span class="sub"> · ${BY_KEY[a.inst].name}</span></span>
+    <span class="amt">${money(a.bal)}</span></div>`;
+document.getElementById('listDark').innerHTML = rows.map(rowHTML).join('');
+document.getElementById('listLight').innerHTML = rows.map(rowHTML).join('');
+
+/* Generated rather than written out, so the list cannot go stale if a colour above changes. */
+const weakLight = INST.map(i => ({ i, cr: contrast(i.hex, LIGHT_SURFACE) }))
+  .filter(x => x.cr < 2.2).sort((a, b) => a.cr - b.cr);
+document.getElementById('lightFail').innerHTML = weakLight.length ? `
+  <b>${weakLight.length} colours are too pale for the light theme.</b>
+  ${weakLight.map(x => `${x.i.name} (${x.cr.toFixed(1)}:1)`).join(', ')} — all below the 2.2:1 a 10px dot needs
+  against the cream surface. Inherited, not introduced: the palette accents were authored as fills and as type on
+  the dark surface. <code>app.css</code> already solves it for type with the <code>-text</code> variants, and the
+  same trick applies here — one darker <code>--inst-*</code> under <code>:root[data-theme='light']</code> per
+  offender. Say the word and I will generate them.`
+  : '<b>Every colour clears 2.2:1 in both themes.</b>';
+
+/* Pairs that are individually visible but not tellable apart from each other. */
+const pairs = [];
+for (let x = 0; x < INST.length; x++)
+  for (let y = x + 1; y < INST.length; y++) {
+    if (INST[x].key === 'other' || INST[y].key === 'other') continue;
+    const de = deltaE(INST[x].hex, INST[y].hex);
+    if (de < 20) pairs.push({ a: INST[x], b: INST[y], de });
+  }
+pairs.sort((p, q) => p.de - q.de);
+const live = k => ACCOUNTS.some(a => a.inst === k && a.bal !== 0);
+document.getElementById('siblingFail').innerHTML = pairs.length ? `
+  <b>${pairs.length} pair${pairs.length > 1 ? 's' : ''} of institutions sit close enough to confuse.</b>
+  ${pairs.map(p => `${p.a.name} / ${p.b.name} (ΔE ${p.de.toFixed(0)}${live(p.a.key) && live(p.b.key)
+    ? ', <b>both live</b>' : ', one closed'})`).join('; ')}.
+  Measured as CIELAB ΔE between the two fills, which unlike a contrast ratio accounts for hue —
+  below about 12 two 10px dots read as one colour, 12–20 only separates when they are not adjacent.
+  Check them against each other in the cards pane below.`
+  : '<b>Every pair of institution colours is comfortably separable (ΔE ≥ 20).</b>';
+
+/* The palette's two theme extremes. Venmo and Bilt fail on OPPOSITE surfaces, which is the specific
+   thing that makes one shared hex impossible and per-theme overrides mandatory. */
+const measured = INST.filter(i => i.key !== 'other').map(i => ({
+  i, d: contrast(i.hex, DARK_SURFACE), l: contrast(i.hex, LIGHT_SURFACE)
+}));
+const worstOnLight = measured.reduce((a, b) => b.l < a.l ? b : a);
+const worstOnDark = measured.reduce((a, b) => b.d < a.d ? b : a);
+document.getElementById('themeSplit').innerHTML = `
+  <b>Your Venmo and Bilt picks fail on opposite surfaces, which settles the per-theme question.</b>
+  ${worstOnLight.i.name} <code>${worstOnLight.i.hex}</code> is the palette's palest at
+  ${worstOnLight.l.toFixed(1)}:1 on light (versus ${worstOnLight.d.toFixed(1)}:1 on dark), and
+  ${worstOnDark.i.name} <code>${worstOnDark.i.hex}</code> is its darkest at ${worstOnDark.d.toFixed(1)}:1 on dark
+  (versus ${worstOnDark.l.toFixed(1)}:1 on light). One is nearly invisible on cream, the other nearly invisible on
+  charcoal, so no single hex satisfies both themes — per-theme <code>--inst-*</code> overrides move from
+  nice-to-have to <b>required</b>, at minimum for these two.
+  <br>Worth noting the trade you made: ${BY_KEY.wellsfargo.name} <code>${BY_KEY.wellsfargo.hex}</code> is now the
+  only colour in the palette that clears 3:1 in <i>both</i> themes
+  (${contrast(BY_KEY.wellsfargo.hex, DARK_SURFACE).toFixed(1)}:1 dark,
+  ${contrast(BY_KEY.wellsfargo.hex, LIGHT_SURFACE).toFixed(1)}:1 light), and going back to its real red cost
+  nothing in separation — it sits ΔE ${deltaE(BY_KEY.wellsfargo.hex, BY_KEY.bofa.hex).toFixed(0)} from Bank of
+  America, comfortably clear.`;
+
+const renamed = ACCOUNTS.filter(a => a.was);
+const w = Math.max(...renamed.map(a => a.was.length));
+document.getElementById('plan').textContent = [
+  `# ${renamed.length} accounts renamed to their verbose, real names, and ${aliased.length} alias: keys written onto`,
+  '# their open directives. Covers the open/close directives, every posting, and the mirrored',
+  '# Equity:Adjustments accounts, across all year files. bean-check is clean and all 11 aliases',
+  '# load back out of the ledger.',
+  '',
+  ...renamed.map(a => `${a.was.padEnd(w)}  →  ${leafOf(a)}`),
+  '',
+  '# institution: on every balance-sheet account — it marks where the bank half of the name ends,',
+  '# so it is required by the bank_alias rule, and it doubles as the colour key.',
+  '# bank_alias: / account_alias: only where the parsed name overruns 20 characters.',
+  ...aliased.map(a => `${leafOf(a).padEnd(w)}  ${[
+    `institution: "${a.institution}"`,
+    a.bank_alias ? `bank_alias: "${a.bank_alias}"` : '',
+    a.account_alias ? `account_alias: "${a.account_alias}"` : ''
+  ].filter(Boolean).join('  ')}`),
+  '',
+  '# LEFT ALONE deliberately',
+  'src: "Amex Gold"     import artifact, in RETIRED_META — not an account reference',
+  'Assets:Cash:*        cash is named by institution alone, per your call',
+  'FidelityIndividual   Institution + AccountName already; account names kept as they are',
+  'FidelityStocks       ditto',
+  'Simplisafe           real casing is "SimpliSafe", which would render "Simpli Safe"',
+  '',
+  '# Amount columns: widened per file only where a longer name outgrew the existing column, and',
+  '# left untouched otherwise — so nothing came out ragged and no unaffected file was reformatted.'
+].join('\n');
+
+document.getElementById('code').textContent = [
+  '# apps/api/src/yala/ledger/naming.py  (new)',
+  'PARTICLES = {"of", "and", "the", "for"}',
+  'CAP = 20',
+  '',
+  'def render(leaf: str) -> str:',
+  '    """CamelCase leaf → display words. Splits case changes AND letter→digit, and drops',
+  '    interior particles to lowercase, so "BankOfAmerica" and "Amazon401k" read correctly."""',
+  '',
+  'def get_account_name(leaf: str, meta: Mapping[str, str]) -> str:',
+  '    """The five-step rule. Reads institution / bank_alias / account_alias off the open',
+  '    directive; substitutes the bank half first, re-checks, then the account half."""',
+  '    full = render(leaf)',
+  '    if len(full) <= CAP:',
+  '        return full',
+  '    inst, bank, acct = (meta.get(k) for k in ("institution", "bank_alias", "account_alias"))',
+  '    tail = full[len(inst):].strip() if inst and full.startswith(inst) else None',
+  '    if bank and tail is not None:',
+  '        name = f"{bank} {tail}".strip()',
+  '        if len(name) <= CAP:',
+  '            return name',
+  '        return f"{bank} {acct}".strip() if acct else name',
+  '    if acct and inst:',
+  '        return f"{inst} {acct}".strip()',
+  '    return full',
+  '',
+  '# apps/api/src/yala/ledger/networth.py — label becomes the finished display name',
+  '-   out.append(AccountValue(a, leaf(a), "cash", bucket(a), ...))',
+  '+   out.append(AccountValue(a, get_account_name(a, inst_of(a), abbrevs), "cash", ...))',
+  '',
+  '# apps/web/src/lib/utils/format.ts — formatAccount() becomes a passthrough; the',
+  '# de-CamelCase rule and ACCOUNT_ALIASES_OVERRIDE both go away',
+  '',
+  '# apps/web/src/app.css — replaces the current --inst-* block',
+  ...INST.map(i => `--inst-${i.key}: ${i.hex};`),
+  '',
+  '# The add-account / add-investment form: four fields, written straight to the ledger.',
+  '#   institution name  ─┬─→ leaf = InstitutionName + AccountName',
+  '#   account name      ─┘   institution: "<institution name>"',
+  '#   institution alias ────→ bank_alias:    (prompt only once the leaf renders past 20)',
+  '#   account alias     ────→ account_alias: (same condition)',
+  '# Pre-fill institution alias from a sibling account of the same institution, so "Amex" cannot',
+  '# be re-entered as "AmEx" on the next card.'
+].join('\n');
+</script>
+</body>
+</html>

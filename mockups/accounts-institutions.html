@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Yala · Accounts → institutions</title>
+<style>
+  :root{
+    color-scheme:dark;
+    --bg:#16161f; --surface:#1f1f2b; --surface-2:#26263a; --inset:#2a2a3c; --border:#33334a;
+    --ink:#e6e0c8; --ink-2:#a8a28c; --ink-3:#969380;
+    --lav:#bb9af7; --salmon:#f7768e; --green:#9ece6a; --teal:#7dcfff; --gold:#e0af68; --orange:#ff9e64;
+    --blue:#6f8fe8; --aqua:#4cc9b0; --magenta:#de85c8; --berry:#c56b9a;
+    --good-text:#9ece6a; --crit-text:#e56c7a; --gold-text:#e0af68; --lav-text:#bb9af7; --teal-text:#7dcfff;
+    --on-accent:#1a1522;
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 14px 34px -18px rgba(0,0,0,.7);
+    --font-serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --font-sans:ui-sans-serif,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --radius-xs:3px; --radius-sm:6px; --radius-md:9px; --radius-lg:12px; --radius-xl:16px; --radius-pill:999px;
+  }
+  html[data-theme='light']{
+    color-scheme:light;
+    --bg:#f0ebdd; --surface:#faf6ec; --surface-2:#f1ead9; --inset:#ece4d2; --border:#ddd2bb;
+    --ink:#2e2a22; --ink-2:#5c5443; --ink-3:#6e6652;
+    --good-text:#457124; --crit-text:#bb324a; --gold-text:#806211; --lav-text:#6a49bd; --teal-text:#1a6f88;
+    --shadow:0 1px 2px rgba(120,90,40,.06),0 14px 34px -18px rgba(120,90,40,.28);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1400px;margin:0 auto;padding:24px 24px 120px}
+  .serif{font-family:var(--font-serif)}
+  h1{font-family:var(--font-serif);font-size:26px;margin:0;letter-spacing:-.3px}
+  h2{font-family:var(--font-serif);font-size:16px;font-weight:600;margin:0 0 2px;letter-spacing:-.2px}
+  .cap{color:var(--ink-3);font-size:12px;margin:0}
+  .cap.quiet{font-style:italic}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:18px 20px;box-shadow:var(--shadow);margin-bottom:14px}
+  .head{margin-bottom:14px}
+  .topbar{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+  .push-end{margin-inline-start:auto}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pill{border:1px solid var(--border);background:var(--surface);color:var(--ink-2);border-radius:var(--radius-pill);padding:8px 14px;font-size:12px;cursor:pointer;box-shadow:var(--shadow);font-family:inherit}
+  .pill:hover{color:var(--ink);border-color:var(--lav)}
+  .pill.active{background:color-mix(in srgb, var(--lav) 20%, transparent);color:var(--ink);border-color:var(--lav)}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--radius-pill);overflow:hidden;background:var(--surface);box-shadow:var(--shadow)}
+  .seg button{border:0;background:none;color:var(--ink-3);padding:7px 13px;font-size:12px;cursor:pointer;font-family:inherit}
+  .seg button.active{background:color-mix(in srgb, var(--lav) 22%, transparent);color:var(--ink)}
+  .lbl{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-3);font-weight:600;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:6px 8px;border-bottom:1px solid color-mix(in srgb, var(--border) 55%, transparent);vertical-align:middle}
+  tr:hover td{background:color-mix(in srgb, var(--inset) 55%, transparent)}
+  tbody.grp td{padding-top:14px}
+  .grouphead td{font-size:11px;text-transform:uppercase;letter-spacing:.9px;color:var(--ink-3);border-bottom:1px solid var(--border);padding-top:18px}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+  .path{color:var(--ink-2)}
+  .dot{width:10px;height:10px;border-radius:var(--radius-pill);display:inline-block;flex:0 0 auto}
+  .mark{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .mono-chip{width:24px;height:24px;border-radius:var(--radius-sm);font-size:10px;font-weight:700;letter-spacing:-.2px;color:var(--on-accent)}
+  .bar-mark{width:4px;height:22px;border-radius:2px}
+  .sw{width:34px;height:18px;border-radius:var(--radius-xs);display:inline-block;border:1px solid color-mix(in srgb, var(--ink) 14%, transparent);vertical-align:-4px}
+  input[type=text],input[type=number]{background:var(--inset);border:1px solid var(--border);color:var(--ink);border-radius:var(--radius-md);padding:5px 8px;font-family:inherit;font-size:12px;width:100%}
+  input[type=color]{width:34px;height:24px;padding:0;border:1px solid var(--border);border-radius:var(--radius-xs);background:var(--inset);cursor:pointer}
+  select{background:var(--inset);border:1px solid var(--border);color:var(--ink);border-radius:var(--radius-md);padding:5px 8px;font-family:inherit;font-size:12px}
+  .tag{display:inline-block;font-size:10px;padding:2px 6px;border-radius:var(--radius-sm);border:1px solid var(--border);color:var(--ink-3);white-space:nowrap}
+  .tag.ok{color:var(--good-text);border-color:color-mix(in srgb,var(--green) 40%,var(--border))}
+  .tag.warn{color:var(--gold-text);border-color:color-mix(in srgb,var(--gold) 45%,var(--border))}
+  .tag.bad{color:var(--crit-text);border-color:color-mix(in srgb,var(--crit-text) 45%,var(--border))}
+  .tag.closed{opacity:.75;font-style:italic}
+  .len{font-variant-numeric:tabular-nums;font-size:11px;color:var(--ink-3)}
+  .len.over{color:var(--crit-text);font-weight:700}
+  .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(26rem,100%),1fr));gap:14px;align-items:stretch}
+  .three{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(18rem,100%),1fr));gap:14px}
+  .row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid color-mix(in srgb,var(--border) 50%,transparent)}
+  .row:last-child{border-bottom:0}
+  .row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .sub{font-size:11px;color:var(--ink-3)}
+  .row .amt{font-variant-numeric:tabular-nums;font-size:13px;color:var(--ink-2)}
+  .stack{display:flex;height:26px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border)}
+  .stack span{display:block;height:100%}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--ink-2);margin-top:10px}
+  .legend .k{display:inline-flex;align-items:center;gap:6px}
+  .legend .k .sw2{width:10px;height:10px;border-radius:2px}
+  ul.notes{margin:0;padding-left:18px;font-size:13px;color:var(--ink-2)}
+  ul.notes li{margin-bottom:8px}
+  ul.notes b{color:var(--ink)}
+  pre{background:var(--inset);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;overflow:auto;max-height:420px;font-size:11.5px;line-height:1.55;margin:0}
+  .banner{background:color-mix(in srgb,var(--gold) 14%,transparent);border:1px solid var(--border);color:var(--ink-2);border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:18px;font-size:13px}
+  .banner b{color:var(--ink)}
+  .btn{border:1px solid var(--border);background:color-mix(in srgb,var(--lav) 20%,transparent);color:var(--ink);border-radius:var(--radius-md);padding:6px 12px;font-size:12px;font-family:inherit;cursor:pointer}
+  .btn:hover{border-color:var(--lav)}
+  .rec{font-size:10px;padding:1px 5px;border-radius:var(--radius-sm);background:color-mix(in srgb,var(--lav) 25%,transparent);color:var(--ink);border:1px solid color-mix(in srgb,var(--lav) 45%,var(--border));white-space:nowrap}
+  .scroller{overflow-x:auto;scrollbar-width:thin}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div>
+      <h1>Accounts → institutions</h1>
+      <p class="cap">A decision sheet, not a page design. Everything here is editable in place — change a colour, a
+        name, or a mapping, then read off the generated ledger plan at the bottom.</p>
+    </div>
+    <div class="controls push-end">
+      <div>
+        <span class="lbl">Theme</span>
+        <div class="seg" id="segTheme">
+          <button data-v="dark" class="active">Dark</button><button data-v="light">Light</button>
+        </div>
+      </div>
+      <div>
+        <span class="lbl">Palette</span>
+        <div class="seg" id="segPalette">
+          <button data-v="brand">Strict brand</button><button data-v="muted" class="active">Brand-muted</button><button data-v="pal">Palette-first</button>
+        </div>
+      </div>
+      <div>
+        <span class="lbl">Mark</span>
+        <div class="seg" id="segMark">
+          <button data-v="dot" class="active">Dot</button><button data-v="mono">Monogram</button><button data-v="bar">Bar</button>
+        </div>
+      </div>
+      <div style="width:96px">
+        <span class="lbl">Name budget</span>
+        <input type="number" id="budget" value="18" min="6" max="40" />
+      </div>
+    </div>
+  </div>
+
+  <div class="banner">
+    <b>Recommended answer to your naming question:</b> keep the ledger leaf <i>identical</i> to the UI name
+    (CamelCase → de-CamelCased), so drift is structurally impossible. Where <code>Issuer&nbsp;+&nbsp;Product</code>
+    blows the budget, <b>shorten the issuer, never the product</b> — the mark already carries the issuer, so
+    “WF Autograph” loses nothing, while “Wells Fargo Auto” loses the card. One exception is mandatory: the three
+    Amazon co-brands must keep their issuer or they collide.
+  </div>
+
+  <!-- ─────────────────────────── 1. institutions ─────────────────────────── -->
+  <div class="card">
+    <div class="head">
+      <h2>1 · Institution palette</h2>
+      <p class="cap">Brand hex is what the company publishes; <b>adapted</b> is what the app would actually draw.
+        Contrast is the adapted colour against this theme’s card surface — a 10px dot wants ≥ 2.5:1 to register at all.
+        Edit any adapted swatch to try an alternative.</p>
+    </div>
+    <div class="scroller">
+      <table id="tblInst">
+        <thead>
+          <tr>
+            <th>Institution</th><th>Short</th><th>Brand</th><th>Source</th>
+            <th>Adapted</th><th>Hex</th><th>Contrast</th><th>Notes</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────── 2. mapping ─────────────────────────── -->
+  <div class="card">
+    <div class="head">
+      <h2>2 · Every account, mapped</h2>
+      <p class="cap">All 25 open + closed accounts in the ledger. <b>Proposed leaf</b> is editable; the UI name and its
+        length are derived live using the app’s real de-CamelCase rule, so you can see immediately when a rename would
+        need an alias override or blow the budget.</p>
+    </div>
+    <div class="scroller">
+      <table id="tblAcct">
+        <thead>
+          <tr>
+            <th style="width:26%">Current ledger path</th><th style="width:13%">Institution</th>
+            <th style="width:16%">Proposed leaf</th><th style="width:16%">UI name</th><th>Len</th>
+            <th>Status</th><th>Note</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────── 3. in situ ─────────────────────────── -->
+  <div class="two">
+    <div class="card">
+      <div class="head">
+        <h2>3a · In situ — balances pane</h2>
+        <p class="cap">The only test that matters: can you tell two accounts apart at 10px, in both themes?</p>
+      </div>
+      <div id="listAssets"></div>
+    </div>
+    <div class="card">
+      <div class="head">
+        <h2>3b · In situ — cards pane</h2>
+        <p class="cap">Six issuers side by side is where a blue-heavy palette falls over.</p>
+      </div>
+      <div id="listCards"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="head">
+      <h2>3c · In situ — assets by institution</h2>
+      <p class="cap">Adjacent fills, no whitespace between them. Any two neighbours that read as one band are too close.</p>
+    </div>
+    <div class="stack" id="stack"></div>
+    <div class="legend" id="stackLegend"></div>
+    <div style="display:flex;gap:24px;align-items:center;margin-top:18px;flex-wrap:wrap">
+      <svg id="donut" width="200" height="200" viewBox="0 0 200 200" style="flex:0 0 auto"></svg>
+      <p class="cap quiet" style="max-width:36rem">The donut is the harsher test — segments meet at a hard edge and the
+        eye has no label to fall back on. Six Fidelity accounts collapsing into one wedge is visible here first.</p>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────── 4. findings ─────────────────────────── -->
+  <div class="card">
+    <div class="head">
+      <h2>4 · What the mapping exposes</h2>
+      <p class="cap">Decisions I could not make for you, and problems the mapping surfaced.</p>
+    </div>
+    <ul class="notes">
+      <li><b>Fidelity holds 6 of 7 investment accounts.</b> HSA, 401k, Roth IRA, Trad IRA, Brokerage and Stocks all
+        take one hue, so the institution mark stops discriminating in the net-worth pane — it becomes a “Fidelity”
+        block with one Schwab outlier. <b>Suggestion:</b> colour investment rows by <i>tax role</i>
+        (<code>--role-taxable</code> / <code>--role-taxadv</code>) and keep the institution mark for cash and cards
+        only, where it actually carries information.</li>
+      <li><b>Five institutions are blue.</b> Amex #016FD0, Chase #005EB8, Venmo #008CFF, Schwab #009DDB and US Bank
+        navy occupy roughly one hue. Strict brand is unusable for this set; brand-muted survives only because it pulls
+        Venmo toward cyan, Schwab toward teal and US Bank toward slate. Flip between the palettes above and watch the
+        cards pane.</li>
+      <li><b>Bilt is issued by Wells Fargo.</b> Colour by the brand you interact with (Bilt) or by the issuer (WF)?
+        I mapped it to Bilt — you log in to Bilt, not to Wells Fargo — but the mapping row lets you switch it.</li>
+      <li><b>Bilt’s own brand colour is near-black</b> (#141414), which is invisible as a dot on the dark theme. It has
+        to be re-lightened to a pewter, so it is the one institution where the mark is not brand-recognisable at all.
+        Same story for the Fidelity black wordmark — I used the green from the pyramid mark instead.</li>
+      <li><b>Three colours are unverified.</b> US Bank, Fidelity green and Bilt are not in the brand-colour databases I
+        could reach; the values shown are the commonly-cited ones and are tagged <span class="tag warn">unverified</span>
+        in the table. Everything else came from a published brand palette.</li>
+      <li><b>No logos.</b> Fifteen bitmaps that need a light and a dark variant, are trademarked, and are illegible at
+        the 10px the row actually gives them. The <b>Monogram</b> mark option above is the middle ground: brand colour
+        plus initials, which is most of the recognition at none of the cost.</li>
+      <li><b>Renaming is not a leaf-only edit.</b> Every <code>Equity:Adjustments:*</code> account mirrors an asset
+        account name, and closed accounts still carry history — both have to move in lockstep, or the ledger stops
+        balancing. The plan below covers both.</li>
+      <li><b>“BofA” cannot be de-CamelCased correctly.</b> The app’s rule renders it “Bof A”. It needs an alias
+        override no matter which naming scheme wins — as does <code>Amazon401k</code> (“Amazon401k”).</li>
+    </ul>
+  </div>
+
+  <!-- ─────────────────────────── 5. plan ─────────────────────────── -->
+  <div class="card">
+    <div class="head" style="display:flex;align-items:flex-start;gap:14px">
+      <div style="flex:1">
+        <h2>5 · Generated ledger plan</h2>
+        <p class="cap">Live output of your edits above — the renames, the mirrored equity renames, the alias overrides
+          that survive, and the palette block for <code>app.css</code>.</p>
+      </div>
+      <button class="btn" id="copyPlan">Copy plan</button>
+    </div>
+    <pre id="plan"></pre>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   DATA
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Three candidate palettes per institution.
+   · brand  — the published primary, verbatim.
+   · muted  — brand hue held, saturation/lightness pulled into the Kanagawa range, with hues nudged
+              apart where two brands share one (the five blues).
+   · pal    — assigned from the theme's existing accents only. Deliberately least literal; it runs
+              out of distinct hues at 15 institutions, which is the point of showing it. */
+const INST = [
+  {key:'amex',        name:'American Express', short:'Amex',        brand:'#016FD0', muted:'#4b8fd6', pal:'#7dcfff', src:'brand palette', note:'Amex Blue'},
+  {key:'chase',       name:'Chase',            short:'Chase',       brand:'#005EB8', muted:'#1f6fbd', pal:'#6f8fe8', src:'brand palette', note:'Chase Blue (also brand black #141414)'},
+  {key:'bofa',        name:'Bank of America',  short:'BofA',        brand:'#E31837', muted:'#d1495b', pal:'#f7768e', src:'brand palette', note:'red primary; navy #012169 secondary'},
+  {key:'capitalone',  name:'Capital One',      short:'C1',          brand:'#D22E1E', muted:'#c85a4a', pal:'#ff9e64', src:'brand palette', note:'red primary; navy #004878 secondary'},
+  {key:'wellsfargo',  name:'Wells Fargo',      short:'WF',          brand:'#D41C2C', muted:'#d8a13a', pal:'#e0af68', src:'brand palette', note:'adapted from the yellow #FCCC44 — the red collides with BofA'},
+  {key:'usbank',      name:'U.S. Bank',        short:'US Bank',     brand:'#0C2074', muted:'#4a6f9e', pal:'#6f8fe8', src:'unverified',    note:'navy; commonly-cited value'},
+  {key:'discover',    name:'Discover',         short:'Discover',    brand:'#EA4209', muted:'#e08a3c', pal:'#ffd27f', src:'brand palette', note:'orange; maroon #A41A11 secondary'},
+  {key:'bilt',        name:'Bilt Rewards',     short:'Bilt',        brand:'#141414', muted:'#a39cb8', pal:'#969380', src:'unverified',    note:'near-black brand → must be inverted to stay visible'},
+  {key:'tdbank',      name:'TD Bank',          short:'TD',          brand:'#54B848', muted:'#6cbf5a', pal:'#9ece6a', src:'brand palette', note:'green; dark green #003F2D secondary'},
+  {key:'ally',        name:'Ally',             short:'Ally',        brand:'#650360', muted:'#a86bc4', pal:'#de85c8', src:'brand palette', note:'deep purple — lightened hard to survive the dark theme'},
+  {key:'fidelity',    name:'Fidelity',         short:'Fidelity',    brand:'#368727', muted:'#3f9e63', pal:'#2bb673', src:'unverified',    note:'green from the pyramid mark; the wordmark itself is black'},
+  {key:'schwab',      name:'Charles Schwab',   short:'Schwab',      brand:'#009DDB', muted:'#37b3d4', pal:'#7dcfff', src:'brand palette', note:'Schwab Blue, pushed toward teal to clear Amex/Venmo'},
+  {key:'wealthfront', name:'Wealthfront',      short:'Wealthfront', brand:'#4840BB', muted:'#7d6be0', pal:'#bb9af7', src:'brand palette', note:'violet-blue (current app token has it as teal — that is stale)'},
+  {key:'venmo',       name:'Venmo',            short:'Venmo',       brand:'#008CFF', muted:'#4aa8d8', pal:'#4cc9b0', src:'brand palette', note:'Venmo Blue, pushed toward cyan to clear Amex'},
+  {key:'amazon',      name:'Amazon',           short:'Amazon',      brand:'#FF9900', muted:'#e0a04a', pal:'#e0af68', src:'brand palette', note:'employer + gift-card + co-brand product name'},
+  {key:'other',       name:'Unmapped',         short:'—',           brand:'#8f86a8', muted:'#8f86a8', pal:'#8f86a8', src:'fallback',      note:'anything the map misses still reads as “an account”'}
+];
+const BY_KEY = Object.fromEntries(INST.map(i => [i.key, i]));
+
+/* Every account currently declared in the ledger, plus the leaf I would rename it to.
+   `alt` is the rejected alternative, shown so the trade-off is visible rather than asserted. */
+const ACCOUNTS = [
+  {g:'Cash & spending accounts', path:'Assets:Cash:Ally',        inst:'ally',        leaf:'Ally',            bal:18400,  alt:'AllySavings — only if you want the product in the name'},
+  {g:'Cash & spending accounts', path:'Assets:Cash:BofA',        inst:'bofa',        leaf:'BofA',            bal:3250,   alias:'BofA', alt:'BankOfAmerica → “Bank Of America”, wrong capital O'},
+  {g:'Cash & spending accounts', path:'Assets:Cash:Wealthfront', inst:'wealthfront', leaf:'Wealthfront',     bal:42700,  alt:'WealthfrontCash — the sweep target, name it if you add a second WF account'},
+  {g:'Cash & spending accounts', path:'Assets:Cash:Venmo',       inst:'venmo',       leaf:'Venmo',           bal:180,    note:'sweeps to Wealthfront'},
+  {g:'Cash & spending accounts', path:'Assets:Cash:TDBank',      inst:'tdbank',      leaf:'TDBank',          bal:0,      closed:'2023-03-01'},
+  {g:'Cash & spending accounts', path:'Assets:Cash:Chase',       inst:'chase',       leaf:'Chase',           bal:0,      closed:'2024-10-01'},
+  {g:'Cash & spending accounts', path:'Assets:GiftCard:Amazon',  inst:'amazon',      leaf:'Amazon',          bal:0,      closed:'2023-12-02'},
+
+  {g:'Credit cards', path:'Liabilities:CC:AmexGold',          inst:'amex',       leaf:'AmexGold',      bal:-1240},
+  {g:'Credit cards', path:'Liabilities:CC:BofACash',          inst:'bofa',       leaf:'BofACash',      bal:-310, alias:'BofA Cash', alt:'BofACustomizedCash → 23 chars, way over'},
+  {g:'Credit cards', path:'Liabilities:CC:Discover',          inst:'discover',   leaf:'DiscoverIt',    bal:-95,  alt:'Discover — fine while it is your only Discover card'},
+  {g:'Credit cards', path:'Liabilities:CC:C1VentureX',        inst:'capitalone', leaf:'C1VentureX',    bal:-2180, alt:'CapitalOneVentureX → “Capital One Venture X”, 21 chars'},
+  {g:'Credit cards', path:'Liabilities:CC:WFAutograph',       inst:'wellsfargo', leaf:'WFAutograph',   bal:-640,  alt:'WellsFargoAutograph → “Wells Fargo Autograph”, 21 chars'},
+  {g:'Credit cards', path:'Liabilities:CC:ChaseAmazon',       inst:'chase',      leaf:'ChaseAmazon',   bal:0, closed:'2024-10-01', note:'issuer must stay — three Amazon co-brands'},
+  {g:'Credit cards', path:'Liabilities:CC:ChaseInkUnlimited', inst:'chase',      leaf:'ChaseInkUnlimited', bal:0, closed:'2024-10-01', alt:'InkUnlimited → 13 chars, but breaks issuer-prefix consistency'},
+  {g:'Credit cards', path:'Liabilities:CC:ChaseInkCash',      inst:'chase',      leaf:'ChaseInkCash',  bal:0, closed:'2025-07-01'},
+  {g:'Credit cards', path:'Liabilities:CC:Bilt',              inst:'bilt',       leaf:'Bilt',          bal:0, closed:'2026-03-01', note:'issued by Wells Fargo — switch the dropdown to test'},
+  {g:'Credit cards', path:'Liabilities:CC:AmexAmazon',        inst:'amex',       leaf:'AmexAmazon',    bal:0, closed:'2026-08-14'},
+  {g:'Credit cards', path:'Liabilities:CC:USBankAmazon',      inst:'usbank',     leaf:'USBankAmazon',  bal:-420},
+
+  {g:'Investments', path:'Assets:Investments:TaxAdvantaged:FidelityHSA',       inst:'fidelity', leaf:'FidelityHSA',        bal:12900},
+  {g:'Investments', path:'Assets:Investments:TaxAdvantaged:Amazon401k',        inst:'fidelity', leaf:'Amazon401k',         bal:128000, alias:'Amazon 401k', note:'employer Amazon, recordkeeper Fidelity'},
+  {g:'Investments', path:'Assets:Investments:TaxAdvantaged:RothIRA',           inst:'fidelity', leaf:'RothIRA',            bal:46300},
+  {g:'Investments', path:'Assets:Investments:TaxAdvantaged:TradIRA',           inst:'fidelity', leaf:'TradIRA',            bal:21800},
+  {g:'Investments', path:'Assets:Investments:Taxable:FidelityIndividual',      inst:'fidelity', leaf:'FidelityBrokerage',  bal:63500, alt:'FidelityIndividual → “Fidelity Individual”, 19 chars'},
+  {g:'Investments', path:'Assets:Investments:Taxable:FidelityStocks',          inst:'fidelity', leaf:'FidelityStocks',     bal:14200},
+  {g:'Investments', path:'Assets:Investments:Taxable:CharlesSchwabIndividual', inst:'schwab',   leaf:'SchwabIndividual',   bal:27600, alt:'CharlesSchwabIndividual → 25 chars'},
+
+  {g:'Employers (not institutions)', path:'Income:Salary:Amazon',     inst:'amazon', leaf:'Amazon',     bal:0, note:'employer — mark optional'},
+  {g:'Employers (not institutions)', path:'Income:Salary:Simplisafe', inst:'other',  leaf:'Simplisafe', bal:0, closed:'2022-01-01', note:'no institution'}
+];
+
+/* Equity:Adjustments accounts that mirror an asset name and must be renamed in lockstep. */
+const EQUITY_MIRRORS = {
+  'Equity:Adjustments:Ally':'Assets:Cash:Ally',
+  'Equity:Adjustments:BofA':'Assets:Cash:BofA',
+  'Equity:Adjustments:Wealthfront':'Assets:Cash:Wealthfront',
+  'Equity:Adjustments:Investments:CharlesSchwabIndividual':'Assets:Investments:Taxable:CharlesSchwabIndividual',
+  'Equity:Adjustments:Investments:FidelityIndividual':'Assets:Investments:Taxable:FidelityIndividual',
+  'Equity:Adjustments:Investments:FidelityStocks':'Assets:Investments:Taxable:FidelityStocks',
+  'Equity:Adjustments:Investments:FidelityHSA':'Assets:Investments:TaxAdvantaged:FidelityHSA',
+  'Equity:Adjustments:Investments:RothIRA':'Assets:Investments:TaxAdvantaged:RothIRA',
+  'Equity:Adjustments:Investments:TradIRA':'Assets:Investments:TaxAdvantaged:TradIRA',
+  'Equity:Adjustments:Investments:Amazon401k':'Assets:Investments:TaxAdvantaged:Amazon401k'
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+let palette = 'muted', markStyle = 'dot', budget = 18;
+/* Hand-edited hexes, keyed by palette AND institution — so tweaking a colour in one variant
+   doesn't silently pin it across the other two and make the palette toggle look broken. */
+const overrides = {};
+
+const instColor = k => overrides[palette + ':' + k] ?? BY_KEY[k][palette];
+
+/* The app's real rule, copied verbatim from src/lib/utils/format.ts so the previews cannot lie. */
+const deCamel = leaf => leaf
+  .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+  .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+  .trim();
+
+const displayName = a => a.alias ?? deCamel(a.leaf);
+const currentLeaf = a => a.path.split(':').pop();
+
+const srgb = c => { c /= 255; return c <= 0.03928 ? c/12.92 : ((c+0.055)/1.055)**2.4; };
+const lum = hex => {
+  const n = parseInt(hex.slice(1), 16);
+  return 0.2126*srgb(n>>16&255) + 0.7152*srgb(n>>8&255) + 0.0722*srgb(n&255);
+};
+const contrast = (a, b) => {
+  const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+  return (x + 0.05) / (y + 0.05);
+};
+const surfaceHex = () => document.documentElement.dataset.theme === 'light' ? '#faf6ec' : '#1f1f2b';
+const money = n => (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US');
+const initials = i => i.short === '—' ? '?'
+  : i.short.replace(/[^A-Za-z0-9]/g,'').slice(0, 2).toUpperCase();
+
+function markHTML(instKey) {
+  const c = instColor(instKey), i = BY_KEY[instKey];
+  if (markStyle === 'dot') return `<span class="dot" style="background:${c}"></span>`;
+  if (markStyle === 'bar') return `<span class="bar-mark mark" style="background:${c}"></span>`;
+  /* The chip's own ink flips with its fill, so a navy or near-black brand colour still reads.
+     Without this the strict-brand US Bank chip is dark-on-dark and unusable. */
+  const ink = lum(c) > 0.32 ? 'var(--on-accent)' : '#fff';
+  return `<span class="mark mono-chip" style="background:${c};color:${ink}">${initials(i)}</span>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RENDER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function renderInst() {
+  const surf = surfaceHex();
+  document.querySelector('#tblInst tbody').innerHTML = INST.map(i => {
+    const c = instColor(i.key);
+    const cr = contrast(c, surf);
+    const crTag = cr >= 3 ? 'ok' : cr >= 2.2 ? 'warn' : 'bad';
+    const srcTag = i.src === 'unverified' ? 'warn' : i.src === 'fallback' ? '' : 'ok';
+    return `<tr>
+      <td>${i.name}</td>
+      <td class="mono">${i.short}</td>
+      <td><span class="sw" style="background:${i.brand}"></span> <code>${i.brand}</code></td>
+      <td><span class="tag ${srcTag}">${i.src}</span></td>
+      <td><input type="color" value="${c}" data-inst="${i.key}" /></td>
+      <td><code>${c}</code></td>
+      <td><span class="tag ${crTag}">${cr.toFixed(2)}:1</span></td>
+      <td class="cap" style="font-size:11.5px">${i.note}</td>
+    </tr>`;
+  }).join('');
+  /* `change`, not `input`: re-rendering the table mid-drag would tear the open picker down. */
+  document.querySelectorAll('#tblInst input[type=color]').forEach(el =>
+    el.addEventListener('change', e => {
+      overrides[palette + ':' + el.dataset.inst] = e.target.value;
+      renderAll();
+    }));
+}
+
+function renderAccounts() {
+  let lastG = null;
+  document.querySelector('#tblAcct tbody').innerHTML = ACCOUNTS.map((a, idx) => {
+    const head = a.g !== lastG
+      ? `<tr class="grouphead"><td colspan="7">${a.g}</td></tr>` : '';
+    lastG = a.g;
+    const name = displayName(a), len = name.length;
+    const renamed = a.leaf !== currentLeaf(a);
+    return head + `<tr>
+      <td><code class="path">${a.path.replace(/:([^:]+)$/, ':<b style="color:var(--ink)">$1</b>')}</code></td>
+      <td><span style="display:inline-flex;align-items:center;gap:6px">${markHTML(a.inst)}
+        <select data-idx="${idx}">${INST.map(i =>
+          `<option value="${i.key}"${i.key === a.inst ? ' selected' : ''}>${i.short === '—' ? i.name : i.short}</option>`).join('')}
+        </select></span></td>
+      <td><input type="text" value="${a.leaf}" data-leaf="${idx}" /></td>
+      <td data-name="${idx}">${name}${a.alias ? ' <span class="tag warn">alias</span>' : ''}</td>
+      <td><span class="len${len > budget ? ' over' : ''}" data-len="${idx}">${len}</span></td>
+      <td data-status="${idx}">${a.closed ? `<span class="tag closed">closed ${a.closed}</span>`
+                     : renamed ? '<span class="tag ok">rename</span>' : '<span class="tag">keep</span>'}</td>
+      <td class="cap" style="font-size:11.5px">${a.note ? a.note + (a.alt ? '<br>' : '') : ''}${a.alt ? `<span class="rec">alt</span> ${a.alt}` : ''}</td>
+    </tr>`;
+  }).join('');
+  document.querySelectorAll('#tblAcct select').forEach(el =>
+    el.addEventListener('change', e => { ACCOUNTS[el.dataset.idx].inst = e.target.value; renderAll(); }));
+  /* Typing patches only the cells that derive from the leaf. A full re-render would rebuild the
+     tbody and yank focus out of the field after every keystroke. */
+  document.querySelectorAll('#tblAcct input[data-leaf]').forEach(el =>
+    el.addEventListener('input', e => {
+      const idx = el.dataset.leaf, a = ACCOUNTS[idx];
+      a.leaf = e.target.value;
+      refreshDerived(idx);
+      renderLists(); renderPlan();
+    }));
+}
+
+/* The three cells downstream of a leaf edit: the UI name, its length, and the rename status. */
+function refreshDerived(idx) {
+  const a = ACCOUNTS[idx], name = displayName(a);
+  const nameCell = document.querySelector(`[data-name="${idx}"]`);
+  const lenCell = document.querySelector(`[data-len="${idx}"]`);
+  const statusCell = document.querySelector(`[data-status="${idx}"]`);
+  nameCell.innerHTML = name + (a.alias ? ' <span class="tag warn">alias</span>' : '');
+  lenCell.textContent = name.length;
+  lenCell.classList.toggle('over', name.length > budget);
+  if (!a.closed) statusCell.innerHTML = a.leaf !== currentLeaf(a)
+    ? '<span class="tag ok">rename</span>' : '<span class="tag">keep</span>';
+}
+
+function renderLists() {
+  const row = a => `<div class="row">${markHTML(a.inst)}
+      <span class="nm">${displayName(a)}<span class="sub"> · ${BY_KEY[a.inst].name}</span></span>
+      <span class="amt">${money(a.bal)}</span></div>`;
+  document.getElementById('listAssets').innerHTML =
+    ACCOUNTS.filter(a => a.bal > 0).map(row).join('');
+  document.getElementById('listCards').innerHTML =
+    ACCOUNTS.filter(a => a.bal < 0).map(row).join('');
+}
+
+function renderCharts() {
+  const rows = ACCOUNTS.filter(a => a.bal > 0);
+  const total = rows.reduce((s, a) => s + a.bal, 0);
+  document.getElementById('stack').innerHTML = rows.map(a =>
+    `<span style="background:${instColor(a.inst)};width:${(a.bal / total * 100).toFixed(2)}%"
+       title="${displayName(a)} · ${money(a.bal)}"></span>`).join('');
+  document.getElementById('stackLegend').innerHTML = rows.map(a =>
+    `<span class="k"><span class="sw2" style="background:${instColor(a.inst)}"></span>${displayName(a)}</span>`).join('');
+
+  const R = 74, C = 2 * Math.PI * R;
+  let off = 0;
+  document.getElementById('donut').innerHTML = rows.map(a => {
+    const frac = a.bal / total, seg = `<circle cx="100" cy="100" r="${R}" fill="none"
+      stroke="${instColor(a.inst)}" stroke-width="34"
+      stroke-dasharray="${(frac * C).toFixed(2)} ${(C - frac * C).toFixed(2)}"
+      stroke-dashoffset="${(-off * C).toFixed(2)}" transform="rotate(-90 100 100)"></circle>`;
+    off += frac;
+    return seg;
+  }).join('');
+}
+
+function renderPlan() {
+  const renames = ACCOUNTS.filter(a => a.leaf !== currentLeaf(a))
+    .map(a => [a.path, a.path.replace(/[^:]+$/, a.leaf)]);
+  const eq = Object.entries(EQUITY_MIRRORS).flatMap(([eqPath, assetPath]) => {
+    const a = ACCOUNTS.find(x => x.path === assetPath);
+    if (!a || a.leaf === currentLeaf(a)) return [];
+    return [[eqPath, eqPath.replace(/[^:]+$/, a.leaf)]];
+  });
+  const aliases = ACCOUNTS.filter(a => a.alias);
+  const over = ACCOUNTS.filter(a => displayName(a).length > budget);
+  const w = Math.max(0, ...[...renames, ...eq].map(([f]) => f.length));
+
+  document.getElementById('plan').textContent = [
+    `# ── 1. account renames (${renames.length}) ─────────────────────────────────────────`,
+    renames.length
+      ? renames.map(([f, t]) => `${f.padEnd(w)}  →  ${t}`).join('\n')
+      : '  (none — every leaf already reads as intended)',
+    '',
+    `# ── 2. mirrored Equity:Adjustments renames (${eq.length}) — must move in lockstep ──`,
+    eq.length ? eq.map(([f, t]) => `${f.padEnd(w)}  →  ${t}`).join('\n') : '  (none)',
+    '',
+    '# ── 3. alias overrides still required in src/lib/utils/format.ts ───────────',
+    'const ACCOUNT_ALIASES_OVERRIDE: Record<string, string> = {',
+    ...aliases.map(a => `\t${/^[A-Za-z_$][\w$]*$/.test(a.leaf) ? a.leaf : `'${a.leaf}'`}: '${a.alias}',`),
+    '};',
+    '',
+    `# ── 4. names still over the ${budget}-char budget (${over.length}) ─────────────────────────`,
+    over.length ? over.map(a => `  ${displayName(a)}  (${displayName(a).length})`).join('\n')
+                : '  (none)',
+    '',
+    `# ── 5. institution palette for src/app.css — variant: ${palette} ──────────────`,
+    ...INST.map(i => `\t--inst-${i.key}: ${instColor(i.key)};`),
+    '',
+    '# ── 6. institution map for src/lib/utils/theme.ts ─────────────────────────',
+    'const INSTITUTION_TOKEN: Record<string, string> = {',
+    ...INST.filter(i => i.key !== 'other').flatMap(i => {
+      const frags = new Set([i.key, i.name.toLowerCase().replace(/[^a-z0-9]/g, ''),
+                             i.short.toLowerCase().replace(/[^a-z0-9]/g, '')]);
+      frags.delete('');
+      return [...frags].map(f => `\t${f}: 'inst-${i.key}',`);
+    }),
+    '};',
+    '',
+    '# ── 7. mechanics of the rename ────────────────────────────────────────────',
+    '#  · rename in the open/close directives AND every posting, across all year files',
+    '#  · closed accounts still carry history — rename them too, do not skip them',
+    '#  · sweep_to: "Assets:Cash:Wealthfront" metadata references an account by string',
+    '#  · after editing, `bean-check main.beancount` must be clean before regenerating data.json'
+  ].join('\n');
+}
+
+function renderAll() { renderInst(); renderAccounts(); renderLists(); renderCharts(); renderPlan(); }
+
+/* ── controls ─────────────────────────────────────────────────────────────── */
+function seg(id, fn) {
+  document.getElementById(id).addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    [...b.parentElement.children].forEach(x => x.classList.toggle('active', x === b));
+    fn(b.dataset.v);
+  });
+}
+seg('segTheme',   v => { document.documentElement.dataset.theme = v; renderAll(); });
+seg('segPalette', v => { palette = v; renderAll(); });
+seg('segMark',    v => { markStyle = v; renderAll(); });
+document.getElementById('budget').addEventListener('input', e => {
+  budget = Number(e.target.value) || 18; renderAccounts(); renderPlan();
+});
+document.getElementById('copyPlan').addEventListener('click', e => {
+  navigator.clipboard.writeText(document.getElementById('plan').textContent);
+  e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy plan', 1200);
+});
+
+renderAll();
+</script>
+</body>
+</html>

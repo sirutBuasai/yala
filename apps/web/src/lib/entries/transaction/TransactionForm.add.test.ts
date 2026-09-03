@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
 import { get } from 'svelte/store';
+import { setAccountDirectory } from '$lib/data/directory.svelte';
 import type { AccountsInfo } from '$lib/data/load';
 import { lastCategory, lastFundingAccount } from '$lib/utils/editPrefs';
 import TransactionForm from '$lib/entries/transaction/TransactionForm.svelte';
@@ -23,8 +24,17 @@ beforeEach(() => {
 	// isolate the session-sticky add-form memory between tests
 	lastFundingAccount.set('');
 	lastCategory.set('');
+	// account pickers label their options from the directory, so seed it alongside the lists
+	setAccountDirectory({
+		'Liabilities:CC:CardA': { name: 'Card A', institution: 'Bank of Example' },
+		'Assets:Cash:BankA': { name: 'Bank A', institution: 'Bank of Example' },
+		'Assets:Cash:Wallet': { name: 'Wallet' }
+	});
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+	vi.unstubAllGlobals();
+	setAccountDirectory({});
+});
 
 describe('TransactionForm (add)', () => {
 	it('blocks submit and shows a message when required fields are empty', async () => {

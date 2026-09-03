@@ -326,7 +326,7 @@ def test_post_balance_rejects_non_balance_sheet_account(client: TestClient):
 
 
 def test_patch_balance_edits_the_locator_from_networth_at(client: TestClient):
-    """The pane's round trip: read a month's locator, PATCH it, see the new figure."""
+    """The pane's round trip: read a month's locator, update it, see the new figure."""
     account = "Assets:Cash:BankA"
     assert (
         client.post(
@@ -335,20 +335,20 @@ def test_patch_balance_edits_the_locator_from_networth_at(client: TestClient):
         == 200
     )
 
-    at = client.get("/api/networth/at?date=2026-09-01").json()
+    at = client.get("/api/networth?date=2026-09-01").json()
     locator = at["logged"][account]
 
-    r = client.patch("/api/balance", json={"locator": locator, "amount": 1234.56})
+    r = client.post("/api/balance/update", json={"locator": locator, "amount": 1234.56})
     assert r.status_code == 200, r.text
     assert r.json()["date"] == "2026-09-01"
 
-    after = client.get("/api/networth/at?date=2026-09-01").json()
+    after = client.get("/api/networth?date=2026-09-01").json()
     assert dict((a["account"], a["value"]) for a in after["accounts"])[account] == 1234.56
 
 
 def test_patch_balance_rejects_an_unknown_locator(client: TestClient):
-    r = client.patch(
-        "/api/balance", json={"locator": "line:assets/2026.beancount:99999", "amount": 10.0}
+    r = client.post(
+        "/api/balance/update", json={"locator": "line:assets/2026.beancount:99999", "amount": 10.0}
     )
     assert r.status_code == 404
 
@@ -382,7 +382,7 @@ def test_post_liability_balance_stores_the_owed_figure_negative(client: TestClie
     )
     assert r.status_code == 200, r.text
 
-    at = client.get("/api/networth/at?date=2026-09-01").json()
+    at = client.get("/api/networth?date=2026-09-01").json()
     assert dict((a["account"], a["value"]) for a in at["accounts"])[CARD] == -CARD_OWED
     assert CARD in at["logged"]
 
@@ -407,7 +407,7 @@ def test_post_liability_balance_rejects_a_mismatch(client: TestClient):
     assert "spending or bill pay" in r.json()["detail"]
 
     # nothing was written
-    assert CARD not in client.get("/api/networth/at?date=2026-09-01").json()["logged"]
+    assert CARD not in client.get("/api/networth?date=2026-09-01").json()["logged"]
 
 
 def test_patch_liability_balance_keeps_the_owed_sign(client: TestClient):
@@ -417,10 +417,10 @@ def test_patch_liability_balance_keeps_the_owed_sign(client: TestClient):
         ).status_code
         == 200
     )
-    locator = client.get("/api/networth/at?date=2026-09-01").json()["logged"][CARD]
+    locator = client.get("/api/networth?date=2026-09-01").json()["logged"][CARD]
 
     # editing to a figure that no longer holds is refused, leaving the original in place
-    edit = client.patch("/api/balance", json={"locator": locator, "amount": 999.0})
+    edit = client.post("/api/balance/update", json={"locator": locator, "amount": 999.0})
     assert edit.status_code >= 400
-    at = client.get("/api/networth/at?date=2026-09-01").json()
+    at = client.get("/api/networth?date=2026-09-01").json()
     assert dict((a["account"], a["value"]) for a in at["accounts"])[CARD] == -CARD_OWED

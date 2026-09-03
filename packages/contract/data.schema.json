@@ -1,5 +1,32 @@
 {
   "$defs": {
+    "AccountInfo": {
+      "additionalProperties": false,
+      "description": "How one account presents itself: its display name and who holds it.\n\nBoth are resolved from ledger metadata by :mod:`yala.ledger.naming`, so the frontend looks a\nname up rather than deriving it. That keeps one implementation of the naming rule instead of\none per language, and it means the ledger stays the only place that decides what an account is\ncalled.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "institution": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Institution"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "AccountInfo",
+      "type": "object"
+    },
     "CategoryAmount": {
       "additionalProperties": false,
       "properties": {
@@ -176,6 +203,13 @@
           "title": "Categories",
           "type": "array"
         },
+        "accounts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/AccountInfo"
+          },
+          "title": "Accounts",
+          "type": "object"
+        },
         "domains": {
           "$ref": "#/$defs/Domains"
         }
@@ -186,6 +220,7 @@
         "transaction_count",
         "date_range",
         "categories",
+        "accounts",
         "domains"
       ],
       "title": "Meta",

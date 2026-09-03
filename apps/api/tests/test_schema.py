@@ -6,6 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from yala.schema import (
+    AccountInfo,
     CategoryAmount,
     DashboardData,
     DateRange,
@@ -35,6 +36,10 @@ def example_data() -> DashboardData:
             transaction_count=3,
             date_range=DateRange(start="2024-12-05", end="2025-01-20"),
             categories=["Grocery", "Takeouts"],
+            accounts={
+                "Liabilities:CC:CardA": AccountInfo(name="Card A", institution="Bank of Example"),
+                "Expenses:Grocery": AccountInfo(name="Grocery"),
+            },
             domains=Domains(
                 spending=True,
                 income=True,

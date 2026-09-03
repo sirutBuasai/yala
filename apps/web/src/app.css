@@ -37,27 +37,37 @@
 	--cat-recreation: #4cc9b0;
 	--cat-subscription: #ffd5d2;
 	--cat-misc: #c0794f;
-	/* Institution palette — each account's dot takes its bank/brokerage brand hue, muted to sit in
-	   this palette. Keyed by institution rather than by account so a bank's cards and its savings
-	   read as one family. --inst-other is the fallback for anything unmapped. */
-	--inst-amex: #4b8fd6;
-	--inst-chase: #1a5ea8;
-	--inst-bofa: #d1495b;
-	--inst-citi: #3a7bbf;
-	--inst-usbank: #2f5d9e;
-	--inst-wellsfargo: #d8a13a;
-	--inst-ally: #8a63d2;
-	--inst-marcus: #5a8ec9;
-	--inst-discover: #e08a3c;
-	--inst-capitalone: #c85a4a;
-	--inst-schwab: #4aa3d9;
-	--inst-fidelity: #3f9e63;
-	--inst-vanguard: #a8564a;
-	--inst-wealthfront: #4ab8a0;
-	--inst-robinhood: #6fc26f;
-	--inst-venmo: #4aa8d8;
-	--inst-paypal: #4a6fd8;
-	--inst-sofi: #d97a4a;
+	/* ── Institution palette ───────────────────────────────────────────────────
+	   Each account's dot takes its bank/brokerage hue. Keyed by institution rather than by account,
+	   so a bank's cards and its savings read as one family, and resolved from the `institution:`
+	   metadata the ledger declares rather than by matching the account name — co-brand cards,
+	   employer plans held at a custodian, and salary accounts all name one institution while
+	   belonging to another. --inst-other is the fallback for anything unmapped.
+
+	   Values are brand-derived but palette-first: an existing theme accent where one sits close to
+	   the brand hue, the brand's SECONDARY colour where a nearer brand already held that accent
+	   (Wells Fargo's red would collide with Bank of America's), and a hand-picked value where the
+	   brand colour is unusable — Bilt's is essentially black.
+
+	   Judge separation between two of these with CIELAB ΔE, not a WCAG contrast ratio: contrast is
+	   pure luminance and scores salmon against green at 1.01:1. The tightest pairs here are ΔE 19
+	   (US Bank / Chase, Charles Schwab / US Bank), comfortably above the ~12 where two 10px dots
+	   read as one colour. */
+	--inst-amex: #6f8fe8;
+	--inst-schwab: #7dcfff;
+	--inst-venmo: #b4f4ff;
+	--inst-wealthfront: #bb9af7;
+	--inst-ally: #de85c8;
+	--inst-bofa: #f7768e;
+	--inst-usbank: #4a6f9e;
+	--inst-capitalone: #c0794f;
+	--inst-discover: #ff9e64;
+	--inst-wellsfargo: #d94c4c;
+	--inst-amazon: #ffd27f;
+	--inst-fidelity: #9ece6a;
+	--inst-tdbank: #2bb673;
+	--inst-chase: #639cc3;
+	--inst-bilt: #595959;
 	--inst-other: #8f86a8;
 	/* ── Role palette ─────────────────────────────────────────────────────────
 	   Financial ROLES, not hues. Every figure the app plots is one of these, and a role
@@ -294,6 +304,24 @@
 	--lav-text: #6a49bd;
 	--teal-text: #1a6f88;
 	--salmon-text: #b33b54;
+	/* Institution dots need a second value here, which the category and role palettes do not.
+	   Those are read as large fills and as type; an institution dot is 10px of colour with no label
+	   of its own, and eight of the brand hues were authored against the charcoal surface. On cream
+	   they drop to 1.1–2.9:1, well under the ~3:1 a dot that small needs — Venmo's pale cyan is the
+	   extreme, effectively invisible. Each override holds the brand's hue and saturation and only
+	   lowers lightness until it clears 3:1, so the dot stays recognisably the same colour.
+	   The ones not listed already clear it: US Bank, Capital One, Wells Fargo, Bilt, other. */
+	--inst-amex: #688ae7;
+	--inst-schwab: #0094eb;
+	--inst-venmo: #009cb7;
+	--inst-wealthfront: #a274f4;
+	--inst-ally: #d565ba;
+	--inst-bofa: #f55472;
+	--inst-discover: #f55c00;
+	--inst-amazon: #c47f00;
+	--inst-fidelity: #6a9c33;
+	--inst-tdbank: #26a166;
+	--inst-chase: #5895bf;
 	--grid: #e6ddca;
 	--s1: #ece3f8;
 	--s2: #d6c4f0;

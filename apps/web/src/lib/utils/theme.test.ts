@@ -1,9 +1,12 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { get } from 'svelte/store';
+import { setAccountDirectory } from '$lib/data/directory.svelte';
 import {
 	CATEGORY_TOKEN,
+	INSTITUTION_TOKEN,
 	accountVar,
 	categoryVar,
+	institutionSlug,
 	setTheme,
 	theme,
 	toggleTheme
@@ -24,24 +27,58 @@ describe('categoryVar', () => {
 	});
 });
 
+describe('institutionSlug', () => {
+	it('strips case, spaces and punctuation', () => {
+		expect(institutionSlug('Bank of Example')).toBe('bankofexample');
+		expect(institutionSlug('E.G. Brokerage')).toBe('egbrokerage');
+	});
+});
+
 describe('accountVar', () => {
-	it('matches an institution anywhere in the account path, ignoring separators', () => {
-		expect(accountVar('Liabilities:CC:AmexGold')).toBe('var(--inst-amex)');
-		expect(accountVar('Assets:Cash:Ally')).toBe('var(--inst-ally)');
-		expect(accountVar('Wealthfront')).toBe('var(--inst-wealthfront)');
+	afterEach(() => setAccountDirectory({}));
+
+	/** Any institution the palette knows, without naming a specific one in the test body. */
+	const [aSlug, aToken] = Object.entries(INSTITUTION_TOKEN)[0]!;
+	const [bSlug, bToken] = Object.entries(INSTITUTION_TOKEN)[1]!;
+
+	it('every institution in the palette resolves to a token', () => {
+		for (const [slug, token] of Object.entries(INSTITUTION_TOKEN)) {
+			setAccountDirectory({ 'Assets:Cash:BankA': { name: 'Bank A', institution: slug } });
+			expect(accountVar('Assets:Cash:BankA')).toBe(`var(--${token})`);
+		}
 	});
 
-	it('prefers the longer brand when one fragment contains another', () => {
-		// "charlesschwab" wins over "schwab"; both map to the same token, so assert the pair that
-		// would actually collide: "bankofamerica" must not fall through to a shorter key.
-		expect(accountVar('Assets:Cash:BankOfAmerica')).toBe('var(--inst-bofa)');
-		expect(accountVar('Assets:Investments:Taxable:CharlesSchwabIndividual')).toBe(
-			'var(--inst-schwab)'
-		);
+	it('colours by the declared institution, not by the account name', () => {
+		// The account paths deliberately say nothing about who holds them — the dot colour comes
+		// only from the declaration, so a name can't influence it.
+		setAccountDirectory({
+			'Assets:Cash:BankA': { name: 'Bank A', institution: aSlug },
+			'Liabilities:CC:CardA': { name: 'Card A', institution: bSlug }
+		});
+
+		expect(accountVar('Assets:Cash:BankA')).toBe(`var(--${aToken})`);
+		expect(accountVar('Liabilities:CC:CardA')).toBe(`var(--${bToken})`);
 	});
 
-	it('falls back to a neutral for an unmapped institution', () => {
-		expect(accountVar('Assets:Cash:CreditUnion')).toBe('var(--inst-other)');
+	it('colours two accounts at one institution as one family', () => {
+		setAccountDirectory({
+			'Assets:Cash:BankA': { name: 'Bank A', institution: aSlug },
+			'Liabilities:CC:CardA': { name: 'Card A', institution: aSlug }
+		});
+
+		expect(accountVar('Liabilities:CC:CardA')).toBe(accountVar('Assets:Cash:BankA'));
+	});
+
+	it('falls back to a neutral for an untagged account, an unknown institution, or nullish', () => {
+		setAccountDirectory({
+			// An employer — not held anywhere, so it has no institution at all.
+			'Income:Salary:Employer1': { name: 'Employer 1' },
+			'Assets:Cash:BankB': { name: 'Bank B', institution: 'Bank of Example' }
+		});
+
+		expect(accountVar('Income:Salary:Employer1')).toBe('var(--inst-other)');
+		expect(accountVar('Assets:Cash:BankB')).toBe('var(--inst-other)');
+		expect(accountVar('Assets:Cash:NotDeclared')).toBe('var(--inst-other)');
 		expect(accountVar(null)).toBe('var(--inst-other)');
 	});
 });

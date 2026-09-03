@@ -26,8 +26,8 @@ from yala.ledger.constants import (
     INVESTMENTS,
     LIABILITIES,
 )
-from yala.ledger.entities import leaf
 from yala.ledger.locators import locator_of
+from yala.ledger.naming import account_name
 from yala.money import round_cents
 
 if TYPE_CHECKING:
@@ -122,17 +122,25 @@ class NetWorth:
         )
 
     def accounts(self, as_of: dt.date | None = None) -> list[AccountValue]:
-        """Every currently-active balance-sheet account with its USD value (for the breakdown)."""
+        """Every currently-active balance-sheet account with its USD value (for the breakdown).
+
+        Labels come from :func:`yala.ledger.naming.account_name`, the same resolver the account
+        directory uses, so a name can't read one way here and another way elsewhere. Investments
+        previously carried their tax tier in the label (``Taxable:BrokerStocks``); they now read
+        like every other account, since the tier is already on the row as its ``bucket``.
+        """
+        meta = self._led.account_meta()
         out: list[AccountValue] = []
 
         for a in self._led.active_accounts(CASH):
-            out.append(AccountValue(a, leaf(a), "cash", bucket(a), self._led.value(a, as_of)))
+            label = account_name(a, meta.get(a))
+            out.append(AccountValue(a, label, "cash", bucket(a), self._led.value(a, as_of)))
         for a in self._led.active_accounts(INVESTMENTS):
-            label = a[len(INVESTMENTS) :]
+            label = account_name(a, meta.get(a))
             out.append(AccountValue(a, label, "investment", bucket(a), self._led.value(a, as_of)))
         for a in self._led.active_accounts(LIABILITIES):
             bal = self._led.balance(a, as_of)
-            out.append(AccountValue(a, leaf(a), "liability", "liability", bal))
+            out.append(AccountValue(a, account_name(a, meta.get(a)), "liability", "liability", bal))
 
         return out
 

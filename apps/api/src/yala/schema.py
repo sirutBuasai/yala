@@ -31,12 +31,26 @@ class Domains(_Base):
     networth: bool = False
 
 
+class AccountInfo(_Base):
+    """How one account presents itself: its display name and who holds it.
+
+    Both are resolved from ledger metadata by :mod:`yala.ledger.naming`, so the frontend looks a
+    name up rather than deriving it. That keeps one implementation of the naming rule instead of
+    one per language, and it means the ledger stays the only place that decides what an account is
+    called.
+    """
+
+    name: str  # display name, already shortened if the real name overran the cap
+    institution: str | None = None  # declared holder; null for employers and untagged accounts
+
+
 class Meta(_Base):
     years: list[int]
     month_keys: list[str]  # "YYYY-MM"
     transaction_count: int
     date_range: DateRange | None
     categories: list[str]
+    accounts: dict[str, AccountInfo]  # every declared account, keyed by full path
     domains: Domains
 
 

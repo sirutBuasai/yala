@@ -22,6 +22,10 @@ export function makeData(): DashboardData {
 			transaction_count: 4,
 			date_range: { start: '2024-12-05', end: '2025-01-20' },
 			categories: ['Grocery', 'Takeouts'],
+			accounts: {
+				'Assets:Cash:BankA': { name: 'Bank A', institution: 'Bank of Example' },
+				'Liabilities:CC:CardA': { name: 'Card A', institution: 'Bank of Example' }
+			},
 			domains: {
 				spending: true,
 				income: true

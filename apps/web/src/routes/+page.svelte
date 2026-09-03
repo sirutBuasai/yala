@@ -52,11 +52,13 @@
 		}
 	});
 
-	// Record the RESOLVED mode (which may be 'view' because the API was unreachable), so the next
-	// load starts from what actually happened rather than what was asked for.
-	$effect(() => {
-		modePref.value = $mode;
-	});
+	// The preference records what the user ASKED for, not what they got. Recording the resolved mode
+	// instead made a transient failure permanent: load the page while the API is restarting and edit
+	// mode falls back to view, which then persisted as if it had been chosen — so every later load
+	// took the "they explicitly chose view" branch and never retried the API again.
+	function rememberMode(chosen: 'edit' | 'view'): void {
+		modePref.value = chosen;
+	}
 
 	// --- scroll offset per tab ---
 	//
@@ -183,7 +185,7 @@
 				elevated
 			/>
 			<div class="tgls">
-				<EditToggle onhint={showHint} />
+				<EditToggle onhint={showHint} onchosen={rememberMode} />
 				<ThemeToggle />
 			</div>
 		</div>

@@ -2,6 +2,7 @@
 	import type { DashboardData } from '$lib/data/types';
 	import { addAccount, addInvestment, closeAccount, type AccountsInfo } from '$lib/data/load';
 	import { formatAccount } from '$lib/utils/format';
+	import { accountVar } from '$lib/utils/theme';
 	import { SaveState } from '$lib/forms/saveState.svelte';
 	import { validateLeaf } from '$lib/forms/validate';
 	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
@@ -9,11 +10,15 @@
 	import DeleteConfirm from '$lib/ui/DeleteConfirm.svelte';
 	import Select from '$lib/forms/fields/Select.svelte';
 	import AccountRow from '$lib/views/manage/AccountRow.svelte';
+	import AddAccountPanel from '$lib/views/manage/AddAccountPanel.svelte';
 	import InvestmentRow from '$lib/views/manage/InvestmentRow.svelte';
 	import SettingsPanel from '$lib/views/manage/SettingsPanel.svelte';
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import ItemList from '$lib/ui/ItemList.svelte';
 	import Panel from '$lib/ui/Panel.svelte';
+
+	/** Ledger prefix for credit cards, to pick them out of the mixed payback-source list. */
+	const LIABILITY = 'Liabilities:';
 
 	interface Props {
 		data: DashboardData;
@@ -49,26 +54,11 @@
 	const close = (category: string) =>
 		cat.run(() => closeAccount(`Expenses:${category}`), `Closed ${category}.`);
 
-	// --- bank accounts ---
-	let bankName = $state('');
-	const bank = new SaveState();
-
-	async function addBank() {
-		const leaf = bankName.trim();
-		const problem = validateLeaf(leaf, 'bank account name');
-		if (problem) return bank.fail(problem);
-
-		let opened = leaf;
-		const ok = await bank.run(async () => {
-			const { account, error } = await addAccount('funding_cash', leaf);
-			if (account) opened = formatAccount(account);
-			return error;
-		});
-		if (ok) {
-			bank.note = `Added ${opened}.`;
-			bankName = '';
-		}
-	}
+	// --- money accounts (banks and cards) ---
+	// AddAccountPanel owns the fields, the busy state and the confirmation; each panel only says which
+	// ledger prefix it opens under. `credit_accounts` mixes cash and cards (it is the payback-source
+	// pool), so the card list filters it rather than being a list of its own.
+	const cards = $derived((accounts?.credit_accounts ?? []).filter((a) => a.startsWith(LIABILITY)));
 
 	// --- investment accounts ---
 	const investments = $derived(accounts?.investment_accounts ?? []);
@@ -76,36 +66,16 @@
 	const investDestinations = $derived([...(accounts?.credit_accounts ?? []), ...investments]);
 
 	let invSubtree = $state('Taxable');
-	let invName = $state('');
 	let invShares = $state(true);
 	let invContributable = $state(false);
 	let invEmployer = $state('');
 	let invLabels = $state('');
-	const inv = new SaveState();
 
 	const splitCsv = (s: string) =>
 		s
 			.split(',')
 			.map((x) => x.trim())
 			.filter(Boolean);
-
-	async function addInvest() {
-		const leaf = invName.trim();
-		if (!leaf) return inv.fail('Enter an account name.');
-
-		const ok = await inv.run(
-			() =>
-				addInvestment({
-					subtree: invSubtree as 'Taxable' | 'TaxAdvantaged',
-					name: leaf,
-					holds_shares: invShares,
-					employer: invContributable && invEmployer.trim() ? invEmployer.trim() : null,
-					labels: invContributable ? splitCsv(invLabels) : []
-				}),
-			`Added ${invSubtree}:${leaf}.`
-		);
-		if (ok) invName = '';
-	}
 </script>
 
 <ViewHeader title="Manage">
@@ -153,15 +123,30 @@
 		</ItemList>
 	</Panel>
 
-	<Panel title="Add a bank account" cap="Opens Assets:Cash:<name>.">
-		<AddRow
-			bind:value={bankName}
-			ariaLabel="new bank account name"
-			placeholder="e.g. Chase or Ally-Savings"
-			disabled={bank.busy}
-			onadd={addBank}
-		/>
-		<SaveFeedback save={bank} />
+	<AddAccountPanel
+		title="Add a bank account"
+		cap="Named by institution alone — a second account at the same bank is when a product name starts to earn its place."
+		withAccountName={false}
+		open={(naming) => addAccount('funding_cash', naming)}
+	/>
+
+	<AddAccountPanel
+		title="Add a credit card"
+		cap="Issuer plus the card's own name, both spelled out — the ledger keeps the full name and the short forms only stand in when a row can't fit it."
+		accountNamePlaceholder="e.g. Cash Rewards"
+		accountNameLabel="card name"
+		open={(naming) => addAccount('funding_credit', naming)}
+	/>
+
+	<Panel title="Your credit cards" count={cards.length}>
+		<ItemList any={cards.length > 0} empty="No credit cards yet.">
+			{#each cards as account (account)}
+				<li class="row">
+					<i class="dot" style:background={accountVar(account)}></i>
+					<span>{formatAccount(account)}</span>
+				</li>
+			{/each}
+		</ItemList>
 	</Panel>
 
 	<Panel
@@ -181,41 +166,49 @@
 		</ItemList>
 	</Panel>
 
-	<Panel
+	<AddAccountPanel
 		title="Add an investment account"
 		cap="Share accounts open unconstrained + seeded; a USD-only plan is tickerless."
+		institutionPlaceholder="e.g. Example Brokerage"
+		accountNamePlaceholder="e.g. Roth IRA"
+		accountAliasPlaceholder="short account name (e.g. Roth)"
+		open={(naming) =>
+			addInvestment({
+				...naming,
+				subtree: invSubtree as 'Taxable' | 'TaxAdvantaged',
+				holds_shares: invShares,
+				employer: invContributable && invEmployer.trim() ? invEmployer.trim() : null,
+				labels: invContributable ? splitCsv(invLabels) : []
+			})}
 	>
-		<AddRow
-			bind:value={invName}
-			ariaLabel="investment name"
-			placeholder="e.g. FidelityIndividual or HSA:Fidelity"
-			disabled={inv.busy}
-			onadd={addInvest}
-		>
-			{#snippet before()}
+		{#snippet extra()}
+			<div class="subtree">
 				<Select
 					ariaLabel="investment subtree"
 					bind:value={invSubtree}
 					options={['Taxable', 'TaxAdvantaged']}
 				/>
-			{/snippet}
-		</AddRow>
-		<label class="chk"
-			><input type="checkbox" bind:checked={invShares} /> Holds tickers (shares)</label
-		>
-		<label class="chk">
-			<input type="checkbox" bind:checked={invContributable} /> Payroll-contributable
-		</label>
-		{#if invContributable}
-			<input aria-label="employer" bind:value={invEmployer} placeholder="employer (e.g. Amazon)" />
-			<input
-				aria-label="labels"
-				bind:value={invLabels}
-				placeholder="contribution options, comma-separated (e.g. Roth401k,Trad401k,AfterTax401k)"
-			/>
-		{/if}
-		<SaveFeedback save={inv} />
-	</Panel>
+			</div>
+			<label class="chk"
+				><input type="checkbox" bind:checked={invShares} /> Holds tickers (shares)</label
+			>
+			<label class="chk">
+				<input type="checkbox" bind:checked={invContributable} /> Payroll-contributable
+			</label>
+			{#if invContributable}
+				<input
+					aria-label="employer"
+					bind:value={invEmployer}
+					placeholder="employer (e.g. Employer1)"
+				/>
+				<input
+					aria-label="labels"
+					bind:value={invLabels}
+					placeholder="contribution options, comma-separated (e.g. Roth401k,Trad401k,AfterTax401k)"
+				/>
+			{/if}
+		{/snippet}
+	</AddAccountPanel>
 
 	<Panel
 		title="Your investments"
@@ -231,6 +224,28 @@
 {/if}
 
 <style>
+	.subtree {
+		max-width: 14rem;
+		margin-bottom: var(--gap-row);
+	}
+	/* A read-only listed card: there is nothing to configure on one yet, only to see its colour. */
+	.row {
+		display: flex;
+		align-items: center;
+		gap: var(--gap-inline);
+		background: var(--inset);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-md);
+		padding: var(--space-3) var(--space-5);
+		font-size: var(--text-control);
+		color: var(--ink-2);
+	}
+	.row .dot {
+		width: 10px;
+		height: 10px;
+		border-radius: var(--radius-pill);
+		flex: 0 0 auto;
+	}
 	/* A plain, non-expanding managed item — a category has nothing to configure, only to close. */
 	.simple {
 		display: flex;
