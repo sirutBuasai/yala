@@ -53,6 +53,25 @@ export function logYScale(
 }
 
 /**
+ * Average glyph width as a fraction of font size, for the app's sans at chart sizes. Measuring
+ * text properly needs a canvas or a layout pass; this approximation is what lets label fitting be
+ * a pure function, which is worth more here than exactness — being a few percent conservative
+ * only ever means slightly smaller type, never a clipped label.
+ */
+const GLYPH_RATIO = 0.55;
+
+/**
+ * The font size at which the longest of `labels` fits inside `gutter` pixels, clamped to a
+ * readable range. Shared by the charts with a fixed label gutter (the ranked bars' row names, the
+ * heatmap's category column), which each need the same answer: shrink rather than truncate, but
+ * never shrink past legibility.
+ */
+export function fitFontSize(gutter: number, labels: string[], min = 8, max = 12): number {
+	const longest = Math.max(1, ...labels.map((l) => l.length));
+	return Math.max(min, Math.min(max, gutter / (GLYPH_RATIO * longest)));
+}
+
+/**
  * Which x-label indices to draw, given how much room there is.
  *
  * Thinning by count alone crams a narrow pane; thinning without protecting the final label loses

@@ -43,6 +43,12 @@ const INSTITUTION_TOKEN: Record<string, string> = {
 	bankofamerica: 'inst-bofa',
 	citi: 'inst-citi',
 	wellsfargo: 'inst-wellsfargo',
+	// Card names are often abbreviated in a ledger path ("WFAutograph", "C1VentureX"), so the
+	// abbreviation is mapped alongside the full brand. Short keys are safe because the list is
+	// matched longest-first — "capitalone" wins over "c1" whenever both would hit.
+	wf: 'inst-wellsfargo',
+	c1: 'inst-capitalone',
+	usbank: 'inst-usbank',
 	ally: 'inst-ally',
 	marcus: 'inst-marcus',
 	discover: 'inst-discover',

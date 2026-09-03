@@ -14,6 +14,8 @@
 	import { money, formatAccount } from '$lib/utils/format';
 	import { accountVar } from '$lib/utils/theme';
 	import RowList from '$lib/lists/RowList.svelte';
+	import Amount from '$lib/ui/Amount.svelte';
+	import Badge from '$lib/ui/Badge.svelte';
 
 	interface Props {
 		transfers: TransferRow[];
@@ -22,18 +24,19 @@
 		showDate?: boolean;
 		/** Fix the list to this many rows tall, then scroll (see RowList). */
 		fixedRows?: number;
+		/** Remembers this list's expanded state (see RowList). */
+		prefKey?: string;
 	}
-	let { transfers, edit, onedit, showDate = true, fixedRows }: Props = $props();
-
-	const cols = $derived(`${showDate ? '34px ' : ''}10px 1fr auto 74px`);
+	let { transfers, edit, onedit, showDate = true, fixedRows, prefKey }: Props = $props();
 </script>
 
+<!-- No metadata columns: the route IS the row's detail, and it lives in `main`. -->
 <RowList
 	items={transfers}
 	{edit}
 	{onedit}
-	{cols}
 	{fixedRows}
+	{prefKey}
 	dotColor={(t) => accountVar(t.from_account)}
 	dateOf={showDate ? (t) => t.date : undefined}
 >
@@ -41,16 +44,13 @@
 		<span class="main">
 			<span class="title">
 				<span class="route">{formatAccount(t.from_account)} → {formatAccount(t.to_account)}</span>
-				{#if t.pending}<span class="pending">● pending</span>{/if}
+				{#if t.pending}<Badge tone="warn" dot>pending</Badge>{/if}
 			</span>
 			{#if t.payee}<span class="note">{t.payee}</span>{/if}
 		</span>
 	{/snippet}
-	{#snippet columns(_t)}
-		<span></span>
-	{/snippet}
 	{#snippet amount(t)}
-		<span class="amt">{money(t.amount)}</span>
+		<Amount value={t.amount} />
 	{/snippet}
 </RowList>
 
@@ -63,6 +63,7 @@
 	.title {
 		display: flex;
 		align-items: baseline;
+		gap: var(--space-3);
 		min-width: 0;
 		font-size: var(--text-row);
 		font-weight: var(--fw-medium);
@@ -73,25 +74,11 @@
 		white-space: nowrap;
 		min-width: 0;
 	}
-	.pending {
-		flex: none;
-		color: var(--gold-text);
-		font-size: var(--text-badge);
-		font-weight: var(--fw-semibold);
-		margin-left: var(--space-3);
-		white-space: nowrap;
-	}
 	.note {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		color: var(--ink-3);
 		font-size: var(--text-badge);
-	}
-	.amt {
-		text-align: right;
-		font-variant-numeric: tabular-nums;
-		font-weight: var(--fw-semibold);
-		font-size: var(--text-row);
 	}
 </style>

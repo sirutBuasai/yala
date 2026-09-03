@@ -124,11 +124,11 @@
 		top: 4px;
 		bottom: 4px;
 		left: 0;
-		border-radius: 3px;
-		background: var(--lav);
+		border-radius: var(--radius-xs);
+		background: var(--role-balance);
 	}
 	.value.reached {
-		background: var(--good);
+		background: var(--role-saving);
 	}
 	.target {
 		position: absolute;

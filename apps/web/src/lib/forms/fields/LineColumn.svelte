@@ -9,6 +9,7 @@
 	// A labeled column of {value, amount} rows: each row picks a value (Select) and an amount.
 	// Reused for a paycheck's deduction/contribution lines and a transaction's credits.
 	import Select from '$lib/forms/fields/Select.svelte';
+	import AmountInput from '$lib/ui/AmountInput.svelte';
 
 	interface Props {
 		rows: AmountRow[];
@@ -51,14 +52,7 @@
 			<div class="grow">
 				<Select ariaLabel={selectAriaLabel} bind:value={row.value} {options} {optionLabel} />
 			</div>
-			<input
-				type="number"
-				step="0.01"
-				min="0"
-				inputmode="decimal"
-				bind:value={row.amount}
-				placeholder="0"
-			/>
+			<AmountInput bind:value={row.amount} ariaLabel="amount" />
 			{#if removable}
 				<button type="button" class="btn-mini rm" onclick={() => remove(i)}>✕</button>
 			{/if}
@@ -84,16 +78,10 @@
 		flex: 1;
 		min-width: 0;
 	}
-	.linerow input {
+	/* The amount cell's own chrome lives in AmountInput; here it only needs to share the row. */
+	.linerow :global(.amountinput) {
 		flex: 1;
-		min-width: 0; /* shrink to fit the popup width; no horizontal scroll */
-		background-color: var(--inset);
-		border: 1px solid var(--border);
-		color: var(--ink);
-		border-radius: var(--radius-md);
-		padding: var(--pad-control);
-		font-size: var(--text-control);
-		font-family: inherit;
+		min-width: 0;
 	}
 	.rm {
 		flex: 0 0 auto;

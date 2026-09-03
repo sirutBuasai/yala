@@ -84,17 +84,18 @@
 		width: 1px;
 		background: var(--border);
 	}
-	/* Fills use the shared accents (identical in both themes); only the amount TEXT below uses the
-	   theme-aware `-text` variants, which exist for legibility on the light background. */
+	/* Over-spend is money out, under-spend is money kept: the same two roles the rest of the app
+	   plots, so they take the role tokens rather than naming hues here. Only the amount TEXT uses
+	   the `-text` variants, which exist for legibility on the light background. */
 	.b {
 		position: absolute;
 		top: 2px;
 		height: 12px;
 		border-radius: var(--radius-xs);
-		background: var(--green);
+		background: var(--role-saving);
 	}
 	.b.over {
-		background: var(--salmon);
+		background: var(--role-spending);
 	}
 	.amt {
 		text-align: right;

@@ -44,14 +44,24 @@
 </RangeNav>
 
 <style>
+	/* The two pickers share whatever width the header has left, between a floor that still fits
+	   "September" and a ceiling that stops them sprawling on a wide header. Fixed widths overflowed a
+	   320px screen once the arrows and gaps were counted. */
 	.selectors {
 		display: flex;
+		flex-wrap: wrap;
 		gap: var(--gap-row);
+		min-width: 0;
+	}
+	.monthsel,
+	.yearsel {
+		flex: 1 1 auto;
+		min-width: 0;
 	}
 	.monthsel {
-		width: 90px;
+		max-width: 6.5rem;
 	}
 	.yearsel {
-		width: 110px;
+		max-width: 7rem;
 	}
 </style>

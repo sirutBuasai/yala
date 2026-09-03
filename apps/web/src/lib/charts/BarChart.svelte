@@ -26,7 +26,8 @@
 	const showLegend = $derived(legend ?? !single);
 	const showValues = $derived(valueLabels ?? single);
 
-	// Render at the measured pixel size so the chart fills (and grows with) its pane.
+	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also
+	// bounds how tall the chart may grow inside a stretched pane.
 	let boxW = $state(0);
 	let boxH = $state(0);
 	const W = $derived(boxW || 1100);
@@ -47,6 +48,11 @@
 	const y = $derived(axis.y);
 	const ticks = $derived(axis.ticks);
 	const base = $derived(y(0));
+
+	// A name for the chart, since an unlabelled role="img" announces only "image".
+	const label = $derived(
+		`Bar chart: ${series.map((sr) => sr.name).join(', ')} across ${labels.length} periods`
+	);
 </script>
 
 {#if showLegend}
@@ -57,8 +63,8 @@
 	</div>
 {/if}
 
-<div class="chartbox" bind:clientWidth={boxW} bind:clientHeight={boxH}>
-	<svg class="chart" viewBox="0 0 {W} {H}" role="img">
+<div class="figurebox" bind:clientWidth={boxW} bind:clientHeight={boxH}>
+	<svg class="chart" viewBox="0 0 {W} {H}" role="img" aria-label={label}>
 		<g class="axis" transform="translate({m.l},{m.t})">
 			{#each ticks as t (t)}
 				<line class="gridline" x1={0} x2={iw} y1={y(t)} y2={y(t)} />
@@ -94,21 +100,3 @@
 		</g>
 	</svg>
 </div>
-
-<style>
-	.chartbox {
-		position: relative;
-		flex: 1 1 auto;
-		min-height: 240px;
-		max-height: 720px; /* fill a stretched pane, but never run away */
-		width: 100%;
-	}
-	/* Absolutely positioned so the SVG's viewBox-derived intrinsic size can't feed back into
-	   the flex/grid auto-height. Without this the box ratchets down on resize and never grows
-	   back (measured height -> viewBox -> intrinsic height -> row height -> measured height). */
-	svg.chart {
-		position: absolute;
-		inset: 0;
-		height: 100%;
-	}
-</style>

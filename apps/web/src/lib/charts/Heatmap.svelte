@@ -12,6 +12,7 @@
 	// One hue rather than per-category hues: the category palette isn't luminance-matched, so at
 	// equal value a warm hue (Transport #ffd27f) reads far brighter than a cool one (Travel
 	// #6f8fe8) and colour would fight the data. Category identity stays in the row label.
+	import { fitFontSize } from '$lib/charts/axis';
 	import { money, esc } from '$lib/utils/format';
 	import { theme } from '$lib/utils/theme';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
@@ -40,10 +41,9 @@
 	const cw = $derived(iw / Math.max(1, cols.length));
 	const H = $derived(MT + rows.length * CELL_H + 4);
 
-	// Shrink the row-header font (never below 7px) so even the longest category name fits the
-	// gutter in full — no truncation.
-	const longestRow = $derived(Math.max(1, ...rows.map((r) => r.length)));
-	const rowFont = $derived(Math.max(7, Math.min(11, (ML - 10) / (0.55 * longestRow))));
+	// Shrink the row-header font so even the longest category name fits the gutter in full — no
+	// truncation. Same fitting rule the ranked bars use for their row names.
+	const rowFont = $derived(fitFontSize(ML - 10, rows, 7, 11));
 
 	const globalMax = $derived(Math.max(1, ...values.flat()));
 	const rowMax = $derived(rows.map((_, i) => Math.max(1, ...(values[i] ?? []).map(Math.abs))));

@@ -2,6 +2,7 @@
 	import { line, area } from 'd3-shape';
 	import { moneyYScale, logYScale, labelIndices } from '$lib/charts/axis';
 	import { money, esc } from '$lib/utils/format';
+	import { clamp } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 
 	interface Series {
@@ -10,7 +11,7 @@
 		color: string;
 		/** Draw a gradient area under this series (single-series area charts). */
 		area?: boolean;
-		/** Render as a dotted line (e.g. a projection) and omit from the legend. */
+		/** Render as a dotted line — a secondary reading, or a projection, against a primary one. */
 		dashed?: boolean;
 	}
 	interface Props {
@@ -33,15 +34,15 @@
 		endLabels = false
 	}: Props = $props();
 
-	// Render at the measured pixel size (as BarChart does) so axis and label type stay a constant
-	// on-screen size instead of shrinking with the pane — a fixed viewBox made these illegible in a
-	// half-width card.
+	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also
+	// bounds how tall the chart may grow inside a stretched pane.
 	let boxW = $state(0);
 	let boxH = $state(0);
 	const W = $derived(boxW || 1100);
 	const H = $derived(boxH || 300);
-	// End labels need room on the right for "Subscription $0.7k"-sized text.
-	const m = $derived({ t: 16, r: endLabels ? 150 : 16, b: 28, l: 60 });
+	// End labels need room on the right for "Subscription $0.7k"-sized text. That room is a share of
+	// the box rather than a constant, so a half-width card doesn't hand most of its plot to labels.
+	const m = $derived({ t: 16, r: endLabels ? clamp(W * 0.2, 96, 170) : 16, b: 28, l: 60 });
 	const iw = $derived(W - m.l - m.r);
 	const ih = $derived(H - m.t - m.b);
 	const n = $derived(labels.length);
@@ -103,6 +104,13 @@
 		return list;
 	});
 
+	// A name for the chart, since an unlabelled role="img" announces only "image". Says what is
+	// plotted and over what — the values themselves stay reachable as text via the legend / table.
+	const label = $derived(
+		`Line chart: ${series.map((sr) => sr.name).join(', ')}` +
+			(labels.length ? ` from ${labels[0]} to ${labels[labels.length - 1]}` : '')
+	);
+
 	let hover = $state<number | null>(null);
 
 	function onMove(e: MouseEvent) {
@@ -124,16 +132,27 @@
 	}
 </script>
 
-{#if legend && series.filter((s) => !s.dashed).length > 1}
+{#if legend && series.length > 1}
+	<!-- Every series is keyed, dashed ones included: a dashed line is a real second reading here
+	     (assets against net worth), so leaving it out left neither line identifiable. Its swatch is
+	     drawn as a dashed rule so the key matches the mark. -->
 	<div class="legend">
-		{#each series.filter((s) => !s.dashed) as s (s.name)}
-			<span class="k"><span class="sw" style:background={s.color}></span>{s.name}</span>
+		{#each series as s (s.name)}
+			<span class="k">
+				<span
+					class="sw"
+					class:dash={s.dashed}
+					style:background={s.dashed
+						? `repeating-linear-gradient(90deg, ${s.color} 0 4px, transparent 4px 7px)`
+						: s.color}
+				></span>{s.name}
+			</span>
 		{/each}
 	</div>
 {/if}
 
-<div class="chartbox" bind:clientWidth={boxW} bind:clientHeight={boxH}>
-	<svg class="chart" viewBox="0 0 {W} {H}" role="img">
+<div class="figurebox" bind:clientWidth={boxW} bind:clientHeight={boxH}>
+	<svg class="chart" viewBox="0 0 {W} {H}" role="img" aria-label={label}>
 		<defs>
 			{#each series as s, si (s.name)}
 				{#if s.area}
@@ -223,20 +242,3 @@
 		</g>
 	</svg>
 </div>
-
-<style>
-	.chartbox {
-		position: relative;
-		flex: 1 1 auto;
-		min-height: 240px;
-		max-height: 720px; /* fill a stretched pane, but never run away */
-		width: 100%;
-	}
-	/* Absolutely positioned so the SVG's viewBox-derived intrinsic size can't feed back into
-	   the flex/grid auto-height (see BarChart). */
-	svg.chart {
-		position: absolute;
-		inset: 0;
-		height: 100%;
-	}
-</style>

@@ -63,13 +63,21 @@
 					{#if kicker}<span class="kicker">{kicker}</span>{/if}
 					<h2 id="overlay-title" class="serif">{title}</h2>
 				</div>
-				<button type="button" class="x" onclick={onclose}>✕</button>
+				<!-- data-dismiss keeps the focus trap from opening on "close" (see focusTrap); the label
+				     gives it a spoken name, since "✕" alone is not one. -->
+				<button
+					type="button"
+					class="x"
+					data-dismiss
+					aria-label={`Close ${title.toLowerCase()}`}
+					onclick={onclose}>✕</button
+				>
 			</div>
 			{#if controls}
 				<div class="controls">{@render controls()}</div>
 			{/if}
 		</div>
-		<div class="body">
+		<div class="body scroller trap">
 			{@render children()}
 		</div>
 	</div>
@@ -160,10 +168,8 @@
 		border-color: var(--crit);
 		color: var(--crit-text);
 	}
+	/* Scrolling, scroll containment and the slim scrollbar all come from the shared `.scroller`. */
 	.body {
-		overflow-y: auto;
-		/* Keep a scroll gesture that reaches the body's end from chaining to the page behind it. */
-		overscroll-behavior: contain;
 		padding: var(--space-10) var(--space-11);
 	}
 </style>

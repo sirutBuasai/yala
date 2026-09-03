@@ -24,8 +24,8 @@
 	}
 	let { labels, series, unit, legend = true }: Props = $props();
 
-	// Measured pixel size, as the other charts do, so axis type stays a constant on-screen size
-	// instead of shrinking with the pane.
+	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also
+	// bounds how tall the chart may grow inside a stretched pane.
 	let boxW = $state(0);
 	let boxH = $state(0);
 	const W = $derived(boxW || 900);
@@ -81,12 +81,12 @@
 	}
 </script>
 
-<div class="wrap" bind:clientWidth={boxW} bind:clientHeight={boxH}>
+<div class="figurebox" bind:clientWidth={boxW} bind:clientHeight={boxH}>
 	<svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Stacked area chart">
-		<g transform={`translate(${m.l},${m.t})`}>
+		<g class="axis" transform={`translate(${m.l},${m.t})`}>
 			{#each ticks as t (t)}
-				<line class="grid" x1="0" y1={y(t)} x2={iw} y2={y(t)} />
-				<text class="ax" x={-8} y={y(t) + 4} text-anchor="end">{formatUnit(t, unit)}</text>
+				<line class="gridline" x1="0" y1={y(t)} x2={iw} y2={y(t)} />
+				<text x={-8} y={y(t) + 4} text-anchor="end">{formatUnit(t, unit)}</text>
 			{/each}
 
 			{#each paths as p (p.band.name)}
@@ -96,7 +96,7 @@
 
 			{#each labels as lb, i (lb + i)}
 				{#if shown.has(i)}
-					<text class="ax" x={xPos(i)} y={ih + 19} text-anchor="middle">{lb}</text>
+					<text x={xPos(i)} y={ih + 19} text-anchor="middle">{lb}</text>
 				{/if}
 			{/each}
 
@@ -118,54 +118,11 @@
 </div>
 
 {#if legend && series.length > 1}
-	<div class="legend">
+	<!-- Keys UNDER the plot, and in reverse: they then read top-to-bottom in the order the bands
+	     are stacked. `.legend.below` is the shared legend's under-the-chart variant. -->
+	<div class="legend below">
 		{#each series.slice().reverse() as s (s.name)}
-			<span><i style:background={s.color}></i>{s.name}</span>
+			<span class="k"><span class="sw" style:background={s.color}></span>{s.name}</span>
 		{/each}
 	</div>
 {/if}
-
-<style>
-	.wrap {
-		position: relative;
-		flex: 1 1 auto;
-		min-height: 240px;
-		max-height: 720px; /* fill a stretched pane, but never run away */
-		width: 100%;
-	}
-	/* Absolutely positioned so the SVG's viewBox-derived intrinsic size can't feed back into the
-	   flex/grid auto-height — measuring the parent while the child sizes from that measurement
-	   otherwise grows without bound (same reason as LineChart and BarChart). */
-	svg.chart {
-		position: absolute;
-		inset: 0;
-		height: 100%;
-		overflow: visible;
-	}
-	.grid {
-		stroke: var(--grid);
-		stroke-width: 1;
-	}
-	.ax {
-		fill: var(--ink-3);
-		font-size: var(--text-axis);
-	}
-	.legend {
-		display: flex;
-		gap: var(--gap-field);
-		flex-wrap: wrap;
-		margin-top: var(--gap-row);
-		font-size: var(--text-caption);
-		color: var(--ink-2);
-	}
-	.legend span {
-		display: inline-flex;
-		align-items: center;
-		gap: var(--gap-inline);
-	}
-	.legend i {
-		width: 9px;
-		height: 9px;
-		border-radius: var(--radius-xs);
-	}
-</style>

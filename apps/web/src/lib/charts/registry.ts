@@ -19,7 +19,7 @@ import type {
 	Table
 } from '$lib/data/primitives';
 import { compatible } from '$lib/data/primitives';
-import { CATEGORY_TOKEN, categoryVar } from '$lib/utils/theme';
+import { accountVar, CATEGORY_TOKEN, categoryVar } from '$lib/utils/theme';
 
 import Donut from '$lib/charts/Donut.svelte';
 import HBarChart from '$lib/charts/HBarChart.svelte';
@@ -41,8 +41,10 @@ interface AdaptOpts {
 	area?: boolean;
 	/** Force the legend on/off. */
 	legend?: boolean;
-	/** Fill colour for a single-series column chart. */
+	/** Fill colour for a single-series chart (columns, line, area). */
 	color?: string;
+	/** What a categorical chart's keys name, and so where their colours come from. */
+	colorBy?: ColorBy;
 	/** Total for ranked-bar percentage tooltips. */
 	total?: number;
 	/** Log-scale a line chart's value axis (series spanning orders of magnitude). */
@@ -88,44 +90,80 @@ function def<C extends Component<any, any, any>>(d: {
 
 // --- colour assignment (visualization concern) ---
 
-/** Named accents for well-known series; anything else cycles a small palette. */
-const SERIES_ACCENT: Record<string, string> = {
-	Income: 'var(--lav)',
-	Spent: 'var(--salmon)',
-	Spending: 'var(--salmon)',
-	Saved: 'var(--saved)',
-	'Cumulative saved': 'var(--saved)',
-	'Savings rate': 'var(--lav)'
+/**
+ * What a well-known series MEANS, mapped to the `--role-*` token for that meaning. Keyed by the
+ * label the data layer already gives the series, so the data stays colour-blind and a series
+ * carries one hue everywhere it appears — spending is salmon on the monthly bars and on the
+ * yearly ones, liabilities are salmon (a negative on net worth) rather than an arbitrary
+ * palette slot. Anything unnamed cycles the fallback palette.
+ */
+const SERIES_ROLE: Record<string, string> = {
+	// Flows — what moved this period.
+	Income: 'var(--role-income)',
+	Spent: 'var(--role-spending)',
+	Spending: 'var(--role-spending)',
+	Saved: 'var(--role-saving)',
+	'Cumulative saved': 'var(--role-saving)',
+	'Savings rate': 'var(--role-rate)',
+	// Stocks — what you stand on.
+	'Net worth': 'var(--role-balance)',
+	Assets: 'var(--role-asset)',
+	Liabilities: 'var(--role-liability)',
+	// Allocation buckets — three slices of assets.
+	Liquid: 'var(--role-liquid)',
+	Taxable: 'var(--role-taxable)',
+	'Tax-advantaged': 'var(--role-taxadv)',
+	// The growth decomposition: what you put aside, and everything else that moved the balance.
+	'You saved': 'var(--role-saving)',
+	'Market & other': 'var(--role-market)'
 };
+
+/** For series with no role and no category — kept clear of the role hues where possible. */
 const PALETTE = [
 	'var(--lav)',
-	'var(--salmon)',
-	'var(--saved)',
-	'var(--cat-travel)',
-	'var(--cat-health)'
+	'var(--teal)',
+	'var(--green)',
+	'var(--gold)',
+	'var(--blue)',
+	'var(--magenta)',
+	'var(--aqua)',
+	'var(--orange)',
+	'var(--berry)'
 ];
 
 function seriesColor(name: string, index: number): string {
 	// A series named after a spending category takes that category's accent, so the same
 	// category reads the same colour across the donut, the ranked bars and the category lines.
 	return (
-		SERIES_ACCENT[name] ??
+		SERIES_ROLE[name] ??
 		(CATEGORY_TOKEN[name] ? categoryVar(name) : null) ??
 		PALETTE[index % PALETTE.length]!
 	);
 }
 
-function categoryColor(key: string): string {
-	if (key === 'Saved') return 'var(--saved)';
+/**
+ * How a categorical chart's keys take their colour. The keys of a categorical are just strings;
+ * only the caller knows whether they name spending categories, ledger accounts, or roles, so the
+ * chart is told rather than left to guess — which is what previously left every bar in "where the
+ * money sits" the same fallback lavender.
+ */
+export type ColorBy = 'category' | 'account' | 'role';
+
+function keyColor(key: string, mode: ColorBy = 'category'): string {
+	// Two reserved keys outrank every mode: `Saved` is the synthetic residual slice and `Other` is
+	// the rolled-up tail, and neither is a member of the set being coloured.
+	if (key === 'Saved') return 'var(--role-saving)';
 	if (key === 'Other') return 'var(--ink-3)';
+	if (mode === 'account') return accountVar(key);
+	if (mode === 'role') return SERIES_ROLE[key] ?? 'var(--ink-3)';
 	return categoryVar(key);
 }
 
 const FLOW_ROLE_COLOR = {
-	gross: 'var(--lav)',
-	takehome: 'var(--lav)',
-	deduction: 'var(--salmon)',
-	saving: 'var(--saved)'
+	gross: 'var(--role-income)',
+	takehome: 'var(--role-income)',
+	deduction: 'var(--role-deduction)',
+	saving: 'var(--role-saving)'
 } as const;
 
 // --- series collection + layering ---
@@ -148,7 +186,9 @@ function toChartSeries(list: Series[], opts: AdaptOpts) {
 	return list.map((s, i) => ({
 		name: s.name,
 		values: s.points.map((pt) => pt.value),
-		color: seriesColor(s.name, i),
+		// A lone series may be given an explicit fill; anything plotted alongside others takes its
+		// role colour, since an override would then only be able to speak for one of them.
+		color: list.length === 1 && opts.color ? opts.color : seriesColor(s.name, i),
 		// The area belongs to the primary reading, so it fills the first series whether or not
 		// others are plotted alongside it.
 		area: opts.area && i === 0 ? true : undefined,
@@ -165,13 +205,13 @@ export const CHARTS: ChartDef[] = [
 		accepts: ['categorical'],
 		layerable: false,
 		component: Donut,
-		adapt(p) {
+		adapt(p, opts = {}) {
 			const c = p as Categorical;
 			return {
 				slices: c.points.map((pt) => ({
 					name: pt.key,
 					value: pt.value,
-					color: categoryColor(pt.key)
+					color: keyColor(pt.key, opts.colorBy)
 				}))
 			};
 		}
@@ -188,7 +228,7 @@ export const CHARTS: ChartDef[] = [
 				items: c.points.map((pt) => ({
 					label: pt.key,
 					value: pt.value,
-					color: categoryColor(pt.key)
+					color: keyColor(pt.key, opts.colorBy)
 				})),
 				total: opts.total
 			};
@@ -286,7 +326,7 @@ export const CHARTS: ChartDef[] = [
 			return {
 				nodes: f.nodes.map((n) => ({
 					...n,
-					color: n.role === 'category' ? categoryColor(n.label) : FLOW_ROLE_COLOR[n.role]
+					color: n.role === 'category' ? keyColor(n.label) : FLOW_ROLE_COLOR[n.role]
 				})),
 				links: f.links
 			};

@@ -2,7 +2,7 @@
 	import { pie, arc } from 'd3-shape';
 	import { money, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
-	import Empty from '$lib/layout/Empty.svelte';
+	import Empty from '$lib/ui/Empty.svelte';
 
 	interface Slice {
 		name: string;
@@ -31,7 +31,9 @@
 
 {#if slices.length}
 	<div class="donut">
-		<svg class="chart" viewBox="0 0 {R * 2} {R * 2}" role="img">
+		<!-- aria-hidden, deliberately: the legend below is the same data as text (name, amount,
+		     share), which is strictly more useful to a screen reader than a labelled image. -->
+		<svg class="chart" viewBox="0 0 {R * 2} {R * 2}" aria-hidden="true">
 			<g transform="translate({R},{R})">
 				{#each arcs as a (a.data.name)}
 					<path
@@ -64,7 +66,7 @@
 			{#each slices as s (s.name)}
 				<li>
 					<span class="sw" style:background={s.color}></span>
-					<span class="nm">{s.name}</span>
+					<span class="nm" title={s.name}>{s.name}</span>
 					<span class="val">{money(s.value)} · {pctOf(s.value)}%</span>
 				</li>
 			{/each}
@@ -75,9 +77,9 @@
 {/if}
 
 <style>
-	/* Side-by-side by default. When an ancestor is a size-container (the Monthly donut pane, which
-	   stretches to the paycheck+bill column) and it gets tall, the legend drops below the ring and
-	   the ring grows to fill — a container query, so it reacts to the pane, not the viewport. */
+	/* Side-by-side by default, ring left and keys right, both flexible: the ring grows into spare
+	   width up to a legible ceiling, and the legend takes what's left. Below the ring's floor the
+	   two wrap onto separate rows rather than crushing each other. */
 	.donut {
 		display: flex;
 		gap: var(--space-11);
@@ -86,16 +88,26 @@
 		height: 100%;
 	}
 	.donut svg {
-		flex: 0 0 auto;
-		max-width: 240px;
+		flex: 1 1 9rem;
+		min-width: 8.5rem;
+		max-width: 15rem;
 	}
+	/* The KEY to "fill the empty space": a column WIDTH, not a column count. The browser fits as
+	   many ~13rem columns as the legend's actual box allows — one in a narrow rail, four under a
+	   wide stacked ring — so the keys reflow continuously instead of stepping at two hardcoded
+	   breakpoints that were only ever right for one pane. */
 	.legend-list {
 		list-style: none;
 		margin: 0;
 		padding: 0;
-		flex: 1;
-		min-width: 160px;
+		flex: 1 1 13rem;
+		min-width: 0;
+		columns: 13rem;
+		column-gap: var(--space-11);
 	}
+	/* When an ancestor is a size-container (the Monthly donut pane, which stretches to the
+	   paycheck+bill column) and it gets tall, stack instead: the keys drop below the ring and the
+	   ring grows into the height. A container query, so it reacts to the pane, not the viewport. */
 	@container (min-height: 300px) {
 		.donut {
 			flex-direction: column;
@@ -104,18 +116,13 @@
 			gap: var(--space-9);
 		}
 		.donut svg {
-			max-width: min(58cqh, 260px);
+			flex: 0 1 auto;
+			width: min(58cqh, 16rem);
+			max-width: 100%;
 		}
 		.legend-list {
-			flex: none;
+			flex: 0 0 auto;
 			width: 100%;
-			columns: 2;
-			column-gap: var(--space-11);
-		}
-	}
-	@container (min-height: 300px) and (min-width: 460px) {
-		.legend-list {
-			columns: 3;
 		}
 	}
 	.legend-list li {
@@ -133,12 +140,20 @@
 		border-radius: var(--radius-xs);
 		flex: 0 0 auto;
 	}
+	/* The name gives way, the figure never does: a long category truncates (with its full text on
+	   hover) rather than pushing the amount out of the column or wrapping the row to two lines. */
 	.legend-list .nm {
-		flex: 1;
+		flex: 1 1 auto;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 		color: var(--ink-2);
 	}
 	.legend-list .val {
+		flex: 0 0 auto;
 		color: var(--ink-3);
 		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
 	}
 </style>

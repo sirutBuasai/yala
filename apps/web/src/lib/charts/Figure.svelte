@@ -4,8 +4,8 @@
 	// renders the matching chart. Views bind data here instead of importing charts and
 	// hand-shaping props — the data→visual coupling lives entirely in the registry.
 	import type { Primitive, Series } from '$lib/data/primitives';
-	import { CHARTS_BY_ID, defaultChart } from './registry';
-	import Empty from '$lib/layout/Empty.svelte';
+	import { CHARTS_BY_ID, defaultChart, type ColorBy } from './registry';
+	import Empty from '$lib/ui/Empty.svelte';
 
 	interface Props {
 		primitive: Primitive;
@@ -16,6 +16,8 @@
 		area?: boolean;
 		legend?: boolean;
 		color?: string;
+		/** What a categorical's keys name (categories, accounts, roles) — drives their colours. */
+		colorBy?: ColorBy;
 		total?: number;
 		/** Log-scale a line chart's value axis. */
 		log?: boolean;
@@ -33,6 +35,7 @@
 		area,
 		legend,
 		color,
+		colorBy,
 		total,
 		log,
 		endLabels,
@@ -41,7 +44,18 @@
 	}: Props = $props();
 
 	const def = $derived(chart ? CHARTS_BY_ID[chart] : defaultChart(primitive.kind));
-	const opts = $derived({ layers, area, legend, color, total, log, endLabels, dashed, normalize });
+	const opts = $derived({
+		layers,
+		area,
+		legend,
+		color,
+		colorBy,
+		total,
+		log,
+		endLabels,
+		dashed,
+		normalize
+	});
 	const chartProps = $derived(def ? def.adapt(primitive, opts) : null);
 </script>
 

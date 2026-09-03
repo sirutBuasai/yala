@@ -30,6 +30,8 @@
 	import { money, formatAccount } from '$lib/utils/format';
 	import { categoryVar } from '$lib/utils/theme';
 	import RowList from '$lib/lists/RowList.svelte';
+	import Amount from '$lib/ui/Amount.svelte';
+	import Badge from '$lib/ui/Badge.svelte';
 
 	interface Props {
 		transactions: TxnRow[];
@@ -45,6 +47,8 @@
 		sortDir?: 'asc' | 'desc';
 		/** Fix the list to this many rows tall, then scroll (see RowList). */
 		fixedRows?: number;
+		/** Remembers this list's expanded state (see RowList). */
+		prefKey?: string;
 	}
 	let {
 		transactions,
@@ -54,7 +58,8 @@
 		fields = ['source'],
 		sortKey,
 		sortDir = 'desc',
-		fixedRows
+		fixedRows,
+		prefKey
 	}: Props = $props();
 
 	function column(t: TxnRow, f: TxnField): string {
@@ -92,15 +97,17 @@
 		});
 	});
 
-	const cols = $derived(`${showDate ? '34px ' : ''}10px 1fr ${'auto '.repeat(fields.length)}74px`);
+	// One track per requested field, so the same field lines up down the list.
+	const columnTracks = $derived('auto '.repeat(fields.length).trim());
 </script>
 
 <RowList
 	items={rows}
 	{edit}
 	{onedit}
-	{cols}
+	{columnTracks}
 	{fixedRows}
+	{prefKey}
 	dotColor={(t) => categoryVar(t.category)}
 	dateOf={showDate ? (t) => t.date : undefined}
 >
@@ -108,7 +115,7 @@
 		<span class="main">
 			<span class="title">
 				<span class="payee">{t.payee}</span>
-				{#if t.pending}<span class="pending">● pending</span>{/if}
+				{#if t.pending}<Badge tone="warn" dot>pending</Badge>{/if}
 			</span>
 			<span class="cat">{t.category}</span>
 		</span>
@@ -117,7 +124,7 @@
 		{#each fields as f (f)}<span class="col">{column(t, f)}</span>{/each}
 	{/snippet}
 	{#snippet amount(t)}
-		<span class="amt" class:refund={t.amount < 0}>{money(t.amount)}</span>
+		<Amount value={t.amount} sign="refund" />
 	{/snippet}
 </RowList>
 
@@ -130,6 +137,7 @@
 	.title {
 		display: flex;
 		align-items: baseline;
+		gap: var(--space-3);
 		min-width: 0;
 		font-size: var(--text-row);
 		font-weight: var(--fw-medium);
@@ -140,14 +148,6 @@
 		white-space: nowrap;
 		min-width: 0;
 	}
-	.pending {
-		flex: none;
-		color: var(--gold-text);
-		font-size: var(--text-badge);
-		font-weight: var(--fw-semibold);
-		margin-left: var(--space-3);
-		white-space: nowrap;
-	}
 	.cat {
 		color: var(--ink-3);
 		font-size: var(--text-badge);
@@ -156,14 +156,5 @@
 		color: var(--ink-2);
 		font-size: var(--text-caption);
 		white-space: nowrap;
-	}
-	.amt {
-		text-align: right;
-		font-variant-numeric: tabular-nums;
-		font-weight: var(--fw-semibold);
-		font-size: var(--text-row);
-	}
-	.amt.refund {
-		color: var(--good-text);
 	}
 </style>

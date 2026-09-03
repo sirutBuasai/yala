@@ -26,9 +26,16 @@
 </div>
 
 <style>
+	/* Wraps and shrinks rather than pushing the header past the page: the arrows keep their size
+	   (they're the tap targets) and the picker between them gives up the width. */
 	.rangenav {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: var(--gap-row);
+		min-width: 0;
+	}
+	.rangenav .navbtn {
+		flex: none;
 	}
 </style>

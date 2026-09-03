@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { labelIndices, moneyYScale } from './axis';
+import { fitFontSize, labelIndices, moneyYScale } from './axis';
 
 describe('moneyYScale', () => {
 	it('anchors the domain at zero for all-positive values', () => {
@@ -66,5 +66,31 @@ describe('labelIndices', () => {
 	it('handles degenerate series', () => {
 		expect(labelIndices(0, 500, [])).toEqual([]);
 		expect(labelIndices(1, 500, ['2026-01-01'])).toEqual([0]);
+	});
+});
+
+describe('fitFontSize', () => {
+	it('shrinks to fit a long label in a tight gutter', () => {
+		const tight = fitFontSize(60, ['Tax-advantaged:CharlesSchwabIndividual']);
+		const roomy = fitFontSize(200, ['Tax-advantaged:CharlesSchwabIndividual']);
+		expect(tight).toBeLessThan(roomy);
+	});
+
+	it('never drops below the floor, however long the label', () => {
+		expect(fitFontSize(20, ['x'.repeat(400)], 8, 12)).toBe(8);
+	});
+
+	it('never exceeds the ceiling, however short the label', () => {
+		expect(fitFontSize(400, ['a'], 8, 12)).toBe(12);
+	});
+
+	it('sizes to the LONGEST label, not the first', () => {
+		expect(fitFontSize(100, ['a', 'a very long category name'])).toBe(
+			fitFontSize(100, ['a very long category name'])
+		);
+	});
+
+	it('survives an empty label list rather than returning NaN', () => {
+		expect(fitFontSize(100, [], 8, 12)).toBe(12);
 	});
 });
