@@ -38,7 +38,16 @@ from yala.ledger.constants import (
 from yala.ledger.entities import leaf
 from yala.ledger.locators import find_balance, find_entry
 from yala.ledger.networth import adjustment_account
+from yala.ledger.settings import (
+    SETTING_TYPE,
+    SETTINGS_BY_KEY,
+    coerce,
+    format_value,
+)
 from yala.money import round_cents
+
+#: Ledger file holding the ``custom "yala-setting"`` directives, relative to the ledger dir.
+SETTINGS_FILE = "settings.beancount"
 
 Credit = tuple[str, Decimal]
 DeductionLeg = tuple[str, Decimal]  # (account, amount)
@@ -110,6 +119,15 @@ def _balance_directive(date: dt.date, account: str, amount: Decimal, entry_id: s
 # Rounds allowed to settle pads after a balance edit: one for the edited assertion, one for the
 # next assertion that re-pins the account, plus slack for a drop that reveals another.
 _MAX_PAD_ROUNDS = 6
+
+
+def _block_end(lines: list[str], begin: int) -> int:
+    """Index one past the directive starting at ``begin``, consuming its indented continuation
+    lines (meta keys, postings). A blank or unindented line ends the block."""
+    end = begin + 1
+    while end < len(lines) and lines[end].startswith((" ", "\t")) and lines[end].strip():
+        end += 1
+    return end
 
 
 def _pad_insert_index(lines: list[str], pad_date: dt.date, balance_index: int) -> int:
@@ -924,9 +942,7 @@ class FileLedgerSink(LedgerSink):
         lines = original.splitlines(keepends=True)
 
         # The open's meta lines are the indented block right below its header.
-        end = begin + 1
-        while end < len(lines) and lines[end].startswith((" ", "\t")) and lines[end].strip():
-            end += 1
+        end = _block_end(lines, begin)
 
         key_re = re.compile(rf"^\s*{re.escape(key)}\s*:")
         block = [lines[begin]] + [m for m in lines[begin + 1 : end] if not key_re.match(m)]
@@ -934,6 +950,45 @@ class FileLedgerSink(LedgerSink):
             block.append(f'  {key}: "{value}"\n')
 
         self._commit(path, "".join(lines[:begin] + block + lines[end:]), original)
+
+    def set_setting(self, key: str, value: object, date: dt.date | None = None) -> Decimal:
+        """Set a user setting, writing it as a dated ``custom`` directive, and return the stored
+        value. Raises ``KeyError`` for an unknown key, ``ValueError`` for an out-of-range value.
+
+        A directive already dated ``date`` for this key is rewritten in place; otherwise a new one
+        is appended. That way repeated edits on one day don't pile up, while a change on a later
+        day supersedes rather than erases — the old value stays as history (see
+        :mod:`yala.ledger.settings`).
+        """
+        spec = SETTINGS_BY_KEY.get(key)
+        if spec is None:
+            raise KeyError(key)
+
+        stored = coerce(key, value)
+        on = date or dt.date.today()
+        directive = f'{on} custom "{SETTING_TYPE}" "{key}" {format_value(spec, stored)}'
+
+        existing = [
+            e
+            for e in Ledger(self.main_ledger, strict=True).load().entries
+            if isinstance(e, data.Custom)
+            and e.type == SETTING_TYPE
+            and e.date == on
+            and [v.value for v in (e.values or [])][:1] == [key]
+        ]
+
+        if existing:
+            path = Path(existing[-1].meta["filename"])
+            original = path.read_text()
+            lines = original.splitlines(keepends=True)
+            at = int(existing[-1].meta["lineno"]) - 1
+            lines[at] = f"{directive}\n"
+            self._commit(path, "".join(lines), original)
+        else:
+            self._ensure_main_include(f'include "{SETTINGS_FILE}"')
+            self._append_directive(self.ledger_dir / SETTINGS_FILE, directive)
+
+        return stored
 
     def _account_file(self, account: str) -> Path:
         """The ``.beancount`` file a directive for ``account`` belongs in, so it lands beside its
@@ -963,15 +1018,19 @@ class FileLedgerSink(LedgerSink):
 
         return self.ledger_dir / "accounts.beancount"
 
-    def _append_account_directive(self, account: str, directive: str) -> None:
-        """Append one account directive to the file holding the account's family (see
-        ``_account_file``), with strict-reload/rollback."""
-        target = self._account_file(account)
-
+    def _append_directive(self, target: Path, directive: str) -> None:
+        """Append one standalone directive to ``target``, normalizing the trailing newline, with
+        strict-reload/rollback. Shared by every writer that adds a whole-line directive rather
+        than editing an entry in place."""
         original = target.read_text() if target.exists() else ""
         text = original if not original or original.endswith("\n") else original + "\n"
 
         self._commit(target, f"{text}{directive}\n", original)
+
+    def _append_account_directive(self, account: str, directive: str) -> None:
+        """Append one account directive to the file holding the account's family (see
+        ``_account_file``)."""
+        self._append_directive(self._account_file(account), directive)
 
     # --- internals: locate, write, roll back ---
 
@@ -1012,11 +1071,7 @@ class FileLedgerSink(LedgerSink):
                 f"{entry.date.isoformat()} {entry.flag} entry"
             )
 
-        end = begin + 1
-        while end < len(lines) and lines[end].startswith((" ", "\t")) and lines[end].strip():
-            end += 1
-
-        return path, original, lines, begin, end
+        return path, original, lines, begin, _block_end(lines, begin)
 
     def _append_entry(self, subdir: str, entry: data.Transaction) -> None:
         """Format ``entry`` and append it to its dated ``<subdir>/<year>.beancount`` file."""

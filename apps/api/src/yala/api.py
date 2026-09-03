@@ -41,6 +41,7 @@ from yala.ledger.constants import (
 from yala.ledger.entities import leaf
 from yala.ledger.locators import find_entry
 from yala.ledger.networth import adjustment_account
+from yala.ledger.settings import SETTINGS, SETTINGS_BY_KEY
 from yala.ledger.sweep import is_sweep, reconcile_months, resolve_terminal, retire_passthrough
 from yala.money import round_cents
 from yala.sink import FileLedgerSink
@@ -900,6 +901,47 @@ def get_networth_at(date: str) -> dict:
         # account -> locator, present only where that date already holds an editable USD assertion
         "logged": nw.logged_at(as_of),
     }
+
+
+# --- settings ---
+
+
+class SettingIn(BaseModel):
+    key: str
+    value: float
+
+
+@app.get("/api/settings")
+def get_settings() -> dict:
+    """Effective settings plus the spec behind each one, so the form renders its own labels, help,
+    bounds, and defaults instead of restating them in the frontend."""
+    values = _ledger().settings.values()
+    return {
+        "values": {k: (None if v is None else float(v)) for k, v in values.items()},
+        "specs": [
+            {
+                "key": s.key,
+                "label": s.label,
+                "kind": s.kind,
+                "min": float(s.minimum),
+                "max": float(s.maximum),
+                "default": None if s.default is None else float(s.default),
+                "help": s.help,
+            }
+            for s in SETTINGS
+        ],
+    }
+
+
+@app.post("/api/settings")
+def post_setting(body: SettingIn) -> dict:
+    """Set one user setting. Bounds and whole-number rules come from the setting's spec, so the
+    ledger and the form enforce exactly the same thing."""
+    with _api_errors():
+        stored = _sink().set_setting(body.key, body.value)
+
+    label = SETTINGS_BY_KEY[body.key].label
+    return _ok(f"{label} set", key=body.key, value=float(stored))
 
 
 # --- static frontend + entrypoint ---

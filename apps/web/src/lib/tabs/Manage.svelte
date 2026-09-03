@@ -2,11 +2,15 @@
 	import type { DashboardData } from '$lib/data/types';
 	import { addAccount, addInvestment, closeAccount, type AccountsInfo } from '$lib/data/load';
 	import { formatAccount } from '$lib/utils/format';
+	import { SaveState } from '$lib/forms/saveState.svelte';
+	import { validateLeaf } from '$lib/forms/validate';
+	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import DeleteConfirm from '$lib/forms/fields/DeleteConfirm.svelte';
 	import Select from '$lib/forms/fields/Select.svelte';
 	import AccountRow from '$lib/manage/AccountRow.svelte';
 	import InvestmentRow from '$lib/manage/InvestmentRow.svelte';
+	import SettingsPanel from '$lib/manage/SettingsPanel.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -17,82 +21,50 @@
 	}
 	let { accounts, edit, onsaved }: Props = $props();
 
-	// A new account name is a single leaf (mirrors the backend's _LEAF_RE).
-	const LEAF_RE = /^[A-Za-z0-9-]+$/;
-
 	const categories = $derived(accounts?.spending_categories ?? []);
 	const banks = $derived(accounts?.cash_accounts ?? []);
 	// The full money set is the candidate pool for sweep and drain destinations.
 	const destinations = $derived(accounts?.credit_accounts ?? []);
 	const sweeps = $derived(accounts?.sweeps ?? {});
 
+	// --- spending categories ---
 	let name = $state('');
-	let err = $state('');
-	let note = $state('');
-	let busy = $state(false);
+	const cat = new SaveState();
 
 	async function add() {
 		const leaf = name.trim();
-		note = '';
-		if (!leaf) {
-			err = 'Enter a category name.';
-			return;
-		}
-		if (!LEAF_RE.test(leaf)) {
-			err = 'Use only letters, numbers, or hyphens.';
-			return;
-		}
-		if (categories.includes(leaf)) {
-			err = `${leaf} already exists.`;
-			return;
-		}
-		busy = true;
-		err = '';
-		const { account, error } = await addAccount('category', leaf);
-		if (account) {
-			note = `Added ${leaf}.`;
+		const problem =
+			validateLeaf(leaf, 'category name') ??
+			(categories.includes(leaf) ? `${leaf} already exists.` : null);
+		if (problem) return cat.fail(problem);
+
+		if (await cat.run(() => addAccount('category', leaf).then((r) => r.error), `Added ${leaf}.`)) {
 			name = '';
-		} else {
-			err = error ?? 'Add failed.';
 		}
-		busy = false;
 	}
 
-	async function close(cat: string) {
-		note = '';
-		err = '';
-		const error = await closeAccount(`Expenses:${cat}`);
-		if (error) err = error;
-		else note = `Closed ${cat}.`;
-	}
+	const close = (category: string) =>
+		cat.run(() => closeAccount(`Expenses:${category}`), `Closed ${category}.`);
 
 	// --- bank accounts ---
 	let bankName = $state('');
-	let bankErr = $state('');
-	let bankNote = $state('');
-	let bankBusy = $state(false);
+	const bank = new SaveState();
 
 	async function addBank() {
 		const leaf = bankName.trim();
-		bankNote = '';
-		if (!leaf) {
-			bankErr = 'Enter a bank account name.';
-			return;
-		}
-		if (!LEAF_RE.test(leaf)) {
-			bankErr = 'Use only letters, numbers, or hyphens.';
-			return;
-		}
-		bankBusy = true;
-		bankErr = '';
-		const { account, error } = await addAccount('funding_cash', leaf);
-		if (account) {
-			bankNote = `Added ${formatAccount(account)}.`;
+		const problem = validateLeaf(leaf, 'bank account name');
+		if (problem) return bank.fail(problem);
+
+		let opened = leaf;
+		const ok = await bank.run(async () => {
+			const { account, error } = await addAccount('funding_cash', leaf);
+			if (account) opened = formatAccount(account);
+			return error;
+		});
+		if (ok) {
+			bank.note = `Added ${opened}.`;
 			bankName = '';
-		} else {
-			bankErr = error ?? 'Add failed.';
 		}
-		bankBusy = false;
 	}
 
 	// --- investment accounts ---
@@ -106,9 +78,7 @@
 	let invContributable = $state(false);
 	let invEmployer = $state('');
 	let invLabels = $state('');
-	let invErr = $state('');
-	let invNote = $state('');
-	let invBusy = $state(false);
+	const inv = new SaveState();
 
 	const splitCsv = (s: string) =>
 		s
@@ -117,32 +87,26 @@
 			.filter(Boolean);
 
 	async function addInvest() {
-		const name = invName.trim();
-		invNote = '';
-		if (!name) {
-			invErr = 'Enter an account name.';
-			return;
-		}
-		invBusy = true;
-		invErr = '';
-		const error = await addInvestment({
-			subtree: invSubtree as 'Taxable' | 'TaxAdvantaged',
-			name,
-			holds_shares: invShares,
-			employer: invContributable && invEmployer.trim() ? invEmployer.trim() : null,
-			labels: invContributable ? splitCsv(invLabels) : []
-		});
-		invBusy = false;
-		if (error) invErr = error;
-		else {
-			invNote = `Added ${invSubtree}:${name}.`;
-			invName = '';
-		}
+		const leaf = invName.trim();
+		if (!leaf) return inv.fail('Enter an account name.');
+
+		const ok = await inv.run(
+			() =>
+				addInvestment({
+					subtree: invSubtree as 'Taxable' | 'TaxAdvantaged',
+					name: leaf,
+					holds_shares: invShares,
+					employer: invContributable && invEmployer.trim() ? invEmployer.trim() : null,
+					labels: invContributable ? splitCsv(invLabels) : []
+				}),
+			`Added ${invSubtree}:${leaf}.`
+		);
+		if (ok) invName = '';
 	}
 </script>
 
 <ViewHeader title="Manage">
-	<span class="sub">Categories &amp; accounts</span>
+	<span class="sub">Categories, accounts &amp; assumptions</span>
 </ViewHeader>
 
 {#if !edit}
@@ -152,34 +116,43 @@
 	</p>
 {:else}
 	<section class="panel">
+		<h3>Planning assumptions</h3>
+		<p class="hint">
+			The few figures the ledger can't work out on its own. Everything else on the dashboard is
+			derived from your entries. Saved into the ledger itself, dated — so revising one leaves the
+			old value behind as history.
+		</p>
+		<SettingsPanel onsaved={() => onsaved?.()} />
+	</section>
+
+	<section class="panel">
 		<h3>Add a spending category</h3>
 		<div class="addrow">
 			<input
 				aria-label="new category name"
 				bind:value={name}
 				placeholder="e.g. Groceries"
-				disabled={busy}
+				disabled={cat.busy}
 				onkeydown={(e) => e.key === 'Enter' && add()}
 			/>
-			<button type="button" class="btn-accent" onclick={add} disabled={busy}>Add</button>
+			<button type="button" class="btn-accent" onclick={add} disabled={cat.busy}>Add</button>
 		</div>
-		{#if err}<span class="err" role="alert">{err}</span>{/if}
-		{#if note}<span class="note" role="status">{note}</span>{/if}
+		<SaveFeedback save={cat} />
 	</section>
 
 	<section class="panel">
 		<h3>Existing categories <span class="count">{categories.length}</span></h3>
 		{#if categories.length}
 			<ul class="cats">
-				{#each categories as cat (cat)}
+				{#each categories as category (category)}
 					<li>
-						<span class="cat-name">{cat}</span>
+						<span class="cat-name">{category}</span>
 						<DeleteConfirm
 							label="Close"
 							confirmLabel="Yes, close"
-							question={`Close ${cat}?`}
-							ondelete={() => close(cat)}
-							oncancel={() => (err = '')}
+							question={`Close ${category}?`}
+							ondelete={() => close(category)}
+							oncancel={() => cat.reset()}
 						/>
 					</li>
 				{/each}
@@ -196,14 +169,13 @@
 				aria-label="new bank account name"
 				bind:value={bankName}
 				placeholder="e.g. Chase or Ally-Savings"
-				disabled={bankBusy}
+				disabled={bank.busy}
 				onkeydown={(e) => e.key === 'Enter' && addBank()}
 			/>
-			<button type="button" class="btn-accent" onclick={addBank} disabled={bankBusy}>Add</button>
+			<button type="button" class="btn-accent" onclick={addBank} disabled={bank.busy}>Add</button>
 		</div>
 		<p class="hint">Opens <code>Assets:Cash:&lt;name&gt;</code>.</p>
-		{#if bankErr}<span class="err" role="alert">{bankErr}</span>{/if}
-		{#if bankNote}<span class="note" role="status">{bankNote}</span>{/if}
+		<SaveFeedback save={bank} />
 	</section>
 
 	<section class="panel">
@@ -242,10 +214,10 @@
 				aria-label="investment name"
 				bind:value={invName}
 				placeholder="e.g. FidelityIndividual or HSA:Fidelity"
-				disabled={invBusy}
+				disabled={inv.busy}
 				onkeydown={(e) => e.key === 'Enter' && addInvest()}
 			/>
-			<button type="button" class="btn-accent" onclick={addInvest} disabled={invBusy}>Add</button>
+			<button type="button" class="btn-accent" onclick={addInvest} disabled={inv.busy}>Add</button>
 		</div>
 		<label class="chk"
 			><input type="checkbox" bind:checked={invShares} /> Holds tickers (shares)</label
@@ -262,8 +234,7 @@
 			/>
 		{/if}
 		<p class="hint">Share accounts open unconstrained + seeded; a USD-only plan is tickerless.</p>
-		{#if invErr}<span class="err" role="alert">{invErr}</span>{/if}
-		{#if invNote}<span class="note" role="status">{invNote}</span>{/if}
+		<SaveFeedback save={inv} />
 	</section>
 
 	<section class="panel">
@@ -341,18 +312,6 @@
 		padding: var(--pad-control);
 		font-size: var(--text-control);
 		font-family: inherit;
-	}
-	.err,
-	.note {
-		display: block;
-		margin-top: var(--space-4);
-		font-size: var(--text-caption);
-	}
-	.err {
-		color: var(--crit-text);
-	}
-	.note {
-		color: var(--ink-3);
 	}
 	.hint {
 		color: var(--ink-3);

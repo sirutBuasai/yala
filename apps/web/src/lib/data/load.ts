@@ -72,6 +72,9 @@ export interface PostResult<T> {
 	data: T;
 	/** A user-facing message on failure (API detail, status, or a network error), else null. */
 	error: string | null;
+	/** HTTP status, or 0 when the request never reached the API. Lets a caller tell a missing
+	    endpoint (a stale server) from a rejected request or an unreachable one. */
+	status: number;
 }
 
 /**
@@ -97,10 +100,15 @@ export async function getJson<T = Record<string, unknown>>(url: string): Promise
 		const data = (await res.json().catch(() => ({}))) as T & { detail?: unknown };
 
 		return res.ok
-			? { ok: true, data, error: null }
-			: { ok: false, data, error: errorMessage(data, res.status) };
+			? { ok: true, data, error: null, status: res.status }
+			: { ok: false, data, error: errorMessage(data, res.status), status: res.status };
 	} catch (e) {
-		return { ok: false, data: {} as T, error: 'API unreachable: ' + (e as Error).message };
+		return {
+			ok: false,
+			data: {} as T,
+			error: 'API unreachable: ' + (e as Error).message,
+			status: 0
+		};
 	}
 }
 
@@ -123,10 +131,15 @@ export async function postJson<T = Record<string, unknown>>(
 		if (res.ok) invalidateDerivedCache();
 
 		return res.ok
-			? { ok: true, data, error: null }
-			: { ok: false, data, error: errorMessage(data, res.status) };
+			? { ok: true, data, error: null, status: res.status }
+			: { ok: false, data, error: errorMessage(data, res.status), status: res.status };
 	} catch (e) {
-		return { ok: false, data: {} as T, error: 'API unreachable: ' + (e as Error).message };
+		return {
+			ok: false,
+			data: {} as T,
+			error: 'API unreachable: ' + (e as Error).message,
+			status: 0
+		};
 	}
 }
 
@@ -359,4 +372,47 @@ export async function networthAt(date: string): Promise<NetWorthAt | null> {
 	if (ok) derivedCache.set(key, data);
 
 	return ok ? data : null;
+}
+
+// --- settings ---
+
+/** One settable figure, as the API describes it. The form renders from this rather than restating
+    labels, bounds, and help text that the backend already owns. */
+export interface SettingSpec {
+	key: string;
+	label: string;
+	kind: 'percent' | 'age' | 'year';
+	min: number;
+	max: number;
+	default: number | null;
+	help: string;
+}
+
+export interface SettingsInfo {
+	values: Record<string, number | null>;
+	specs: SettingSpec[];
+}
+
+/**
+ * Effective settings plus their specs.
+ *
+ * Reports *why* it failed rather than just null: a 404 means the API is running code older than
+ * this page (the endpoint doesn't exist yet), which needs a restart — a materially different fix
+ * from the API being down, and one a bare "could not load" leaves the user guessing at.
+ */
+export async function getSettings(): Promise<{ info: SettingsInfo | null; error: string | null }> {
+	const { ok, data, error, status } = await getJson<SettingsInfo>('/api/settings');
+	if (ok) return { info: data, error: null };
+
+	const hint =
+		status === 404
+			? 'This build expects a /api/settings endpoint the running API does not have. Restart it (`make serve-api`) to pick up the current backend.'
+			: (error ?? 'could not load settings');
+	return { info: null, error: hint };
+}
+
+/** Set one setting; returns an error message, or null on success. */
+export async function setSetting(key: string, value: number): Promise<string | null> {
+	const { ok, error } = await postJson('/api/settings', { key, value });
+	return ok ? null : (error ?? 'could not save setting');
 }

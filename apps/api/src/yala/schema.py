@@ -155,6 +155,20 @@ class NetWorthSection(_Base):
     adjustments: list[NetWorthAdjustment]  # per-account untracked-flow sanity check
 
 
+class SettingsSection(_Base):
+    """Effective user settings: what the ledger states, else the built-in default.
+
+    A null means the setting is unset and has no default — features depending on it stay hidden
+    rather than guessing. Keys mirror :data:`yala.ledger.settings.SETTINGS`; ``test_settings``
+    asserts the two can't drift.
+    """
+
+    swr: float  # withdrawal rate, percent
+    real_return: float  # expected return above inflation, percent
+    retire_age: float  # target retirement age
+    birth_year: float | None = None  # unset → age-based projections hidden
+
+
 class DashboardData(_Base):
     schema_version: Literal[1]
     generated_at: str  # RFC 3339 UTC
@@ -166,6 +180,7 @@ class DashboardData(_Base):
     months: dict[str, MonthPage]  # keyed "YYYY-MM"
     income: IncomeSection
     networth: NetWorthSection | None = None
+    settings: SettingsSection | None = None
 
 
 def json_schema() -> dict:

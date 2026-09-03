@@ -10,6 +10,36 @@ export function requirePositive(value: number | null, label: string): string | n
 	return null;
 }
 
+/** A new account / category name is a single leaf segment (mirrors the backend's `_LEAF_RE`). */
+const LEAF_RE = /^[A-Za-z0-9-]+$/;
+
+/**
+ * Validate a name typed for a new account or category. Returns a message, or null when it passes.
+ * Shared by every "add a …" field in Manage so the three of them can't drift apart.
+ */
+export function validateLeaf(leaf: string, noun: string): string | null {
+	if (!leaf) return `Enter a ${noun}.`;
+	if (!LEAF_RE.test(leaf)) return 'Use only letters, numbers, or hyphens.';
+	return null;
+}
+
+/**
+ * Validate a number against an inclusive range, optionally requiring a whole number. Mirrors the
+ * backend's `coerce`, so a setting rejected in the form is rejected the same way in the ledger.
+ */
+export function validateRange(
+	value: number | null,
+	label: string,
+	min: number,
+	max: number,
+	integer = false
+): string | null {
+	if (value == null || !Number.isFinite(value)) return `${label} must be a number.`;
+	if (integer && !Number.isInteger(value)) return `${label} must be a whole number.`;
+	if (value < min || value > max) return `${label} must be between ${min} and ${max}.`;
+	return null;
+}
+
 /**
  * A row is only submitted when it has both a type and an amount, so the two mistakes worth flagging
  * are the ones that lose input or write a bad leg: an amount with no type picked, and a

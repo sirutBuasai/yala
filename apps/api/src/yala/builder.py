@@ -34,6 +34,7 @@ from yala.schema import (
     NetWorthSnapshot,
     Overview,
     PaycheckOut,
+    SettingsSection,
     Transfer,
     Txn,
     YearPage,
@@ -251,6 +252,18 @@ def _networth(networth) -> NetWorthSection:
     )
 
 
+def _settings(settings) -> SettingsSection:
+    """Effective settings as the contract shape. Setting keys are hyphenated (they read as words in
+    the ledger); contract fields are the same names with underscores."""
+    values = settings.values()
+    return SettingsSection(
+        **{
+            key.replace("-", "_"): (None if value is None else float(value))
+            for key, value in values.items()
+        }
+    )
+
+
 def build(ledger: Ledger) -> DashboardData:
     """Query the ledger and validate / construct the dashboard contract."""
     spending = ledger.spending
@@ -284,6 +297,7 @@ def build(ledger: Ledger) -> DashboardData:
         months=_months(spending, income, transfers, all_months),
         income=_income(income),
         networth=networth_section,
+        settings=_settings(ledger.settings),
     )
 
 

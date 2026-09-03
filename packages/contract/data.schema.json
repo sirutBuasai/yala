@@ -500,6 +500,43 @@
       "title": "PaycheckOut",
       "type": "object"
     },
+    "SettingsSection": {
+      "additionalProperties": false,
+      "description": "Effective user settings: what the ledger states, else the built-in default.\n\nA null means the setting is unset and has no default \u2014 features depending on it stay hidden\nrather than guessing. Keys mirror :data:`yala.ledger.settings.SETTINGS`; ``test_settings``\nasserts the two can't drift.",
+      "properties": {
+        "swr": {
+          "title": "Swr",
+          "type": "number"
+        },
+        "real_return": {
+          "title": "Real Return",
+          "type": "number"
+        },
+        "retire_age": {
+          "title": "Retire Age",
+          "type": "number"
+        },
+        "birth_year": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Birth Year"
+        }
+      },
+      "required": [
+        "swr",
+        "real_return",
+        "retire_age"
+      ],
+      "title": "SettingsSection",
+      "type": "object"
+    },
     "Transfer": {
       "additionalProperties": false,
       "properties": {
@@ -706,6 +743,17 @@
       "anyOf": [
         {
           "$ref": "#/$defs/NetWorthSection"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "settings": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SettingsSection"
         },
         {
           "type": "null"

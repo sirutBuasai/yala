@@ -10,9 +10,11 @@ import {
 	enableEditMode,
 	invalidateDerivedCache,
 	loadState,
+	getSettings,
 	loadViewData,
 	mode,
-	networthAt
+	networthAt,
+	setSetting
 } from '$lib/data/load';
 import { makeData } from '$lib/data/__fixtures__/dashboard';
 
@@ -142,5 +144,43 @@ describe('networthAt caching', () => {
 		vi.stubGlobal('fetch', after);
 		await networthAt('2026-07-01');
 		expect(after).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('getSettings', () => {
+	const body = { values: { swr: 4 }, specs: [{ key: 'swr' }] };
+
+	it('returns the payload when the API answers', async () => {
+		vi.stubGlobal('fetch', mockFetchOnce(body));
+		const { info, error } = await getSettings();
+
+		expect(error).toBeNull();
+		expect(info?.values.swr).toBe(4);
+	});
+
+	it('tells the user to restart the API when the endpoint is missing', async () => {
+		// A 404 here means the running API predates this build, not that a record is absent.
+		vi.stubGlobal('fetch', mockFetchOnce({}, false, 404));
+		const { info, error } = await getSettings();
+
+		expect(info).toBeNull();
+		expect(error).toContain('Restart');
+		expect(error).toContain('serve-api');
+	});
+
+	it('reports an unreachable API distinctly from a missing endpoint', async () => {
+		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
+		const { error } = await getSettings();
+
+		expect(error).toContain('unreachable');
+		expect(error).not.toContain('Restart');
+	});
+
+	it('surfaces a rejected value as the API worded it', async () => {
+		vi.stubGlobal(
+			'fetch',
+			mockFetchOnce({ detail: 'Withdrawal rate must be between 0.1 and 20' }, false, 422)
+		);
+		expect(await setSetting('swr', 99)).toBe('Withdrawal rate must be between 0.1 and 20');
 	});
 });

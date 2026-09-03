@@ -10,16 +10,24 @@ import { money } from '$lib/utils/format';
 
 // --- units ---
 
-export type Unit = { kind: 'money'; currency: string } | { kind: 'percent' } | { kind: 'count' };
+export type Unit =
+	| { kind: 'money'; currency: string }
+	| { kind: 'percent' }
+	| { kind: 'count' }
+	/** A span of time — how long something lasts, e.g. months of runway, years of freedom. */
+	| { kind: 'duration'; period: 'month' | 'year' };
 
 export const MONEY = (currency = 'USD'): Unit => ({ kind: 'money', currency });
 export const PERCENT: Unit = { kind: 'percent' };
 export const COUNT: Unit = { kind: 'count' };
+export const MONTHS: Unit = { kind: 'duration', period: 'month' };
+export const YEARS: Unit = { kind: 'duration', period: 'year' };
 
 /** Same measurement scale — the core compatibility test. */
 export function sameUnit(a: Unit, b: Unit): boolean {
 	if (a.kind !== b.kind) return false;
 	if (a.kind === 'money' && b.kind === 'money') return a.currency === b.currency;
+	if (a.kind === 'duration' && b.kind === 'duration') return a.period === b.period;
 	return true;
 }
 
@@ -32,6 +40,10 @@ export function formatUnit(value: number, unit: Unit): string {
 			return `${Math.round(value)}%`;
 		case 'count':
 			return Math.round(value).toLocaleString();
+		// One decimal: a runway of "14.6 mo" is a materially different answer from "15 mo", and
+		// these are always small numbers where the fraction reads clearly.
+		case 'duration':
+			return `${value.toFixed(1)} ${unit.period === 'month' ? 'mo' : 'yr'}`;
 	}
 }
 

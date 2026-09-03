@@ -81,6 +81,10 @@ export type Account1 = string;
 export type Label1 = string;
 export type Value1 = number;
 export type Adjustments = NetWorthAdjustment[];
+export type Swr = number;
+export type RealReturn = number;
+export type RetireAge = number;
+export type BirthYear = number | null;
 
 export interface DashboardData {
 	schema_version: SchemaVersion;
@@ -92,6 +96,7 @@ export interface DashboardData {
 	months: Months;
 	income: IncomeSection;
 	networth?: NetWorthSection | null;
+	settings?: SettingsSection | null;
 }
 /**
  * This interface was referenced by `DashboardData`'s JSON-Schema
@@ -304,4 +309,20 @@ export interface NetWorthAdjustment {
 	account: Account1;
 	label: Label1;
 	value: Value1;
+}
+/**
+ * Effective user settings: what the ledger states, else the built-in default.
+ *
+ * A null means the setting is unset and has no default — features depending on it stay hidden
+ * rather than guessing. Keys mirror :data:`yala.ledger.settings.SETTINGS`; ``test_settings``
+ * asserts the two can't drift.
+ *
+ * This interface was referenced by `DashboardData`'s JSON-Schema
+ * via the `definition` "SettingsSection".
+ */
+export interface SettingsSection {
+	swr: Swr;
+	real_return: RealReturn;
+	retire_age: RetireAge;
+	birth_year?: BirthYear;
 }

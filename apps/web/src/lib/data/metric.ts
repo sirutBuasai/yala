@@ -170,8 +170,14 @@ function categorySpend(data: DashboardData, scope: Scope, category: string): num
 		.reduce((a, c) => a + c.amount, 0);
 }
 
-/** Resolve any measure to a raw number at a scope. */
-function measureValue(data: DashboardData, scope: Scope, m: Measure): number {
+/**
+ * Resolve any measure to a raw number at a scope.
+ *
+ * Exported because the net-worth metrics need the same spending/income aggregates to answer
+ * "how much of this came from saving?" — recomputing them there would duplicate the scope
+ * collection and lose this module's memoization.
+ */
+export function measureValue(data: DashboardData, scope: Scope, m: Measure): number {
 	if (typeof m === 'string') return totals(data, scope)[m];
 	return scopePaychecks(data, scope).reduce(
 		(a, p) => a + ((m.group === 'deductions' ? p.deductions : p.contributions)[m.key] ?? 0),

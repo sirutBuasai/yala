@@ -74,7 +74,13 @@
 		})
 	);
 
-	const stride = $derived(Math.max(1, Math.ceil(n / 12)));
+	// Thin the x labels to what actually fits, not just to a fixed count: in a half-width pane a
+	// dozen "2026-01-01" labels overlap into a smudge. Budget each label the width of the longest
+	// one plus breathing room, and drop to every 2nd/3rd/… accordingly.
+	const labelRoom = $derived(Math.max(...labels.map((l) => l.length), 1) * 6.2 + 12);
+	const stride = $derived(
+		Math.max(1, Math.ceil(n / Math.max(2, Math.min(12, Math.floor(iw / labelRoom)))))
+	);
 
 	/**
 	 * Right-edge labels for many-series charts, nudged apart so ten lines stay readable without a

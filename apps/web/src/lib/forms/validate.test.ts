@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { problems, requirePositive, validateRows } from '$lib/forms/validate';
+import {
+	problems,
+	requirePositive,
+	validateLeaf,
+	validateRange,
+	validateRows
+} from '$lib/forms/validate';
 
 describe('requirePositive', () => {
 	it('rejects null, zero, negative, and non-finite amounts', () => {
@@ -57,5 +63,43 @@ describe('problems', () => {
 
 	it('ignores null ad-hoc checks', () => {
 		expect(problems().positive(5, 'Amount').add(null).message()).toBe('');
+	});
+});
+
+describe('validateLeaf', () => {
+	it("requires a name, using the caller's noun", () => {
+		expect(validateLeaf('', 'category name')).toBe('Enter a category name.');
+		expect(validateLeaf('', 'bank account name')).toBe('Enter a bank account name.');
+	});
+
+	it('accepts letters, numbers and hyphens', () => {
+		expect(validateLeaf('Ally-Savings2', 'name')).toBeNull();
+	});
+
+	it('rejects a name with a colon, space, or other punctuation', () => {
+		for (const bad of ['Assets:Cash', 'my account', 'caf\u00e9', 'a_b']) {
+			expect(validateLeaf(bad, 'name')).toBe('Use only letters, numbers, or hyphens.');
+		}
+	});
+});
+
+describe('validateRange', () => {
+	it('accepts a value inside the range', () => {
+		expect(validateRange(4, 'Withdrawal rate', 0.1, 20)).toBeNull();
+	});
+
+	it('rejects a missing or non-finite value', () => {
+		expect(validateRange(null, 'Rate', 0, 10)).toBe('Rate must be a number.');
+		expect(validateRange(Number.NaN, 'Rate', 0, 10)).toBe('Rate must be a number.');
+	});
+
+	it('rejects a value outside the bounds, naming them', () => {
+		expect(validateRange(99, 'Rate', 0.1, 20)).toBe('Rate must be between 0.1 and 20.');
+		expect(validateRange(0, 'Rate', 0.1, 20)).toBe('Rate must be between 0.1 and 20.');
+	});
+
+	it('rejects a fraction only when a whole number is required', () => {
+		expect(validateRange(55.5, 'Age', 18, 100, true)).toBe('Age must be a whole number.');
+		expect(validateRange(55.5, 'Rate', 18, 100)).toBeNull();
 	});
 });
