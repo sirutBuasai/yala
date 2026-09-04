@@ -7,7 +7,7 @@
 	import { accountLeaf, formatAccount, money } from '$lib/utils/format';
 	import { lastCategory, lastEntryDate, lastFundingAccount, seed } from '$lib/utils/editPrefs';
 	import AccountField from '$lib/forms/fields/AccountField.svelte';
-	import { problems, validateRows } from '$lib/forms/validate';
+	import { problems, TEXT_MAX, validateRows } from '$lib/forms/validate';
 	import Credits, { type Credit } from '$lib/entries/transaction/Credits.svelte';
 	import DatePicker from '$lib/forms/fields/DatePicker.svelte';
 	import EntryFooter from '$lib/entries/EntryFooter.svelte';
@@ -45,9 +45,8 @@
 
 	$effect(() => {
 		if (locator == null) {
-			// Add mode: seed the selects once the account lists are available (so a later-loading list
-			// still populates them) without clobbering the user's pick. Category and funding both default
-			// to the last one used, so a run of adds keeps the same picks (see editPrefs).
+			// Add mode: seed from the last entry's picks once the account lists load, without clobbering
+			// anything already chosen (see editPrefs).
 			if (!date && presetDate) date = presetDate;
 			if (!category) category = seed(get(lastCategory), accounts.spending_categories);
 			if (!funding_account)
@@ -85,8 +84,8 @@
 	const yourShare = $derived((total || 0) - paybacks);
 
 	async function submit() {
-		// A net share below zero is a valid net refund (reimbursements exceed the bill), not an error;
-		// the summary flags it so an accidental over-credit is still visible.
+		// A net share below zero is a valid net refund, not an error; the summary flags it so an
+		// accidental over-credit is still visible.
 		const problem = problems()
 			.require(payee, 'Title')
 			.positive(total, 'Total bill')
@@ -150,6 +149,7 @@
 				id="tx-payee"
 				bind:value={payee}
 				placeholder="e.g. lucky"
+				maxlength={TEXT_MAX}
 			/>
 		</div>
 		<div class="field">

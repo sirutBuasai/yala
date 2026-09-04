@@ -1,11 +1,8 @@
 /**
- * The busy / error / confirmation state around one async write.
- *
- * Every write control in the app repeats the same five steps: clear the last outcome, mark busy,
- * await a call that resolves to an error message (or null on success), unmark busy, then show
- * either the error or a confirmation. Hand-rolling that per control drifted — some cleared the
- * previous note, some didn't; some left `busy` set on an early return. This owns the sequence so
- * each caller only supplies the call and its messages.
+ * The busy / error / confirmation state around one async write: clear the last outcome, mark busy,
+ * await a call that resolves to an error message (or null), unmark busy, then show the error or a
+ * confirmation. Hand-rolled per control this drifted, so the sequence lives here and each caller
+ * supplies only the call and its messages.
  */
 export class SaveState {
 	busy = $state(false);

@@ -1,9 +1,8 @@
 // The chart registry — the visualization layer's half of the data/visual split.
 //
-// Each entry declares which primitive KINDS a chart accepts, whether more compatible
-// series can be layered onto it, and how to ADAPT a primitive into that chart's props.
-// Colour assignment lives here (never in the data layer), so it's defined once instead
-// of being rebuilt inline by every view.
+// Each entry declares which primitive KINDS a chart accepts and how to ADAPT a primitive into that
+// chart's props. Colour assignment lives here (never in the data layer), so it's defined once
+// instead of being rebuilt inline by every view.
 
 import type { Component } from 'svelte';
 import type {
@@ -18,7 +17,6 @@ import type {
 	Series,
 	Table
 } from '$lib/data/primitives';
-import { compatible } from '$lib/data/primitives';
 import { accountVar, CATEGORY_TOKEN, categoryVar } from '$lib/utils/theme';
 
 import Donut from '$lib/charts/Donut.svelte';
@@ -35,12 +33,8 @@ import StatTile from './StatTile.svelte';
 
 /** Extra rendering options a caller can pass to `adapt` (all optional). */
 interface AdaptOpts {
-	/** Additional series to layer onto a series/line chart (filtered to compatible). */
-	layers?: Series[];
 	/** Draw a gradient area under a single line. */
 	area?: boolean;
-	/** Force the legend on/off. */
-	legend?: boolean;
 	/** Fill colour for a single-series chart (columns, line, area). */
 	color?: string;
 	/** What a categorical chart's keys name, and so where their colours come from. */
@@ -61,8 +55,6 @@ export interface ChartDef<P extends Record<string, unknown> = Record<string, unk
 	id: string;
 	label: string;
 	accepts: PrimitiveKind[];
-	/** Whether additional compatible series can be layered on. */
-	layerable: boolean;
 	component: Component<P>;
 	adapt(primitive: Primitive, opts?: AdaptOpts): P;
 }
@@ -81,7 +73,6 @@ function def<C extends Component<any, any, any>>(d: {
 	id: string;
 	label: string;
 	accepts: PrimitiveKind[];
-	layerable: boolean;
 	component: C;
 	adapt(primitive: Primitive, opts?: AdaptOpts): PropsOf<C>;
 }): ChartDef {
@@ -166,20 +157,14 @@ const FLOW_ROLE_COLOR = {
 	saving: 'var(--role-saving)'
 } as const;
 
-// --- series collection + layering ---
+// --- series collection ---
 
-/** Flatten a series/multiseries into its series list, appending compatible layers. */
-function seriesOf(
-	p: Series | MultiSeries,
-	layers: Series[] = []
-): { labels: string[]; list: Series[] } {
+/** Flatten a series/multiseries into its series list and the labels they share. */
+function seriesOf(p: Series | MultiSeries): { labels: string[]; list: Series[] } {
 	const list = p.kind === 'series' ? [p] : [...p.series];
 	const base = list[0];
 	if (!base) return { labels: [], list };
-	const labels = base.points.map((pt) => pt.label);
-	// Dynamic layering: any number of compatible series can be added.
-	for (const l of layers) if (compatible(base, l)) list.push(l);
-	return { labels, list };
+	return { labels: base.points.map((pt) => pt.label), list };
 }
 
 function toChartSeries(list: Series[], opts: AdaptOpts) {
@@ -203,7 +188,6 @@ export const CHARTS: ChartDef[] = [
 		id: 'donut',
 		label: 'Donut',
 		accepts: ['categorical'],
-		layerable: false,
 		component: Donut,
 		adapt(p, opts = {}) {
 			const c = p as Categorical;
@@ -220,7 +204,6 @@ export const CHARTS: ChartDef[] = [
 		id: 'ranked-bars',
 		label: 'Ranked bars',
 		accepts: ['categorical'],
-		layerable: false,
 		component: HBarChart,
 		adapt(p, opts = {}) {
 			const c = p as Categorical;
@@ -238,10 +221,9 @@ export const CHARTS: ChartDef[] = [
 		id: 'bar',
 		label: 'Bar',
 		accepts: ['series', 'multiseries'],
-		layerable: true,
 		component: BarChart,
 		adapt(p, opts = {}) {
-			const { labels, list } = seriesOf(p as Series | MultiSeries, opts.layers);
+			const { labels, list } = seriesOf(p as Series | MultiSeries);
 			return {
 				labels,
 				series: list.map((s, i) => ({
@@ -249,8 +231,7 @@ export const CHARTS: ChartDef[] = [
 					values: s.points.map((pt) => pt.value ?? 0),
 					// A single series may take an explicit fill; multiple use the series palette.
 					color: list.length === 1 && opts.color ? opts.color : seriesColor(s.name, i)
-				})),
-				legend: opts.legend
+				}))
 			};
 		}
 	}),
@@ -258,19 +239,16 @@ export const CHARTS: ChartDef[] = [
 		id: 'line',
 		label: 'Line',
 		accepts: ['series', 'multiseries'],
-		layerable: true,
 		component: LineChart,
 		adapt(p, opts = {}) {
-			const { labels, list } = seriesOf(p as Series | MultiSeries, opts.layers);
+			const { labels, list } = seriesOf(p as Series | MultiSeries);
 			const percent = (p as Series | MultiSeries).unit.kind === 'percent';
 			return {
 				labels,
 				series: toChartSeries(list, opts),
 				percent,
 				log: opts.log,
-				endLabels: opts.endLabels,
-				// End labels replace the legend; showing both would say the same thing twice.
-				legend: opts.legend ?? (!opts.endLabels && list.length > 1)
+				endLabels: opts.endLabels
 			};
 		}
 	}),
@@ -278,7 +256,6 @@ export const CHARTS: ChartDef[] = [
 		id: 'diverging-bars',
 		label: 'Diverging bars',
 		accepts: ['categorical'],
-		layerable: false,
 		component: DivergingBars,
 		adapt(p) {
 			const c = p as Categorical;
@@ -289,7 +266,6 @@ export const CHARTS: ChartDef[] = [
 		id: 'stacked-area',
 		label: 'Stacked area',
 		accepts: ['multiseries'],
-		layerable: false,
 		component: StackedArea,
 		adapt(p, opts = {}) {
 			const m = p as MultiSeries;
@@ -300,8 +276,7 @@ export const CHARTS: ChartDef[] = [
 					values: s.points.map((pt) => pt.value ?? 0),
 					color: seriesColor(s.name, i)
 				})),
-				unit: m.unit,
-				legend: opts.legend
+				unit: m.unit
 			};
 		}
 	}),
@@ -309,7 +284,6 @@ export const CHARTS: ChartDef[] = [
 		id: 'bullet',
 		label: 'Bullet',
 		accepts: ['bullet'],
-		layerable: false,
 		component: BulletChart,
 		adapt(p) {
 			return { rows: (p as Bullet).rows };
@@ -319,7 +293,6 @@ export const CHARTS: ChartDef[] = [
 		id: 'sankey',
 		label: 'Sankey',
 		accepts: ['flow'],
-		layerable: false,
 		component: Sankey,
 		adapt(p) {
 			const f = p as Flow;
@@ -336,7 +309,6 @@ export const CHARTS: ChartDef[] = [
 		id: 'heatmap',
 		label: 'Heatmap',
 		accepts: ['matrix'],
-		layerable: false,
 		component: Heatmap,
 		adapt(p, opts = {}) {
 			const m = p as Matrix;
@@ -347,7 +319,6 @@ export const CHARTS: ChartDef[] = [
 		id: 'table',
 		label: 'Table',
 		accepts: ['table'],
-		layerable: false,
 		component: DataTable,
 		adapt(p) {
 			return { table: p as Table };
@@ -357,7 +328,6 @@ export const CHARTS: ChartDef[] = [
 		id: 'stat',
 		label: 'Stat tile',
 		accepts: ['scalar'],
-		layerable: false,
 		component: StatTile,
 		adapt(p) {
 			return { scalar: p as Scalar };

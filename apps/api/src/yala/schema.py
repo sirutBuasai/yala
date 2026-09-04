@@ -5,11 +5,15 @@ Additive changes keep ``SCHEMA_VERSION`` stable; breaking changes bump it.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict
 
-SCHEMA_VERSION = 1
+#: The contract's version, declared once. The model annotates the field with the ``Literal`` (so a
+#: document carrying any other version fails validation) and every writer sends
+#: :data:`SCHEMA_VERSION`, which is read back off that same literal.
+SchemaVersion = Literal[1]
+SCHEMA_VERSION: int = get_args(SchemaVersion)[0]
 
 
 class _Base(BaseModel):
@@ -189,7 +193,7 @@ class SettingsSection(_Base):
 
 
 class DashboardData(_Base):
-    schema_version: Literal[1]
+    schema_version: SchemaVersion
     generated_at: str  # RFC 3339 UTC
     currency: str
 

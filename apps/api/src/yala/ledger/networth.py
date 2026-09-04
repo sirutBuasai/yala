@@ -21,6 +21,7 @@ from yala.ledger.constants import (
     ASSETS,
     CASH,
     DEFAULT_CURRENCY,
+    INVEST_ADJUSTMENTS,
     INVEST_TAX_ADVANTAGED,
     INVEST_TAXABLE,
     INVESTMENTS,
@@ -43,9 +44,9 @@ def adjustment_account(account: str) -> str:
     if account.startswith(CASH):
         return ADJUSTMENTS + account[len(CASH) :]
     if account.startswith(INVEST_TAXABLE):
-        return ADJUSTMENTS + "Investments:" + account[len(INVEST_TAXABLE) :]
+        return INVEST_ADJUSTMENTS + account[len(INVEST_TAXABLE) :]
     if account.startswith(INVEST_TAX_ADVANTAGED):
-        return ADJUSTMENTS + "Investments:" + account[len(INVEST_TAX_ADVANTAGED) :]
+        return INVEST_ADJUSTMENTS + account[len(INVEST_TAX_ADVANTAGED) :]
     raise ValueError(f"no adjustment account for {account}")
 
 

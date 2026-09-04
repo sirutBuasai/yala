@@ -1,8 +1,6 @@
-// The rules behind the balance checklist, as pure functions over plain values.
-//
-// These are the arithmetic that decides whether a typed figure agrees with the ledger, and what
-// happens if it doesn't — the part where being wrong means either posting a bogus adjustment or
-// refusing a legitimate one. None of it needs a component to be true, so none of it lives in one.
+// The rules behind the balance checklist, as pure functions over plain values: the arithmetic that
+// decides whether a typed figure agrees with the ledger, and what happens when it doesn't. Being
+// wrong here means posting a bogus adjustment or refusing a legitimate one.
 
 /** Which subtotal an account is counted under, and in what order the groups are shown. */
 export type Group = 'Liquid' | 'Taxable' | 'Tax-advantaged' | 'Liabilities';
@@ -30,9 +28,8 @@ export function groupOf(account: string): Group {
 }
 
 /**
- * Every loggable account as a row, grouped and then sorted by display name — one pass down the
- * column in the order the splits are tallied. `label` is passed in rather than imported so this
- * stays independent of how an account happens to be formatted for display.
+ * Every loggable account as a row, grouped and then sorted by display name. `label` is passed in
+ * rather than imported so this stays independent of how an account is formatted for display.
  */
 export function buildRows(
 	assetAccounts: string[],
@@ -58,10 +55,9 @@ export function buildRows(
 /**
  * What the ledger computes for an account at this month's snapshot, BEFORE anything new is logged.
  *
- * The subtraction is the subtle part. If an assertion already stands on this date, the ledger's
- * figure has that assertion's own adjustment baked into it — so leaving it in would compare a
- * figure against itself and always report agreement. `adjNow - adjPrev` isolates just this month's
- * plug, which is what gets backed out.
+ * If an assertion already stands on this date, the ledger's figure has that assertion's own
+ * adjustment baked in, so comparing against it would report agreement with itself; `adjNow -
+ * adjPrev` isolates this month's plug, which is what gets backed out.
  */
 export function expectedAt(
 	account: string,
@@ -87,16 +83,33 @@ export function agrees(check: number | null): boolean {
 	return check != null && Math.abs(check) < EPSILON;
 }
 
+/** Why a row can't be saved as typed. `negative` is an impossible figure; `missing-entry` is a
+    liability that disagrees with the ledger. */
+export type BlockReason = 'negative' | 'missing-entry';
+
 /**
- * Whether a row must block instead of posting an adjustment.
+ * Why a row must block instead of posting an adjustment, or null when it is savable.
  *
  * Assets are allowed to drift — markets move — so their gap becomes an `Equity:Adjustments:*` plug.
  * A liability has no such licence: a card's balance is fully determined by the spending and bill
  * payments already entered, so a gap there means an entry is MISSING, and plugging it would paper
- * over the very thing the checklist exists to surface.
+ * over the very thing the checklist exists to surface. Either way a snapshot is what an account
+ * holds or owes, which is never a negative figure.
  */
+export function blockReason(
+	row: Row,
+	typed: number | null,
+	expected: number | null
+): BlockReason | null {
+	if (typed == null) return null;
+	if (row.liability) {
+		return agrees(checkOf(typed, expected)) ? null : 'missing-entry';
+	}
+	return typed < 0 ? 'negative' : null;
+}
+
 export function isBlocked(row: Row, typed: number | null, expected: number | null): boolean {
-	return row.liability && typed != null && !agrees(checkOf(typed, expected));
+	return blockReason(row, typed, expected) !== null;
 }
 
 /** A liability's gap tells you which kind of entry is missing. */

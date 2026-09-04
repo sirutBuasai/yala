@@ -1,15 +1,11 @@
 <script lang="ts">
-	// The app's one money input. Every form that takes an amount was repeating the same six
-	// attributes — `type=number step=0.01 min=0 inputmode=decimal placeholder=0` — and any of them
-	// could have drifted: a missing `inputmode` costs a phone user the decimal keypad, a missing
-	// `step` makes the browser reject "12.50". One component, one set of rules.
-	//
-	// The value is a `number | null` rather than a string: null is "nothing typed yet", which is the
-	// state the entry forms validate against, and it keeps the parsing in one place.
+	// The app's one money input: one place for the `type=number step=0.01 inputmode=decimal` rules
+	// every amount field needs, so a missing one can't make the browser reject "12.50" or cost a phone
+	// user the decimal keypad. The value is `number | null` rather than text — null is "nothing typed
+	// yet", the state the forms validate against, so the parsing stays here.
 	interface Props {
-		/** Amount in currency units; null/undefined when empty (bindable). `undefined` is allowed
-		    because a caller may bind a not-yet-created slot of a record — the balance checklist binds
-		    `typed[account]`, which starts absent — and "absent" and "cleared" mean the same thing here. */
+		/** Amount in currency units; null or undefined when empty (bindable). A caller may bind a
+		    not-yet-created slot of a record, where absent and cleared mean the same thing. */
 		value: number | null | undefined;
 		id?: string;
 		ariaLabel?: string;

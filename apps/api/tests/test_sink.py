@@ -9,6 +9,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from beancount.core import data
 
 from yala.ledger import Ledger
 from yala.sink import FileLedgerSink
@@ -446,12 +447,36 @@ def test_open_account_adds_contribution_type(ledger_dir: Path):
 
 def _open_file(ledger_dir: Path, account: str) -> Path:
     """The source file declaring ``account``'s ``open`` directive."""
-    from beancount.core import data
-
     for e in _loads_clean(ledger_dir).entries:
         if isinstance(e, data.Open) and e.account == account:
             return Path(e.meta["filename"])
     raise AssertionError(f"no open for {account}")
+
+
+def test_open_account_escapes_a_quote_in_metadata(ledger_dir: Path):
+    """A quote in a typed institution is escaped, so the file parses and the value survives."""
+    sink = FileLedgerSink(ledger_dir)
+
+    sink.open_account("Assets:Cash:Quoted", meta={"institution": 'Bank "X" \\ Example'})
+
+    led = _loads_clean(ledger_dir)
+    opened = next(
+        e for e in led.entries if isinstance(e, data.Open) and e.account == "Assets:Cash:Quoted"
+    )
+    assert opened.meta["institution"] == 'Bank "X" \\ Example'
+
+
+def test_set_account_meta_escapes_a_quote(ledger_dir: Path):
+    sink = FileLedgerSink(ledger_dir)
+    sink.open_account("Assets:Cash:Meta")
+
+    sink.set_account_meta("Assets:Cash:Meta", "institution", 'A "B"')
+
+    led = _loads_clean(ledger_dir)
+    opened = next(
+        e for e in led.entries if isinstance(e, data.Open) and e.account == "Assets:Cash:Meta"
+    )
+    assert opened.meta["institution"] == 'A "B"'
 
 
 def test_open_account_lands_beside_its_siblings(ledger_dir: Path):

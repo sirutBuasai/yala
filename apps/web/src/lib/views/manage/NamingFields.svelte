@@ -3,11 +3,10 @@
 	// to fall back on. Shared by the bank / credit card / investment panels so the three can't drift
 	// on wording or on which fields are optional.
 	//
-	// Deliberately no live preview of the resulting name. Composing it means applying the naming rule
-	// (de-CamelCase, particles, letter/digit splits, then the alias substitutions), and that rule
-	// lives in Python so there is exactly one of it — reproducing it here to render a preview would
-	// reintroduce the drift the rule was moved to avoid. The panel reports the name the API actually
-	// created once the account is open, which is the same answer from the authoritative source.
+	// Deliberately no live preview of the resulting name: the naming rule lives in Python so there is
+	// exactly one of it, and reproducing it here would reintroduce the drift it was moved to avoid.
+	// The panel reports the name the API created once the account is open.
+	import { TEXT_MAX } from '$lib/forms/validate';
 
 	interface Props {
 		/** Institution / bank / brokerage, as a person writes it. Required. */
@@ -44,6 +43,7 @@
 			aria-label="institution"
 			bind:value={institution}
 			placeholder={institutionPlaceholder}
+			maxlength={TEXT_MAX}
 			{disabled}
 		/>
 	</label>
@@ -54,6 +54,7 @@
 				aria-label="account name"
 				bind:value={accountName}
 				placeholder={accountNamePlaceholder}
+				maxlength={TEXT_MAX}
 				{disabled}
 			/>
 		</label>
@@ -72,6 +73,7 @@
 			aria-label="institution alias"
 			bind:value={bankAlias}
 			placeholder="e.g. BoE"
+			maxlength={TEXT_MAX}
 			{disabled}
 		/>
 	</label>
@@ -82,6 +84,7 @@
 				aria-label="account alias"
 				bind:value={accountAlias}
 				placeholder={accountAliasPlaceholder}
+				maxlength={TEXT_MAX}
 				{disabled}
 			/>
 		</label>

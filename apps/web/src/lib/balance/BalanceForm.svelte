@@ -1,7 +1,6 @@
 <script lang="ts">
-	// Log a USD balance snapshot for a cash or investment account (POST /api/balance): a
-	// pad + balance pair that routes the untracked delta to the account's Equity:Adjustments plug.
-	// Add-only — balance snapshots aren't individually editable (they carry no locator).
+	// Log a USD balance snapshot for a cash or investment account (POST /api/balance): a pad + balance
+	// pair routing the untracked delta to the account's Equity:Adjustments plug.
 	import type { AccountsInfo } from '$lib/data/load';
 	import { logBalance } from '$lib/data/load';
 	import { formatAccount, money } from '$lib/utils/format';
@@ -36,12 +35,7 @@
 	});
 
 	async function submit() {
-		const problem = problems()
-			.require(account, 'Account')
-			.add(
-				amount == null ? 'Balance is required.' : amount < 0 ? 'Balance must be 0 or more.' : null
-			)
-			.message();
+		const problem = problems().require(account, 'Account').nonNegative(amount, 'Balance').message();
 		if (problem) {
 			msg = problem;
 			err = true;

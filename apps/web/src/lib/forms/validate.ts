@@ -1,26 +1,50 @@
-// Shared client-side validation for the entry forms (transaction / paycheck / bill pay).
+// Shared client-side validation for every form that writes to the ledger.
 //
 // The first, fast line of defense — specific messages before a round trip; the API re-validates
 // authoritatively (a form is not a security boundary). Problems are collected and reported
 // together, so the user fixes everything at once instead of one prompt at a time.
 
-export function requirePositive(value: number | null, label: string): string | null {
-	if (value == null) return `${label} is required.`;
-	if (!Number.isFinite(value) || value <= 0) return `${label} must be greater than 0.`;
-	return null;
+/** The backend's own ceilings (`MAX_TEXT` / `MAX_LEAF` in api.py), so a form rejects what it would. */
+export const TEXT_MAX = 200;
+export const LEAF_MAX = 60;
+
+/** A typed amount, once it is known to be present. Non-finite fails the same way as out-of-range. */
+function amountProblem(value: number, label: string, allowZero: boolean): string | null {
+	if (Number.isFinite(value) && (allowZero ? value >= 0 : value > 0)) return null;
+	return allowZero ? `${label} must be 0 or more.` : `${label} must be greater than 0.`;
 }
 
 /** A new account / category name is a single leaf segment (mirrors the backend's `_LEAF_RE`). */
 const LEAF_RE = /^[A-Za-z0-9-]+$/;
+const ALNUM_RE = /[A-Za-z0-9]/;
 
 /**
- * Validate a name typed for a new account or category. Returns a message, or null when it passes.
- * Shared by every "add a …" field in Manage so the three of them can't drift apart.
+ * Validate a name typed for a new account, category, employer, or contribution label. Returns a
+ * message, or null when it passes. Shared by every "add a …" field so they can't drift apart.
  */
 export function validateLeaf(leaf: string, noun: string): string | null {
-	if (!leaf) return `Enter a ${noun}.`;
+	if (!leaf) return `Enter ${/^[aeiou]/i.test(noun) ? 'an' : 'a'} ${noun}.`;
 	if (!LEAF_RE.test(leaf)) return 'Use only letters, numbers, or hyphens.';
+	if (leaf.length > LEAF_MAX) return `Use at most ${LEAF_MAX} characters.`;
 	return null;
+}
+
+/**
+ * Validate a name typed as words — an institution, a product name, a short form. The backend joins
+ * these into the stored leaf by keeping only letters and digits, so a value with neither would
+ * compose to an empty account name.
+ */
+export function validateName(value: string, label: string): string | null {
+	const text = value.trim();
+	if (!text) return `${label} is required.`;
+	if (!ALNUM_RE.test(text)) return `${label} needs at least one letter or number.`;
+	if (text.length > TEXT_MAX) return `${label} must be at most ${TEXT_MAX} characters.`;
+	return null;
+}
+
+/** The same rules for a name the form allows to be left blank. */
+export function validateOptionalName(value: string, label: string): string | null {
+	return value.trim() ? validateName(value, label) : null;
 }
 
 /**
@@ -69,6 +93,8 @@ interface Problems {
 	require(value: string, label: string): Problems;
 	/** A required amount that must be present and strictly positive. */
 	positive(value: number | null, label: string): Problems;
+	/** A required amount that must be present and zero or more (a balance can be nothing). */
+	nonNegative(value: number | null, label: string): Problems;
 	/** Any other one-off check that already produced a full-sentence message (or null). */
 	add(message: string | null): Problems;
 	/** The combined message, or '' when everything passed. */
@@ -90,7 +116,12 @@ export function problems(): Problems {
 		},
 		positive(value, label) {
 			if (value == null) missing.push(label);
-			else api.add(requirePositive(value, label));
+			else api.add(amountProblem(value, label, false));
+			return api;
+		},
+		nonNegative(value, label) {
+			if (value == null) missing.push(label);
+			else api.add(amountProblem(value, label, true));
 			return api;
 		},
 		add(message) {

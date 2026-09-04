@@ -11,19 +11,17 @@
 		transactions: TxnRow[];
 		edit: boolean;
 		onedit: (locator: string) => void;
-		/** Sub-caption under the title — only worth setting to name a narrower scope. */
-		caption?: string;
 		/** Fix the list to this many rows tall, then scroll (see RowList). */
 		fixedRows?: number;
 		/** Remembers this list's expanded state (see RowList). */
 		prefKey?: string;
 	}
-	let { transactions, edit, onedit, caption, fixedRows, prefKey }: Props = $props();
+	let { transactions, edit, onedit, fixedRows, prefKey }: Props = $props();
 
 	const total = $derived(transactions.reduce((s, t) => s + t.amount, 0));
 </script>
 
-<Pane title="Pending transactions" cap={caption} tone="attention">
+<Pane title="Pending transactions" tone="attention">
 	{#snippet actions()}
 		{#if transactions.length}
 			<span class="meta">{transactions.length} · {money(total)} out</span>

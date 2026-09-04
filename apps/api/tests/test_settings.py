@@ -208,5 +208,7 @@ def test_post_setting_rejects_an_out_of_range_value(client: TestClient):
 
 
 def test_post_setting_rejects_an_unknown_key(client: TestClient):
+    """A key no spec defines is a malformed request, so it names the offending key at 422."""
     r = client.post("/api/settings", json={"key": "nope", "value": 1})
-    assert r.status_code == 404
+    assert r.status_code == 422
+    assert r.json()["detail"] == "unknown setting: 'nope'"

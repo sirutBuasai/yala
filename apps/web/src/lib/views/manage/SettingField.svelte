@@ -1,8 +1,7 @@
 <script lang="ts">
-	// One settable figure. Renders entirely from the spec the API sends — label, help, bounds, and
-	// default — so the form can't disagree with what the ledger will accept. Saves on blur or Enter
-	// rather than behind a button: each setting is independent, so a per-field commit keeps the
-	// panel from becoming a form with one submit for unrelated values.
+	// One settable figure, rendered entirely from the spec the API sends so the form can't disagree
+	// with what the ledger will accept. Each setting is independent, so it commits on blur or Enter
+	// rather than behind one submit for unrelated values.
 	import { setSetting, type SettingSpec } from '$lib/data/load';
 	import { SaveState } from '$lib/forms/saveState.svelte';
 	import { validateRange } from '$lib/forms/validate';
@@ -20,9 +19,8 @@
 	const integer = $derived(spec.kind !== 'percent');
 	const step = $derived(integer ? 1 : 0.1);
 
-	// Local edit buffer. A number input binds as `number | null`, so this is the parsed value, not
-	// text. Re-seeded whenever the incoming value changes so an external save (or the initial load)
-	// shows through, without clobbering what's being typed.
+	// Local edit buffer, re-seeded whenever the incoming value changes so an external save or the
+	// initial load shows through without clobbering what is being typed.
 	let entry = $state<number | null>(null);
 	let lastSeen: number | null | undefined;
 	$effect(() => {

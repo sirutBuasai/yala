@@ -5,7 +5,7 @@
 	//
 	// `sign` is the interesting prop: money out and money in are the same number with opposite
 	// meaning, and which one is "good" depends on the column, not on the sign. So the caller says.
-	import { money, moneyExact } from '$lib/utils/format';
+	import { money } from '$lib/utils/format';
 
 	interface Props {
 		value: number;
@@ -15,16 +15,10 @@
 		    · 'credit'  — money coming in; always reads positive, and shows its + sign.
 		    · 'refund'  — money out, EXCEPT when negative, which is a refund and reads positive. */
 		sign?: 'none' | 'natural' | 'credit' | 'refund';
-		/** Show cents. Off by default — whole dollars are what a list is scanned for. */
-		exact?: boolean;
-		/** Emphasis: a row's trailing figure is semibold, an inline mention is not. */
-		strong?: boolean;
 	}
-	let { value, sign = 'none', exact = false, strong = true }: Props = $props();
+	let { value, sign = 'none' }: Props = $props();
 
-	const text = $derived(
-		(sign === 'credit' ? '+' : '') + (exact ? moneyExact(value) : money(value))
-	);
+	const text = $derived((sign === 'credit' ? '+' : '') + money(value));
 
 	const tone = $derived(
 		sign === 'credit' || (sign === 'refund' && value < 0) || (sign === 'natural' && value > 0)
@@ -35,17 +29,15 @@
 	);
 </script>
 
-<span class="amount {tone}" class:strong>{text}</span>
+<span class="amount {tone}">{text}</span>
 
 <style>
 	.amount {
 		text-align: right;
 		font-variant-numeric: tabular-nums;
 		font-size: var(--text-row);
-		white-space: nowrap;
-	}
-	.strong {
 		font-weight: var(--fw-semibold);
+		white-space: nowrap;
 	}
 	.pos {
 		color: var(--good-text);

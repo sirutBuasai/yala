@@ -4,7 +4,7 @@
 	import { formatAccount } from '$lib/utils/format';
 	import { accountVar } from '$lib/utils/theme';
 	import { SaveState } from '$lib/forms/saveState.svelte';
-	import { validateLeaf } from '$lib/forms/validate';
+	import { LEAF_MAX, problems, validateLeaf } from '$lib/forms/validate';
 	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import DeleteConfirm from '$lib/ui/DeleteConfirm.svelte';
@@ -76,6 +76,23 @@
 			.split(',')
 			.map((x) => x.trim())
 			.filter(Boolean);
+
+	/**
+	 * The payroll half of an investment: an employer and the contribution options it offers. Both are
+	 * written into the ledger as account metadata, so they follow the leaf rule — and a
+	 * payroll-contributable account with neither would offer nothing to contribute to.
+	 */
+	function validatePayrollFields(): string | null {
+		if (!invContributable) return null;
+
+		const labels = splitCsv(invLabels);
+		const checks = problems()
+			.add(validateLeaf(invEmployer.trim(), 'employer'))
+			.add(labels.length ? null : 'List at least one contribution option.');
+		for (const label of labels) checks.add(validateLeaf(label, 'contribution option'));
+
+		return checks.message() || null;
+	}
 </script>
 
 <ViewHeader title="Manage">
@@ -134,7 +151,7 @@
 		title="Add a credit card"
 		cap="Issuer plus the card's own name, both spelled out — the ledger keeps the full name and the short forms only stand in when a row can't fit it."
 		accountNamePlaceholder="e.g. Cash Rewards"
-		accountNameLabel="card name"
+		accountNameLabel="Card name"
 		open={(naming) => addAccount('funding_credit', naming)}
 	/>
 
@@ -172,6 +189,7 @@
 		institutionPlaceholder="e.g. Example Brokerage"
 		accountNamePlaceholder="e.g. Roth IRA"
 		accountAliasPlaceholder="short account name (e.g. Roth)"
+		validateExtra={validatePayrollFields}
 		open={(naming) =>
 			addInvestment({
 				...naming,
@@ -200,6 +218,7 @@
 					aria-label="employer"
 					bind:value={invEmployer}
 					placeholder="employer (e.g. Employer1)"
+					maxlength={LEAF_MAX}
 				/>
 				<input
 					aria-label="labels"

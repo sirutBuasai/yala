@@ -1,21 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+	LEAF_MAX,
 	problems,
-	requirePositive,
+	TEXT_MAX,
 	validateLeaf,
+	validateName,
+	validateOptionalName,
 	validateRange,
 	validateRows
 } from '$lib/forms/validate';
-
-describe('requirePositive', () => {
-	it('rejects null, zero, negative, and non-finite amounts', () => {
-		expect(requirePositive(null, 'Amount')).toBe('Amount is required.');
-		expect(requirePositive(0, 'Amount')).toBe('Amount must be greater than 0.');
-		expect(requirePositive(-5, 'Amount')).toBe('Amount must be greater than 0.');
-		expect(requirePositive(Infinity, 'Amount')).toBe('Amount must be greater than 0.');
-		expect(requirePositive(4.25, 'Amount')).toBeNull();
-	});
-});
 
 describe('validateRows', () => {
 	it('passes empty and fully-filled rows', () => {
@@ -64,6 +57,22 @@ describe('problems', () => {
 	it('ignores null ad-hoc checks', () => {
 		expect(problems().positive(5, 'Amount').add(null).message()).toBe('');
 	});
+
+	it('rejects a missing, zero, negative, or non-finite positive amount', () => {
+		expect(problems().positive(null, 'Amount').message()).toBe('Amount is required.');
+		expect(problems().positive(0, 'Amount').message()).toBe('Amount must be greater than 0.');
+		expect(problems().positive(-5, 'Amount').message()).toBe('Amount must be greater than 0.');
+		expect(problems().positive(Infinity, 'Amount').message()).toBe(
+			'Amount must be greater than 0.'
+		);
+		expect(problems().positive(4.25, 'Amount').message()).toBe('');
+	});
+
+	it('lets a non-negative amount be zero but not missing or negative', () => {
+		expect(problems().nonNegative(0, 'Balance').message()).toBe('');
+		expect(problems().nonNegative(null, 'Balance').message()).toBe('Balance is required.');
+		expect(problems().nonNegative(-1, 'Balance').message()).toBe('Balance must be 0 or more.');
+	});
 });
 
 describe('validateLeaf', () => {
@@ -80,6 +89,45 @@ describe('validateLeaf', () => {
 		for (const bad of ['Assets:Cash', 'my account', 'caf\u00e9', 'a_b']) {
 			expect(validateLeaf(bad, 'name')).toBe('Use only letters, numbers, or hyphens.');
 		}
+	});
+
+	it('caps the length at what the ledger accepts', () => {
+		expect(validateLeaf('A'.repeat(LEAF_MAX), 'name')).toBeNull();
+		expect(validateLeaf('A'.repeat(LEAF_MAX + 1), 'name')).toBe(
+			`Use at most ${LEAF_MAX} characters.`
+		);
+	});
+
+	it('picks the article the noun needs', () => {
+		expect(validateLeaf('', 'employer')).toBe('Enter an employer.');
+	});
+});
+
+describe('validateName', () => {
+	it('accepts words as a person writes them', () => {
+		expect(validateName('Bank of Example', 'Institution')).toBeNull();
+	});
+
+	it('requires a value that composes to something', () => {
+		expect(validateName('  ', 'Institution')).toBe('Institution is required.');
+		expect(validateName('!!!', 'Institution')).toBe(
+			'Institution needs at least one letter or number.'
+		);
+	});
+
+	it('caps the length', () => {
+		expect(validateName('A'.repeat(TEXT_MAX + 1), 'Institution')).toBe(
+			`Institution must be at most ${TEXT_MAX} characters.`
+		);
+	});
+});
+
+describe('validateOptionalName', () => {
+	it('passes a blank value but still checks a filled one', () => {
+		expect(validateOptionalName('   ', 'Account short form')).toBeNull();
+		expect(validateOptionalName('!!', 'Account short form')).toBe(
+			'Account short form needs at least one letter or number.'
+		);
 	});
 });
 

@@ -6,6 +6,7 @@
 	import { moneyYScale } from '$lib/charts/axis';
 	import { money, moneyK, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
+	import Legend from '$lib/charts/Legend.svelte';
 
 	interface Series {
 		name: string;
@@ -15,16 +16,10 @@
 	interface Props {
 		labels: string[];
 		series: Series[];
-		/** Force the legend; defaults on for multi-series, off for a single series. */
-		legend?: boolean;
-		/** Draw value labels atop bars; defaults on for a single series only. */
-		valueLabels?: boolean;
 	}
-	let { labels, series, legend, valueLabels }: Props = $props();
+	let { labels, series }: Props = $props();
 
 	const single = $derived(series.length <= 1);
-	const showLegend = $derived(legend ?? !single);
-	const showValues = $derived(valueLabels ?? single);
 
 	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also
 	// bounds how tall the chart may grow inside a stretched pane.
@@ -55,12 +50,8 @@
 	);
 </script>
 
-{#if showLegend}
-	<div class="legend">
-		{#each series as s (s.name)}
-			<span class="k"><span class="sw" style:background={s.color}></span>{s.name}</span>
-		{/each}
-	</div>
+{#if !single}
+	<Legend keys={series} />
 {/if}
 
 <div class="figurebox" bind:clientWidth={boxW} bind:clientHeight={boxH}>
@@ -89,7 +80,7 @@
 							showTip(`<b>${esc(lb)}</b><br>${single ? '' : esc(s.name) + ': '}${money(v)}`, e)}
 						onmouseleave={hideTip}
 					/>
-					{#if showValues && v !== 0}
+					{#if single && v !== 0}
 						<text class="vlabel" x={bx + bw / 2} y={Math.min(yv, base) - 6} text-anchor="middle"
 							>{moneyK(v)}</text
 						>

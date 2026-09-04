@@ -1,8 +1,8 @@
 <script lang="ts">
 	// An investment row: value its holdings, split that total across destinations, then close it. The
-	// split must balance to the penny before the action is allowed — retiring an account that doesn't
-	// add up would silently invent or destroy money.
+	// split must balance to the penny, or retiring the account would invent or destroy money.
 	import { investmentValue, closeInvestment, type DrainLeg } from '$lib/data/load';
+	import { problems } from '$lib/forms/validate';
 	import { formatAccount, money } from '$lib/utils/format';
 	import Select from '$lib/forms/fields/Select.svelte';
 	import AmountInput from '$lib/ui/AmountInput.svelte';
@@ -26,7 +26,7 @@
 	// Rounded to cents before comparing: floating-point addition of a split will not land on zero.
 	const remaining = $derived(value == null ? 0 : Math.round((value - allocated) * 100) / 100);
 
-	/** Value the account when the drawer opens; the split can't be offered before we know the total. */
+	/** Value the account when the drawer opens; the split can't be offered before the total is known. */
 	async function start() {
 		err = '';
 		value = null;
@@ -46,16 +46,37 @@
 		legs = legs.filter((_, j) => j !== i);
 	}
 
+	// A leg left at zero moves nothing, so it is dropped rather than sent: an empty account retires
+	// with no legs at all, which is what "split its whole value" means when the value is nothing.
+	const moving = $derived(legs.filter((leg) => (leg.amount ?? 0) !== 0));
+
+	/** Each leg that moves money needs a destination and a positive figure, and the legs together
+	    must total the account's value — an unbalanced split would invent or lose money. */
+	function problem(): string | null {
+		const checks = problems().add(
+			remaining === 0 ? null : `Split must total ${money(value ?? 0)} (off by ${money(remaining)}).`
+		);
+
+		moving.forEach((leg, i) => {
+			checks
+				.require(leg.destination, `Destination ${i + 1}`)
+				.positive(leg.amount ?? null, `Amount ${i + 1}`);
+		});
+
+		return checks.message() || null;
+	}
+
 	async function retire() {
-		if (remaining !== 0) {
-			err = `Split must total ${money(value ?? 0)} (off by ${money(remaining)}).`;
+		const invalid = problem();
+		if (invalid) {
+			err = invalid;
 			return;
 		}
 		busy = true;
 		err = '';
-		const problem = await closeInvestment(account, legs);
+		const failure = await closeInvestment(account, moving);
 		busy = false;
-		if (problem) err = problem;
+		if (failure) err = failure;
 		else onchanged();
 	}
 </script>
@@ -118,7 +139,7 @@
 		font-size: var(--text-caption);
 		color: var(--ink-3);
 	}
-	/* An unbalanced split is the one thing standing between you and the action, so it says so. */
+	/* An unbalanced split is what blocks the action, so it says so. */
 	.rem.off {
 		color: var(--crit-text);
 	}

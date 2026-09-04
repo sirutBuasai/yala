@@ -1,9 +1,7 @@
 <script lang="ts">
 	// "Type a name, press Add" — the shape of every create control in Manage. Extracted because the
-	// three copies had already diverged on the detail that matters most: whether Enter submits. One of
-	// them would have been the odd one out sooner or later, and a create form where Enter does nothing
-	// is a small papercut that never gets reported.
-	import type { Snippet } from 'svelte';
+	// copies had diverged on the detail that matters most: whether Enter submits.
+	import { LEAF_MAX } from '$lib/forms/validate';
 
 	interface Props {
 		/** Text being typed (bindable). */
@@ -13,9 +11,9 @@
 		ariaLabel: string;
 		label?: string;
 		disabled?: boolean;
+		/** Character ceiling; defaults to what the ledger accepts for a single account name. */
+		maxlength?: number;
 		onadd: () => void;
-		/** Extra control ahead of the input, e.g. a subtree picker. */
-		before?: Snippet;
 	}
 	let {
 		value = $bindable(),
@@ -23,17 +21,17 @@
 		ariaLabel,
 		label = 'Add',
 		disabled = false,
-		onadd,
-		before
+		maxlength = LEAF_MAX,
+		onadd
 	}: Props = $props();
 </script>
 
 <div class="addrow">
-	{#if before}<div class="before">{@render before()}</div>{/if}
 	<input
 		aria-label={ariaLabel}
 		bind:value
 		{placeholder}
+		{maxlength}
 		{disabled}
 		onkeydown={(e) => e.key === 'Enter' && onadd()}
 	/>
@@ -46,10 +44,6 @@
 		gap: var(--gap-inline);
 		align-items: center;
 		flex-wrap: wrap;
-	}
-	.before {
-		flex: 0 1 auto;
-		min-width: 0;
 	}
 	.addrow input {
 		flex: 1;

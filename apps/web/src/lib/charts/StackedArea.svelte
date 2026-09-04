@@ -10,6 +10,7 @@
 	import { formatUnit, type Unit } from '$lib/data/primitives';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import { labelIndices } from '$lib/charts/axis';
+	import Legend from '$lib/charts/Legend.svelte';
 
 	interface Band {
 		name: string;
@@ -20,9 +21,8 @@
 		labels: string[];
 		series: Band[];
 		unit: Unit;
-		legend?: boolean;
 	}
-	let { labels, series, unit, legend = true }: Props = $props();
+	let { labels, series, unit }: Props = $props();
 
 	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also
 	// bounds how tall the chart may grow inside a stretched pane.
@@ -117,12 +117,7 @@
 	</svg>
 </div>
 
-{#if legend && series.length > 1}
-	<!-- Keys UNDER the plot, and in reverse: they then read top-to-bottom in the order the bands
-	     are stacked. `.legend.below` is the shared legend's under-the-chart variant. -->
-	<div class="legend below">
-		{#each series.slice().reverse() as s (s.name)}
-			<span class="k"><span class="sw" style:background={s.color}></span>{s.name}</span>
-		{/each}
-	</div>
+{#if series.length > 1}
+	<!-- Reversed and under the plot, so the keys read top-to-bottom in the order the bands stack. -->
+	<Legend keys={series} below reverse />
 {/if}

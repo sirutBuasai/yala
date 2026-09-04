@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	agrees,
+	blockReason,
 	buildRows,
 	checkOf,
 	expectedAt,
@@ -120,8 +121,14 @@ describe('isBlocked', () => {
 	const asset: Row = { account: 'Assets:Cash:A', group: 'Liquid', liability: false };
 	const card: Row = { account: 'Liabilities:CC:B', group: 'Liabilities', liability: true };
 
-	it('never blocks an asset — its drift becomes an adjustment', () => {
+	it('does not block an asset that drifted — that is what the adjustment plug is for', () => {
 		expect(isBlocked(asset, 1200, 1000)).toBe(false);
+	});
+
+	it('blocks an impossible figure, naming it apart from a missing entry', () => {
+		expect(blockReason(asset, -5, 1000)).toBe('negative');
+		expect(blockReason(card, -1200, -1000)).toBe('missing-entry');
+		expect(blockReason(asset, 1200, 1000)).toBeNull();
 	});
 
 	it('blocks a liability whose figure disagrees with the ledger', () => {

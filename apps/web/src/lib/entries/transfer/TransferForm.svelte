@@ -7,7 +7,7 @@
 	import { formatAccount, money } from '$lib/utils/format';
 	import { lastEntryDate, lastTransferFrom, lastTransferTo, seed } from '$lib/utils/editPrefs';
 	import AccountField from '$lib/forms/fields/AccountField.svelte';
-	import { problems } from '$lib/forms/validate';
+	import { problems, TEXT_MAX } from '$lib/forms/validate';
 	import DatePicker from '$lib/forms/fields/DatePicker.svelte';
 	import EntryFooter from '$lib/entries/EntryFooter.svelte';
 	import FormSection from '$lib/forms/fields/FormSection.svelte';
@@ -36,8 +36,8 @@
 	let msg = $state('');
 	let err = $state(false);
 
-	// `credit_accounts` is the full money-in set (banks, passthroughs, and credit cards); a bill pay can
-	// target any of them except the account being paid from.
+	// `credit_accounts` is the full money-in set; a bill pay can target any of them except the account
+	// being paid from.
 	const toAccounts = $derived(accounts.credit_accounts.filter((a) => a !== from_account));
 
 	$effect(() => {
@@ -154,7 +154,11 @@
 <FormSection label="Details">
 	<div class="field-grid">
 		<div class="field">
-			<label for="tf-payee">Note</label><input id="tf-payee" bind:value={payee} />
+			<label for="tf-payee">Note</label><input
+				id="tf-payee"
+				bind:value={payee}
+				maxlength={TEXT_MAX}
+			/>
 		</div>
 		<label class="chk"><input type="checkbox" bind:checked={pending} /> Pending</label>
 	</div>

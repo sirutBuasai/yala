@@ -4,6 +4,7 @@
 	import { money, esc } from '$lib/utils/format';
 	import { clamp } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
+	import Legend from '$lib/charts/Legend.svelte';
 
 	interface Series {
 		name: string;
@@ -19,20 +20,14 @@
 		series: Series[];
 		/** Format the value axis + tooltip as percentages instead of money. */
 		percent?: boolean;
-		legend?: boolean;
 		/** Log-scale the value axis — for series spanning orders of magnitude. */
 		log?: boolean;
 		/** Label each line at its right end instead of using a legend (many-series charts). */
 		endLabels?: boolean;
 	}
-	let {
-		labels,
-		series,
-		percent = false,
-		legend = false,
-		log = false,
-		endLabels = false
-	}: Props = $props();
+	let { labels, series, percent = false, log = false, endLabels = false }: Props = $props();
+
+	const showLegend = $derived(!endLabels && series.length > 1);
 
 	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also
 	// bounds how tall the chart may grow inside a stretched pane.
@@ -132,23 +127,10 @@
 	}
 </script>
 
-{#if legend && series.length > 1}
-	<!-- Every series is keyed, dashed ones included: a dashed line is a real second reading here
-	     (assets against net worth), so leaving it out left neither line identifiable. Its swatch is
-	     drawn as a dashed rule so the key matches the mark. -->
-	<div class="legend">
-		{#each series as s (s.name)}
-			<span class="k">
-				<span
-					class="sw"
-					class:dash={s.dashed}
-					style:background={s.dashed
-						? `repeating-linear-gradient(90deg, ${s.color} 0 4px, transparent 4px 7px)`
-						: s.color}
-				></span>{s.name}
-			</span>
-		{/each}
-	</div>
+{#if showLegend}
+	<!-- Dashed series are keyed too: a dashed line is a real second reading, so leaving it out left
+	     neither line identifiable. -->
+	<Legend keys={series} />
 {/if}
 
 <div class="figurebox" bind:clientWidth={boxW} bind:clientHeight={boxH}>

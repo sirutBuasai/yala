@@ -1,22 +1,16 @@
 <script lang="ts">
-	// "Log balances" — every loggable account on one screen, grouped the way the splits are tallied,
-	// so a month's snapshot is one pass down the Balance column rather than ten separate steps.
+	// "Log balances" — every loggable account on one screen, so a month's snapshot is one pass down the
+	// Balance column. A month's snapshot is its FIRST-of-month assertion, the convention the whole
+	// ledger follows.
 	//
-	// A month's snapshot is its FIRST-of-month assertion — the convention the whole ledger follows
-	// (and the spreadsheet it was migrated from), where "July 2026" is the balance standing on
-	// 2026-07-01.
-	//
-	// The columns exist to make a figure checkable before it is committed:
-	//   Previous — what stood at the *previous* month's snapshot
+	// The columns make a figure checkable before it is committed:
+	//   Previous — what stood at the previous month's snapshot
 	//   Expected — what the ledger computes for this one, before anything new is logged
-	//   Change   — Balance − Previous, i.e. how much the account moved this month
-	//   Check    — Balance − Expected, i.e. only the adjustment THIS month would post (not the
-	//              running total), so an unlogged transfer shows up as its own figure
+	//   Change   — Balance − Previous, how much the account moved this month
+	//   Check    — Balance − Expected, only the adjustment this month would post
 	//
-	// Assets may legitimately drift (markets move), so their gap posts an `Equity:Adjustments:*`
-	// plug. Liabilities have no plug: a card balance is fully determined by the spending and bill
-	// payments already entered, so a gap means an entry is missing. Those rows block instead, and
-	// "Save all" commits everything else and reports what it skipped.
+	// A row that can't be saved blocks (see `blockReason`); "Save" commits the rest and says what it
+	// skipped.
 	import type { DashboardData } from '$lib/data/types';
 	import { type AccountsInfo, logBalance, networthAt, updateBalance } from '$lib/data/load';
 	import { formatAccount, money, moneyExact } from '$lib/utils/format';
@@ -24,6 +18,7 @@
 	import { addMonths } from '$lib/utils/period';
 	import {
 		agrees,
+		blockReason,
 		buildRows,
 		checkOf,
 		expectedAt,
@@ -104,10 +99,8 @@
 		expectedAt(account, atNow, adjNow, adjPrev, locators.has(account));
 	const previous = (account: string) => prevVals.get(account) ?? null;
 
-	// Typed values, keyed by month so switching months never carries an entry across. Liabilities
-	// are typed as the amount owed (positive) and stored negative — the sign the ledger keeps.
-	// Numbers, not strings: AmountInput is a real number field, so it has already rejected anything
-	// unparseable and there is no `$1,234` text left to clean up here.
+	// Typed values, keyed by month so switching months never carries an entry across. Liabilities are
+	// typed as the amount owed (positive) and stored negative, the sign the ledger keeps.
 	let typed = $state<Record<string, number | null>>({});
 	const cellKey = (account: string) => `${monthKey}|${account}`;
 
@@ -120,7 +113,9 @@
 	/** Balance − Expected: the adjustment this month's snapshot would post, on its own. */
 	const check = (row: Row) => checkOf(parsed(row), expected(row.account));
 	const matches = (row: Row) => agrees(check(row));
-	/** A liability whose figure disagrees with the ledger — unlogged spending, not an adjustment. */
+	/** Why a row can't be saved: an impossible figure, or a liability that disagrees with the ledger
+	    (unlogged spending, not an adjustment). */
+	const whyBlocked = (row: Row) => blockReason(row, parsed(row), expected(row.account));
 	const blockedRow = (row: Row) => isBlocked(row, parsed(row), expected(row.account));
 
 	const filled = $derived(rows.filter((r) => parsed(r) != null));
@@ -198,11 +193,8 @@
 				</div>
 			</dl>
 
-			<!-- A table, not a grid of rows: the browser sizes each column to its widest cell and shares
-			     that width across every row, so the figures line up and hug the right edge at any pane
-			     width. The name cell takes all the slack. Once even that isn't enough room, the WRAPPER
-			     scrolls the table sideways — six money columns can't be dropped or wrapped without
-			     making the check they exist for impossible. -->
+			<!-- A table, not a grid of rows: shared column widths line the figures up at any pane width,
+			     and the wrapper scrolls sideways when six money columns no longer fit. -->
 			<div class="balbox scroller-x">
 				<table class="bal" class:loading>
 					<thead>
@@ -277,10 +269,15 @@
 				{#if blocked.length}
 					<p class="blockmsg" role="status">
 						{#each blocked as row (row.account)}
-							{@const gap = check(row)}
+							{@const gap = check(row) ?? 0}
 							<span class="bl">
-								<b>{formatAccount(row.account)}</b> is off by {moneyExact(Math.abs(gap ?? 0))} — log the
-								missing {missingEntryKind(gap ?? 0)} first.
+								<b>{formatAccount(row.account)}</b>
+								{#if whyBlocked(row) === 'negative'}
+									can't hold a negative balance — enter what it is worth, not what it moved.
+								{:else}
+									is off by {moneyExact(Math.abs(gap))} — log the missing {missingEntryKind(gap)}
+									first.
+								{/if}
 							</span>
 						{/each}
 					</p>
@@ -300,16 +297,14 @@
 </div>
 
 <style>
-	/* Capped rather than full-width. A 17-row form does not need 1440px: stretched to a fullscreen
-	   desktop, the account name and its own figures ended up ~800px apart with nothing between them,
-	   which stops reading as a row. */
+	/* Capped rather than full-width: stretched to a fullscreen desktop, a name and its own figures end
+	   up so far apart that the row stops reading as one. */
 	.balancepane {
 		max-width: 52rem;
 	}
 
-	/* The BLEED lives on the wrapper, not on the table, because the wrapper is also the sideways
-	   scroller. With both on one element the scroll box was itself 40px wider than the card, so a
-	   narrow viewport scrolled the whole PAGE instead of just the table. */
+	/* The bleed lives on the wrapper because it is also the sideways scroller; with both on the table,
+	   a narrow viewport scrolled the whole page instead. */
 	.balbox {
 		width: calc(100% + 2 * var(--pad-card-x));
 		margin-inline: calc(-1 * var(--pad-card-x));
@@ -395,8 +390,7 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
-	/* The entry cell is the only interactive column; its chrome comes from AmountInput. All that is
-	   left here is the row-state tint — a figure that agrees with the ledger, or one that can't. */
+	/* The entry cell's chrome comes from AmountInput; all that is left here is the row-state tint. */
 	.done .entrycell :global(.amountinput) {
 		border-color: color-mix(in srgb, var(--good) 45%, var(--border));
 	}
@@ -411,9 +405,8 @@
 		flex-direction: column;
 		gap: var(--gap-row);
 	}
-	/* Three tallies, or two, or one — whatever fits. `1fr` alone can't go below its content's
-	   min-width, so three fixed columns holding six-figure sums simply overflowed the card on a
-	   phone; auto-fit reflows them into rows instead. */
+	/* `1fr` alone can't go below its content's min-width, so three columns of six-figure sums overflowed
+	   the card on a phone; auto-fit reflows them into rows. */
 	.agg {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
@@ -473,7 +466,6 @@
 		font-size: var(--text-secondary);
 		margin: 0;
 	}
-	/* No breakpoint needed for the narrow case: `.balbox` scrolls whenever the columns need more
-	   width than the pane has, at any size. The old rule set `display: block` on the table itself,
-	   which also threw away the shared column widths that make the figures line up. */
+	/* No breakpoint for the narrow case: `.balbox` scrolls whenever the columns need more width than
+	   the pane has. */
 </style>

@@ -19,9 +19,6 @@
 		options: string[];
 		selectAriaLabel: string;
 		optionLabel?: (v: string) => string;
-		removable?: boolean;
-		/** Value for a newly added row (default: the first option). */
-		defaultValue?: string;
 	}
 	let {
 		rows = $bindable(),
@@ -29,13 +26,11 @@
 		addLabel,
 		options,
 		selectAriaLabel,
-		optionLabel = (v) => v,
-		removable = true,
-		defaultValue
+		optionLabel = (v) => v
 	}: Props = $props();
 
 	function add() {
-		rows = [...rows, { value: defaultValue ?? options[0] ?? '', amount: null }];
+		rows = [...rows, { value: options[0] ?? '', amount: null }];
 	}
 	function remove(i: number) {
 		rows = rows.filter((_, idx) => idx !== i);
@@ -53,9 +48,7 @@
 				<Select ariaLabel={selectAriaLabel} bind:value={row.value} {options} {optionLabel} />
 			</div>
 			<AmountInput bind:value={row.amount} ariaLabel="amount" />
-			{#if removable}
-				<button type="button" class="btn-mini rm" onclick={() => remove(i)}>✕</button>
-			{/if}
+			<button type="button" class="btn-mini rm" onclick={() => remove(i)}>✕</button>
 		</div>
 	{/each}
 </div>

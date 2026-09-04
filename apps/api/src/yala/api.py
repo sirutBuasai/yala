@@ -91,26 +91,26 @@ _FIELD_LABELS = {
     "leaf": "Name",
 }
 
-# Sanity ceilings. Money is bounded well below float's precision cliff (2^53 cents) so cent-exact
+# Sanity ceilings. Money stays well below float's precision cliff (2^53 cents) so cent-exact
 # arithmetic stays exact; free text is single-line and short; leg lists are capped so one request
 # can't balloon a ledger file. These are defense-in-depth, not domain rules.
 MAX_AMOUNT = 1e12
 MAX_TEXT = 200
+MAX_LEAF = 60
 MAX_LEGS = 100
+
+# Dates outside this window are a typo (a mistyped year), not a ledger a person keeps.
+MIN_DATE = dt.date(1900, 1, 1)
+MAX_DATE = dt.date(2100, 12, 31)
 
 
 # --- request field types ---
-#
-# ``Text`` references ``_clean_text``, so the validator is defined first;
 
 
 def _clean_text(value: str) -> str:
-    """Normalize a free-text field (payee/note) to a single trimmed line.
-
-    The ledger is a line-based file, so a newline or control char in a payee would corrupt it (or
-    silently smuggle content into the stored string). We strip control chars, collapse internal
-    whitespace, trim, and bound the length — rejecting an all-blank value outright.
-    """
+    """Normalize a free-text field (payee/note) to a single trimmed line, rejecting an all-blank
+    value. The ledger is line-based, so a control char in a payee would corrupt a file or smuggle
+    content into the stored string."""
     text = " ".join(_CTRL_RE.sub(" ", value).split())
     if not text:
         raise ValueError("must not be blank")
@@ -120,12 +120,9 @@ def _clean_text(value: str) -> str:
 
 
 def _clean_optional_text(value: object) -> str | None:
-    """Same normalization as :func:`_clean_text`, but blank means "not given".
-
-    A form binds an empty string to an untouched input, so an optional field has to read that as
-    absent rather than rejecting it — otherwise leaving a genuinely optional box alone fails the
-    whole request.
-    """
+    """Same normalization as :func:`_clean_text`, but blank means "not given" — a form binds an
+    empty string to an untouched input, and leaving an optional box alone must not fail the
+    request."""
     if value is None:
         return None
 
@@ -142,7 +139,6 @@ def _clean_optional_text(value: object) -> str | None:
 # (e.g. a $0 deduction) but never negative. Both are finite and bounded (see MAX_AMOUNT).
 Amount = Annotated[float, Field(gt=0, le=MAX_AMOUNT, allow_inf_nan=False)]
 NonNegAmount = Annotated[float, Field(ge=0, le=MAX_AMOUNT, allow_inf_nan=False)]
-# A required, single-line free-text field.
 Text = Annotated[str, AfterValidator(_clean_text)]
 # The optional counterpart: blank or missing both arrive as None.
 OptionalText = Annotated[str | None, BeforeValidator(_clean_optional_text)]
@@ -161,10 +157,9 @@ def _sink() -> FileLedgerSink:
 
 @contextmanager
 def _api_errors() -> Iterator[None]:
-    """Map exceptions from a write endpoint body to HTTP errors (``KeyError`` → 404 for an
-    unknown locator, any other client-input problem → 422). Explicit ``HTTPException``\\ s (e.g. a
-    409 sweep conflict) pass through unchanged. Every write endpoint wraps its body here so the
-    mapping lives in one place."""
+    """Map exceptions raised in a write endpoint's body to HTTP errors: ``KeyError`` → 404 for an
+    unknown locator, any other client-input problem → 422. Explicit ``HTTPException``\\ s (e.g. a
+    409 sweep conflict) pass through unchanged."""
     try:
         yield
 
@@ -224,19 +219,38 @@ async def on_validation_error(_: Request, exc: RequestValidationError) -> JSONRe
 
 
 def _valid_name(value: str) -> str:
-    if not _NAME_RE.match(value):
+    """An existing account or category the client picked from a list we sent it."""
+    if not _NAME_RE.match(value) or len(value) > MAX_TEXT:
         raise HTTPException(status_code=422, detail=f"invalid account/category name: {value!r}")
     return value
 
 
-def _valid_transfer_account(value: str) -> str:
-    """A transfer's legs must be a balance-sheet account (asset or liability), never an
-    Expenses/Income account."""
+def _valid_money_account(value: str) -> str:
+    """A leg that moves money must name a balance-sheet account (asset or liability), never an
+    Expenses/Income one — that is what separates a transfer or a reimbursement from spending."""
     _valid_name(value)
     if not value.startswith((ASSETS, LIABILITIES)):
         raise HTTPException(
             status_code=422,
-            detail=f"transfer accounts must be an asset or liability account: {value!r}",
+            detail=f"{value!r} must be an asset or liability account",
+        )
+    return value
+
+
+def _valid_leaf(value: str, field: str = "account name", *, nested: bool = False) -> str:
+    """A name the client typed for something new — an account, category, employer, or label.
+
+    ``nested`` allows the colon-separated form investments use, where beancount additionally
+    requires every segment to start with a capital."""
+    parts = value.split(":") if nested else [value]
+    pattern = _SEGMENT_RE if nested else _LEAF_RE
+    rule = "letters, numbers, or hyphens" + (
+        ", each part starting with a capital" if nested else ""
+    )
+
+    if not 0 < len(value) <= MAX_LEAF or not all(pattern.match(p) for p in parts):
+        raise HTTPException(
+            status_code=422, detail=f"{field} must be 1-{MAX_LEAF} {rule}: {value!r}"
         )
     return value
 
@@ -244,7 +258,7 @@ def _valid_transfer_account(value: str) -> str:
 def _open_destination(ledger: Ledger, dest: str, account: str) -> str:
     """Validate ``dest`` as a distinct, currently-open asset/liability target for ``account`` —
     the shared check for every operation that moves a balance to another account."""
-    _valid_transfer_account(dest)
+    _valid_money_account(dest)
     if dest == account:
         raise HTTPException(status_code=422, detail="destination must differ from the account")
     if not ledger.is_open(dest):
@@ -253,20 +267,29 @@ def _open_destination(ledger: Ledger, dest: str, account: str) -> str:
 
 
 def _parse_date(value: str | None) -> dt.date:
-    """Parse an ISO date, defaulting to today when omitted (used by add endpoints)."""
+    """Parse an ISO date, defaulting to today when omitted — the date is the one field a form may
+    leave to the server."""
     if not value:
         return dt.date.today()
 
     try:
-        return dt.date.fromisoformat(value)
+        date = dt.date.fromisoformat(value)
 
     except ValueError:
         raise HTTPException(status_code=422, detail=f"invalid date: {value!r}")
 
+    if not MIN_DATE <= date <= MAX_DATE:
+        raise HTTPException(
+            status_code=422,
+            detail=f"date must be between {MIN_DATE.isoformat()} and {MAX_DATE.isoformat()}: "
+            f"{value!r}",
+        )
+    return date
+
 
 def _parse_date_opt(value: str | None) -> dt.date | None:
-    """Parse an ISO date, or ``None`` when omitted (used by update endpoints to keep the
-    entry's own date). Raises a 400 with a clear message on a malformed string."""
+    """Parse an ISO date, or ``None`` when omitted — an update with no date keeps the entry's
+    own."""
     return _parse_date(value) if value else None
 
 
@@ -361,13 +384,9 @@ class TransactionDeleteIn(BaseModel):
 
 
 def _credits(credits: list[CreditIn]) -> list[tuple[str, Decimal]]:
-    credits_out = []
-
-    for s in credits:
-        _valid_name(s.account)
-        credits_out.append((s.account, _dec(s.amount)))
-
-    return credits_out
+    """Resolve the reimbursement legs. Each lands in an account that holds money — a refund arrives
+    in a bank account or against a card, never in a category."""
+    return [(_valid_money_account(c.account), _dec(c.amount)) for c in credits]
 
 
 @app.get("/api/transaction")
@@ -380,7 +399,7 @@ def get_transaction(locator: str) -> dict:
 def post_transaction(body: TransactionIn) -> dict:
     with _api_errors():
         _valid_name(body.category)
-        _valid_name(body.funding_account)
+        _valid_money_account(body.funding_account)
 
         date = _parse_date(body.date)
         entry_id = _sink().append_transaction(
@@ -401,7 +420,7 @@ def post_transaction(body: TransactionIn) -> dict:
 def post_transaction_update(body: TransactionUpdateIn) -> dict:
     with _api_errors():
         _valid_name(body.category)
-        _valid_name(body.funding_account)
+        _valid_money_account(body.funding_account)
 
         old_date = _entry_date(body.locator)
         new_date = _parse_date_opt(body.date)
@@ -456,10 +475,10 @@ def _resolve_paycheck(
 ) -> tuple[str, list[tuple[str, Decimal]], list[tuple[str, str | None, Decimal]]]:
     """Resolve an employer + option-labeled maps into concrete ledger legs.
 
-    Returns ``(income_account, deduction_legs, contribution_legs)``; raises 400 on an unknown
+    Returns ``(income_account, deduction_legs, contribution_legs)``; raises 422 on an unknown
     employer or a line item the selected employer doesn't offer.
     """
-    _valid_name(body.deposit_account)
+    _valid_money_account(body.deposit_account)
 
     if body.employer not in payroll.employers(ledger):
         raise HTTPException(
@@ -573,8 +592,8 @@ def get_transfer(locator: str) -> dict:
 @app.post("/api/transfer")
 def post_transfer(body: TransferIn) -> dict:
     with _api_errors():
-        _valid_transfer_account(body.from_account)
-        _valid_transfer_account(body.to_account)
+        _valid_money_account(body.from_account)
+        _valid_money_account(body.to_account)
 
         date = _parse_date(body.date)
         entry_id = _sink().append_transfer(
@@ -593,8 +612,8 @@ def post_transfer(body: TransferIn) -> dict:
 @app.post("/api/transfer/update")
 def post_transfer_update(body: TransferUpdateIn) -> dict:
     with _api_errors():
-        _valid_transfer_account(body.from_account)
-        _valid_transfer_account(body.to_account)
+        _valid_money_account(body.from_account)
+        _valid_money_account(body.to_account)
 
         old = find_entry(_ledger().entries, body.locator)
         _reject_if_sweep(old)
@@ -626,13 +645,9 @@ class NamedAccountIn(BaseModel):
     the descriptive form: the caller sends the words as a person writes them and the server joins
     them into the leaf, so the display name and the stored name cannot disagree. The aliases are
     only consulted when the rendered name overruns; see :mod:`yala.ledger.naming`.
-
-    Shared by every open-account request so the fields, their normalization, and the composition
-    rule are stated once — a card and an investment are named the same way even though opening them
-    does different things.
     """
 
-    leaf: str | None = None
+    leaf: OptionalText = None
     institution: OptionalText = None
     account_name: OptionalText = None  # the product half; cash is named by institution alone
     bank_alias: OptionalText = None
@@ -649,9 +664,20 @@ class NamedAccountIn(BaseModel):
         return {key: value for key, value in pairs.items() if value}
 
     def composed_leaf(self) -> str:
-        """The leaf this request asks for, by whichever of the two forms it used."""
+        """The leaf this request asks for, by whichever of the two forms it used.
+
+        Composition drops anything that isn't a letter or digit, so a name written entirely in
+        punctuation would compose to nothing; that is reported against the field the words came
+        from rather than as an empty account name."""
         if self.institution:
-            return to_leaf(self.institution) + to_leaf(self.account_name or "")
+            composed = to_leaf(self.institution) + to_leaf(self.account_name or "")
+            if not composed:
+                raise HTTPException(
+                    status_code=422,
+                    detail="institution must contain at least one letter or number",
+                )
+            return composed
+
         if self.leaf:
             return self.leaf
 
@@ -665,24 +691,15 @@ class AccountIn(NamedAccountIn):
 
 
 def _opened(account: str, meta: dict[str, str]) -> dict:
-    """The success body every open-account endpoint returns.
-
-    Carries the resolved display name so a form can confirm what the account will actually be
-    called, rather than reimplementing the naming rule to preview it.
-    """
+    """The success body every open-account endpoint returns. It carries the resolved display name so
+    a form can confirm what the account will be called rather than reimplementing the naming
+    rule."""
     return _ok(f"opened {account}", account=account, name=account_name(account, meta))
 
 
 @app.post("/api/account")
 def post_account(body: AccountIn) -> dict:
-    leaf = body.composed_leaf()
-
-    if not _LEAF_RE.match(leaf):
-        raise HTTPException(
-            status_code=422,
-            detail=f"account name must use only letters, numbers, or hyphens: {leaf!r}",
-        )
-
+    leaf = _valid_leaf(body.composed_leaf())
     account = f"{_ACCOUNT_PREFIX[body.kind]}{leaf}"
     meta = body.naming_meta
 
@@ -729,7 +746,7 @@ class SweepIn(BaseModel):
 @app.post("/api/account/sweep")
 def post_account_sweep(body: SweepIn) -> dict:
     """Set or clear ``account``'s ``sweep_to`` destination; rejects a cycle."""
-    account = _valid_transfer_account(body.account)
+    account = _valid_money_account(body.account)
 
     if not body.dest:
         with _api_errors():
@@ -762,7 +779,7 @@ class DrainCloseIn(BaseModel):
 @app.post("/api/account/drain-close")
 def post_account_drain_close(body: DrainCloseIn) -> dict:
     """Move a balance-sheet account's balance to ``destination``, then close it at zero."""
-    account = _valid_transfer_account(body.account)
+    account = _valid_money_account(body.account)
     date = _parse_date(body.date)
 
     with _api_errors():
@@ -793,24 +810,12 @@ def post_account_drain_close(body: DrainCloseIn) -> dict:
 # --- investment accounts ---
 
 
-def _invest_plug(account: str) -> str:
-    """The dedicated adjustments plug paired with a share account (see
-    :func:`~yala.ledger.networth.adjustment_account`)."""
-    return adjustment_account(account)
-
-
-def _valid_leaf_list(values: list[str], field: str) -> None:
-    for v in values:
-        if not _LEAF_RE.match(v):
-            raise HTTPException(status_code=422, detail=f"invalid {field}: {v!r}")
-
-
 class InvestmentIn(NamedAccountIn):
     """Open an investment account. Named like any other; opened differently."""
 
     subtree: Literal["Taxable", "TaxAdvantaged"]
     holds_shares: bool = True  # True holds tickers; False is a cash-only plan
-    employer: str | None = None
+    employer: OptionalText = None
     labels: list[str] = Field(default=[], max_length=MAX_LEGS)
 
 
@@ -818,23 +823,16 @@ class InvestmentIn(NamedAccountIn):
 def post_investment(body: InvestmentIn) -> dict:
     """Open an investment account. A share account can hold any ticker and gets a 0.00 starting
     balance plus a paired Equity:Adjustments account; a cash-only plan gets neither."""
-    # Investments may be colon-nested, so each segment is checked rather than the whole leaf.
-    leaf = body.composed_leaf()
-    if not all(_SEGMENT_RE.match(s) for s in leaf.split(":")):
-        raise HTTPException(
-            status_code=422,
-            detail=f"invalid name (segments must start uppercase): {leaf!r}",
-        )
-    _valid_leaf_list(body.labels, "label")
-    if body.employer:
-        _valid_leaf_list([body.employer], "employer")
+    leaf = _valid_leaf(body.composed_leaf(), nested=True)
+    labels = [_valid_leaf(label, "label") for label in body.labels]
 
     account = f"{_INVEST_SUBTREE[body.subtree]}{leaf}"
     meta = body.naming_meta
     if body.employer:
-        meta["employer"] = body.employer
-    if body.labels:
-        meta["labels"] = ",".join(body.labels)
+        meta["employer"] = _valid_leaf(body.employer, "employer")
+    if labels:
+        # Comma-joined into one meta value; the leaf rule already excludes commas from each label.
+        meta["labels"] = ",".join(labels)
 
     with _api_errors():
         sink = _sink()
@@ -843,7 +841,7 @@ def post_investment(body: InvestmentIn) -> dict:
         )
         if body.holds_shares:
             sink.assert_balance(account, "0.00")
-            sink.open_account(_invest_plug(account), currency=None)
+            sink.open_account(adjustment_account(account), currency=None)
 
     return _opened(account, meta)
 
@@ -890,7 +888,7 @@ def post_investment_close(body: InvestmentCloseIn) -> dict:
                 detail=f"legs must sum to the account's USD value {value}; got {legs_total}",
             )
 
-        plug = _invest_plug(account)
+        plug = adjustment_account(account)
         plug = plug if ledger.is_open(plug) else None
         _sink().close_investment(
             account, date, [(leg.destination, _dec(leg.amount)) for leg in body.legs], plug
@@ -914,12 +912,9 @@ def post_balance(body: BalanceIn) -> dict:
     """Log a USD balance snapshot.
 
     A cash or investment account gets a ``pad`` + ``balance`` pair routing the untracked delta to
-    its ``Equity:Adjustments:*`` plug; share lots are reclassified to USD at that date's prices
-    first, so the USD figure is authoritative.
-
-    A liability has no plug, so it is verify-only: ``amount`` is what is owed (positive, stored
-    negative) and must match the balance the ledger already computes — otherwise a bill payment or
-    some spending is still missing, and the mismatch is returned rather than padded away."""
+    its ``Equity:Adjustments:*`` plug. A liability has no plug, so it is verify-only: the figure
+    must match what the ledger already computes, otherwise spending or a bill payment is missing and
+    the mismatch is reported rather than padded away."""
     account = _valid_name(body.account)
     if not account.startswith((CASH, INVESTMENTS, LIABILITIES)):
         raise HTTPException(status_code=422, detail=f"not a balance-loggable account: {account!r}")
@@ -954,8 +949,7 @@ def post_balance_update(body: BalanceEditIn) -> dict:
     """Edit an existing ``balance`` assertion in place, keeping one snapshot per logged date.
 
     Re-logging the same date would stack a second assertion on it, so correcting a past month
-    rewrites its own line — located by the handle ``/api/networth`` reports for that date. The
-    assertion's ``pad`` is added or dropped as the new figure requires."""
+    rewrites its own line, located by the handle ``/api/networth`` reports for that date."""
     with _api_errors():
         account, date, locator = _sink().update_balance(body.locator, _dec(body.amount))
         _reconcile_sweeps(date)
@@ -972,9 +966,8 @@ def post_balance_update(body: BalanceEditIn) -> dict:
 @app.get("/api/networth")
 def get_networth_at(date: str) -> dict:
     """Per-account USD values, adjustment-plug balances, and editable-assertion locators as of
-    ``date`` — powers the balance pane's month-aware view, so selecting a past month shows that
-    month's recorded balance and adjustment rather than only the current ones, and offers the
-    handle to edit it in place."""
+    ``date``. This is what lets the balance pane show a past month's own figures, and offer the
+    handle to correct them in place."""
     as_of = _parse_date(date)
     nw = _ledger().net_worth
     return {
@@ -992,7 +985,7 @@ def get_networth_at(date: str) -> dict:
 
 class SettingIn(BaseModel):
     key: str
-    value: float
+    value: Annotated[float, Field(allow_inf_nan=False)]
 
 
 @app.get("/api/settings")
@@ -1021,11 +1014,16 @@ def get_settings() -> dict:
 def post_setting(body: SettingIn) -> dict:
     """Set one user setting. Bounds and whole-number rules come from the setting's spec, so the
     ledger and the form enforce exactly the same thing."""
+    spec = SETTINGS_BY_KEY.get(body.key)
+    if spec is None:
+        # A bad key is a malformed request, not a missing resource: the client sent a name no
+        # version of this app defines, so 404 would suggest a setting that could exist.
+        raise HTTPException(status_code=422, detail=f"unknown setting: {body.key!r}")
+
     with _api_errors():
         stored = _sink().set_setting(body.key, body.value)
 
-    label = SETTINGS_BY_KEY[body.key].label
-    return _ok(f"{label} set", key=body.key, value=float(stored))
+    return _ok(f"{spec.label} set", key=body.key, value=float(stored))
 
 
 # --- static frontend + entrypoint ---
@@ -1034,14 +1032,10 @@ def post_setting(body: SettingIn) -> dict:
 class SPAStaticFiles(StaticFiles):
     """Serve the SvelteKit static build with client-side-routing awareness.
 
-    Plain ``StaticFiles`` maps ``/dev`` to ``build/dev`` or ``build/dev/index.html`` — but the
-    static adapter emits prerendered pages as ``build/dev.html``, so a *direct* URL visit (rather
-    than in-app navigation) 404s. This resolves web page navigation by falling back, in order, to
-    the prerendered ``<path>.html`` and then the SPA shell (``200.html``) so the client router can
-    take over. The ``/api`` prefix is a reserved namespace: those requests never reach here (the
-    API routes are registered first), and any that do get a real 404 rather than an HTML shell —
-    so ``/api`` is never a usable page, but ``/api``-*prefixed* page names (e.g. ``/apiary``) still
-    route normally.
+    The static adapter emits prerendered pages as ``<path>.html``, which plain ``StaticFiles``
+    doesn't look for, so a direct URL visit 404s; navigation falls back to that file and then to the
+    SPA shell (``200.html``). The ``/api`` namespace is reserved and stays a hard 404 rather than
+    being answered with an HTML shell.
     """
 
     async def get_response(self, path: str, scope: Scope):  # type: ignore[override]
@@ -1049,8 +1043,7 @@ class SPAStaticFiles(StaticFiles):
             return await super().get_response(path, scope)
 
         except StarletteHTTPException as e:
-            # Only web navigation gets the SPA treatment; the reserved /api namespace (the "api"
-            # segment itself, not merely an "api"-prefixed name) stays a hard 404.
+            # The "api" segment itself is reserved; an api-prefixed page name still routes normally.
             if e.status_code != 404 or path == "api" or path.startswith("api/"):
                 raise
 

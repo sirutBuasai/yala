@@ -12,19 +12,16 @@
 	}
 	interface Props {
 		items: Item[];
-		/** Cap the rows shown; the rest are dropped (items arrive ranked by |value|). */
-		limit?: number;
 	}
-	let { items, limit = 8 }: Props = $props();
+	let { items }: Props = $props();
 
-	const rows = $derived(items.slice(0, limit));
-	const max = $derived(Math.max(1, ...rows.map((r) => Math.abs(r.value))));
+	const max = $derived(Math.max(1, ...items.map((r) => Math.abs(r.value))));
 	// Half-width, so the longest bar in either direction just fills its side.
 	const pct = (v: number) => (Math.abs(v) / max) * 50;
 </script>
 
 <div class="dev">
-	{#each rows as r (r.label)}
+	{#each items as r (r.label)}
 		<div class="r">
 			<span class="nm">{r.label}</span>
 			<div

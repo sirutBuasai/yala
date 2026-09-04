@@ -1,10 +1,7 @@
-// Data primitives — the vocabulary of shapes the dashboard can compute, decoupled
-// from how they're drawn. A primitive is pure numbers + structure + a `unit`; it
-// carries NO colors or chart config (those belong to the visualization layer).
-//
-// The `unit` is what makes two primitives *compatible*: they can be shown side by
-// side on one chart only when their units match (money↔money same currency, etc.).
-// Series additionally must share an axis and identical label sequence to overlay.
+// Data primitives — the vocabulary of shapes the dashboard can compute, decoupled from how they're
+// drawn. A primitive is pure numbers + structure + a `unit`; it carries NO colors or chart config
+// (those belong to the visualization layer). The `unit` names the measurement scale, which is what
+// lets one formatter render every figure the same way.
 
 import { money } from '$lib/utils/format';
 
@@ -22,14 +19,6 @@ export const PERCENT: Unit = { kind: 'percent' };
 export const COUNT: Unit = { kind: 'count' };
 export const MONTHS: Unit = { kind: 'duration', period: 'month' };
 export const YEARS: Unit = { kind: 'duration', period: 'year' };
-
-/** Same measurement scale — the core compatibility test. */
-export function sameUnit(a: Unit, b: Unit): boolean {
-	if (a.kind !== b.kind) return false;
-	if (a.kind === 'money' && b.kind === 'money') return a.currency === b.currency;
-	if (a.kind === 'duration' && b.kind === 'duration') return a.period === b.period;
-	return true;
-}
 
 /** Render a raw value in its unit. Formatting lives here so every visual agrees. */
 export function formatUnit(value: number, unit: Unit): string {
@@ -182,45 +171,3 @@ export interface Bullet {
 
 export type Primitive =
 	Scalar | Categorical | Series | MultiSeries | Flow | Matrix | Table | Bullet;
-
-// --- introspection helpers ---
-
-/** The unit of any primitive, or null when its parts carry their own (Table, Bullet). */
-export function unitOf(p: Primitive): Unit | null {
-	return p.kind === 'table' || p.kind === 'bullet' ? null : p.unit;
-}
-
-export function isSeriesLike(p: Primitive): p is Series | MultiSeries {
-	return p.kind === 'series' || p.kind === 'multiseries';
-}
-
-function axisOf(p: Series | MultiSeries): Axis {
-	return p.axis;
-}
-
-function labelsOf(p: Series | MultiSeries): string[] {
-	return p.kind === 'series' ? p.points.map((pt) => pt.label) : p.labels;
-}
-
-function sameLabels(a: string[], b: string[]): boolean {
-	return a.length === b.length && a.every((l, i) => l === b[i]);
-}
-
-// --- compatibility + layering (the "show side by side" contract) ---
-
-/**
- * Whether `b` can be drawn on the same chart as `a`. Requires matching units;
- * for series it also requires the same axis and identical labels so points line up.
- * Different kinds are never compatible (a categorical can't overlay a series).
- */
-export function compatible(a: Primitive, b: Primitive): boolean {
-	const ua = unitOf(a);
-	const ub = unitOf(b);
-	if (!ua || !ub || !sameUnit(ua, ub)) return false;
-
-	if (isSeriesLike(a) && isSeriesLike(b)) {
-		return axisOf(a) === axisOf(b) && sameLabels(labelsOf(a), labelsOf(b));
-	}
-
-	return a.kind === b.kind;
-}

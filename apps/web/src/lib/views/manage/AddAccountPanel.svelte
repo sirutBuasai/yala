@@ -1,20 +1,19 @@
 <script lang="ts">
 	// One "add an account" panel, used for banks, credit cards and investments.
 	//
-	// The three differ in exactly three ways: whether the account has a product half, what the
-	// placeholders say, and whether extra controls (subtree, share/payroll flags) ride along. Those
-	// are props and a snippet. Everything else — the four naming fields, the submit, the busy state,
-	// the "what is it actually called" confirmation, and clearing the form afterwards — is identical,
-	// so it lives here once rather than three times.
+	// The three differ in whether the account has a product half, what the placeholders say, and
+	// whether extra controls (subtree, share/payroll flags) ride along; those are props and a snippet.
+	// The naming fields, validation, submit, busy state and confirmation are identical, so they live
+	// here once rather than three times.
 	//
-	// The caller supplies `open`, which does the actual POST and hands back what the API resolved. The
-	// panel never composes a display name itself: that rule lives in Python (see
-	// `yala.ledger.naming`), and guessing at it here to render a preview is what would let the two
-	// drift apart.
+	// The caller supplies `open`, which does the POST and hands back what the API resolved. The panel
+	// never composes a display name itself: that rule lives in Python (see `yala.ledger.naming`), and
+	// guessing at it here to preview it is what would let the two drift apart.
 
 	import type { Snippet } from 'svelte';
 	import type { AccountNaming, OpenedAccount } from '$lib/data/load';
 	import { SaveState } from '$lib/forms/saveState.svelte';
+	import { problems, validateName, validateOptionalName } from '$lib/forms/validate';
 	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
 	import Panel from '$lib/ui/Panel.svelte';
 	import NamingFields from '$lib/views/manage/NamingFields.svelte';
@@ -27,10 +26,12 @@
 		institutionPlaceholder?: string;
 		accountNamePlaceholder?: string;
 		accountAliasPlaceholder?: string;
-		/** What to call the account half in the "required" message ("card name", "account name"). */
+		/** What to call the account half in a validation message ("Card name", "Account name"). */
 		accountNameLabel?: string;
 		/** Controls specific to one kind — the investment subtree and its flags. */
 		extra?: Snippet;
+		/** Validate whatever `extra` renders; a message here blocks the open. */
+		validateExtra?: () => string | null;
 		/** Perform the open. Returns what the API resolved, including its display name. */
 		open: (naming: AccountNaming) => Promise<OpenedAccount>;
 	}
@@ -41,8 +42,9 @@
 		institutionPlaceholder,
 		accountNamePlaceholder,
 		accountAliasPlaceholder,
-		accountNameLabel = 'account name',
+		accountNameLabel = 'Account name',
 		extra,
+		validateExtra,
 		open
 	}: Props = $props();
 
@@ -57,13 +59,20 @@
 			institution: institution.trim(),
 			bank_alias: bankAlias.trim()
 		};
-		if (!naming.institution) return save.fail('Enter the institution.');
+		const checks = problems()
+			.add(validateName(institution, 'Institution'))
+			.add(validateOptionalName(bankAlias, 'Institution short form'));
 
 		if (withAccountName) {
 			naming.account_name = accountName.trim();
 			naming.account_alias = accountAlias.trim();
-			if (!naming.account_name) return save.fail(`Enter the ${accountNameLabel}.`);
+			checks
+				.add(validateName(accountName, accountNameLabel))
+				.add(validateOptionalName(accountAlias, 'Account short form'));
 		}
+
+		const problem = checks.add(validateExtra?.() ?? null).message();
+		if (problem) return save.fail(problem);
 
 		let opened = '';
 		const ok = await save.run(async () => {

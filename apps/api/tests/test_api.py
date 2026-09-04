@@ -288,6 +288,18 @@ def test_post_account_accepts_blank_optional_aliases(client: TestClient):
     assert opened["institution"] == "Bank of Example"
 
 
+def test_post_account_keeps_a_quoted_institution_intact(client: TestClient):
+    """Naming metadata is written as text, so a quote is escaped rather than breaking the file."""
+    r = client.post(
+        "/api/account",
+        json={"kind": "funding_cash", "institution": 'Bank "X" Example'},
+    )
+
+    assert r.status_code == 200, r.text
+    meta = client.get("/api/data").json()["meta"]["accounts"]
+    assert meta["Assets:Cash:BankXExample"]["institution"] == 'Bank "X" Example'
+
+
 def test_post_account_needs_a_name_or_an_institution(client: TestClient):
     r = client.post("/api/account", json={"kind": "funding_cash"})
 
@@ -878,6 +890,47 @@ def test_post_transaction_amount_above_ceiling_is_422(client: TestClient):
     r = client.post("/api/transaction", json=_txn_body(amount=1e13))
     assert r.status_code == 422
     assert "Amount must be at most" in r.json()["detail"]
+
+
+def test_post_transaction_credit_to_a_category_is_422(client: TestClient):
+    """A reimbursement arrives in an account that holds money; crediting a category would book the
+    refund as more spending."""
+    r = client.post(
+        "/api/transaction",
+        json=_txn_body(credits=[{"account": "Expenses:Takeouts", "amount": 5.0}]),
+    )
+    assert r.status_code == 422
+    assert "asset or liability" in r.json()["detail"]
+
+
+@pytest.mark.parametrize("bad_date", ["1899-12-31", "2101-01-01"])
+def test_post_transaction_date_outside_the_window_is_422(client: TestClient, bad_date: str):
+    r = client.post("/api/transaction", json=_txn_body(date=bad_date))
+    assert r.status_code == 422
+    assert "date must be between" in r.json()["detail"]
+
+
+def test_post_account_name_too_long_is_422(client: TestClient):
+    r = client.post("/api/account", json={"kind": "category", "leaf": "A" * 61})
+    assert r.status_code == 422
+    assert "must be 1-60" in r.json()["detail"]
+
+
+def test_post_account_punctuation_only_institution_is_422(client: TestClient):
+    """Composition keeps only letters and digits, so "!!!" would compose to an empty leaf; the
+    failure is reported against the field the words came from."""
+    r = client.post("/api/account", json={"kind": "funding_cash", "institution": "!!!"})
+    assert r.status_code == 422
+    assert r.json()["detail"] == "institution must contain at least one letter or number"
+
+
+def test_post_investment_invalid_label_is_422(client: TestClient):
+    r = client.post(
+        "/api/investment",
+        json={"subtree": "Taxable", "leaf": "BrokerZ", "labels": ["Roth 401k"]},
+    )
+    assert r.status_code == 422
+    assert "label must be" in r.json()["detail"]
 
 
 def test_update_transaction_invalid_date_is_422(client: TestClient):

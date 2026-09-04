@@ -62,6 +62,16 @@ def _stored_amount(account: str, amount: Decimal) -> Decimal:
     return -abs(amount) if account.startswith(LIABILITIES) else amount
 
 
+def _meta_line(key: str, value: str) -> str:
+    """One indented ``key: "value"`` metadata line, with the string escaped.
+
+    Account metadata is written as text rather than through beancount's printer, so a quote or
+    backslash in a name typed by hand has to be escaped here — unescaped, it ends the string early
+    and the file no longer parses."""
+    escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
+    return f'  {key}: "{escaped}"'
+
+
 def _build_posting(account: str, number: Decimal, meta: dict | None = None) -> data.Posting:
     """Construct a single USD posting with no cost/price/flag; optional posting meta (e.g.
     ``label``)."""
@@ -607,7 +617,7 @@ class FileLedgerSink(LedgerSink):
         """Append an ``open`` directive; ``currency=None`` lets the account hold any ticker."""
         date = date or dt.date.today()
         header = f"{date.isoformat()} {OPEN} {account}" + (f" {currency}" if currency else "")
-        metalines = "".join(f'\n  {k}: "{v}"' for k, v in (meta or {}).items())
+        metalines = "".join(f"\n{_meta_line(k, v)}" for k, v in (meta or {}).items())
         self._append_account_directive(account, header + metalines)
 
     def assert_balance(
@@ -947,7 +957,7 @@ class FileLedgerSink(LedgerSink):
         key_re = re.compile(rf"^\s*{re.escape(key)}\s*:")
         block = [lines[begin]] + [m for m in lines[begin + 1 : end] if not key_re.match(m)]
         if value is not None:
-            block.append(f'  {key}: "{value}"\n')
+            block.append(f"{_meta_line(key, value)}\n")
 
         self._commit(path, "".join(lines[:begin] + block + lines[end:]), original)
 

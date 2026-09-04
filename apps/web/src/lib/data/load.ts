@@ -6,9 +6,11 @@
 import { writable } from 'svelte/store';
 import { asset } from '$app/paths';
 import { setAccountDirectory } from '$lib/data/directory.svelte';
-import type { DashboardData } from '$lib/data/types';
+import type { DashboardData, SchemaVersion } from '$lib/data/types';
 
-const EXPECTED_SCHEMA = 1;
+// Typed as the contract's own version (types.ts is generated from schema.py), so bumping the schema
+// makes this line a compile error rather than a stale runtime comparison.
+const EXPECTED_SCHEMA: SchemaVersion = 1;
 
 /** A selectable paycheck line item, scoped to an employer (or generic when employer is null). */
 export interface PayrollOption {
@@ -86,8 +88,8 @@ export interface PostResult<T> {
 
 /**
  * A readable error message from a failed API response. The API flattens validation failures into a
- * string `detail`, but stay defensive: FastAPI's own default handler (or an unhandled path) returns
- * `detail` as a list of error objects, which must not surface as "[object Object]".
+ * string `detail`, but FastAPI's own default handler returns a list of error objects, which must not
+ * surface as "[object Object]".
  */
 function errorMessage(data: { detail?: unknown }, status: number): string {
 	const d = data.detail;
@@ -119,10 +121,8 @@ export async function getJson<T = Record<string, unknown>>(url: string): Promise
 	}
 }
 
-/** POST a JSON body and parse the response, normalizing errors into a `PostResult`.
- *
- * Every write is a POST to a verb-suffixed path (`/api/balance/update`, `/api/entry/delete`) rather
- * than a method on a resource, so there is no method to choose. */
+/** POST a JSON body and parse the response, normalizing errors into a `PostResult`. Every write is
+ *  a POST to a verb-suffixed path, so there is no method to choose. */
 export async function postJson<T = Record<string, unknown>>(
 	url: string,
 	body: unknown
@@ -135,8 +135,8 @@ export async function postJson<T = Record<string, unknown>>(
 		});
 		const data = (await res.json().catch(() => ({}))) as T & { detail?: unknown };
 
-		// Every write can move a derived balance, so this single choke point drops the read cache
-		// rather than each caller having to remember to.
+		// Every write can move a derived balance, so the read cache is dropped here rather than in
+		// each caller.
 		if (res.ok) invalidateDerivedCache();
 
 		return res.ok
@@ -239,11 +239,8 @@ export async function deleteTransaction(locator: string): Promise<string | null>
 }
 
 /**
- * Re-pull the account lists (after declaring a new deduction/contribution type).
- *
- * The document goes first, then the lists. Opening an account changes both, and the lists are what
- * put a new row on screen — refreshing them first would render that row for one frame before the
- * directory knew its display name, so it would flash its raw leaf.
+ * Re-pull the document and then the account lists, in that order. The lists are what put a new row on
+ * screen, so refreshing them first would flash its raw leaf before the directory knew its name.
  */
 async function refreshAccounts(): Promise<void> {
 	await refreshEditData();
@@ -260,10 +257,9 @@ export type CreatableAccountKind =
 	'category' | 'deduction' | 'contribution' | 'funding_credit' | 'funding_cash';
 
 /**
- * How an account is to be named. Either a `leaf` written directly (categories, and the quick-add
- * inside an entry form), or the descriptive form the Manage panels use — the institution and account
- * name as a person writes them, which the API joins into the leaf so the two cannot disagree. The
- * aliases are the short forms, consulted only when the rendered name overruns the display budget.
+ * How an account is to be named: either a `leaf` written directly, or the descriptive form the Manage
+ * panels use — institution and account name as a person writes them, which the API joins into the
+ * leaf. The aliases are short forms, used only when the rendered name overruns the display budget.
  */
 export interface AccountNaming {
 	leaf?: string;
@@ -273,10 +269,8 @@ export interface AccountNaming {
 	account_alias?: string;
 }
 
-/**
- * What opening an account returns. `name` is the display name the API resolved — the only authority
- * on it, since the naming rule and its alias substitutions live server-side.
- */
+/** What opening an account returns. `name` is the display name the API resolved, which is the only
+    authority on it: the naming rule lives server-side. */
 export interface OpenedAccount {
 	account: string | null;
 	name: string | null;
@@ -441,11 +435,8 @@ export interface SettingsInfo {
 }
 
 /**
- * Effective settings plus their specs.
- *
- * Reports *why* it failed rather than just null: a 404 means the API is running code older than
- * this page (the endpoint doesn't exist yet), which needs a restart — a materially different fix
- * from the API being down, and one a bare "could not load" leaves the user guessing at.
+ * Effective settings plus their specs. It reports *why* it failed rather than just null: a 404 means
+ * the running API predates this page and needs a restart, a different fix from the API being down.
  */
 export async function getSettings(): Promise<{ info: SettingsInfo | null; error: string | null }> {
 	const { ok, data, error, status } = await getJson<SettingsInfo>('/api/settings');

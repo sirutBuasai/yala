@@ -1,7 +1,6 @@
 <script lang="ts">
 	// A bank row: set or clear its sweep target, or retire it by draining the balance into another
-	// account and closing it. The row chrome and the open/closed drawer come from ExpandableRow; what
-	// is left here is the two actions and the state they need.
+	// account and closing it. The row chrome comes from ExpandableRow.
 	import { setSweep, drainCloseAccount } from '$lib/data/load';
 	import { formatAccount } from '$lib/utils/format';
 	import Select from '$lib/forms/fields/Select.svelte';

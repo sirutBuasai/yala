@@ -21,6 +21,7 @@ from yala.ledger.institutions import colors as institution_colors
 from yala.ledger.naming import account_name, institution_of
 from yala.money import money
 from yala.schema import (
+    SCHEMA_VERSION,
     AccountInfo,
     CategoryAmount,
     DashboardData,
@@ -314,7 +315,7 @@ def build(ledger: Ledger) -> DashboardData:
     networth_section = _networth(networth)
 
     return DashboardData(
-        schema_version=1,
+        schema_version=SCHEMA_VERSION,
         generated_at=_now_rfc3339(),
         currency=ledger.currency,
         meta=_meta(

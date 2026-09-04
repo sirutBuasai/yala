@@ -14,7 +14,7 @@
 		lastEntryDate,
 		seed
 	} from '$lib/utils/editPrefs';
-	import { problems, validateRows } from '$lib/forms/validate';
+	import { problems, TEXT_MAX, validateRows } from '$lib/forms/validate';
 	import Select from '$lib/forms/fields/Select.svelte';
 	import DatePicker from '$lib/forms/fields/DatePicker.svelte';
 	import LineColumn, { type AmountRow } from '$lib/forms/fields/LineColumn.svelte';
@@ -57,11 +57,8 @@
 	const toRows = (m: Record<string, number>): AmountRow[] =>
 		Object.entries(m).map(([value, amount]) => ({ value, amount }));
 
-	/**
-	 * Remembered labels as blank rows, dropping any the current employer no longer offers — the same
-	 * rule `seed` applies to a single select, applied to a list. Amounts stay null: the shape carries
-	 * over, the figures never do.
-	 */
+	/** Remembered labels as blank rows, dropping any the current employer no longer offers. Amounts
+	    stay null: the shape carries over, the figures never do. */
 	const emptyRows = (labels: string[], options: string[]): AmountRow[] =>
 		labels.filter((l) => options.includes(l)).map((value) => ({ value, amount: null }));
 
@@ -77,10 +74,8 @@
 
 	$effect(() => {
 		if (locator == null) {
-			// Add mode: seed from the last paycheck's shape once the account lists load (so a
-			// later-loading list still populates them), without clobbering a pick. Employer, deposit
-			// account and the deduction/contribution ROWS all carry over — a paycheck is the same
-			// shape month to month, so only the figures should need typing.
+			// Add mode: employer, deposit account and the deduction/contribution ROWS all carry over — a
+			// paycheck keeps its shape month to month, so only the figures should need typing.
 			if (!date && presetDate) date = presetDate;
 			if (!employer) employer = seed(get(lastEmployer), accounts.employers);
 			if (!deposit_account) deposit_account = seed(get(lastDepositAccount), accounts.cash_accounts);
@@ -204,7 +199,11 @@
 			/>
 		</div>
 		<div class="field">
-			<label for="pc-payee">Payee</label><input id="pc-payee" bind:value={payee} />
+			<label for="pc-payee">Payee</label><input
+				id="pc-payee"
+				bind:value={payee}
+				maxlength={TEXT_MAX}
+			/>
 		</div>
 	</div>
 </FormSection>
