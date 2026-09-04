@@ -17,15 +17,15 @@ import {
 
 describe('groupOf', () => {
 	it('files a liability under Liabilities', () => {
-		expect(groupOf('Liabilities:CC:AmexGold')).toBe('Liabilities');
+		expect(groupOf('Liabilities:CC:CardAGold')).toBe('Liabilities');
 	});
 
 	it('files a plain cash account under Liquid', () => {
-		expect(groupOf('Assets:Cash:Ally')).toBe('Liquid');
+		expect(groupOf('Assets:Cash:BankA')).toBe('Liquid');
 	});
 
 	it('separates taxable from tax-advantaged investments', () => {
-		expect(groupOf('Assets:Investments:Taxable:FidelityStocks')).toBe('Taxable');
+		expect(groupOf('Assets:Investments:Taxable:BrokerAStocks')).toBe('Taxable');
 		expect(groupOf('Assets:Investments:TaxAdvantaged:Amazon401k')).toBe('Tax-advantaged');
 	});
 

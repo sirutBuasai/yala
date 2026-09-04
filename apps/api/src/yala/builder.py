@@ -17,6 +17,7 @@ from pathlib import Path
 
 from yala.ledger import Ledger
 from yala.ledger.income import Paycheck
+from yala.ledger.institutions import colors as institution_colors
 from yala.ledger.naming import account_name, institution_of
 from yala.money import money
 from yala.schema import (
@@ -97,14 +98,20 @@ def _accounts(ledger) -> dict[str, AccountInfo]:
     of their own, which is the duplication this exists to remove.
     """
     account_meta = ledger.account_meta()
+    # Colour is keyed by institution, so it is resolved here rather than per account — one lookup
+    # for the whole directory, and a bank's accounts cannot end up disagreeing.
+    palette = institution_colors(ledger.entries)
 
-    return {
-        account: AccountInfo(
+    def info(account: str, meta: dict) -> AccountInfo:
+        institution = institution_of(meta)
+
+        return AccountInfo(
             name=account_name(account, meta),
-            institution=institution_of(meta),
+            institution=institution,
+            color=palette.get(institution) if institution else None,
         )
-        for account, meta in sorted(account_meta.items())
-    }
+
+    return {account: info(account, meta) for account, meta in sorted(account_meta.items())}
 
 
 def _meta(ledger, spending, income, categories, all_years, all_months, networth_has_data) -> Meta:

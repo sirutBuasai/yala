@@ -18,7 +18,7 @@ def test_only_two_leg_own_account_moves_are_transfers():
     ts = _transfers().transactions()
     assert [(t.payee, t.from_account, t.to_account, t.amount) for t in ts] == [
         ("card autopay", "Assets:Cash:BankA", "Liabilities:CC:CardA", Decimal("250.00")),
-        ("venmo sweep", "Assets:Cash:BankA", "Assets:Cash:Venmo", Decimal("30.00")),
+        ("venmo sweep", "Assets:Cash:BankA", "Assets:Cash:Passthrough", Decimal("30.00")),
     ]
 
 

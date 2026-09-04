@@ -13,11 +13,14 @@ from fastapi.testclient import TestClient
 from yala import config
 from yala.api import app
 from yala.ledger import Ledger
+from yala.ledger.sweep import sweep_payee
 
 FIXTURE_LEDGER = Path(__file__).parent / "fixtures" / "ledger"
 
-VENMO = "Assets:Cash:Venmo"
-WEALTHFRONT = "Assets:Cash:Wealthfront"
+PASSTHROUGH = "Assets:Cash:Passthrough"
+# Derived as production does, so the test cannot drift from the payee actually written.
+SWEEP_PAYEE = sweep_payee(PASSTHROUGH)
+SAVINGS = "Assets:Cash:Savings"
 BANK_A = "Assets:Cash:BankA"
 BANK_B = "Assets:Cash:BankB"
 
@@ -67,37 +70,37 @@ def _set_sweep(client: TestClient, account: str, dest: str | None):
 
 
 def test_declaring_a_passthrough_starts_sweeping_it(client: TestClient):
-    assert _set_sweep(client, BANK_B, WEALTHFRONT).status_code == 200
+    assert _set_sweep(client, BANK_B, SAVINGS).status_code == 200
     _spend(client, BANK_B, "2026-02-10", 25.00)
 
     sweeps = _sweeps(client, "2026-02", "bankb sweep")
     assert len(sweeps) == 1
     # A net outflow from the passthrough pulls money in from its destination.
-    assert (sweeps[0]["from_account"], sweeps[0]["to_account"]) == (WEALTHFRONT, BANK_B)
+    assert (sweeps[0]["from_account"], sweeps[0]["to_account"]) == (SAVINGS, BANK_B)
     assert sweeps[0]["amount"] == 25.00
 
 
 def test_clearing_a_passthrough_stops_sweeping(client: TestClient):
-    assert _set_sweep(client, VENMO, None).status_code == 200
-    _spend(client, VENMO, "2026-02-10", 30.00)
+    assert _set_sweep(client, PASSTHROUGH, None).status_code == 200
+    _spend(client, PASSTHROUGH, "2026-02-10", 30.00)
 
-    assert _sweeps(client, "2026-02", "venmo sweep") == []
+    assert _sweeps(client, "2026-02", SWEEP_PAYEE) == []
 
 
 def test_transitive_reduction_collapses_intermediate_passthrough(client: TestClient):
-    # BankB → Venmo → Wealthfront collapses: BankB sweeps directly to the terminal, Wealthfront.
-    assert _set_sweep(client, BANK_B, VENMO).status_code == 200
+    # BankB → passthrough → savings collapses: BankB sweeps directly to the terminal, savings.
+    assert _set_sweep(client, BANK_B, PASSTHROUGH).status_code == 200
     _spend(client, BANK_B, "2026-02-10", 40.00)
 
     sweeps = _sweeps(client, "2026-02", "bankb sweep")
     assert len(sweeps) == 1
-    assert {sweeps[0]["from_account"], sweeps[0]["to_account"]} == {BANK_B, WEALTHFRONT}
-    assert VENMO not in (sweeps[0]["from_account"], sweeps[0]["to_account"])
+    assert {sweeps[0]["from_account"], sweeps[0]["to_account"]} == {BANK_B, SAVINGS}
+    assert PASSTHROUGH not in (sweeps[0]["from_account"], sweeps[0]["to_account"])
 
 
 def test_sweep_cycle_is_rejected(client: TestClient):
-    # Venmo already sweeps to Wealthfront; pointing Wealthfront back at Venmo would cycle.
-    r = client.post("/api/account/sweep", json={"account": WEALTHFRONT, "dest": VENMO})
+    # The passthrough already sweeps to savings; pointing savings back at it would cycle.
+    r = client.post("/api/account/sweep", json={"account": SAVINGS, "dest": PASSTHROUGH})
     assert r.status_code == 422
     assert "cycle" in r.json()["detail"]
 
@@ -120,7 +123,7 @@ def test_sweep_to_unopened_account_is_rejected(client: TestClient):
 def test_setting_sweep_replaces_previous_destination(client: TestClient):
     # sweep_to is a single meta value, so an account can only sweep to one place — re-setting
     # replaces rather than accumulates.
-    assert _set_sweep(client, BANK_A, WEALTHFRONT).status_code == 200
+    assert _set_sweep(client, BANK_A, SAVINGS).status_code == 200
     assert _set_sweep(client, BANK_A, BANK_B).status_code == 200
     assert client.get("/api/accounts").json()["sweeps"][BANK_A] == BANK_B
 
@@ -159,22 +162,22 @@ def test_drain_close_with_zero_balance_just_closes(client: TestClient):
 
 
 def test_drain_close_passthrough_retires_sweep_and_config(client: TestClient):
-    # Venmo is a passthrough kept near-zero by its month-end sweep. Retiring it must delete that
+    # The passthrough is kept near-zero by its month-end sweep. Retiring it must delete that
     # sweep, strip sweep_to, drain the real balance, and close — leaving nothing dated after close.
-    _spend(client, VENMO, "2026-02-10", 30.00)
-    assert _sweeps(client, "2026-02", "venmo sweep")  # auto-sweep exists
+    _spend(client, PASSTHROUGH, "2026-02-10", 30.00)
+    assert _sweeps(client, "2026-02", SWEEP_PAYEE)  # auto-sweep exists
 
     r = client.post(
         "/api/account/drain-close",
-        json={"account": VENMO, "destination": WEALTHFRONT, "date": "2026-02-15"},
+        json={"account": PASSTHROUGH, "destination": SAVINGS, "date": "2026-02-15"},
     )
     assert r.status_code == 200
 
     acc = client.get("/api/accounts").json()
-    assert VENMO not in acc["cash_accounts"]  # closed
-    assert VENMO not in acc.get("sweeps", {})  # sweep_to stripped
-    assert _sweeps(client, "2026-02", "venmo sweep") == []  # auto-sweep removed
-    assert _balance(client, VENMO) == 0  # zeroed by the final drain
+    assert PASSTHROUGH not in acc["cash_accounts"]  # closed
+    assert PASSTHROUGH not in acc.get("sweeps", {})  # sweep_to stripped
+    assert _sweeps(client, "2026-02", SWEEP_PAYEE) == []  # auto-sweep removed
+    assert _balance(client, PASSTHROUGH) == 0  # zeroed by the final drain
 
 
 def test_drain_close_same_account_is_rejected(client: TestClient):
@@ -194,12 +197,14 @@ def test_failing_passthrough_is_isolated_and_surfaced(
     shutil.copytree(FIXTURE_LEDGER, ledger_dir)
     sink = FileLedgerSink(ledger_dir)
 
-    monkeypatch.setattr(sweep, "sweep_targets", lambda ledger: {VENMO: WEALTHFRONT, BANK_A: BANK_B})
+    monkeypatch.setattr(
+        sweep, "sweep_targets", lambda ledger: {PASSTHROUGH: SAVINGS, BANK_A: BANK_B}
+    )
     seen: list[str] = []
 
     def fake_one(sink, ledger, active, source, terminal, year, month, date):
         seen.append(source)
-        if source == VENMO:
+        if source == PASSTHROUGH:
             raise ValueError("boom")
 
     monkeypatch.setattr(sweep, "_reconcile_one", fake_one)
@@ -207,5 +212,5 @@ def test_failing_passthrough_is_isolated_and_surfaced(
     with pytest.raises(sweep.LedgerError) as ei:
         sweep.reconcile_month(sink, 2026, 2)
 
-    assert set(seen) == {VENMO, BANK_A}  # both attempted despite the first failing
-    assert VENMO in str(ei.value)
+    assert set(seen) == {PASSTHROUGH, BANK_A}  # both attempted despite the first failing
+    assert PASSTHROUGH in str(ei.value)

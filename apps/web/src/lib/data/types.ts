@@ -16,6 +16,7 @@ export type End = string;
 export type Categories = string[];
 export type Name = string;
 export type Institution = string | null;
+export type Color = string | null;
 export type Spending = boolean;
 export type Income = boolean;
 export type Networth = boolean;
@@ -139,6 +140,7 @@ export interface Accounts {
 export interface AccountInfo {
 	name: Name;
 	institution?: Institution;
+	color?: Color;
 }
 /**
  * Which domains carry data.

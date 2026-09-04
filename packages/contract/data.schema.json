@@ -19,6 +19,18 @@
           ],
           "default": null,
           "title": "Institution"
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color"
         }
       },
       "required": [

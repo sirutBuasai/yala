@@ -37,9 +37,9 @@ if TYPE_CHECKING:
 def adjustment_account(account: str) -> str:
     """The ``Equity:Adjustments:*`` plug account paired with snapshots of ``account``.
 
-    Cash keeps its leaf (``Assets:Cash:Ally`` → ``Equity:Adjustments:Ally``); investments drop the
-    tax tier so both trees share one plug (``Assets:Investments:Taxable:Schwab`` →
-    ``Equity:Adjustments:Investments:Schwab``). Raises for anything else."""
+    Cash keeps its leaf (``Assets:Cash:BankA`` → ``Equity:Adjustments:BankA``); investments drop the
+    tax tier so both trees share one plug (``Assets:Investments:Taxable:BrokerA`` →
+    ``Equity:Adjustments:Investments:BrokerA``). Raises for anything else."""
     if account.startswith(CASH):
         return ADJUSTMENTS + account[len(CASH) :]
     if account.startswith(INVEST_TAXABLE):
@@ -191,7 +191,7 @@ class NetWorth:
 
     def loggable_accounts(self) -> list[str]:
         """Active cash + investment accounts that have an ``Equity:Adjustments:*`` plug to pad
-        into (excludes swept passthroughs like Venmo)."""
+        into (excludes swept passthroughs, whose balance belongs to their destination)."""
         declared = set(self._led.declared_accounts(ADJUSTMENTS))
         candidates = self._led.active_accounts(CASH) + self._led.active_accounts(INVESTMENTS)
         return [a for a in candidates if _adjustment_or_none(a) in declared]

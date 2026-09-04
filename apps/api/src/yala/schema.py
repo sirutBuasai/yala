@@ -42,6 +42,10 @@ class AccountInfo(_Base):
 
     name: str  # display name, already shortened if the real name overran the cap
     institution: str | None = None  # declared holder; null for employers and untagged accounts
+    # The holding institution's colour as the ledger declares it, a `#rrggbb` literal (see
+    # :mod:`yala.ledger.institutions`). Used as-is in both themes. Null when nothing was declared,
+    # and the UI falls back to a neutral swatch.
+    color: str | None = None
 
 
 class Meta(_Base):

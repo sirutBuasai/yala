@@ -9,9 +9,9 @@ option "operating_currency" "USD"
 2020-01-01 open Assets:Cash:BankA USD
 2020-01-01 open Assets:Cash:BankB USD
 2020-01-01 open Assets:Cash:Wallet USD
-2020-01-01 open Assets:Cash:Venmo USD
-  sweep_to: "Assets:Cash:Wealthfront"
-2020-01-01 open Assets:Cash:Wealthfront USD
+2020-01-01 open Assets:Cash:Passthrough USD
+  sweep_to: "Assets:Cash:Savings"
+2020-01-01 open Assets:Cash:Savings USD
 2020-01-01 open Assets:Receivable:Friends USD
 
 ; ------------------------------------------------
@@ -61,7 +61,7 @@ option "operating_currency" "USD"
 2020-01-01 open Equity:Opening-Balances
 2020-01-01 open Equity:Adjustments:BankA
 2020-01-01 open Equity:Adjustments:BankB
-2020-01-01 open Equity:Adjustments:Wealthfront
+2020-01-01 open Equity:Adjustments:Savings
 2020-01-01 open Equity:Adjustments:Investments:HSA:Broker1
 2020-01-01 open Equity:Adjustments:Investments:Employer401k
 

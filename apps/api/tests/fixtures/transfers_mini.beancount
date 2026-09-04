@@ -2,7 +2,7 @@ option "operating_currency" "USD"
 
 2020-01-01 commodity USD
 2020-01-01 open Assets:Cash:BankA USD
-2020-01-01 open Assets:Cash:Venmo USD
+2020-01-01 open Assets:Cash:Passthrough USD
 2020-01-01 open Liabilities:CC:CardA USD
 2020-01-01 open Income:Salary USD
 2020-01-01 open Expenses:Grocery USD
@@ -16,7 +16,7 @@ option "operating_currency" "USD"
 ; cash sweep (bank -> venmo): a transfer
 2025-08-06 * "venmo sweep"
   Assets:Cash:BankA       -30.00 USD
-  Assets:Cash:Venmo        30.00 USD
+  Assets:Cash:Passthrough        30.00 USD
 
 ; paycheck (has an Income leg): not a transfer
 2025-08-07 * "employer"
@@ -36,5 +36,5 @@ option "operating_currency" "USD"
 ; three-leg move: excluded (only simple two-leg transfers)
 2025-08-10 * "split move"
   Assets:Cash:BankA      -100.00 USD
-  Assets:Cash:Venmo        60.00 USD
+  Assets:Cash:Passthrough        60.00 USD
   Liabilities:CC:CardA     40.00 USD

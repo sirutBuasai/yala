@@ -3,10 +3,8 @@ import { get } from 'svelte/store';
 import { setAccountDirectory } from '$lib/data/directory.svelte';
 import {
 	CATEGORY_TOKEN,
-	INSTITUTION_TOKEN,
 	accountVar,
 	categoryVar,
-	institutionSlug,
 	setTheme,
 	theme,
 	toggleTheme
@@ -27,59 +25,54 @@ describe('categoryVar', () => {
 	});
 });
 
-describe('institutionSlug', () => {
-	it('strips case, spaces and punctuation', () => {
-		expect(institutionSlug('Bank of Example')).toBe('bankofexample');
-		expect(institutionSlug('E.G. Brokerage')).toBe('egbrokerage');
-	});
-});
-
 describe('accountVar', () => {
 	afterEach(() => setAccountDirectory({}));
 
-	/** Any institution the palette knows, without naming a specific one in the test body. */
-	const [aSlug, aToken] = Object.entries(INSTITUTION_TOKEN)[0]!;
-	const [bSlug, bToken] = Object.entries(INSTITUTION_TOKEN)[1]!;
-
-	it('every institution in the palette resolves to a token', () => {
-		for (const [slug, token] of Object.entries(INSTITUTION_TOKEN)) {
-			setAccountDirectory({ 'Assets:Cash:BankA': { name: 'Bank A', institution: slug } });
-			expect(accountVar('Assets:Cash:BankA')).toBe(`var(--${token})`);
-		}
-	});
-
-	it('colours by the declared institution, not by the account name', () => {
-		// The account paths deliberately say nothing about who holds them — the dot colour comes
-		// only from the declaration, so a name can't influence it.
+	it('uses the colour the ledger declared, as-is', () => {
 		setAccountDirectory({
-			'Assets:Cash:BankA': { name: 'Bank A', institution: aSlug },
-			'Liabilities:CC:CardA': { name: 'Card A', institution: bSlug }
+			'Assets:Cash:BankA': { name: 'Bank A', institution: 'Bank of Example', color: '#de85c8' }
 		});
 
-		expect(accountVar('Assets:Cash:BankA')).toBe(`var(--${aToken})`);
-		expect(accountVar('Liabilities:CC:CardA')).toBe(`var(--${bToken})`);
+		expect(accountVar('Assets:Cash:BankA')).toBe('#de85c8');
+	});
+
+	it('colours by the declaration, not by the account name', () => {
+		// The paths deliberately say nothing about who holds them, and the colours are swapped
+		// relative to what a name-matching scheme would guess.
+		setAccountDirectory({
+			'Assets:Cash:CardishName': {
+				name: 'Bank A',
+				institution: 'Bank of Example',
+				color: '#4a6f9e'
+			},
+			'Liabilities:CC:BankishName': { name: 'Card A', institution: 'Card Issuer', color: '#d94c4c' }
+		});
+
+		expect(accountVar('Assets:Cash:CardishName')).toBe('#4a6f9e');
+		expect(accountVar('Liabilities:CC:BankishName')).toBe('#d94c4c');
 	});
 
 	it('colours two accounts at one institution as one family', () => {
 		setAccountDirectory({
-			'Assets:Cash:BankA': { name: 'Bank A', institution: aSlug },
-			'Liabilities:CC:CardA': { name: 'Card A', institution: aSlug }
+			'Assets:Cash:BankA': { name: 'Bank A', institution: 'Bank of Example', color: '#639cc3' },
+			'Liabilities:CC:CardA': { name: 'Card A', institution: 'Bank of Example', color: '#639cc3' }
 		});
 
 		expect(accountVar('Liabilities:CC:CardA')).toBe(accountVar('Assets:Cash:BankA'));
 	});
 
-	it('falls back to a neutral for an untagged account, an unknown institution, or nullish', () => {
+	it('falls back to the neutral swatch when no colour was declared', () => {
 		setAccountDirectory({
-			// An employer — not held anywhere, so it has no institution at all.
+			// An employer — not held anywhere, so it has no institution and no colour.
 			'Income:Salary:Employer1': { name: 'Employer 1' },
-			'Assets:Cash:BankB': { name: 'Bank B', institution: 'Bank of Example' }
+			// An institution with no directive in the ledger yet.
+			'Assets:Cash:BankB': { name: 'Bank B', institution: 'Second Example Bank' }
 		});
 
-		expect(accountVar('Income:Salary:Employer1')).toBe('var(--inst-other)');
-		expect(accountVar('Assets:Cash:BankB')).toBe('var(--inst-other)');
-		expect(accountVar('Assets:Cash:NotDeclared')).toBe('var(--inst-other)');
-		expect(accountVar(null)).toBe('var(--inst-other)');
+		expect(accountVar('Income:Salary:Employer1')).toBe('var(--inst-neutral)');
+		expect(accountVar('Assets:Cash:BankB')).toBe('var(--inst-neutral)');
+		expect(accountVar('Assets:Cash:NotDeclared')).toBe('var(--inst-neutral)');
+		expect(accountVar(null)).toBe('var(--inst-neutral)');
 	});
 });
 

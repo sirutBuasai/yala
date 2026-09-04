@@ -15,7 +15,7 @@ def _txn(postings, meta=None, flag="*"):
 
 
 def test_leaf_returns_last_segment():
-    assert leaf("Assets:Cash:BofA") == "BofA"
+    assert leaf("Assets:Cash:BankB") == "BankB"
     assert leaf("Solo") == "Solo"
 
 

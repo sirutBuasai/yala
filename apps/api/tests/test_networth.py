@@ -38,14 +38,14 @@ def _load(ledger_dir: Path) -> Ledger:
 
 
 def test_adjustment_account_mapping():
-    assert adjustment_account("Assets:Cash:Ally") == "Equity:Adjustments:Ally"
+    assert adjustment_account("Assets:Cash:BankA") == "Equity:Adjustments:BankA"
     assert (
-        adjustment_account("Assets:Investments:Taxable:Schwab")
-        == "Equity:Adjustments:Investments:Schwab"
+        adjustment_account("Assets:Investments:Taxable:BrokerA")
+        == "Equity:Adjustments:Investments:BrokerA"
     )
     assert (
-        adjustment_account("Assets:Investments:TaxAdvantaged:HSA:Fidelity")
-        == "Equity:Adjustments:Investments:HSA:Fidelity"
+        adjustment_account("Assets:Investments:TaxAdvantaged:HSA:BrokerB")
+        == "Equity:Adjustments:Investments:HSA:BrokerB"
     )
 
 
@@ -291,8 +291,8 @@ def test_networth_series_and_adjustments(ledger_dir: Path):
 def test_loggable_accounts_excludes_swept(ledger_dir: Path):
     loggable = _load(ledger_dir).net_worth.loggable_accounts()
     assert "Assets:Cash:BankA" in loggable
-    # Venmo sweeps to Wealthfront and has no adjustment plug → not loggable
-    assert "Assets:Cash:Venmo" not in loggable
+    # The passthrough sweeps to savings and has no adjustment plug → not loggable
+    assert "Assets:Cash:Passthrough" not in loggable
 
 
 # --- /api/balance endpoint ---

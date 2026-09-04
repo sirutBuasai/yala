@@ -43,8 +43,8 @@ INSTITUTION_META = "institution"
 BANK_ALIAS_META = "bank_alias"
 ACCOUNT_ALIAS_META = "account_alias"
 
-#: Words that stay lowercase inside a name: "BankOfAmerica" is "Bank of America", not "Bank Of
-#: America". Only ever applied to interior words, so a leading "Of" would survive untouched.
+#: Words that stay lowercase inside a name: "BankOfExample" is "Bank of Example", not "Bank Of
+#: Example". Only ever applied to interior words, so a leading "Of" would survive untouched.
 _PARTICLES = frozenset({"of", "and", "the", "for"})
 
 _LOWER_UPPER = re.compile(r"([a-z0-9])([A-Z])")
@@ -79,7 +79,7 @@ def to_leaf(display: str) -> str:
     Used when opening an account: the form asks for an institution and an account name as people
     write them ("Bank of Example", "Cash Rewards") and this joins them into the leaf the ledger
     stores (``BankOfExampleCashRewards``). Each word's first letter is capitalized and the rest is
-    left as typed, so an acronym the user entered in caps survives ("US Bank" → ``USBank``) and
+    left as typed, so an acronym the user entered in caps survives ("AB Bank" → ``ABBank``) and
     :func:`render` turns the result back into the words they wrote.
     """
     words = re.sub(r"[^A-Za-z0-9 ]", " ", display).split()

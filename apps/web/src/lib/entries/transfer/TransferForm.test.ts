@@ -44,7 +44,7 @@ describe('TransferForm (add) — bill pay', () => {
 		expect(body.amount).toBe(250);
 	});
 
-	it('offers banks and Venmo as pay-toward targets, excluding the source account', async () => {
+	it('offers banks and passthroughs as pay-toward targets, excluding the source account', async () => {
 		const fetchSpy = okFetch();
 		vi.stubGlobal('fetch', fetchSpy);
 		const wide: AccountsInfo = {
@@ -53,7 +53,7 @@ describe('TransferForm (add) — bill pay', () => {
 			credit_accounts: [
 				'Assets:Cash:BankA',
 				'Assets:Cash:BankB',
-				'Assets:Cash:Venmo',
+				'Assets:Cash:Passthrough',
 				'Liabilities:CC:CardA'
 			]
 		};
@@ -65,7 +65,7 @@ describe('TransferForm (add) — bill pay', () => {
 		await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
 		const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
 		// Source seeds to the only bank; "pay toward" now defaults to a non-source account (another
-		// bank), proving banks/Venmo are valid bill-pay targets — not just credit cards.
+		// bank), proving banks/passthroughs are valid bill-pay targets — not just credit cards.
 		expect(body.from_account).toBe('Assets:Cash:BankA');
 		expect(body.to_account).toBe('Assets:Cash:BankB');
 	});

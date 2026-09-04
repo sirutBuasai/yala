@@ -31,51 +31,18 @@ export function categoryVar(category: string): string {
 }
 
 /**
- * Institution accents, keyed by the `institution:` the ledger declares, slugified.
+ * The colour for an account's dot, as a CSS value.
  *
- * Keyed by the declaration rather than by matching the account name, which is a correctness fix
- * rather than a tidy-up. Matching is wrong in four common shapes: an employer-sponsored plan named
- * for the employer but held at a custodian, a co-brand card whose name contains *two* institutions,
- * a card issued by one bank and branded by another, and a salary account whose employer shares a
- * name with an institution. Longest-substring matching resolved those by accident of key length —
- * and when two candidate names are the same length, by coin toss.
+ * There is no palette here any more, and no institution list: the ledger declares a hex per
+ * institution (see `yala.ledger.institutions`) and the API resolves it per account, so adding an
+ * institution or recolouring one is a ledger edit with no code change and no name matching.
  *
- * Adding an institution means one line here plus one `--inst-*` token in app.css. That stays in code
- * on purpose: which colour a brand gets is a design decision, unlike what an account is called.
- */
-export const INSTITUTION_TOKEN: Record<string, string> = {
-	americanexpress: 'inst-amex',
-	charlesschwab: 'inst-schwab',
-	venmo: 'inst-venmo',
-	wealthfront: 'inst-wealthfront',
-	ally: 'inst-ally',
-	bankofamerica: 'inst-bofa',
-	usbank: 'inst-usbank',
-	capitalone: 'inst-capitalone',
-	discover: 'inst-discover',
-	wellsfargo: 'inst-wellsfargo',
-	amazon: 'inst-amazon',
-	fidelity: 'inst-fidelity',
-	tdbank: 'inst-tdbank',
-	chase: 'inst-chase',
-	bilt: 'inst-bilt'
-};
-
-/** An institution name as a palette key: lowercase, punctuation and spaces removed. */
-export function institutionSlug(institution: string): string {
-	return institution.toLowerCase().replace(/[^a-z0-9]/g, '');
-}
-
-/**
- * CSS variable reference for an account's institution color, for the dot beside an account name.
- * Falls back to a neutral so an account with no declared institution — or one whose institution
- * has no token yet — still reads as "an account" rather than vanishing.
+ * The declared colour is used as-is in both themes, so choosing one that reads on the cream surface
+ * and the charcoal one alike is the chooser's call. The neutral swatch stands in for an account whose
+ * institution has no colour on file.
  */
 export function accountVar(account: string | null | undefined): string {
-	const institution = accountInfo(account)?.institution;
-	const token = institution ? INSTITUTION_TOKEN[institutionSlug(institution)] : undefined;
-
-	return `var(--${token ?? 'inst-other'})`;
+	return accountInfo(account)?.color ?? 'var(--inst-neutral)';
 }
 
 function initialMode(): ThemeMode {

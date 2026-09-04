@@ -36,7 +36,7 @@
 	let msg = $state('');
 	let err = $state(false);
 
-	// `credit_accounts` is the full money-in set (banks, Venmo, and credit cards); a bill pay can
+	// `credit_accounts` is the full money-in set (banks, passthroughs, and credit cards); a bill pay can
 	// target any of them except the account being paid from.
 	const toAccounts = $derived(accounts.credit_accounts.filter((a) => a !== from_account));
 

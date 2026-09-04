@@ -73,7 +73,7 @@ describe('validateLeaf', () => {
 	});
 
 	it('accepts letters, numbers and hyphens', () => {
-		expect(validateLeaf('Ally-Savings2', 'name')).toBeNull();
+		expect(validateLeaf('BankA-Savings2', 'name')).toBeNull();
 	});
 
 	it('rejects a name with a colon, space, or other punctuation', () => {

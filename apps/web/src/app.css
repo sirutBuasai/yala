@@ -37,44 +37,17 @@
 	--cat-recreation: #4cc9b0;
 	--cat-subscription: #ffd5d2;
 	--cat-misc: #c0794f;
-	/* ── Institution palette ───────────────────────────────────────────────────
-	   Each account's dot takes its bank/brokerage hue. Keyed by institution rather than by account,
-	   so a bank's cards and its savings read as one family, and resolved from the `institution:`
-	   metadata the ledger declares rather than by matching the account name — co-brand cards,
-	   employer plans held at a custodian, and salary accounts all name one institution while
-	   belonging to another. --inst-other is the fallback for anything unmapped.
-
-	   Values are brand-derived but palette-first: an existing theme accent where one sits close to
-	   the brand hue, the brand's SECONDARY colour where a nearer brand already held that accent
-	   (Wells Fargo's red would collide with Bank of America's), and a hand-picked value where the
-	   brand colour is unusable — Bilt's is essentially black.
-
-	   Judge separation between two of these with CIELAB ΔE, not a WCAG contrast ratio: contrast is
-	   pure luminance and scores salmon against green at 1.01:1. The tightest pairs here are ΔE 19
-	   (US Bank / Chase, Charles Schwab / US Bank), comfortably above the ~12 where two 10px dots
-	   read as one colour. */
-	--inst-amex: #6f8fe8;
-	--inst-schwab: #7dcfff;
-	--inst-venmo: #b4f4ff;
-	--inst-wealthfront: #bb9af7;
-	--inst-ally: #de85c8;
-	--inst-bofa: #f7768e;
-	--inst-usbank: #4a6f9e;
-	--inst-capitalone: #c0794f;
-	--inst-discover: #ff9e64;
-	--inst-wellsfargo: #d94c4c;
-	--inst-amazon: #ffd27f;
-	--inst-fidelity: #9ece6a;
-	--inst-tdbank: #2bb673;
-	--inst-chase: #639cc3;
-	--inst-bilt: #595959;
-	--inst-other: #8f86a8;
+	/* One institution colour survives here: the fallback for an account with nothing declared.
+	   The rest used to be a fixed swatch list, but the ledger now states a hex per institution and the
+	   API fits it to each surface, so there is no palette left to keep in sync. */
+	--inst-neutral: #8f86a8;
 	/* ── Role palette ─────────────────────────────────────────────────────────
 	   Financial ROLES, not hues. Every figure the app plots is one of these, and a role
 	   keeps its hue across every chart and every tab — so salmon always means money
-	   leaving or owed, and green always means money kept. The category and institution
-	   palettes above are the two deliberate exceptions: their members have no role, only
-	   an identity, so they're keyed by name instead.
+	   leaving or owed, and green always means money kept. The category palette above is the
+	   deliberate exception: its members have no role, only an identity, so they're keyed by
+	   name instead. Institution colours are the other, and they aren't here at all — the
+	   ledger declares them per institution and the API fits them to each surface.
 	   Roles that ever LABEL rather than fill also carry a `-text` variant, which inherits
 	   the theme-aware accents below and so needs no light-mode override of its own. */
 	--role-balance: var(--lav); /* net worth — the net of everything */
@@ -304,24 +277,6 @@
 	--lav-text: #6a49bd;
 	--teal-text: #1a6f88;
 	--salmon-text: #b33b54;
-	/* Institution dots need a second value here, which the category and role palettes do not.
-	   Those are read as large fills and as type; an institution dot is 10px of colour with no label
-	   of its own, and eight of the brand hues were authored against the charcoal surface. On cream
-	   they drop to 1.1–2.9:1, well under the ~3:1 a dot that small needs — Venmo's pale cyan is the
-	   extreme, effectively invisible. Each override holds the brand's hue and saturation and only
-	   lowers lightness until it clears 3:1, so the dot stays recognisably the same colour.
-	   The ones not listed already clear it: US Bank, Capital One, Wells Fargo, Bilt, other. */
-	--inst-amex: #688ae7;
-	--inst-schwab: #0094eb;
-	--inst-venmo: #009cb7;
-	--inst-wealthfront: #a274f4;
-	--inst-ally: #d565ba;
-	--inst-bofa: #f55472;
-	--inst-discover: #f55c00;
-	--inst-amazon: #c47f00;
-	--inst-fidelity: #6a9c33;
-	--inst-tdbank: #26a166;
-	--inst-chase: #5895bf;
 	--grid: #e6ddca;
 	--s1: #ece3f8;
 	--s2: #d6c4f0;

@@ -349,10 +349,10 @@ def test_close_bank_account_removes_it_from_pickers(client: TestClient):
 
 
 def test_close_passthrough_account_succeeds(client: TestClient):
-    # Venmo is a passthrough (sweep_to Wealthfront) but is still closeable like any bank account.
-    r = client.post("/api/account/close", json={"account": "Assets:Cash:Venmo"})
+    # A passthrough (sweep_to savings) is still closeable like any bank account.
+    r = client.post("/api/account/close", json={"account": "Assets:Cash:Passthrough"})
     assert r.status_code == 200
-    assert "Assets:Cash:Venmo" not in client.get("/api/accounts").json()["cash_accounts"]
+    assert "Assets:Cash:Passthrough" not in client.get("/api/accounts").json()["cash_accounts"]
 
 
 def test_close_non_closeable_account_is_422(client: TestClient):
