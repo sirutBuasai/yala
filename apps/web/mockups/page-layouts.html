@@ -470,8 +470,8 @@
 				['Acme Corp', 'take-home', '+$3,200']
 			];
 			const BILL = [
-				['Wealthfront → Venmo', 'venmo sweep', '$20', false],
-				['Chase → Amex Gold', 'card payment', '$1,240', true]
+				['Savings → Passthrough', 'venmo sweep', '$20', false],
+				['Card B → Card A Gold', 'card payment', '$1,240', true]
 			];
 			// "busy month" variants to stress the A2 right column against the donut's height.
 			const PAY_MANY = [
@@ -481,12 +481,12 @@
 				['Dividends', 'brokerage', '+$310']
 			];
 			const BILL_MANY = [
-				['Wealthfront → Venmo', 'venmo sweep', '$20', false],
-				['Chase → Amex Gold', 'card payment', '$1,240', true],
-				['Ally → Chase', 'autopay', '$600', false],
-				['Fidelity → Ally', 'rebalance', '$2,000', false]
+				['Savings → Passthrough', 'venmo sweep', '$20', false],
+				['Card B → Card A Gold', 'card payment', '$1,240', true],
+				['Bank A → Card B', 'autopay', '$600', false],
+				['Broker A → Bank A', 'rebalance', '$2,000', false]
 			];
-			const BILL_MORE = [...BILL_MANY, ['Chase → Discover', 'card payment', '$430', false]];
+			const BILL_MORE = [...BILL_MANY, ['Card B → Card C', 'card payment', '$430', false]];
 			const LEGEND = [
 				['Housing', '$3,465 · 23%', '--cat-housing'],
 				['Takeouts', '$615 · 4%', '--cat-takeouts'],

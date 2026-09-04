@@ -17,8 +17,12 @@ from pathlib import Path
 
 from yala.ledger import Ledger
 from yala.ledger.income import Paycheck
+from yala.ledger.institutions import colors as institution_colors
+from yala.ledger.naming import account_name, institution_of
 from yala.money import money
 from yala.schema import (
+    SCHEMA_VERSION,
+    AccountInfo,
     CategoryAmount,
     DashboardData,
     DateRange,
@@ -34,6 +38,7 @@ from yala.schema import (
     NetWorthSnapshot,
     Overview,
     PaycheckOut,
+    SettingsSection,
     Transfer,
     Txn,
     YearPage,
@@ -86,7 +91,31 @@ def _transfer_out(t) -> Transfer:
     )
 
 
-def _meta(spending, income, categories, all_years, all_months, networth_has_data) -> Meta:
+def _accounts(ledger) -> dict[str, AccountInfo]:
+    """The account directory: display name and institution for every account the ledger declares.
+
+    Every declared account, not just the active or balance-sheet ones — a closed card still appears
+    in historical rows, and a directory with gaps would force callers to keep a fallback naming rule
+    of their own, which is the duplication this exists to remove.
+    """
+    account_meta = ledger.account_meta()
+    # Colour is keyed by institution, so it is resolved here rather than per account — one lookup
+    # for the whole directory, and a bank's accounts cannot end up disagreeing.
+    palette = institution_colors(ledger.entries)
+
+    def info(account: str, meta: dict) -> AccountInfo:
+        institution = institution_of(meta)
+
+        return AccountInfo(
+            name=account_name(account, meta),
+            institution=institution,
+            color=palette.get(institution) if institution else None,
+        )
+
+    return {account: info(account, meta) for account, meta in sorted(account_meta.items())}
+
+
+def _meta(ledger, spending, income, categories, all_years, all_months, networth_has_data) -> Meta:
     date_range = spending.date_range()
 
     return Meta(
@@ -99,6 +128,7 @@ def _meta(spending, income, categories, all_years, all_months, networth_has_data
             else None
         ),
         categories=categories,
+        accounts=_accounts(ledger),
         domains=Domains(
             spending=spending.count() > 0,
             income=len(income.paychecks()) > 0,
@@ -215,7 +245,7 @@ def _income(income) -> IncomeSection:
 
 def _networth_snapshot(p) -> NetWorthSnapshot:
     return NetWorthSnapshot(
-        month=p.month,
+        date=p.date,
         assets=money(p.assets),
         liabilities=money(p.liabilities),
         net_worth=money(p.net_worth),
@@ -251,6 +281,18 @@ def _networth(networth) -> NetWorthSection:
     )
 
 
+def _settings(settings) -> SettingsSection:
+    """Effective settings as the contract shape. Setting keys are hyphenated (they read as words in
+    the ledger); contract fields are the same names with underscores."""
+    values = settings.values()
+    return SettingsSection(
+        **{
+            key.replace("-", "_"): (None if value is None else float(value))
+            for key, value in values.items()
+        }
+    )
+
+
 def build(ledger: Ledger) -> DashboardData:
     """Query the ledger and validate / construct the dashboard contract."""
     spending = ledger.spending
@@ -273,17 +315,24 @@ def build(ledger: Ledger) -> DashboardData:
     networth_section = _networth(networth)
 
     return DashboardData(
-        schema_version=1,
+        schema_version=SCHEMA_VERSION,
         generated_at=_now_rfc3339(),
         currency=ledger.currency,
         meta=_meta(
-            spending, income, categories, all_years, all_months, bool(networth_section.series)
+            ledger,
+            spending,
+            income,
+            categories,
+            all_years,
+            all_months,
+            bool(networth_section.series),
         ),
         overview=_overview(spending, income, all_years),
         years=_years(spending, income, all_years),
         months=_months(spending, income, transfers, all_months),
         income=_income(income),
         networth=networth_section,
+        settings=_settings(ledger.settings),
     )
 
 

@@ -10,98 +10,134 @@
 		enableEditMode,
 		refreshEditData
 	} from '$lib/data/load';
-	import OverviewView from '$lib/tabs/Overview.svelte';
-	import NetWorthView from '$lib/tabs/NetWorth.svelte';
-	import YearlyView from '$lib/tabs/Yearly.svelte';
-	import MonthlyView from '$lib/tabs/Monthly.svelte';
-	import CalendarView from '$lib/tabs/Calendar.svelte';
-	import ManageView from '$lib/tabs/Manage.svelte';
-	import ThemeToggle from '$lib/forms/ThemeToggle.svelte';
-	import EditToggle from '$lib/forms/EditToggle.svelte';
+	import HomeView from '$lib/views/home/Home.svelte';
+	import ActivityView from '$lib/views/activity/Activity.svelte';
+	import NetWorthView from '$lib/views/networth/NetWorth.svelte';
+	import ManageView from '$lib/views/manage/Manage.svelte';
+	import ThemeToggle from '$lib/nav/ThemeToggle.svelte';
+	import EditToggle from '$lib/nav/EditToggle.svelte';
 	import Tooltip from '$lib/overlay/Tooltip.svelte';
 	import NavMenu from '$lib/nav/NavMenu.svelte';
+	import Segmented from '$lib/nav/Segmented.svelte';
+	import { number, oneOf, Pref, record } from '$lib/utils/persist.svelte';
 
-	type Tab = 'overview' | 'networth' | 'yearly' | 'monthly' | 'calendar' | 'manage';
-	const TABS: { id: Tab; label: string }[] = [
-		{ id: 'overview', label: 'Overview' },
+	const TABS = [
+		{ id: 'home', label: 'Home' },
+		{ id: 'activity', label: 'Activity' },
 		{ id: 'networth', label: 'Net Worth' },
-		{ id: 'yearly', label: 'Yearly' },
-		{ id: 'monthly', label: 'Monthly' },
-		{ id: 'calendar', label: 'Calendar' },
 		{ id: 'manage', label: 'Manage' }
-	];
-	let tab = $state<Tab>('overview');
-	let year = $state<number>(0); // 0 = unset; the default-scope effect fills it once data loads
-	let monthKey = $state<string>('');
+	] as const;
+	type Tab = (typeof TABS)[number]['id'];
+
+	// The view you were last on. The PERIOD each view was looking at is that view's own business —
+	// each tab keeps its own key — so this page no longer owns any scope state.
+	const tabPref = new Pref<Tab>('tab', 'home', oneOf(TABS.map((t) => t.id)));
+
 	let hint = $state('');
 
 	const edit = $derived($mode === 'edit');
 
-	// Persist the current view (tab + selected year/month) so a refresh returns you to it.
-	const VIEW_KEY = 'yala-view';
 	// Persist edit/view mode so a refresh, a logo click, or leaving to /dev and back keeps it.
-	const MODE_KEY = 'yala-mode';
-	let restored = false;
+	const modePref = new Pref<'edit' | 'view' | ''>('mode', '', oneOf(['edit', 'view'] as const));
 
 	onMount(async () => {
-		let savedMode: string | null = null;
-		try {
-			const raw = localStorage.getItem(VIEW_KEY);
-			if (raw) {
-				const s = JSON.parse(raw);
-				if (['overview', 'networth', 'yearly', 'monthly', 'calendar', 'manage'].includes(s.tab))
-					tab = s.tab;
-				if (typeof s.year === 'number') year = s.year;
-				if (typeof s.monthKey === 'string') monthKey = s.monthKey;
-			}
-			savedMode = localStorage.getItem(MODE_KEY);
-		} catch {
-			/* corrupt/unavailable storage — fall back to defaults */
-		}
-		restored = true;
-
 		// Restore the last-used mode. Enter edit only when the user was last editing, or has no
 		// saved preference (first visit prefers edit if the local API is up). If they explicitly
 		// chose view, stay in view even when the API is reachable. Edit always falls back to view
 		// when the API is unreachable.
-		if (savedMode === 'view') {
+		if (modePref.value === 'view') {
 			await loadViewData();
 		} else if (!(await enableEditMode())) {
 			await loadViewData();
 		}
 	});
 
-	// Save on any change (after the initial restore). Reads the deps before the guard so the
-	// effect stays subscribed to tab/year/monthKey.
-	$effect(() => {
-		const snapshot = JSON.stringify({ tab, year, monthKey });
-		if (!restored) return;
-		try {
-			localStorage.setItem(VIEW_KEY, snapshot);
-		} catch {
-			/* storage unavailable — persistence is best-effort */
-		}
-	});
+	// The preference records what the user ASKED for, not what they got. Recording the resolved mode
+	// instead made a transient failure permanent: load the page while the API is restarting and edit
+	// mode falls back to view, which then persisted as if it had been chosen — so every later load
+	// took the "they explicitly chose view" branch and never retried the API again.
+	function rememberMode(chosen: 'edit' | 'view'): void {
+		modePref.value = chosen;
+	}
 
-	// Persist the resolved mode whenever it changes (toggle or load), after the initial restore.
-	$effect(() => {
-		const m = $mode;
-		if (!restored) return;
-		try {
-			localStorage.setItem(MODE_KEY, m);
-		} catch {
-			/* storage unavailable — persistence is best-effort */
-		}
-	});
+	// --- scroll offset per tab ---
+	//
+	// Returning to a tab (or reloading) puts you back where you were reading rather than at the top
+	// of a long transaction list. Offsets are held in plain state and flushed to storage only when
+	// they can actually be read again — a write per scroll event would be hundreds of writes for a
+	// value nothing looks at until a tab switch or a reload.
+	/** Events that mean the user has taken the scroll position back off us. */
+	const GESTURES = ['wheel', 'touchstart', 'keydown'] as const;
 
-	// Initialize the scope selectors to the newest available period on first load only. We
-	// deliberately don't clamp afterwards, so Yearly/Monthly can step to empty (zero-data)
-	// periods via their prev/next arrows.
+	const scrollPref = new Pref<Record<string, number>>('scroll', {}, record(number(0)));
+	let offsets: Record<string, number> = { ...scrollPref.value };
+	let restored = $state(false);
+	/** True while `restore` is driving the scroll position; see why `remember` has to ignore it. */
+	let restoring = false;
+
+	function remember() {
+		// Ignore scrolls we caused ourselves. Mid-restore the browser reports clamped intermediate
+		// offsets, and recording those would store a position the user never chose.
+		if (restoring) return;
+		offsets[tabPref.value] = Math.round(window.scrollY);
+	}
+	function flush() {
+		remember();
+		scrollPref.value = { ...offsets };
+	}
+
+	/**
+	 * Floor under the panel, in px, held across a tab swap. This is the crux of making scroll
+	 * restoration work at all, and it is not obvious:
+	 *
+	 * Swapping the panel makes the page SHORTER for a moment, so the browser clamps the scroll offset
+	 * to the new maximum. Asynchronous panes (Manage's settings, the balance checklist) then make it
+	 * taller again — and Chrome, having clamped, restores its own remembered pre-clamp offset, which
+	 * is the offset of the tab we just LEFT. It does this hundreds of milliseconds later, so it beats
+	 * any scrollTo we issue and then gets recorded as if the user had chosen it.
+	 *
+	 * Holding the outgoing height means the page never shrinks, so there is no clamp and nothing for
+	 * the browser to restore. Released once the incoming content has settled.
+	 */
+	let hold = $state<number | null>(null);
+	let panelEl = $state<HTMLElement>();
+
+	/** Put a tab's offset back, re-applying while the incoming content lays itself out. */
+	function restore(tab: Tab) {
+		const target = offsets[tab] ?? 0;
+		const deadline = performance.now() + 400;
+		restoring = true;
+
+		// A real gesture always wins: the first wheel, touch or key press hands control back.
+		const stop = () => {
+			restoring = false;
+			hold = null;
+			for (const ev of GESTURES) removeEventListener(ev, stop);
+		};
+		for (const ev of GESTURES) addEventListener(ev, stop, { passive: true });
+
+		const apply = () => {
+			if (!restoring) return;
+			window.scrollTo({ top: target, behavior: 'instant' });
+			if (performance.now() < deadline) requestAnimationFrame(apply);
+			else stop();
+		};
+		requestAnimationFrame(apply);
+	}
+
+	function switchTab(next: Tab) {
+		flush(); // the tab being left, while `tabPref` still names it
+		hold = panelEl?.offsetHeight ?? null;
+		tabPref.value = next;
+		restore(next);
+	}
+
+	// The first restore has to wait for the data, since until then the panel is empty and the page
+	// has no height to scroll into.
 	$effect(() => {
-		const d = $data;
-		if (!d) return;
-		if (!year) year = d.meta.years[d.meta.years.length - 1] ?? year;
-		if (!monthKey) monthKey = d.meta.month_keys[d.meta.month_keys.length - 1] ?? monthKey;
+		if (restored || !$data || $loadState.status !== 'ready') return;
+		restored = true;
+		restore(tabPref.value);
 	});
 
 	function showHint(msg: string) {
@@ -112,27 +148,13 @@
 	function onsaved() {
 		void refreshEditData();
 	}
-
-	// Tablist keyboard model (ARIA APG): arrows move selection + focus, Home/End jump to ends.
-	function onTabKeydown(e: KeyboardEvent) {
-		const i = TABS.findIndex((t) => t.id === tab);
-		let next = i;
-		if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % TABS.length;
-		else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp')
-			next = (i - 1 + TABS.length) % TABS.length;
-		else if (e.key === 'Home') next = 0;
-		else if (e.key === 'End') next = TABS.length - 1;
-		else return;
-		const chosen = TABS[next];
-		if (!chosen) return;
-		e.preventDefault();
-		tab = chosen.id;
-		const tabs = (e.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>(
-			'[role="tab"]'
-		);
-		tabs[next]?.focus();
-	}
 </script>
+
+<!-- `pagehide` rather than `beforeunload`: it also fires when a tab is backgrounded on mobile, which
+     is where a page is most likely to be discarded without ever unloading. -->
+<svelte:window onscroll={remember} onpagehide={flush} />
+
+<a class="skip" href="#view-panel">Skip to content</a>
 
 <div class="wrap">
 	<NavMenu />
@@ -142,7 +164,7 @@
 				<span class="dot"></span>
 				<h1 class="serif">Yala</h1>
 			</a>
-			<span class="sub">
+			<span class="cap">
 				{#if $data}
 					{edit ? 'live · editing' : 'personal finance'} ·
 					{$data.meta.transaction_count.toLocaleString()} txns ·
@@ -153,27 +175,17 @@
 			</span>
 		</div>
 		<div class="controls">
-			<div
-				class="views"
-				role="tablist"
-				aria-label="Dashboard views"
-				tabindex="-1"
-				onkeydown={onTabKeydown}
-			>
-				{#each TABS as t (t.id)}
-					<button
-						role="tab"
-						id={`tab-${t.id}`}
-						aria-selected={tab === t.id}
-						aria-controls="view-panel"
-						tabindex={tab === t.id ? 0 : -1}
-						class:active={tab === t.id}
-						onclick={() => (tab = t.id)}>{t.label}</button
-					>
-				{/each}
-			</div>
+			<Segmented
+				options={[...TABS]}
+				value={tabPref.value}
+				onchange={switchTab}
+				ariaLabel="Dashboard views"
+				controls="view-panel"
+				idPrefix="tab-"
+				elevated
+			/>
 			<div class="tgls">
-				<EditToggle onhint={showHint} />
+				<EditToggle onhint={showHint} onchosen={rememberMode} />
 				<ThemeToggle />
 			</div>
 		</div>
@@ -192,17 +204,20 @@
 	</div>
 
 	{#if $data && $loadState.status === 'ready'}
-		<div id="view-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} tabindex="0">
-			{#if tab === 'overview'}
-				<OverviewView data={$data} />
-			{:else if tab === 'networth'}
+		<div
+			id="view-panel"
+			role="tabpanel"
+			aria-labelledby={`tab-${tabPref.value}`}
+			tabindex="0"
+			bind:this={panelEl}
+			style:min-height={hold == null ? null : `${hold}px`}
+		>
+			{#if tabPref.value === 'home'}
+				<HomeView data={$data} accounts={$accounts} {edit} {onsaved} />
+			{:else if tabPref.value === 'activity'}
+				<ActivityView data={$data} {edit} accounts={$accounts} {onsaved} />
+			{:else if tabPref.value === 'networth'}
 				<NetWorthView data={$data} accounts={$accounts} {edit} {onsaved} />
-			{:else if tab === 'yearly'}
-				<YearlyView data={$data} bind:year />
-			{:else if tab === 'monthly'}
-				<MonthlyView data={$data} bind:monthKey {edit} accounts={$accounts} {onsaved} />
-			{:else if tab === 'calendar'}
-				<CalendarView data={$data} {edit} accounts={$accounts} {onsaved} />
 			{:else}
 				<ManageView data={$data} accounts={$accounts} {edit} {onsaved} />
 			{/if}
@@ -252,55 +267,17 @@
 		box-shadow: 0 0 0 4px color-mix(in srgb, var(--lav) 20%, transparent);
 		align-self: center;
 	}
-	.sub {
-		color: var(--ink-3);
-		font-size: var(--text-subtitle);
-	}
 	.controls {
 		display: flex;
 		gap: var(--space-5);
 		align-items: center;
 		flex-wrap: wrap;
 	}
-	.views {
-		display: flex;
-		gap: var(--space-2);
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-pill);
-		padding: var(--space-2);
-		box-shadow: var(--shadow);
-	}
-	.views button {
-		border: 0;
-		background: none;
-		color: var(--ink-2);
-		padding: var(--space-4) var(--space-8);
-		border-radius: var(--radius-pill);
-		font-size: var(--text-control);
-		cursor: pointer;
-		font-weight: var(--fw-medium);
-	}
-	.views button.active {
-		background: color-mix(in srgb, var(--lav) 20%, transparent);
-		color: var(--ink);
-	}
-	.views button:hover:not(.active) {
-		color: var(--ink);
-	}
-	.views button:focus-visible {
-		outline: none;
-		box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 45%, transparent);
-	}
-	/* The tabpanel is focusable (APG) so keyboard users can page into the content, but it should
-	   never draw a ring on mouse click — only on keyboard focus. */
+	/* The tabpanel is focusable (APG) so keyboard users — and the skip link — can page into the
+	   content. The shared :focus-visible ring covers the keyboard case; suppress the plain :focus
+	   outline so a mouse click on a card never rings the whole panel. */
 	#view-panel:focus {
 		outline: none;
-	}
-	#view-panel:focus-visible {
-		outline: none;
-		box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 30%, transparent);
-		border-radius: var(--radius-lg);
 	}
 	.tgls {
 		display: flex;

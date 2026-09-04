@@ -19,6 +19,8 @@ from pathlib import Path
 
 from beancount.core import data, prices
 from beancount.core.amount import Amount
+from beancount.ops.balance import BalanceError
+from beancount.ops.pad import PadError
 from beancount.parser import printer
 
 from yala import config
@@ -29,16 +31,45 @@ from yala.ledger.constants import (
     DEFAULT_CURRENCY,
     DROPPED_META,
     EXPENSES,
+    LIABILITIES,
     OPEN,
     PAD,
 )
 from yala.ledger.entities import leaf
-from yala.ledger.locators import find_entry
+from yala.ledger.locators import find_balance, find_entry
+from yala.ledger.networth import adjustment_account
+from yala.ledger.settings import (
+    SETTING_TYPE,
+    SETTINGS_BY_KEY,
+    coerce,
+    format_value,
+)
 from yala.money import round_cents
+
+#: Ledger file holding the ``custom "yala-setting"`` directives, relative to the ledger dir.
+SETTINGS_FILE = "settings.beancount"
 
 Credit = tuple[str, Decimal]
 DeductionLeg = tuple[str, Decimal]  # (account, amount)
 ContributionLeg = tuple[str, str | None, Decimal]  # (account, label or None, amount)
+
+
+def _stored_amount(account: str, amount: Decimal) -> Decimal:
+    """The signed figure a ``balance`` assertion carries for ``account``.
+
+    Liability balances are entered the way a bank app shows them — the amount *owed*, positive —
+    but beancount keeps them negative, so one rule flips them for every write path."""
+    return -abs(amount) if account.startswith(LIABILITIES) else amount
+
+
+def _meta_line(key: str, value: str) -> str:
+    """One indented ``key: "value"`` metadata line, with the string escaped.
+
+    Account metadata is written as text rather than through beancount's printer, so a quote or
+    backslash in a name typed by hand has to be escaped here — unescaped, it ends the string early
+    and the file no longer parses."""
+    escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
+    return f'  {key}: "{escaped}"'
 
 
 def _build_posting(account: str, number: Decimal, meta: dict | None = None) -> data.Posting:
@@ -65,6 +96,65 @@ def _atomic_write(path: Path, content: str) -> None:
         raise
 
 
+# A `balance` line: "<date> balance <account>" then the right-aligned number and its currency.
+# None of the three leading tokens can contain a space, so they split cleanly.
+_BALANCE_LINE_RE = re.compile(r"^(?P<head>\S+ \S+ \S+)(?P<gap> +)(?P<num>[\d,.-]+)(?P<tail> .*)$")
+
+
+def _reamount(line: str, amount: Decimal) -> str:
+    """Swap the amount on a ``balance`` line, holding the number's right edge so the assets files
+    keep their aligned column."""
+    m = _BALANCE_LINE_RE.match(line.rstrip("\n"))
+    if m is None:
+        raise ValueError(f"unparsable balance line: {line!r}")
+
+    num = f"{amount:,.2f}"
+    end = len(m["head"]) + len(m["gap"]) + len(m["num"])
+    gap = max(end - len(m["head"]) - len(num), 1)
+    return f"{m['head']}{' ' * gap}{num}{m['tail']}\n"
+
+
+def _balance_directive(date: dt.date, account: str, amount: Decimal, entry_id: str) -> str:
+    """A ``balance`` assertion plus the ``id`` meta that makes it addressable by locator.
+
+    Assertions are bare directives rather than transactions, so they carry no id unless written
+    with one — and without it the only handle is the source line, which shifts whenever anything
+    above it in the file changes."""
+    return (
+        f"{date.isoformat()} {BALANCE} {account}    {amount:,.2f} {DEFAULT_CURRENCY}\n"
+        f'  id: "{entry_id}"'
+    )
+
+
+# Rounds allowed to settle pads after a balance edit: one for the edited assertion, one for the
+# next assertion that re-pins the account, plus slack for a drop that reveals another.
+_MAX_PAD_ROUNDS = 6
+
+
+def _block_end(lines: list[str], begin: int) -> int:
+    """Index one past the directive starting at ``begin``, consuming its indented continuation
+    lines (meta keys, postings). A blank or unindented line ends the block."""
+    end = begin + 1
+    while end < len(lines) and lines[end].startswith((" ", "\t")) and lines[end].strip():
+        end += 1
+    return end
+
+
+def _pad_insert_index(lines: list[str], pad_date: dt.date, balance_index: int) -> int:
+    """Where to slot a new ``pad``: joining that date's existing pad group when the file has one
+    (an assets month lists its pads together, then its balances), else above the assertion it
+    serves."""
+    tag = f"{pad_date} {PAD} "
+    group = [n for n, line in enumerate(lines) if line.startswith(tag)]
+    if not group:
+        return balance_index
+
+    at = group[-1] + 1  # past the group's last pad, and the blank line spacing it
+    while at < len(lines) and not lines[at].strip():
+        at += 1
+    return at
+
+
 def _year_header(subdir: str, year: int) -> str:
     """The ``; <Title> for <year>`` header line a new year-file opens with."""
     # Comment title each dated ``<subdir>/<year>.beancount`` file opens with.
@@ -73,6 +163,7 @@ def _year_header(subdir: str, year: int) -> str:
         "income": "Income",
         "transfers": "Transfers",
         "assets": "Asset balances",
+        "liabilities": "Liability balances",
     }
 
     return f"; {_file_titles[subdir]} for {year}"
@@ -526,7 +617,7 @@ class FileLedgerSink(LedgerSink):
         """Append an ``open`` directive; ``currency=None`` lets the account hold any ticker."""
         date = date or dt.date.today()
         header = f"{date.isoformat()} {OPEN} {account}" + (f" {currency}" if currency else "")
-        metalines = "".join(f'\n  {k}: "{v}"' for k, v in (meta or {}).items())
+        metalines = "".join(f"\n{_meta_line(k, v)}" for k, v in (meta or {}).items())
         self._append_account_directive(account, header + metalines)
 
     def assert_balance(
@@ -616,12 +707,19 @@ class FileLedgerSink(LedgerSink):
 
     def log_balance(
         self, account: str, amount: Decimal, date: dt.date, counter_account: str
-    ) -> None:
+    ) -> str:
         """Snapshot ``account`` to ``amount`` USD as of ``date``, appended to
-        ``assets/<year>.beancount`` as a ``pad`` + ``balance`` pair.
+        ``assets/<year>.beancount`` as a ``balance`` assertion, preceded by a ``pad`` when one is
+        needed.
 
-        The ``pad`` (dated the day before, so it lands before the start-of-day assertion) routes
-        the untracked delta into ``counter_account`` (the account's ``Equity:Adjustments:*`` plug).
+        The ``balance`` is the snapshot: it is always written, so logging the same figure month
+        after month builds the history even when nothing moved. The ``pad`` (dated the day before,
+        so it lands before the start-of-day assertion) is only written when the account's projected
+        balance differs from ``amount``, routing that untracked delta into ``counter_account`` (the
+        account's ``Equity:Adjustments:*`` plug). beancount rejects a pad it doesn't need
+        ("Unused Pad entry"), so emitting one unconditionally would make an unchanged balance
+        impossible to log.
+
         If the account still holds share lots, they are first reclassified to USD at ``date``
         prices in place — a net-worth-neutral conversion — so the single USD assertion is
         authoritative and nothing double-counts."""
@@ -633,6 +731,10 @@ class FileLedgerSink(LedgerSink):
         usd = ledger.currency
         drain, _ = self._liquidate_postings(ledger, account, pad_date)
         share_legs = [p for p in drain if p.price is not None]  # non-USD legs carry an @ price
+
+        # What the account will hold once any share lots are reclassified: its USD component plus
+        # the converted share value. Compared against `amount` to decide whether a pad is needed.
+        projected = ledger.holdings(account, pad_date).get(usd, Decimal(0))
 
         blocks: list[str] = []
 
@@ -656,13 +758,180 @@ class FileLedgerSink(LedgerSink):
                 postings,
             )
             blocks.append(printer.format_entry(conversion).rstrip("\n"))
+            projected += usd_add
 
-        blocks.append(f"{pad_date.isoformat()} {PAD} {account} {counter_account}")
-        blocks.append(f"{date.isoformat()} {BALANCE} {account}    {amount:,.2f} {DEFAULT_CURRENCY}")
+        if projected != amount:
+            blocks.append(f"{pad_date.isoformat()} {PAD} {account} {counter_account}")
+        entry_id = str(uuid.uuid4())
+        blocks.append(_balance_directive(date, account, amount, entry_id))
 
         self._append(
             "assets", date.year, _year_header("assets", date.year), "\n\n".join(blocks) + "\n"
         )
+        return entry_id
+
+    def verify_balance(self, account: str, amount: Decimal, date: dt.date) -> str:
+        """Snapshot an account that has no adjustment plug (a liability): ``balance`` only, never a
+        ``pad``.
+
+        Because nothing can absorb a difference, the figure has to agree with what the ledger
+        already computes. A card balance that disagrees means spending or a bill payment hasn't
+        been entered yet, so the gap is reported and nothing is written — the mismatch is the
+        signal, and padding it would hide it. (``_append`` strict-reloads and rolls back too, so a
+        stale projection can't slip a bad assertion through; this check just names the fix.)
+
+        ``amount`` is the figure owed, positive; it is stored negative."""
+        amount = _stored_amount(account, round_cents(amount))
+        self._assert_accounts_active(date, [account])
+
+        ledger = Ledger(self.main_ledger, strict=True).load()
+        # A start-of-day assertion is checked against the close of the day before — the same
+        # instant log_balance pads at.
+        standing = ledger.holdings(account, date - dt.timedelta(days=1)).get(
+            ledger.currency, Decimal(0)
+        )
+        if standing != amount:
+            raise ValueError(
+                f"{leaf(account)} computes to {standing} on {date.isoformat()}, not {amount}: "
+                f"enter the missing {abs(amount - standing)} of spending or bill pay first"
+            )
+
+        entry_id = str(uuid.uuid4())
+        self._append(
+            "liabilities",
+            date.year,
+            _year_header("liabilities", date.year),
+            _balance_directive(date, account, amount, entry_id) + "\n",
+        )
+        return entry_id
+
+    def update_balance(self, locator: str, amount: Decimal) -> tuple[str, dt.date, str]:
+        """Rewrite the amount on the existing ``balance`` assertion at ``locator``, reconciling its
+        ``pad`` so the edited figure still loads. Returns ``(account, date, locator)``.
+
+        Editing an assertion changes how much must be absorbed at its date, which can flip whether
+        a pad is required: raising a figure that had no pad leaves the delta unexplained (the
+        assertion fails), while setting one back to its carried value makes an existing pad unused
+        (beancount rejects that). So a pad is ensured up front, then dropped again only if beancount
+        reports it unused — which it pinpoints by source line.
+
+        A migrated assertion carries no ``id``, so it is only addressable by source line; editing
+        one stamps an id on it and returns the stable locator to use from then on.
+
+        A liability's ``amount`` is the figure owed, positive, as on the way in."""
+        entry = find_balance(Ledger(self.main_ledger, strict=True).load().entries, locator)
+        account, date = entry.account, entry.date
+        amount = _stored_amount(account, round_cents(amount))
+
+        if entry.amount.currency != DEFAULT_CURRENCY:
+            raise ValueError(
+                f"{locator} asserts {entry.amount.currency}, not {DEFAULT_CURRENCY}; edit the "
+                "share lots in the ledger instead"
+            )
+
+        path = Path(entry.meta["filename"])
+        original = path.read_text()
+        lines = original.splitlines(keepends=True)
+        i = int(entry.meta["lineno"]) - 1
+
+        header = f"{date.isoformat()} {BALANCE} {account}"
+        if not (0 <= i < len(lines) and lines[i].startswith(header)):
+            raise ValueError(
+                f"stale locator {locator!r}: line {i + 1} of {path.name} is not the "
+                f"{date.isoformat()} balance for {account}"
+            )
+
+        lines[i] = _reamount(lines[i], amount)
+
+        entry_id = (entry.meta or {}).get("id")
+        if not entry_id:
+            entry_id = str(uuid.uuid4())
+            lines[i + 1 : i + 1] = [f'  id: "{entry_id}"\n']
+
+        if account.startswith(LIABILITIES):
+            # Verify-only account: there is no plug to settle, so the edited figure simply has to
+            # hold — _commit rolls the file back if it doesn't.
+            self._commit(path, "".join(lines), original)
+        else:
+            self._settle_pads(account, {path: lines}, {path: original})
+        return account, date, f"id:{entry_id}"
+
+    def _settle_pads(
+        self, account: str, work: dict[Path, list[str]], originals: dict[Path, str]
+    ) -> None:
+        """Write ``work``, then add or drop ``account``'s pads until the ledger loads clean.
+
+        An assertion is a checkpoint, so editing one shifts the running balance onward until the
+        next assertion re-pins it — needing a pad at the edited date *and* usually at that next
+        one, which may live in another year's file. Rather than predict them, each round writes the
+        candidate files and lets beancount name what is missing (a failed assertion → add its pad)
+        or redundant (an unused pad → drop it). Any other error, or exhausting the rounds, restores
+        every touched file and re-raises."""
+        try:
+            for _ in range(_MAX_PAD_ROUNDS):
+                for path, lines in work.items():
+                    _atomic_write(path, "".join(lines))
+
+                errors = Ledger(self.main_ledger, strict=False).load().errors
+                if not errors:
+                    return
+
+                if not self._apply_pad_fix(account, errors, work, originals):
+                    break
+
+            Ledger(self.main_ledger, strict=True).load()  # unresolved: surface beancount's own text
+
+        except Exception:
+            for path, before in originals.items():
+                _atomic_write(path, before)
+            raise
+
+    def _apply_pad_fix(
+        self,
+        account: str,
+        errors: list,
+        work: dict[Path, list[str]],
+        originals: dict[Path, str],
+    ) -> bool:
+        """Add or drop one of ``account``'s pads in response to ``errors``; True if anything moved.
+
+        Only this account's pads are touched — an unrelated complaint is left for the caller to
+        surface rather than papered over with a plug."""
+        for e in errors:
+            source = getattr(e, "source", None) or {}
+            entry = getattr(e, "entry", None)
+            filename, lineno = source.get("filename"), source.get("lineno")
+
+            if not filename or not lineno or getattr(entry, "account", None) != account:
+                continue
+
+            path = Path(filename)
+            lines = self._working(path, work, originals)
+            n = int(lineno) - 1
+
+            if isinstance(e, PadError):
+                if not lines[n].startswith(f"{entry.date} {PAD} {account} "):
+                    continue
+                del lines[n]
+                if n < len(lines) and not lines[n].strip():
+                    del lines[n]  # and the blank line that spaced it
+                return True
+
+            if isinstance(e, BalanceError):
+                pad_date = entry.date - dt.timedelta(days=1)
+                at = _pad_insert_index(lines, pad_date, n)
+                lines[at:at] = [f"{pad_date} {PAD} {account} {adjustment_account(account)}\n", "\n"]
+                return True
+
+        return False
+
+    @staticmethod
+    def _working(path: Path, work: dict[Path, list[str]], originals: dict[Path, str]) -> list[str]:
+        """The mutable line buffer for ``path``, reading (and remembering) it on first touch."""
+        if path not in work:
+            originals[path] = path.read_text()
+            work[path] = originals[path].splitlines(keepends=True)
+        return work[path]
 
     def set_account_meta(self, account: str, key: str, value: str | None) -> None:
         """Set (or, when ``value`` is None, remove) a string meta key on an account's ``open``
@@ -683,16 +952,53 @@ class FileLedgerSink(LedgerSink):
         lines = original.splitlines(keepends=True)
 
         # The open's meta lines are the indented block right below its header.
-        end = begin + 1
-        while end < len(lines) and lines[end].startswith((" ", "\t")) and lines[end].strip():
-            end += 1
+        end = _block_end(lines, begin)
 
         key_re = re.compile(rf"^\s*{re.escape(key)}\s*:")
         block = [lines[begin]] + [m for m in lines[begin + 1 : end] if not key_re.match(m)]
         if value is not None:
-            block.append(f'  {key}: "{value}"\n')
+            block.append(f"{_meta_line(key, value)}\n")
 
         self._commit(path, "".join(lines[:begin] + block + lines[end:]), original)
+
+    def set_setting(self, key: str, value: object, date: dt.date | None = None) -> Decimal:
+        """Set a user setting, writing it as a dated ``custom`` directive, and return the stored
+        value. Raises ``KeyError`` for an unknown key, ``ValueError`` for an out-of-range value.
+
+        A directive already dated ``date`` for this key is rewritten in place; otherwise a new one
+        is appended. That way repeated edits on one day don't pile up, while a change on a later
+        day supersedes rather than erases — the old value stays as history (see
+        :mod:`yala.ledger.settings`).
+        """
+        spec = SETTINGS_BY_KEY.get(key)
+        if spec is None:
+            raise KeyError(key)
+
+        stored = coerce(key, value)
+        on = date or dt.date.today()
+        directive = f'{on} custom "{SETTING_TYPE}" "{key}" {format_value(spec, stored)}'
+
+        existing = [
+            e
+            for e in Ledger(self.main_ledger, strict=True).load().entries
+            if isinstance(e, data.Custom)
+            and e.type == SETTING_TYPE
+            and e.date == on
+            and [v.value for v in (e.values or [])][:1] == [key]
+        ]
+
+        if existing:
+            path = Path(existing[-1].meta["filename"])
+            original = path.read_text()
+            lines = original.splitlines(keepends=True)
+            at = int(existing[-1].meta["lineno"]) - 1
+            lines[at] = f"{directive}\n"
+            self._commit(path, "".join(lines), original)
+        else:
+            self._ensure_main_include(f'include "{SETTINGS_FILE}"')
+            self._append_directive(self.ledger_dir / SETTINGS_FILE, directive)
+
+        return stored
 
     def _account_file(self, account: str) -> Path:
         """The ``.beancount`` file a directive for ``account`` belongs in, so it lands beside its
@@ -722,15 +1028,19 @@ class FileLedgerSink(LedgerSink):
 
         return self.ledger_dir / "accounts.beancount"
 
-    def _append_account_directive(self, account: str, directive: str) -> None:
-        """Append one account directive to the file holding the account's family (see
-        ``_account_file``), with strict-reload/rollback."""
-        target = self._account_file(account)
-
+    def _append_directive(self, target: Path, directive: str) -> None:
+        """Append one standalone directive to ``target``, normalizing the trailing newline, with
+        strict-reload/rollback. Shared by every writer that adds a whole-line directive rather
+        than editing an entry in place."""
         original = target.read_text() if target.exists() else ""
         text = original if not original or original.endswith("\n") else original + "\n"
 
         self._commit(target, f"{text}{directive}\n", original)
+
+    def _append_account_directive(self, account: str, directive: str) -> None:
+        """Append one account directive to the file holding the account's family (see
+        ``_account_file``)."""
+        self._append_directive(self._account_file(account), directive)
 
     # --- internals: locate, write, roll back ---
 
@@ -771,11 +1081,7 @@ class FileLedgerSink(LedgerSink):
                 f"{entry.date.isoformat()} {entry.flag} entry"
             )
 
-        end = begin + 1
-        while end < len(lines) and lines[end].startswith((" ", "\t")) and lines[end].strip():
-            end += 1
-
-        return path, original, lines, begin, end
+        return path, original, lines, begin, _block_end(lines, begin)
 
     def _append_entry(self, subdir: str, entry: data.Transaction) -> None:
         """Format ``entry`` and append it to its dated ``<subdir>/<year>.beancount`` file."""

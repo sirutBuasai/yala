@@ -14,6 +14,9 @@ export type TransactionCount = number;
 export type Start = string;
 export type End = string;
 export type Categories = string[];
+export type Name = string;
+export type Institution = string | null;
+export type Color = string | null;
 export type Spending = boolean;
 export type Income = boolean;
 export type Networth = boolean;
@@ -66,7 +69,7 @@ export type Deductions1 = number;
 export type Contributions1 = number;
 export type ByYear1 = IncomeYear[];
 export type RecentPaychecks = PaycheckOut[];
-export type Month1 = string;
+export type Date3 = string;
 export type Assets = number;
 export type Liabilities = number;
 export type NetWorth = number;
@@ -76,11 +79,16 @@ export type Label = string;
 export type Group = string;
 export type Bucket = string;
 export type Value = number;
-export type Accounts = NetWorthAccount[];
+export type Accounts1 = NetWorthAccount[];
 export type Account1 = string;
 export type Label1 = string;
 export type Value1 = number;
 export type Adjustments = NetWorthAdjustment[];
+export type Swr = number;
+export type RealReturn = number;
+export type RetireAge = number;
+export type RunwayTarget = number;
+export type BirthYear = number | null;
 
 export interface DashboardData {
 	schema_version: SchemaVersion;
@@ -92,6 +100,7 @@ export interface DashboardData {
 	months: Months;
 	income: IncomeSection;
 	networth?: NetWorthSection | null;
+	settings?: SettingsSection | null;
 }
 /**
  * This interface was referenced by `DashboardData`'s JSON-Schema
@@ -103,6 +112,7 @@ export interface Meta {
 	transaction_count: TransactionCount;
 	date_range: DateRange | null;
 	categories: Categories;
+	accounts: Accounts;
 	domains: Domains;
 }
 /**
@@ -112,6 +122,25 @@ export interface Meta {
 export interface DateRange {
 	start: Start;
 	end: End;
+}
+export interface Accounts {
+	[k: string]: AccountInfo;
+}
+/**
+ * How one account presents itself: its display name and who holds it.
+ *
+ * Both are resolved from ledger metadata by :mod:`yala.ledger.naming`, so the frontend looks a
+ * name up rather than deriving it. That keeps one implementation of the naming rule instead of
+ * one per language, and it means the ledger stays the only place that decides what an account is
+ * called.
+ *
+ * This interface was referenced by `DashboardData`'s JSON-Schema
+ * via the `definition` "AccountInfo".
+ */
+export interface AccountInfo {
+	name: Name;
+	institution?: Institution;
+	color?: Color;
 }
 /**
  * Which domains carry data.
@@ -268,7 +297,7 @@ export interface ByMonth {
 export interface NetWorthSection {
 	current: NetWorthSnapshot | null;
 	series: Series;
-	accounts: Accounts;
+	accounts: Accounts1;
 	adjustments: Adjustments;
 }
 /**
@@ -276,7 +305,7 @@ export interface NetWorthSection {
  * via the `definition` "NetWorthSnapshot".
  */
 export interface NetWorthSnapshot {
-	month: Month1;
+	date: Date3;
 	assets: Assets;
 	liabilities: Liabilities;
 	net_worth: NetWorth;
@@ -304,4 +333,21 @@ export interface NetWorthAdjustment {
 	account: Account1;
 	label: Label1;
 	value: Value1;
+}
+/**
+ * Effective user settings: what the ledger states, else the built-in default.
+ *
+ * A null means the setting is unset and has no default — features depending on it stay hidden
+ * rather than guessing. Keys mirror :data:`yala.ledger.settings.SETTINGS`; ``test_settings``
+ * asserts the two can't drift.
+ *
+ * This interface was referenced by `DashboardData`'s JSON-Schema
+ * via the `definition` "SettingsSection".
+ */
+export interface SettingsSection {
+	swr: Swr;
+	real_return: RealReturn;
+	retire_age: RetireAge;
+	runway_target: RunwayTarget;
+	birth_year?: BirthYear;
 }

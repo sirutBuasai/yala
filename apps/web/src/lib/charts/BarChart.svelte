@@ -6,6 +6,7 @@
 	import { moneyYScale } from '$lib/charts/axis';
 	import { money, moneyK, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
+	import Legend from '$lib/charts/Legend.svelte';
 
 	interface Series {
 		name: string;
@@ -15,18 +16,13 @@
 	interface Props {
 		labels: string[];
 		series: Series[];
-		/** Force the legend; defaults on for multi-series, off for a single series. */
-		legend?: boolean;
-		/** Draw value labels atop bars; defaults on for a single series only. */
-		valueLabels?: boolean;
 	}
-	let { labels, series, legend, valueLabels }: Props = $props();
+	let { labels, series }: Props = $props();
 
 	const single = $derived(series.length <= 1);
-	const showLegend = $derived(legend ?? !single);
-	const showValues = $derived(valueLabels ?? single);
 
-	// Render at the measured pixel size so the chart fills (and grows with) its pane.
+	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also
+	// bounds how tall the chart may grow inside a stretched pane.
 	let boxW = $state(0);
 	let boxH = $state(0);
 	const W = $derived(boxW || 1100);
@@ -47,18 +43,19 @@
 	const y = $derived(axis.y);
 	const ticks = $derived(axis.ticks);
 	const base = $derived(y(0));
+
+	// A name for the chart, since an unlabelled role="img" announces only "image".
+	const label = $derived(
+		`Bar chart: ${series.map((sr) => sr.name).join(', ')} across ${labels.length} periods`
+	);
 </script>
 
-{#if showLegend}
-	<div class="legend">
-		{#each series as s (s.name)}
-			<span class="k"><span class="sw" style:background={s.color}></span>{s.name}</span>
-		{/each}
-	</div>
+{#if !single}
+	<Legend keys={series} />
 {/if}
 
-<div class="chartbox" bind:clientWidth={boxW} bind:clientHeight={boxH}>
-	<svg class="chart" viewBox="0 0 {W} {H}" role="img">
+<div class="figurebox" bind:clientWidth={boxW} bind:clientHeight={boxH}>
+	<svg class="chart" viewBox="0 0 {W} {H}" role="img" aria-label={label}>
 		<g class="axis" transform="translate({m.l},{m.t})">
 			{#each ticks as t (t)}
 				<line class="gridline" x1={0} x2={iw} y1={y(t)} y2={y(t)} />
@@ -83,7 +80,7 @@
 							showTip(`<b>${esc(lb)}</b><br>${single ? '' : esc(s.name) + ': '}${money(v)}`, e)}
 						onmouseleave={hideTip}
 					/>
-					{#if showValues && v !== 0}
+					{#if single && v !== 0}
 						<text class="vlabel" x={bx + bw / 2} y={Math.min(yv, base) - 6} text-anchor="middle"
 							>{moneyK(v)}</text
 						>
@@ -94,21 +91,3 @@
 		</g>
 	</svg>
 </div>
-
-<style>
-	.chartbox {
-		position: relative;
-		flex: 1 1 auto;
-		min-height: 240px;
-		max-height: 720px; /* fill a stretched pane, but never run away */
-		width: 100%;
-	}
-	/* Absolutely positioned so the SVG's viewBox-derived intrinsic size can't feed back into
-	   the flex/grid auto-height. Without this the box ratchets down on resize and never grows
-	   back (measured height -> viewBox -> intrinsic height -> row height -> measured height). */
-	svg.chart {
-		position: absolute;
-		inset: 0;
-		height: 100%;
-	}
-</style>

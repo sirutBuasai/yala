@@ -1,27 +1,24 @@
-// Data primitives — the vocabulary of shapes the dashboard can compute, decoupled
-// from how they're drawn. A primitive is pure numbers + structure + a `unit`; it
-// carries NO colors or chart config (those belong to the visualization layer).
-//
-// The `unit` is what makes two primitives *compatible*: they can be shown side by
-// side on one chart only when their units match (money↔money same currency, etc.).
-// Series additionally must share an axis and identical label sequence to overlay.
+// Data primitives — the vocabulary of shapes the dashboard can compute, decoupled from how they're
+// drawn. A primitive is pure numbers + structure + a `unit`; it carries NO colors or chart config
+// (those belong to the visualization layer). The `unit` names the measurement scale, which is what
+// lets one formatter render every figure the same way.
 
 import { money } from '$lib/utils/format';
 
 // --- units ---
 
-export type Unit = { kind: 'money'; currency: string } | { kind: 'percent' } | { kind: 'count' };
+export type Unit =
+	| { kind: 'money'; currency: string }
+	| { kind: 'percent' }
+	| { kind: 'count' }
+	/** A span of time — how long something lasts, e.g. months of runway, years of freedom. */
+	| { kind: 'duration'; period: 'month' | 'year' };
 
 export const MONEY = (currency = 'USD'): Unit => ({ kind: 'money', currency });
 export const PERCENT: Unit = { kind: 'percent' };
 export const COUNT: Unit = { kind: 'count' };
-
-/** Same measurement scale — the core compatibility test. */
-export function sameUnit(a: Unit, b: Unit): boolean {
-	if (a.kind !== b.kind) return false;
-	if (a.kind === 'money' && b.kind === 'money') return a.currency === b.currency;
-	return true;
-}
+export const MONTHS: Unit = { kind: 'duration', period: 'month' };
+export const YEARS: Unit = { kind: 'duration', period: 'year' };
 
 /** Render a raw value in its unit. Formatting lives here so every visual agrees. */
 export function formatUnit(value: number, unit: Unit): string {
@@ -32,13 +29,17 @@ export function formatUnit(value: number, unit: Unit): string {
 			return `${Math.round(value)}%`;
 		case 'count':
 			return Math.round(value).toLocaleString();
+		// One decimal: a runway of "14.6 mo" is a materially different answer from "15 mo", and
+		// these are always small numbers where the fraction reads clearly.
+		case 'duration':
+			return `${value.toFixed(1)} ${unit.period === 'month' ? 'mo' : 'yr'}`;
 	}
 }
 
 // --- primitive kinds ---
 
 export type PrimitiveKind =
-	'scalar' | 'categorical' | 'series' | 'multiseries' | 'flow' | 'matrix' | 'table';
+	'scalar' | 'categorical' | 'series' | 'multiseries' | 'flow' | 'matrix' | 'table' | 'bullet';
 
 /** Ordered axis a series is plotted against. */
 export type Axis = 'time' | 'ordinal';
@@ -142,46 +143,31 @@ export interface Table {
 	rows: (string | number)[][];
 }
 
-export type Primitive = Scalar | Categorical | Series | MultiSeries | Flow | Matrix | Table;
-
-// --- introspection helpers ---
-
-/** The unit of any primitive, or null for the unitless Table. */
-export function unitOf(p: Primitive): Unit | null {
-	return p.kind === 'table' ? null : p.unit;
-}
-
-export function isSeriesLike(p: Primitive): p is Series | MultiSeries {
-	return p.kind === 'series' || p.kind === 'multiseries';
-}
-
-function axisOf(p: Series | MultiSeries): Axis {
-	return p.axis;
-}
-
-function labelsOf(p: Series | MultiSeries): string[] {
-	return p.kind === 'series' ? p.points.map((pt) => pt.label) : p.labels;
-}
-
-function sameLabels(a: string[], b: string[]): boolean {
-	return a.length === b.length && a.every((l, i) => l === b[i]);
-}
-
-// --- compatibility + layering (the "show side by side" contract) ---
-
 /**
- * Whether `b` can be drawn on the same chart as `a`. Requires matching units;
- * for series it also requires the same axis and identical labels so points line up.
- * Different kinds are never compatible (a categorical can't overlay a series).
+ * One measured value against the threshold it's being judged by.
+ *
+ * Each row carries its own unit and is scaled independently, because the rows in one bullet set
+ * usually answer the same *question* ("how close am I?") in different measures — months of runway
+ * beside a percentage of a target. Bands are optional qualitative cut-points along the row's own
+ * scale (ascending), for shading "lean / adequate / comfortable" behind the bar.
  */
-export function compatible(a: Primitive, b: Primitive): boolean {
-	const ua = unitOf(a);
-	const ub = unitOf(b);
-	if (!ua || !ub || !sameUnit(ua, ub)) return false;
-
-	if (isSeriesLike(a) && isSeriesLike(b)) {
-		return axisOf(a) === axisOf(b) && sameLabels(labelsOf(a), labelsOf(b));
-	}
-
-	return a.kind === b.kind;
+export interface BulletRow {
+	label: string;
+	unit: Unit;
+	value: number | null;
+	/** The threshold to compare against; drawn as a marker, and reached at 100%. */
+	target: number;
+	/** Ascending cut-points along the scale, shaded from weakest to strongest. */
+	bands?: number[];
+	/** Free-text footnote (already localized). */
+	note?: string;
 }
+
+/** Several value-against-threshold rows — powers bullet graphs. */
+export interface Bullet {
+	kind: 'bullet';
+	rows: BulletRow[];
+}
+
+export type Primitive =
+	Scalar | Categorical | Series | MultiSeries | Flow | Matrix | Table | Bullet;

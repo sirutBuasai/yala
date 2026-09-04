@@ -8,7 +8,7 @@
 	--border: #33334a;
 	--ink: #e6e0c8;
 	--ink-2: #a8a28c;
-	--ink-3: #6f6c5c;
+	--ink-3: #969380;
 	--lav: #bb9af7;
 	--salmon: #f7768e;
 	--green: #9ece6a;
@@ -25,8 +25,6 @@
 	/* Dark ink for text/icons sitting on a bright accent fill (primary button, donut labels).
 	   Shared across themes since the accent fills don't change between light and dark. */
 	--on-accent: #1a1522;
-	/* Reserved color for the synthetic "Saved" slice/series so it never collides with a spending category. */
-	--saved: #9ece6a;
 	/* Category palette. */
 	--cat-housing: #f7768e;
 	--cat-grocery: #f295c5;
@@ -39,12 +37,64 @@
 	--cat-recreation: #4cc9b0;
 	--cat-subscription: #ffd5d2;
 	--cat-misc: #c0794f;
+	/* One institution colour survives here: the fallback for an account with nothing declared.
+	   The rest used to be a fixed swatch list, but the ledger now states a hex per institution and the
+	   API fits it to each surface, so there is no palette left to keep in sync. */
+	--inst-neutral: #8f86a8;
+	/* ── Role palette ─────────────────────────────────────────────────────────
+	   Financial ROLES, not hues. Every figure the app plots is one of these, and a role
+	   keeps its hue across every chart and every tab — so salmon always means money
+	   leaving or owed, and green always means money kept. The category palette above is the
+	   deliberate exception: its members have no role, only an identity, so they're keyed by
+	   name instead. Institution colours are the other, and they aren't here at all — the
+	   ledger declares them per institution and the API fits them to each surface.
+	   Roles that ever LABEL rather than fill also carry a `-text` variant, which inherits
+	   the theme-aware accents below and so needs no light-mode override of its own. */
+	--role-balance: var(--lav); /* net worth — the net of everything */
+	--role-asset: var(--teal); /* what you hold */
+	--role-liability: var(--salmon); /* what you owe — a negative on net worth */
+	--role-saving: var(--green); /* what you kept */
+	--role-spending: var(--salmon); /* what went out */
+	--role-income: var(--lav); /* what came in */
+	--role-deduction: var(--orange); /* taken out before you saw it */
+	--role-market: var(--gold); /* movement you never logged */
+	--role-rate: var(--lav); /* a ratio rather than an amount */
+	/* Allocation buckets are three slices of one whole (assets), so they share a
+	   blue→green family rather than taking unrelated hues. */
+	--role-liquid: var(--teal);
+	--role-taxable: var(--blue);
+	--role-taxadv: var(--aqua);
+	/* Entry-type accents: which KIND of thing you are logging, used by the Add overlay's band
+	   and switcher. A separate axis from the roles above — an entry type is a form you fill in,
+	   not a quantity being plotted — so the two may share hues without either constraining the
+	   other, and re-theming the overlay can't silently recolour a chart. */
+	--entry-transaction: var(--salmon);
+	--entry-paycheck: var(--green);
+	--entry-transfer: var(--teal);
+	--entry-balance: var(--lav);
+	/* ── Text accents ─────────────────────────────────────────────────────────
+	   The `-text` variants exist because an accent that reads well as a FILL often doesn't as
+	   TYPE. Every value here — and every `--ink-*` above — is set to clear WCAG AA (4.5:1)
+	   against the tightest surface it can land on (`--inset`), in BOTH themes. `--ink-3` in
+	   particular was at 2.5–3.4:1, and it is the colour of every caption, axis tick and row
+	   date in the app; anything that fails here fails in a hundred places at once.
+	   If you change one of these, re-check the ratio before committing to it. */
 	--good-text: #9ece6a;
-	--crit-text: #e46876;
+	--crit-text: #e56c7a;
 	--gold-text: #e0af68;
 	--lav-text: #bb9af7;
 	--teal-text: #7dcfff;
 	--salmon-text: #f7768e;
+	--role-balance-text: var(--lav-text);
+	--role-asset-text: var(--teal-text);
+	--role-liability-text: var(--salmon-text);
+	--role-saving-text: var(--good-text);
+	--role-spending-text: var(--salmon-text);
+	--role-market-text: var(--gold-text);
+	--entry-transaction-text: var(--salmon-text);
+	--entry-paycheck-text: var(--good-text);
+	--entry-transfer-text: var(--teal-text);
+	--entry-balance-text: var(--lav-text);
 	--grid: #2a2a3c;
 	--s1: #26263a;
 	--s2: #3c3560;
@@ -184,6 +234,30 @@
 
 	/* ── Elevation ────────────────────────────────────────────────────────────*/
 	--shadow-pop: 0 10px 30px -10px #000; /* tooltips / popovers */
+
+	/* ── Focus ────────────────────────────────────────────────────────────────
+	   One ring for everything focusable (see the global :focus-visible rule below).
+	   An outline rather than a box-shadow, so it can't be mistaken for an element's own
+	   elevation and it follows whatever border-radius the element already has. */
+	--ring-color: var(--lav);
+	--ring-width: 2px;
+	--ring-offset: 2px;
+
+	/* ── Figure sizing ────────────────────────────────────────────────────────
+	   A chart in a stretched pane grows to fill it; these bound how far that can go, so
+	   one tall figure can never drag the panes beside it out of alignment. An individual
+	   instance can widen its own ceiling by setting --figure-h-max inline. */
+	--figure-h-min: 240px;
+	--figure-h-max: 460px;
+
+	/* ── List row columns ─────────────────────────────────────────────────────
+	   The fixed tracks of a list row (see RowList). The amount track is a floor, not a
+	   width: it grows with the figure so a six-digit total can't be clipped, and the
+	   payee column gives up the space. In ch units so they track the font, not a
+	   guess in pixels. */
+	--col-date: 3.5ch;
+	--col-dot: 10px;
+	--col-amount: 6ch;
 }
 :root[data-theme='light'] {
 	/* Light mode overrides ONLY the neutral chrome (backgrounds, text, borders). */
@@ -194,15 +268,15 @@
 	--inset: #ece4d2;
 	--border: #ddd2bb;
 	--ink: #2e2a22;
-	--ink-2: #6b6350;
-	--ink-3: #9a9078;
+	--ink-2: #5c5443;
+	--ink-3: #6e6652;
 	/* Darker text variants of the accents for legibility on the light background. */
-	--good-text: #4f8129;
-	--crit-text: #c0334c;
-	--gold-text: #8a6a12;
+	--good-text: #457124;
+	--crit-text: #bb324a;
+	--gold-text: #806211;
 	--lav-text: #6a49bd;
-	--teal-text: #1d7d99;
-	--salmon-text: #c0405a;
+	--teal-text: #1a6f88;
+	--salmon-text: #b33b54;
 	--grid: #e6ddca;
 	--s1: #ece3f8;
 	--s2: #d6c4f0;
@@ -231,15 +305,48 @@ body {
 a {
 	color: inherit;
 }
+
+/* One keyboard focus ring for every focusable thing, declared once. :is() lifts the
+   specificity to (0,1,1) so it lands on tokenized controls (.navbtn, .pill, .trigger…)
+   without each of them restating a ring — a component only overrides this when the ring
+   genuinely belongs somewhere else (a nested input, a card-sized grid cell). */
+:is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+	outline: var(--ring-width) solid var(--ring-color);
+	outline-offset: var(--ring-offset);
+}
+
+/* Skip link: the first tab stop on the page, visible only while focused. Keyboard users
+   reach the view content without tabbing through the menu, tabs and toggles first. */
+.skip {
+	position: fixed;
+	top: var(--space-4);
+	left: var(--space-4);
+	z-index: 80;
+	background: var(--surface);
+	border: 1px solid var(--lav);
+	border-radius: var(--radius-md);
+	padding: var(--pad-control);
+	font-size: var(--text-control);
+	text-decoration: none;
+	transform: translateY(-200%);
+}
+.skip:focus-visible {
+	transform: none;
+}
+
+/* The page column. Its left padding is a variable rather than a constant because the fixed
+   hamburger lives in the left gutter: wide viewports have gutter to spare, but once the
+   viewport stops being wider than the column plus that gutter, the column has to indent so
+   content (header AND cards together, so they stay aligned) can't slide under the button. */
 .wrap {
-	max-width: 1200px;
+	max-width: 1400px;
 	margin: 0 auto;
-	padding: 26px 24px 90px;
+	padding: var(--space-11) var(--space-11) 90px;
 }
 /* The hamburger is fixed to the page's left edge. Wide viewports leave a gutter that holds it,
    but once that gutter shrinks, indent the whole column so the content (header + cards, together,
    so they stay aligned) can never slide underneath the hamburger. */
-@media (max-width: 1260px) {
+@media (max-width: 1460px) {
 	.wrap {
 		padding-left: 56px;
 	}
@@ -258,10 +365,100 @@ a {
 	margin: 0 0 var(--space-1);
 	letter-spacing: var(--ls-snug);
 }
-.card .cap {
+/* A quieter card for settings-style panels: same surface, border and elevation, one step down in
+   radius and padding, so a column of small forms doesn't read as heavily as a dashboard pane.
+   A modifier rather than a second card class, so the two can never drift on colour or elevation. */
+.card.compact {
+	border-radius: var(--radius-lg);
+	padding: var(--space-8);
+}
+/* "Needs attention": the pane holds something waiting on you (unreconciled entries). Its border
+   picks up the warning accent while everything else about the card stays identical. */
+.card.attention {
+	border-color: color-mix(in srgb, var(--gold) 32%, var(--border));
+}
+/* The app's single caption voice: supporting text that explains rather than states — a
+   subtitle under a title, a "why this is read-only" note, an empty state, a helper line.
+   Components used to reach for --text-secondary or --text-subtitle interchangeably here;
+   both are 12px today, so the drift was invisible but real. One class, one token, and they
+   can never separate again. `.quiet` is the italic variant for absence-explaining notes. */
+.cap {
 	color: var(--ink-3);
 	font-size: var(--text-secondary);
-	margin: 0 0 var(--space-7);
+	margin: 0;
+}
+.cap.quiet {
+	font-style: italic;
+}
+/* Pushes an element to the far end of a flex row — a trailing note in a view header. */
+.push-end {
+	margin-inline-start: auto;
+}
+
+/* Text for screen readers only — an accessible name for a control whose visible chrome already
+   says what it is (the balance-entry inputs in a table of named rows).
+   NOTE the `position: relative` requirement on the parent, which is not cosmetic: an
+   absolutely-positioned box with no positioned ancestor is laid out against the initial containing
+   block, which means it escapes every overflow clip on the way up. One of these inside a
+   horizontally scrolled table was enough to give the whole PAGE a 64px horizontal scrollbar on a
+   phone. Anything using .sr-only must give it a containing block. */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+/* A caption in a pane HEADER also owns the gap down to the body. Scoped to the header, not to the
+   whole card, so a caption used as body copy (a helper line, an empty state) keeps margin: 0. */
+.head .cap {
+	margin-bottom: var(--space-7);
+}
+
+/* Regions that scroll INSIDE the page (a capped list, the day panel, a dropdown, a modal body).
+   Split by AXIS, which matters more than it looks: `overflow-y: auto` on a box that only ever
+   scrolls sideways makes the browser treat it as a vertical scroll target, and a wheel over it does
+   nothing at all instead of scrolling the page. So a horizontal-only box takes `.scroller-x`.
+
+   Both give the same slim, always-present scrollbar. Setting scrollbar-width/color opts out of the
+   platform's overlay scrollbars, which stay invisible until you already scroll — so a list capped
+   mid-row read as a clipped row rather than as "there is more below". */
+.scroller,
+.scroller-x {
+	scrollbar-width: thin;
+	scrollbar-color: var(--border) transparent;
+}
+.scroller {
+	overflow-y: auto;
+	/* stable, so content doesn't shift sideways when the bar appears */
+	scrollbar-gutter: stable;
+}
+.scroller-x {
+	overflow-x: auto;
+}
+/* Scroll chaining is DELIBERATELY left on by default: reaching the end of a capped list should carry
+   on scrolling the page, which is what you meant. `.trap` is the opt-in for the two places where it
+   would be wrong — a modal body and an open dropdown, where the page behind should stay put. */
+.scroller.trap {
+	overscroll-behavior: contain;
+}
+.scroller::-webkit-scrollbar,
+.scroller-x::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+.scroller::-webkit-scrollbar-thumb,
+.scroller-x::-webkit-scrollbar-thumb {
+	background: var(--border);
+	border-radius: var(--radius-pill);
+}
+.scroller::-webkit-scrollbar-thumb:hover,
+.scroller-x::-webkit-scrollbar-thumb:hover {
+	background: var(--ink-3);
 }
 
 /* Reusable edge-to-edge bleed. A child of a .card (or any box padded by --pad-card-x)
@@ -284,11 +481,10 @@ a {
 	font-family: inherit;
 }
 
-/* Focus ring in the brand accent instead of the OS blue glow. */
+/* A focused text input also tints its border, so the field itself reads as active and not
+   just ringed. The ring comes from the global :focus-visible rule. */
 input:focus-visible {
-	outline: none;
 	border-color: var(--lav);
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 30%, transparent);
 }
 
 /* Strip the up/down spinner arrows on number inputs. */
@@ -325,10 +521,6 @@ input[type='checkbox']:checked {
 	background-color: var(--lav);
 	border-color: var(--lav);
 	background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='12'%20height='12'%20viewBox='0%200%2012%2012'%20fill='none'%20stroke='%231a1522'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M2.5%206.5%205%209l4.5-5.5'/%3E%3C/svg%3E");
-}
-input[type='checkbox']:focus-visible {
-	outline: none;
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 35%, transparent);
 }
 
 /* --- buttons --- */
@@ -370,10 +562,51 @@ input[type='checkbox']:focus-visible {
 	font-size: var(--text-control);
 	cursor: pointer;
 }
+/* The quiet half of a two-step destructive action: it OFFERS to delete, it doesn't delete. Only the
+   armed confirmation gets the solid `.btn-danger`, so the two steps don't look identical — and a
+   list of ten rows isn't a wall of red for what is a routine action. */
+.btn-danger-quiet {
+	background: none;
+	border: 1px solid color-mix(in srgb, var(--crit) 40%, var(--border));
+	color: var(--crit-text);
+	border-radius: var(--radius-md);
+	padding: var(--pad-btn);
+	font-size: var(--text-control);
+	font-weight: var(--fw-medium);
+	cursor: pointer;
+}
+.btn-danger-quiet:hover {
+	background: color-mix(in srgb, var(--crit) 12%, transparent);
+	border-color: var(--crit);
+}
 .btn-ghost:hover,
 .btn-cancel:hover {
 	border-color: var(--lav);
 	color: var(--ink);
+}
+/* Accent-tinted secondary action — louder than a ghost, quieter than the solid primary.
+   Used for "add"-style actions (inline beside an input, or as a pane/header action with .pill). */
+.btn-accent {
+	border: 1px solid var(--border);
+	background: color-mix(in srgb, var(--lav) 20%, transparent);
+	color: var(--ink);
+	border-radius: var(--radius-md);
+	padding: var(--pad-control);
+	font: inherit;
+	font-size: var(--text-control);
+	font-weight: var(--fw-medium);
+	cursor: pointer;
+}
+.btn-accent.pill {
+	border-radius: var(--radius-pill);
+	padding: var(--pad-pill);
+}
+.btn-accent:hover {
+	border-color: var(--lav);
+}
+.btn-accent:disabled {
+	opacity: 0.6;
+	cursor: default;
 }
 /* small outline button for inline row/type actions */
 .btn-mini {
@@ -407,10 +640,6 @@ input[type='checkbox']:focus-visible {
 	color: var(--ink);
 	background: var(--inset);
 }
-.iconbtn:focus-visible {
-	outline: none;
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 30%, transparent);
-}
 /* inline text button: keeps the surrounding text's size/family/colour (inherit) and only
    adds a hover highlight box, e.g. a clickable "Sorted by X" label that opens a menu. */
 .chipbtn {
@@ -428,10 +657,6 @@ input[type='checkbox']:focus-visible {
 .chipbtn:hover {
 	background: var(--inset);
 }
-.chipbtn:focus-visible {
-	outline: none;
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 30%, transparent);
-}
 /* pane grid shared by the Overview / Yearly / Monthly tabs: full-width rows, or `.two`
    for a pair of side-by-side panes that share the taller one's height */
 .panes {
@@ -439,14 +664,13 @@ input[type='checkbox']:focus-visible {
 	gap: var(--gap-grid);
 	margin-bottom: var(--gap-grid);
 }
+/* A pair of panes that share the taller one's height, dropping to one column as soon as a
+   column would fall under ~26rem. auto-fit rather than a viewport breakpoint, so the row
+   reflows off its OWN width — correct inside a narrower container, and correct at any zoom
+   level, where a px breakpoint silently moves. */
 .panes.two {
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: repeat(auto-fit, minmax(min(26rem, 100%), 1fr));
 	align-items: stretch;
-}
-@media (max-width: 900px) {
-	.panes.two {
-		grid-template-columns: 1fr;
-	}
 }
 /* round prev/next stepper button (period navigation next to a picker) */
 .navbtn {
@@ -540,9 +764,7 @@ input[type='checkbox']:focus-visible {
 	text-align: left;
 }
 .trigger:focus-visible {
-	outline: none;
 	border-color: var(--lav);
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 30%, transparent);
 }
 .trigger .val {
 	overflow: hidden;
@@ -558,6 +780,28 @@ svg.chart {
 	display: block;
 	width: 100%;
 	overflow: visible;
+}
+/* A MEASURED chart box, shared by every chart that renders at its own pixel size rather than a
+   fixed viewBox (line, bar, stacked area). Two things it buys:
+   · Axis and label type stay a constant on-screen size instead of shrinking with the pane — a
+     fixed viewBox made these illegible in a half-width card.
+   · The box grows to fill a stretched pane, but only between --figure-h-min and --figure-h-max,
+     so one tall figure can't drag the panes beside it out of alignment.
+   The SVG is absolutely positioned on purpose, not for convenience: left in flow, its
+   viewBox-derived intrinsic height would feed back into the box's own auto height — the box
+   measures the child while the child sizes off that measurement — and the row would ratchet in
+   one direction and never come back. */
+.figurebox {
+	position: relative;
+	flex: 1 1 auto;
+	width: 100%;
+	min-height: var(--figure-h-min);
+	max-height: var(--figure-h-max);
+}
+.figurebox > svg.chart {
+	position: absolute;
+	inset: 0;
+	height: 100%;
 }
 .chart .axis text {
 	fill: var(--ink-3);
@@ -576,6 +820,19 @@ svg.chart {
 	stroke: var(--grid);
 	stroke-width: 1;
 }
+/* Right-edge series labels: direct labelling beats a legend once a chart carries many lines,
+   because it removes the colour→name lookup entirely. */
+.chart .endlab {
+	fill: var(--ink-2);
+	font-size: var(--text-caption);
+}
+.chart .endval {
+	fill: var(--ink-3);
+	font-variant-numeric: tabular-nums;
+}
+/* The one chart legend. Every chart that draws keys uses this markup (`.legend > .k > .sw`)
+   rather than styling its own, so swatch size, gap and type can't drift between charts.
+   `.below` is for charts that key underneath the plot instead of above it. */
 .legend {
 	display: flex;
 	gap: var(--space-8);
@@ -584,6 +841,10 @@ svg.chart {
 	color: var(--ink-2);
 	margin-bottom: var(--space-3);
 	flex-wrap: wrap;
+}
+.legend.below {
+	margin-bottom: 0;
+	margin-top: var(--gap-row);
 }
 .legend .k {
 	display: inline-flex;
@@ -594,6 +855,15 @@ svg.chart {
 	width: 11px;
 	height: 11px;
 	border-radius: var(--radius-xs);
+	flex: 0 0 auto;
+}
+/* A dashed series' key is drawn as a dashed RULE, not a solid block, so the key looks like the
+   mark it stands for. The dashes themselves come from the caller's background gradient, which is
+   where the series colour already lives. */
+.legend .sw.dash {
+	width: 16px;
+	height: 3px;
+	border-radius: 0;
 }
 .tooltip {
 	position: fixed;

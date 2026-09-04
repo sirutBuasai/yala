@@ -1,5 +1,7 @@
 // Small pure formatting helpers shared across components and charts.
 
+import { accountInfo } from '$lib/data/directory.svelte';
+
 export const MONTHS = [
 	'Jan',
 	'Feb',
@@ -19,6 +21,17 @@ export function money(n: number | null | undefined): string {
 	const r = Math.round(n || 0);
 
 	return (r < 0 ? '-$' : '$') + Math.abs(r).toLocaleString();
+}
+
+/**
+ * Money to the cent. For reconciliation figures the user has to match exactly — rounding an
+ * expected balance to whole dollars makes a penny-perfect entry look wrong.
+ */
+export function moneyExact(n: number | null | undefined): string {
+	const v = n || 0;
+	const digits = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+
+	return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString(undefined, digits);
 }
 
 export function moneyK(n: number | null | undefined): string {
@@ -51,31 +64,27 @@ export function esc(s: unknown): string {
 	);
 }
 
-/** Display-name overrides for account leaves whose acronym casing plain de-CamelCasing gets
- * wrong (e.g. `UsBankCash` → `US Bank Cash`). Empty by default; extend per your own accounts. */
-const ACCOUNT_ALIASES_OVERRIDE: Record<string, string> = {};
-
 /** The leaf of an account path — the segment after the last ":", or the whole name if none. */
 export function accountLeaf(name: string | null | undefined): string {
 	return name ? (String(name).split(':').pop() ?? '') : '';
 }
 
-/** Format a funding account for display: the leaf name (after the last ":"), de-CamelCased, with alias overrides applied. */
+/**
+ * An account's display name, as the ledger resolved it.
+ *
+ * A lookup, not a computation. The name comes from `meta.accounts` in `data.json`, where Python has
+ * already applied the naming rule — parse the CamelCase leaf, and if it overruns the 20-character
+ * budget, substitute the `bank_alias` / `account_alias` the ledger declares. Deriving it here as
+ * well would put the rule in two languages and let them drift.
+ *
+ * The fallback is the raw leaf rather than a second guess at formatting: the directory covers every
+ * declared account, so a miss means the account was created after this document was loaded. Showing
+ * the leaf makes that visible instead of papering over it with a name the ledger never agreed to.
+ */
 export function formatAccount(name: string | null | undefined): string {
 	if (!name) return '';
 
-	const leaf = accountLeaf(name);
-
-	if (ACCOUNT_ALIASES_OVERRIDE[leaf]) return ACCOUNT_ALIASES_OVERRIDE[leaf];
-
-	return (
-		leaf
-			// space between a lowercase/digit and an uppercase
-			.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-			// split a run of caps before a capitalized word
-			.replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
-			.trim()
-	);
+	return accountInfo(name)?.name ?? accountLeaf(name);
 }
 
 /** Format a "YYYY-MM" key as a full month label. */

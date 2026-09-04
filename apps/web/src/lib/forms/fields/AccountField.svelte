@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { addAccount, type CreatableAccountKind } from '$lib/data/load';
+	import { LEAF_MAX, validateLeaf } from '$lib/forms/validate';
 	import Select from '$lib/forms/fields/Select.svelte';
 
 	interface CreatableKind {
@@ -48,8 +49,13 @@
 
 	async function commit() {
 		const trimmed = leaf.trim();
-		if (!trimmed) {
-			err = 'Enter a name.';
+		// A category field lists leaves, so the duplicate check bites here; a funding field lists full
+		// account names, where the API is what rejects a name already open.
+		const problem =
+			validateLeaf(trimmed, `${label.toLowerCase()} name`) ??
+			(options.includes(trimmed) ? `${trimmed} already exists.` : null);
+		if (problem) {
+			err = problem;
 			return;
 		}
 		busy = true;
@@ -84,6 +90,7 @@
 				aria-label={`new ${label.toLowerCase()} name`}
 				bind:value={leaf}
 				placeholder="new name"
+				maxlength={LEAF_MAX}
 				disabled={busy}
 			/>
 			<button type="button" class="btn-mini" onclick={commit} disabled={busy}>Add</button>

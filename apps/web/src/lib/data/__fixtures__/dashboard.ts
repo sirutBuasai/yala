@@ -1,6 +1,6 @@
 // A small, valid DashboardData factory for unit tests. Returns a fresh object
 // each call so tests can mutate freely.
-import type { DashboardData, MonthMatrixRow } from '$lib/data/types';
+import type { DashboardData, MonthMatrixRow, NetWorthSnapshot } from '$lib/data/types';
 
 function matrix(byMonth: Record<number, { spent: Record<string, number>; income: number }>) {
 	const rows: MonthMatrixRow[] = [];
@@ -22,6 +22,10 @@ export function makeData(): DashboardData {
 			transaction_count: 4,
 			date_range: { start: '2024-12-05', end: '2025-01-20' },
 			categories: ['Grocery', 'Takeouts'],
+			accounts: {
+				'Assets:Cash:BankA': { name: 'Bank A', institution: 'Bank of Example' },
+				'Liabilities:CC:CardA': { name: 'Card A', institution: 'Bank of Example' }
+			},
 			domains: {
 				spending: true,
 				income: true
@@ -120,4 +124,74 @@ export function makeData(): DashboardData {
 			]
 		}
 	};
+}
+
+/**
+ * The base fixture plus a net-worth section and settings, for the Net Worth page's metrics.
+ *
+ * Figures are chosen so the growth decomposition is checkable by hand against the base fixture's
+ * `saved` rows: 2025 opens at the 2024-12 snapshot (3000) and closes at 6000, a change of 3000
+ * against a logged saving of 2254.5 — so "market & other" must come out at 745.5.
+ */
+export function makeNetWorthData(): DashboardData {
+	const snapshot = (
+		date: string,
+		nw: number,
+		liquid: number,
+		taxable: number,
+		advantaged: number,
+		liabilities = 0
+	): NetWorthSnapshot => ({
+		date,
+		assets: nw + liabilities,
+		liabilities,
+		net_worth: nw,
+		breakdown: { Liquid: liquid, Taxable: taxable, 'Tax-advantaged': advantaged }
+	});
+
+	const series = [
+		snapshot('2024-01-01', 1000, 600, 400, 0),
+		snapshot('2024-12-01', 3000, 1000, 1200, 800),
+		snapshot('2025-06-01', 6000, 1300, 2600, 2600, 500)
+	];
+
+	const data = makeData();
+	data.meta.domains.networth = true;
+	data.networth = {
+		current: series[2]!,
+		series,
+		accounts: [
+			{
+				account: 'Assets:Investments:Taxable:Big',
+				label: 'Big',
+				group: 'investment',
+				bucket: 'Taxable',
+				value: 3000
+			},
+			{ account: 'Assets:Cash:Bank', label: 'Bank', group: 'cash', bucket: 'Liquid', value: 2000 },
+			{
+				account: 'Assets:Investments:TaxAdvantaged:Plan',
+				label: 'Plan',
+				group: 'investment',
+				bucket: 'Tax-advantaged',
+				value: 1500
+			},
+			{
+				account: 'Liabilities:CC:CardA',
+				label: 'CardA',
+				group: 'liability',
+				bucket: 'liability',
+				value: -500
+			}
+		],
+		adjustments: []
+	};
+	data.settings = {
+		swr: 4,
+		real_return: 5,
+		retire_age: 60,
+		runway_target: 6,
+		birth_year: null
+	};
+	return data;
 }

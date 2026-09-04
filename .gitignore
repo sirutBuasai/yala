@@ -17,6 +17,10 @@ dist/
 
 # Never commit real data to the public repo
 *.beancount
+# Design mockups at the repo root are scratch working documents about REAL institutions and
+# accounts, which is exactly what this repo is meant not to carry. apps/web/mockups/ is tracked
+# because its sample data is fictional.
+/mockups/
 !apps/api/tests/fixtures/*.beancount
 !apps/api/tests/fixtures/**/*.beancount
 *.xlsx

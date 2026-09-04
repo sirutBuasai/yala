@@ -7,7 +7,7 @@
 	// column title) still get their own named token so intent stays explicit.
 	import '../../app.css';
 	import NavMenu from '$lib/nav/NavMenu.svelte';
-	import Pane from '$lib/layout/Pane.svelte';
+	import Pane from '$lib/ui/Pane.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
 	import { makeData } from '$lib/data/__fixtures__/dashboard';
 	import { build } from '$lib/data/catalog';

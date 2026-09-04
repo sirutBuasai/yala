@@ -32,9 +32,6 @@ BALANCE = "balance"
 PAD = "pad"
 
 SWEEP_META = "sweep_to"
-VENMO = CASH + "Venmo"
-VENMO_PASSTHROUGH = CASH + "Wealthfront"
-SWEEP_PAYEE = "venmo sweep"
 
 # Source-location keys beancount injects onto every directive.
 INTERNAL_META = frozenset({"filename", "lineno"})

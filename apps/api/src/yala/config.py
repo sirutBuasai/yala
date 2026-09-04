@@ -19,5 +19,3 @@ _DEFAULT_LEDGER = Path.home() / "personal_dev" / "yala-project" / "yala-private-
 
 LEDGER_DIR = Path(os.environ.get("YALA_LEDGER_DIR", _DEFAULT_LEDGER))
 MAIN_LEDGER = LEDGER_DIR / "main.beancount"
-ACCOUNTS_LEDGER = LEDGER_DIR / "accounts.beancount"
-INCOME_LEDGER = LEDGER_DIR / "income.beancount"

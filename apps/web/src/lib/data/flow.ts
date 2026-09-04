@@ -28,23 +28,41 @@ function distribute(
 	return out;
 }
 
-export function moneyFlow(data: DashboardData): Flow {
-	// Authoritative totals from the yearly rollup.
+/** Spending per category within one year, biggest first. */
+function yearCategories(data: DashboardData, year: number): { category: string; amount: number }[] {
+	const rows = data.years[String(year)]?.matrix ?? [];
+	const totals: Record<string, number> = {};
+	for (const row of rows) {
+		for (const [c, v] of Object.entries(row.spent)) totals[c] = (totals[c] ?? 0) + v;
+	}
+	return Object.entries(totals)
+		.filter(([, v]) => v > 0)
+		.map(([category, amount]) => ({ category, amount }))
+		.sort((a, b) => b.amount - a.amount);
+}
+
+/** Lifetime flow, or one year's when `year` is given. */
+export function moneyFlow(data: DashboardData, year?: number): Flow {
+	// Authoritative totals from the yearly rollup — one row when scoped to a year.
+	const rows =
+		year == null ? data.income.by_year : data.income.by_year.filter((r) => r.year === year);
 	let gross = 0;
 	let takeHome = 0;
 	let dedTotal = 0;
 	let conTotal = 0;
-	for (const iy of data.income.by_year) {
+	for (const iy of rows) {
 		gross += iy.gross;
 		takeHome += iy.take_home;
 		dedTotal += iy.deductions;
 		conTotal += iy.contributions;
 	}
 
-	// Breakdown proportions from the individual paychecks.
+	// Breakdown proportions from the individual paychecks in scope.
+	const prefix = year == null ? '' : `${year}-`;
 	const dedShares: Record<string, number> = {};
 	const conShares: Record<string, number> = {};
-	for (const month of Object.values(data.months)) {
+	for (const [key, month] of Object.entries(data.months)) {
+		if (prefix && !key.startsWith(prefix)) continue;
 		for (const p of month.paychecks) {
 			for (const [k, v] of Object.entries(p.deductions)) dedShares[k] = (dedShares[k] ?? 0) + v;
 			// Each contribution label (Roth401k / Trad401k / AfterTax401k / HSA …) is its own
@@ -55,7 +73,10 @@ export function moneyFlow(data: DashboardData): Flow {
 	const ded = distribute(dedShares, dedTotal, 'Deductions');
 	const con = distribute(conShares, conTotal, 'Contributions');
 
-	const cats = [...data.overview.all_time_by_category].sort((a, b) => b.amount - a.amount);
+	const cats =
+		year == null
+			? [...data.overview.all_time_by_category].sort((a, b) => b.amount - a.amount)
+			: yearCategories(data, year);
 	const spent = cats.reduce((a, c) => a + c.amount, 0);
 	const cashSavings = Math.max(0, takeHome - spent);
 

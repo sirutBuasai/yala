@@ -18,7 +18,6 @@ def test_env_var_overrides_ledger_dir(monkeypatch, tmp_path):
 
     assert cfg.LEDGER_DIR == tmp_path
     assert cfg.MAIN_LEDGER == tmp_path / "main.beancount"
-    assert cfg.ACCOUNTS_LEDGER == tmp_path / "accounts.beancount"
 
 
 def test_paths_derive_from_ledger_dir_by_default(monkeypatch):
@@ -26,4 +25,3 @@ def test_paths_derive_from_ledger_dir_by_default(monkeypatch):
     cfg = _reload()
 
     assert cfg.MAIN_LEDGER == cfg.LEDGER_DIR / "main.beancount"
-    assert cfg.ACCOUNTS_LEDGER == cfg.LEDGER_DIR / "accounts.beancount"

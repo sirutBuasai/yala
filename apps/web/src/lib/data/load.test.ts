@@ -8,9 +8,13 @@ import {
 	data,
 	deleteTransaction,
 	enableEditMode,
+	invalidateDerivedCache,
 	loadState,
+	getSettings,
 	loadViewData,
-	mode
+	mode,
+	networthAt,
+	setSetting
 } from '$lib/data/load';
 import { makeData } from '$lib/data/__fixtures__/dashboard';
 
@@ -93,5 +97,90 @@ describe('deleteTransaction', () => {
 	it('returns a friendly message when the API is unreachable', async () => {
 		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
 		expect(await deleteTransaction('id:x')).toContain('API unreachable');
+	});
+});
+
+describe('networthAt caching', () => {
+	beforeEach(() => invalidateDerivedCache());
+
+	it('fetches a date once and serves repeats from cache', async () => {
+		const f = mockFetchOnce({ accounts: [], adjustments: [], logged: {} });
+		vi.stubGlobal('fetch', f);
+
+		await networthAt('2026-07-01');
+		await networthAt('2026-07-01');
+		expect(f).toHaveBeenCalledTimes(1);
+	});
+
+	it('caches each date separately', async () => {
+		const f = mockFetchOnce({ accounts: [], adjustments: [], logged: {} });
+		vi.stubGlobal('fetch', f);
+
+		await networthAt('2026-07-01');
+		await networthAt('2026-06-01');
+		expect(f).toHaveBeenCalledTimes(2);
+	});
+
+	it('does not cache a failed read', async () => {
+		vi.stubGlobal('fetch', mockFetchOnce({ detail: 'bad date' }, false, 422));
+		expect(await networthAt('nope')).toBeNull();
+
+		const ok = mockFetchOnce({ accounts: [], adjustments: [], logged: {} });
+		vi.stubGlobal('fetch', ok);
+		await networthAt('nope');
+		expect(ok).toHaveBeenCalledTimes(1);
+	});
+
+	it('a write clears the cache, so the next read refetches', async () => {
+		const first = mockFetchOnce({ accounts: [], adjustments: [], logged: {} });
+		vi.stubGlobal('fetch', first);
+		await networthAt('2026-07-01');
+
+		// deleteTransaction goes through postJson, the single write choke point
+		vi.stubGlobal('fetch', mockFetchOnce({ ok: true }));
+		await deleteTransaction('id:x');
+
+		const after = mockFetchOnce({ accounts: [], adjustments: [], logged: {} });
+		vi.stubGlobal('fetch', after);
+		await networthAt('2026-07-01');
+		expect(after).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('getSettings', () => {
+	const body = { values: { swr: 4 }, specs: [{ key: 'swr' }] };
+
+	it('returns the payload when the API answers', async () => {
+		vi.stubGlobal('fetch', mockFetchOnce(body));
+		const { info, error } = await getSettings();
+
+		expect(error).toBeNull();
+		expect(info?.values.swr).toBe(4);
+	});
+
+	it('tells the user to restart the API when the endpoint is missing', async () => {
+		// A 404 here means the running API predates this build, not that a record is absent.
+		vi.stubGlobal('fetch', mockFetchOnce({}, false, 404));
+		const { info, error } = await getSettings();
+
+		expect(info).toBeNull();
+		expect(error).toContain('Restart');
+		expect(error).toContain('serve-api');
+	});
+
+	it('reports an unreachable API distinctly from a missing endpoint', async () => {
+		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
+		const { error } = await getSettings();
+
+		expect(error).toContain('unreachable');
+		expect(error).not.toContain('Restart');
+	});
+
+	it('surfaces a rejected value as the API worded it', async () => {
+		vi.stubGlobal(
+			'fetch',
+			mockFetchOnce({ detail: 'Withdrawal rate must be between 0.1 and 20' }, false, 422)
+		);
+		expect(await setSetting('swr', 99)).toBe('Withdrawal rate must be between 0.1 and 20');
 	});
 });

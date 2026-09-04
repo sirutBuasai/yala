@@ -3,6 +3,7 @@
 // via the :root[data-theme] swap in app.css — no JS palette object needed.
 
 import { writable } from 'svelte/store';
+import { accountInfo } from '$lib/data/directory.svelte';
 
 type ThemeMode = 'dark' | 'light';
 
@@ -27,6 +28,21 @@ export const CATEGORY_TOKEN: Record<string, string> = {
 /** CSS variable reference for a category's accent color. */
 export function categoryVar(category: string): string {
 	return `var(--${CATEGORY_TOKEN[category] ?? 'lav'})`;
+}
+
+/**
+ * The colour for an account's dot, as a CSS value.
+ *
+ * There is no palette here any more, and no institution list: the ledger declares a hex per
+ * institution (see `yala.ledger.institutions`) and the API resolves it per account, so adding an
+ * institution or recolouring one is a ledger edit with no code change and no name matching.
+ *
+ * The declared colour is used as-is in both themes, so choosing one that reads on the cream surface
+ * and the charcoal one alike is the chooser's call. The neutral swatch stands in for an account whose
+ * institution has no colour on file.
+ */
+export function accountVar(account: string | null | undefined): string {
+	return accountInfo(account)?.color ?? 'var(--inst-neutral)';
 }
 
 function initialMode(): ThemeMode {

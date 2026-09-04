@@ -10,6 +10,7 @@
 	import { money } from '$lib/utils/format';
 	import { sumValues } from '$lib/utils/num';
 	import RowList from '$lib/lists/RowList.svelte';
+	import Amount from '$lib/ui/Amount.svelte';
 
 	interface Props {
 		paychecks: PaycheckOut[];
@@ -22,6 +23,8 @@
 		fields?: PaycheckField[];
 		/** Fix the list to this many rows tall, then scroll (see RowList). */
 		fixedRows?: number;
+		/** Remembers this list's expanded state (see RowList). */
+		prefKey?: string;
 	}
 	let {
 		paychecks,
@@ -29,7 +32,8 @@
 		onedit,
 		showDate = true,
 		fields = ['gross', 'takehome'],
-		fixedRows
+		fixedRows,
+		prefKey
 	}: Props = $props();
 
 	const LABELS: Record<PaycheckField, string> = {
@@ -61,9 +65,10 @@
 		}
 	}
 
-	// The breakout figures live in one grid cell (a flex row) rather than one track each, so they
-	// collapse as a unit — and hide entirely — when the pane is too narrow to read them.
-	const cols = $derived(`${showDate ? '34px ' : ''}10px 1fr auto 74px`);
+	// The breakout figures live in ONE grid cell (a flex row) rather than one track each, so they
+	// collapse as a unit when the pane is too narrow to read them. RowList drops the whole cell
+	// below its own threshold; this list also thins the figures earlier, since several of them need
+	// more room than a single metadata column does.
 </script>
 
 <div class="pc">
@@ -71,10 +76,11 @@
 		items={paychecks}
 		{edit}
 		{onedit}
-		{cols}
+		columnTracks="auto"
 		{fixedRows}
+		{prefKey}
 		density="comfortable"
-		dotColor={() => 'var(--saved)'}
+		dotColor={() => 'var(--role-income)'}
 		dateOf={showDate ? (p) => p.date : undefined}
 	>
 		{#snippet main(p)}
@@ -91,7 +97,7 @@
 			</span>
 		{/snippet}
 		{#snippet amount(p)}
-			<span class="amt pos">+{money(p.net)}</span>
+			<Amount value={p.net} sign="credit" />
 		{/snippet}
 	</RowList>
 </div>
@@ -100,6 +106,7 @@
 	.pc {
 		/* size-container so the figure cell can hide when the pane is too narrow for it */
 		container-type: inline-size;
+		min-width: 0;
 	}
 	.title {
 		font-size: var(--text-row);
@@ -136,14 +143,5 @@
 	.fval {
 		font-size: var(--text-caption);
 		font-variant-numeric: tabular-nums;
-	}
-	.amt {
-		text-align: right;
-		font-variant-numeric: tabular-nums;
-		font-weight: var(--fw-semibold);
-		font-size: var(--text-row);
-	}
-	.pos {
-		color: var(--good-text);
 	}
 </style>

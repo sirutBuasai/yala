@@ -6,6 +6,8 @@ import pytest
 from pydantic import ValidationError
 
 from yala.schema import (
+    SCHEMA_VERSION,
+    AccountInfo,
     CategoryAmount,
     DashboardData,
     DateRange,
@@ -26,7 +28,7 @@ from yala.schema import (
 def example_data() -> DashboardData:
     """A small, fully-fake document (2 years, a couple months) to exercise the contract."""
     return DashboardData(
-        schema_version=1,
+        schema_version=SCHEMA_VERSION,
         generated_at="2025-01-15T12:00:00Z",
         currency="USD",
         meta=Meta(
@@ -35,6 +37,10 @@ def example_data() -> DashboardData:
             transaction_count=3,
             date_range=DateRange(start="2024-12-05", end="2025-01-20"),
             categories=["Grocery", "Takeouts"],
+            accounts={
+                "Liabilities:CC:CardA": AccountInfo(name="Card A", institution="Bank of Example"),
+                "Expenses:Grocery": AccountInfo(name="Grocery"),
+            },
             domains=Domains(
                 spending=True,
                 income=True,

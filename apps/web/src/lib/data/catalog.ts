@@ -6,8 +6,9 @@
 import type { DashboardData } from '$lib/data/types';
 import type { Primitive, PrimitiveKind } from './primitives';
 import { MONEY } from './primitives';
-import { categorical, whereItWent } from './categorical';
+import { categorical, categoryDeviation, whereItWent } from './categorical';
 import {
+	categorySpendByYear,
 	cumulativeSaved,
 	incomeByMonth,
 	incomeByYear,
@@ -20,16 +21,26 @@ import { moneyFlow } from './flow';
 import { categoryByMonth } from './matrix';
 import { paychecks } from './table';
 import {
-	netWorthAdjustments,
-	netWorthAllocation,
-	netWorthAllocationTrend,
-	netWorthByAccount,
+	balanceGrowth,
+	coastFi,
+	fiNumber,
+	fiProgress,
+	liquidRunway,
+	netWorthAccounts,
+	netWorthAllocationShare,
 	netWorthByMonth,
-	netWorthInvested,
-	netWorthLiquid,
+	netWorthChange,
+	netWorthLiabilities,
 	netWorthMonthlyTable,
+	netWorthOther,
+	netWorthSaved,
 	netWorthScalar,
-	netWorthTrend
+	netWorthThresholds,
+	netWorthVsAssets,
+	netWorthYearTable,
+	savedVsOther,
+	topAccountShare,
+	yearsOfFreedom
 } from './networth';
 import { type Scope, type ScopeLevel, scopeYear } from './scope';
 import {
@@ -43,6 +54,7 @@ import {
 	extremum,
 	ratio,
 	signed,
+	vsTypical,
 	type Countable,
 	type ExtremumOf,
 	type Measure
@@ -127,6 +139,23 @@ const CHART_DEFS: DataDef[] = [
 		build: (data, scope) => categoryByMonth(data, scopeYear(data, scope))
 	},
 	{
+		id: 'spending.category_by_year',
+		label: 'Category by year',
+		kind: 'multiseries',
+		scopes: ['all'],
+		build: (data) => categorySpendByYear(data)
+	},
+	{
+		id: 'spending.vs_average',
+		label: 'Unusual this month',
+		kind: 'categorical',
+		scopes: ['month'],
+		build: (data, scope) =>
+			scope.monthKey
+				? categoryDeviation(data, scope.monthKey)
+				: { kind: 'categorical', unit: MONEY(data.currency), points: [] }
+	},
+	{
 		id: 'income.by_month',
 		label: 'Income by month',
 		kind: 'series',
@@ -180,15 +209,9 @@ const CHART_DEFS: DataDef[] = [
 		id: 'money.flow',
 		label: 'Money flow',
 		kind: 'flow',
-		scopes: ['all'],
-		build: (data) => moneyFlow(data)
-	},
-	{
-		id: 'networth.trend',
-		label: 'Net worth over time',
-		kind: 'multiseries',
-		scopes: ['all'],
-		build: (data) => netWorthTrend(data)
+		scopes: ['all', 'year'],
+		build: (data, scope) =>
+			moneyFlow(data, scope.level === 'year' ? scopeYear(data, scope) : undefined)
 	},
 	{
 		id: 'networth.by_month',
@@ -206,39 +229,55 @@ const CHART_DEFS: DataDef[] = [
 		build: (data, scope) => netWorthMonthlyTable(data, scopeYear(data, scope))
 	},
 	{
-		id: 'networth.allocation',
-		label: 'Allocation',
-		kind: 'categorical',
-		scopes: ['all'],
-		build: (data) => netWorthAllocation(data)
-	},
-	{
-		id: 'networth.allocation_trend',
-		label: 'Allocation over time',
+		id: 'networth.vs_assets',
+		label: 'Net worth & assets over time',
 		kind: 'multiseries',
 		scopes: ['all'],
-		build: (data) => netWorthAllocationTrend(data)
+		build: (data) => netWorthVsAssets(data)
 	},
 	{
-		id: 'networth.investments',
-		label: 'Investments by account',
+		id: 'networth.thresholds',
+		label: 'Progress to thresholds',
+		kind: 'bullet',
+		scopes: ['all'],
+		build: (data) => netWorthThresholds(data)
+	},
+	{
+		id: 'networth.liabilities_trend',
+		label: 'Liabilities over time',
+		kind: 'series',
+		scopes: ['all', 'year'],
+		build: (data, scope) =>
+			netWorthLiabilities(data, scope.level === 'year' ? scopeYear(data, scope) : undefined)
+	},
+	{
+		id: 'networth.allocation_share',
+		label: 'Allocation mix over time',
+		kind: 'multiseries',
+		scopes: ['all', 'year'],
+		build: (data, scope) =>
+			netWorthAllocationShare(data, scope.level === 'year' ? scopeYear(data, scope) : undefined)
+	},
+	{
+		id: 'networth.accounts',
+		label: 'Where the money sits',
 		kind: 'categorical',
 		scopes: ['all'],
-		build: (data) => netWorthByAccount(data, 'investment')
+		build: (data) => netWorthAccounts(data)
 	},
 	{
-		id: 'networth.cash',
-		label: 'Cash by account',
-		kind: 'categorical',
+		id: 'networth.saved_vs_other',
+		label: 'You vs the market, by year',
+		kind: 'multiseries',
 		scopes: ['all'],
-		build: (data) => netWorthByAccount(data, 'cash')
+		build: (data) => savedVsOther(data)
 	},
 	{
-		id: 'networth.adjustments',
-		label: 'Untracked adjustments',
+		id: 'networth.year_table',
+		label: 'Year by year',
 		kind: 'table',
 		scopes: ['all'],
-		build: (data) => netWorthAdjustments(data)
+		build: (data) => netWorthYearTable(data)
 	}
 ];
 
@@ -254,19 +293,78 @@ const NETWORTH_STATS: DataDef[] = [
 		scopes: ['all'] as ScopeLevel[],
 		build: (data: DashboardData) => netWorthScalar(data, s.field, s.label)
 	})),
+	// Scope-aware: the same three figures answer "where am I and how did I get here" for a year or
+	// for the whole history, so the page passes its range rather than having two sets of ids.
 	{
-		id: 'networth.invested',
-		label: 'Invested',
+		id: 'networth.change',
+		label: 'Net worth',
 		kind: 'scalar',
-		scopes: ['all'],
-		build: (data) => netWorthInvested(data)
+		scopes: ['all', 'year'],
+		build: (data, scope) => netWorthChange(data, scope)
 	},
 	{
-		id: 'networth.liquid',
-		label: 'Liquid',
+		id: 'networth.saved',
+		label: 'You saved',
+		kind: 'scalar',
+		scopes: ['all', 'year'],
+		build: (data, scope) => netWorthSaved(data, scope)
+	},
+	{
+		id: 'networth.other',
+		label: 'Market & other',
+		kind: 'scalar',
+		scopes: ['all', 'year'],
+		build: (data, scope) => netWorthOther(data, scope)
+	},
+	// Derived from your own spending; only the rate and the age come from settings.
+	{
+		id: 'networth.fi_number',
+		label: 'FI number',
 		kind: 'scalar',
 		scopes: ['all'],
-		build: (data) => netWorthLiquid(data)
+		build: (data) => fiNumber(data)
+	},
+	{
+		id: 'networth.fi_progress',
+		label: 'FI progress',
+		kind: 'scalar',
+		scopes: ['all'],
+		build: (data) => fiProgress(data)
+	},
+	{
+		id: 'networth.coast_fi',
+		label: 'Coast FI',
+		kind: 'scalar',
+		scopes: ['all'],
+		build: (data) => coastFi(data)
+	},
+	{
+		id: 'networth.years_of_freedom',
+		label: 'Years of freedom',
+		kind: 'scalar',
+		scopes: ['all'],
+		build: (data) => yearsOfFreedom(data)
+	},
+	{
+		id: 'networth.runway',
+		label: 'Liquid runway',
+		kind: 'scalar',
+		scopes: ['all'],
+		build: (data) => liquidRunway(data)
+	},
+	{
+		id: 'networth.balance_growth',
+		label: 'Balance growth',
+		kind: 'scalar',
+		scopes: ['all'],
+		build: (data) => balanceGrowth(data)
+	},
+	{
+		id: 'networth.top_account',
+		label: 'Top account',
+		kind: 'scalar',
+		scopes: ['all'],
+		build: (data) => topAccountShare(data)
 	}
 ];
 
@@ -365,6 +463,20 @@ const CHANGES: {
 	}
 ];
 
+// A month against its own trailing norm — the "is this month normal?" tile.
+const VS_TYPICAL: DataDef[] = [
+	scalarDef('spending.vs_typical', 'vs your average', ['month'], (data, scope) =>
+		scope.monthKey
+			? vsTypical(data, scope.monthKey, 'spending', { label: 'vs your average' })
+			: {
+					kind: 'scalar',
+					unit: MONEY(data.currency),
+					label: 'vs your average',
+					value: null
+				}
+	)
+];
+
 const STAT_DEFS: DataDef[] = [
 	...AMOUNTS.map((a) =>
 		scalarDef(a.id, a.label, ALL_SCOPES, (data, scope) => {
@@ -406,7 +518,7 @@ const STAT_DEFS: DataDef[] = [
 	)
 ];
 
-export const CATALOG: DataDef[] = [...CHART_DEFS, ...STAT_DEFS, ...NETWORTH_STATS];
+export const CATALOG: DataDef[] = [...CHART_DEFS, ...STAT_DEFS, ...VS_TYPICAL, ...NETWORTH_STATS];
 
 export const CATALOG_BY_ID: Record<string, DataDef> = Object.fromEntries(
 	CATALOG.map((d) => [d.id, d])

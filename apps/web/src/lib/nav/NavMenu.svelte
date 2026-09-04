@@ -51,7 +51,8 @@
 	>
 		<div class="head">
 			<span id="sidebar-title" class="serif title">Yala</span>
-			<button class="close" aria-label="Close menu" onclick={close}>✕</button>
+			<!-- data-dismiss so the focus trap opens the sidebar on its first LINK, not on close. -->
+			<button class="close" data-dismiss aria-label="Close menu" onclick={close}>✕</button>
 		</div>
 		<nav class="links">
 			{#each links as link (link.href)}
