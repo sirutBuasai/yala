@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """End-product serve: clean -> generate data.json -> build site -> serve.
 
-serve.py web  [--port N] [--worktree DIR]   view-only static site (npm preview; default 4173)
-serve.py api  [--port N] [--worktree DIR]   edit mode: FastAPI site + write endpoints (default 8000)
+serve.py web  [--port N] [--worktree DIR]   the built snapshot alone (npm preview; default 4173)
+serve.py api  [--port N] [--worktree DIR]   snapshot + the write API (FastAPI; default 8000)
+
+The frontend has no view/edit modes to pick between: it tries the API and falls back to the
+snapshot, reporting which it got. So the only difference here is whether an API is running —
+`web` is how you see what a hosted copy looks like.
 
 --worktree points the whole pipeline (data.json, built site, and the yala python package) at a
 git worktree, so you can serve a feature branch without a full per-worktree install.
@@ -44,7 +48,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         nargs="?",
         default="web",
         choices=("web", "api"),
-        help="web = view-only static preview; api = edit mode (FastAPI). Default: web.",
+        help="web = the snapshot alone; api = snapshot + the write API (FastAPI). Default: web.",
     )
     parser.add_argument(
         "--port",
@@ -107,10 +111,10 @@ def main(argv: list[str]) -> None:
     run("npm", "run", "build", cwd=web)
 
     if mode == "web":
-        print(f"==> Serve view-only (http://localhost:{port})")
+        print(f"==> Serve the snapshot alone, no write API (http://localhost:{port})")
         run("npm", "run", "preview", "--", "--port", str(port), cwd=web)
     else:  # api — the only other choice argparse allows
-        print(f"==> Serve edit mode (http://127.0.0.1:{port})")
+        print(f"==> Serve with the write API (http://127.0.0.1:{port})")
         os.environ["YALA_API_PORT"] = str(port)  # read by yala.api's uvicorn launch
         run(VENV_PY, "-m", "yala.api", cwd=root)
 

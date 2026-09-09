@@ -1,5 +1,9 @@
 <script lang="ts">
-	// One "add an account" panel, used for banks, credit cards and investments.
+	// The body of an "add an account" pane, used for banks, credit cards and investments.
+	//
+	// Presentational: it has no pane of its own, so the view places and titles it (see Manage). That
+	// keeps this file testable without a board around it, and it is the same seam that lets the folded
+	// layout reuse it unchanged.
 	//
 	// The three differ in whether the account has a product half, what the placeholders say, and
 	// whether extra controls (subtree, share/payroll flags) ride along; those are props and a snippet.
@@ -15,12 +19,9 @@
 	import { SaveState } from '$lib/forms/saveState.svelte';
 	import { problems, validateName, validateOptionalName } from '$lib/forms/validate';
 	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
-	import Panel from '$lib/ui/Panel.svelte';
 	import NamingFields from '$lib/views/manage/NamingFields.svelte';
 
 	interface Props {
-		title: string;
-		cap?: string;
 		/** False for cash accounts, which are named by institution alone. */
 		withAccountName?: boolean;
 		institutionPlaceholder?: string;
@@ -36,8 +37,6 @@
 		open: (naming: AccountNaming) => Promise<OpenedAccount>;
 	}
 	let {
-		title,
-		cap,
 		withAccountName = true,
 		institutionPlaceholder,
 		accountNamePlaceholder,
@@ -91,24 +90,22 @@
 	}
 </script>
 
-<Panel {title} {cap}>
-	{@render extra?.()}
-	<NamingFields
-		bind:institution
-		bind:accountName
-		bind:bankAlias
-		bind:accountAlias
-		{withAccountName}
-		{institutionPlaceholder}
-		{accountNamePlaceholder}
-		{accountAliasPlaceholder}
-		disabled={save.busy}
-	/>
-	<div class="actions">
-		<button class="btn-primary" disabled={save.busy} onclick={submit}>Add</button>
-	</div>
-	<SaveFeedback {save} />
-</Panel>
+{@render extra?.()}
+<NamingFields
+	bind:institution
+	bind:accountName
+	bind:bankAlias
+	bind:accountAlias
+	{withAccountName}
+	{institutionPlaceholder}
+	{accountNamePlaceholder}
+	{accountAliasPlaceholder}
+	disabled={save.busy}
+/>
+<div class="actions">
+	<button class="btn-primary" disabled={save.busy} onclick={submit}>Add</button>
+</div>
+<SaveFeedback {save} />
 
 <style>
 	.actions {

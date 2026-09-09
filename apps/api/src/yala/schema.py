@@ -177,6 +177,53 @@ class NetWorthSection(_Base):
     adjustments: list[NetWorthAdjustment]  # per-account untracked-flow sanity check
 
 
+class PayrollOption(_Base):
+    """One selectable paycheck line, scoped to an employer (null = offered by every employer)."""
+
+    kind: Literal["deduction", "contribution"]
+    label: str
+    employer: str | None
+    account: str
+
+
+class AccountLists(_Base):
+    """The pickable account sets the entry forms and the Manage panels choose from.
+
+    Snapshotted into ``data.json`` as well as served live from ``/api/accounts`` (both from one
+    builder function) so the forms still render — and Manage still lists what you have — when the
+    local API is down. Writes are refused by the frontend's single write guard, not by an absent
+    list: a form that vanishes reads as a missing feature rather than as an unreachable server.
+    """
+
+    spending_categories: list[str]
+    funding_accounts: list[str]
+    employers: list[str]
+    payroll_options: list[PayrollOption]
+    cash_accounts: list[str]
+    credit_accounts: list[str]
+    investment_accounts: list[str]
+    balance_accounts: list[str]
+    liability_accounts: list[str]
+    sweeps: dict[str, str]  # passthrough account -> its sweep destination
+
+
+class SettingField(_Base):
+    """The spec behind one setting: how the form names it, bounds it, and explains it.
+
+    Snapshotted alongside the values so the settings form renders with no API running — the same
+    rule every other form follows. Writing one still needs the API, and the frontend's single write
+    guard is what says so.
+    """
+
+    key: str
+    label: str
+    kind: Literal["percent", "age", "year", "months"]
+    min: float
+    max: float
+    default: float | None  # null = no sensible default; dependent features stay hidden
+    help: str
+
+
 class SettingsSection(_Base):
     """Effective user settings: what the ledger states, else the built-in default.
 
@@ -204,6 +251,8 @@ class DashboardData(_Base):
     income: IncomeSection
     networth: NetWorthSection | None = None
     settings: SettingsSection | None = None
+    setting_specs: list[SettingField] | None = None
+    account_lists: AccountLists | None = None
 
 
 def json_schema() -> dict:

@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
-import type { AccountsInfo } from '$lib/data/load';
 import PaycheckForm from '$lib/entries/paycheck/PaycheckForm.svelte';
+import { makeAccounts } from '$lib/data/__fixtures__/dashboard';
 
-const accounts: AccountsInfo = {
-	spending_categories: [],
+const accounts = makeAccounts({
 	funding_accounts: ['Assets:Cash:Bank1'],
 	employers: ['Employer1'],
 	payroll_options: [
@@ -17,9 +16,8 @@ const accounts: AccountsInfo = {
 			account: 'Assets:Investments:TaxAdvantaged:Employer401k'
 		}
 	],
-	cash_accounts: ['Assets:Cash:Bank1'],
-	credit_accounts: []
-};
+	cash_accounts: ['Assets:Cash:Bank1']
+});
 
 function okFetch() {
 	return vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true }) });

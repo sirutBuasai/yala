@@ -89,6 +89,27 @@ export type RealReturn = number;
 export type RetireAge = number;
 export type RunwayTarget = number;
 export type BirthYear = number | null;
+export type SettingSpecs = SettingField[] | null;
+export type Key = string;
+export type Label2 = string;
+export type Kind = 'percent' | 'age' | 'year' | 'months';
+export type Min = number;
+export type Max = number;
+export type Default = number | null;
+export type Help = string;
+export type SpendingCategories = string[];
+export type FundingAccounts = string[];
+export type Employers = string[];
+export type Kind1 = 'deduction' | 'contribution';
+export type Label3 = string;
+export type Employer1 = string | null;
+export type Account2 = string;
+export type PayrollOptions = PayrollOption[];
+export type CashAccounts = string[];
+export type CreditAccounts = string[];
+export type InvestmentAccounts = string[];
+export type BalanceAccounts = string[];
+export type LiabilityAccounts = string[];
 
 export interface DashboardData {
 	schema_version: SchemaVersion;
@@ -101,6 +122,8 @@ export interface DashboardData {
 	income: IncomeSection;
 	networth?: NetWorthSection | null;
 	settings?: SettingsSection | null;
+	setting_specs?: SettingSpecs;
+	account_lists?: AccountLists | null;
 }
 /**
  * This interface was referenced by `DashboardData`'s JSON-Schema
@@ -350,4 +373,61 @@ export interface SettingsSection {
 	retire_age: RetireAge;
 	runway_target: RunwayTarget;
 	birth_year?: BirthYear;
+}
+/**
+ * The spec behind one setting: how the form names it, bounds it, and explains it.
+ *
+ * Snapshotted alongside the values so the settings form renders with no API running — the same
+ * rule every other form follows. Writing one still needs the API, and the frontend's single write
+ * guard is what says so.
+ *
+ * This interface was referenced by `DashboardData`'s JSON-Schema
+ * via the `definition` "SettingField".
+ */
+export interface SettingField {
+	key: Key;
+	label: Label2;
+	kind: Kind;
+	min: Min;
+	max: Max;
+	default: Default;
+	help: Help;
+}
+/**
+ * The pickable account sets the entry forms and the Manage panels choose from.
+ *
+ * Snapshotted into ``data.json`` as well as served live from ``/api/accounts`` (both from one
+ * builder function) so the forms still render — and Manage still lists what you have — when the
+ * local API is down. Writes are refused by the frontend's single write guard, not by an absent
+ * list: a form that vanishes reads as a missing feature rather than as an unreachable server.
+ *
+ * This interface was referenced by `DashboardData`'s JSON-Schema
+ * via the `definition` "AccountLists".
+ */
+export interface AccountLists {
+	spending_categories: SpendingCategories;
+	funding_accounts: FundingAccounts;
+	employers: Employers;
+	payroll_options: PayrollOptions;
+	cash_accounts: CashAccounts;
+	credit_accounts: CreditAccounts;
+	investment_accounts: InvestmentAccounts;
+	balance_accounts: BalanceAccounts;
+	liability_accounts: LiabilityAccounts;
+	sweeps: Sweeps;
+}
+/**
+ * One selectable paycheck line, scoped to an employer (null = offered by every employer).
+ *
+ * This interface was referenced by `DashboardData`'s JSON-Schema
+ * via the `definition` "PayrollOption".
+ */
+export interface PayrollOption {
+	kind: Kind1;
+	label: Label3;
+	employer: Employer1;
+	account: Account2;
+}
+export interface Sweeps {
+	[k: string]: string;
 }

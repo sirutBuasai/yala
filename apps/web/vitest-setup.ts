@@ -1,7 +1,24 @@
 // Global test setup: jest-dom matchers + DOM cleanup between tests.
 import '@testing-library/jest-dom/vitest';
-import { afterEach } from 'vitest';
+import { afterEach, beforeEach } from 'vitest';
 import { cleanup } from '@testing-library/svelte';
+import { live } from './src/lib/data/load';
+
+// jsdom has no ResizeObserver, which `bind:clientWidth` and the grid's fitted-pane measurement both
+// need. A no-op stub: nothing in jsdom has a layout to observe anyway, so the grid renders folded —
+// which is the right thing for a component test, and the geometry rules have their own pure tests.
+class NoopResizeObserver implements ResizeObserver {
+	observe() {}
+	unobserve() {}
+	disconnect() {}
+}
+globalThis.ResizeObserver ??= NoopResizeObserver;
+
+// Mark the API as reachable. Without this the SINGLE write guard in `load.ts` refuses every POST
+// before it is made, and any test that asserts on a request body sees no request at all.
+beforeEach(() => {
+	live.set(true);
+});
 
 // Node ≥22 exposes an experimental `localStorage` global that warns unless `--localstorage-file`
 // is passed. App code (theme, view-mode persistence) reads localStorage during tests, so install

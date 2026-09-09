@@ -11,7 +11,7 @@ const opened = (name: string) => ({ account: `Assets:Cash:${name}`, name, error:
 
 function panel(props: Record<string, unknown> = {}) {
 	const open = vi.fn().mockResolvedValue(opened('BankOfExample'));
-	render(AddAccountPanel, { props: { title: 'Add a bank account', open, ...props } });
+	render(AddAccountPanel, { props: { open, ...props } });
 	return open;
 }
 

@@ -20,12 +20,15 @@
 	const rows = $derived([...items].sort((a, b) => b.value - a.value));
 	const sum = $derived(total ?? rows.reduce((a, r) => a + r.value, 0));
 
-	// Measure the width (as the bar/line charts do) so the labels and value text keep a constant
+	// Measured on both axes (as the bar/line charts are) so the labels and value text keep a constant
 	// on-screen size instead of shrinking with the pane — a fixed viewBox made these unreadable in
 	// a third-width card.
 	let boxW = $state(0);
+	let boxH = $state(0);
 	const W = $derived(boxW || 520);
-	const rowH = 29;
+	/** Rows share the pane's height so a tall pane has no empty band under the last bar, down to a
+	    floor where a row stops being a readable bar with a label beside it. */
+	const rowH = $derived(boxH ? Math.max(24, (boxH - 4) / Math.max(1, rows.length)) : 29);
 	// Both gutters scale with the box between a readable floor and a ceiling that stops them eating
 	// the bars: a third-width card used to clip its row names against a constant 112px gutter, and a
 	// full-width one wasted the same 112px on short ones.
@@ -50,7 +53,7 @@
 	);
 </script>
 
-<div class="hbox" bind:clientWidth={boxW}>
+<div class="figurebox" bind:clientWidth={boxW} bind:clientHeight={boxH}>
 	{#if rows.length}
 		<svg class="chart" viewBox="0 0 {W} {H}" role="img" aria-label={label}>
 			{#each rows as d, i (d.label)}
@@ -86,11 +89,3 @@
 		<Empty>No data.</Empty>
 	{/if}
 </div>
-
-<style>
-	/* Width-only measurement: height still comes from the row count, so the pane grows with the
-	   data instead of the chart being stretched to fill it. */
-	.hbox {
-		width: 100%;
-	}
-</style>

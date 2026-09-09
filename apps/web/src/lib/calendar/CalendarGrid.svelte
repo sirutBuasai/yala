@@ -101,6 +101,9 @@
 		display: none;
 	}
 	.cal {
+		/* Grow into whatever height the pane has: the `1fr` rows below then share it, so a tall pane
+		   gets taller day cells rather than a band of empty space under the last week. */
+		flex: 1 1 auto;
 		--sel: var(--lav);
 		--pend: var(--gold);
 		/* One month needs five week rows, the next needs six. Floor the grid at six rows' worth and let

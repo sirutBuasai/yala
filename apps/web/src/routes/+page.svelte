@@ -1,24 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import '../app.css';
-	import {
-		data,
-		accounts,
-		mode,
-		loadState,
-		loadViewData,
-		enableEditMode,
-		refreshEditData
-	} from '$lib/data/load';
+	import { data, accounts, live, loadState, loadData, refreshData } from '$lib/data/load';
 	import HomeView from '$lib/views/home/Home.svelte';
 	import ActivityView from '$lib/views/activity/Activity.svelte';
 	import NetWorthView from '$lib/views/networth/NetWorth.svelte';
 	import ManageView from '$lib/views/manage/Manage.svelte';
 	import ThemeToggle from '$lib/nav/ThemeToggle.svelte';
-	import EditToggle from '$lib/nav/EditToggle.svelte';
 	import Tooltip from '$lib/overlay/Tooltip.svelte';
 	import NavMenu from '$lib/nav/NavMenu.svelte';
 	import Segmented from '$lib/nav/Segmented.svelte';
+	import Banner from '$lib/ui/Banner.svelte';
+	import ArrangeToggle from '$lib/layout/grid/ArrangeToggle.svelte';
+	import { GridEnv } from '$lib/layout/grid/env.svelte';
+	import { setGridEnv } from '$lib/layout/grid/context';
 	import { number, oneOf, Pref, record } from '$lib/utils/persist.svelte';
 
 	const TABS = [
@@ -33,32 +28,16 @@
 	// each tab keeps its own key — so this page no longer owns any scope state.
 	const tabPref = new Pref<Tab>('tab', 'home', oneOf(TABS.map((t) => t.id)));
 
-	let hint = $state('');
+	// The pane grid's environment: how wide the content column actually is, and whether the user is
+	// arranging. Owned here because both are page-wide, and provided by context so the header's toggle
+	// and the board itself can't disagree about them.
+	const env = new GridEnv();
+	setGridEnv(env);
 
-	const edit = $derived($mode === 'edit');
+	/** Dismissed for this visit. The banner is a standing fact, so it comes back on a reload. */
+	let bannerClosed = $state(false);
 
-	// Persist edit/view mode so a refresh, a logo click, or leaving to /dev and back keeps it.
-	const modePref = new Pref<'edit' | 'view' | ''>('mode', '', oneOf(['edit', 'view'] as const));
-
-	onMount(async () => {
-		// Restore the last-used mode. Enter edit only when the user was last editing, or has no
-		// saved preference (first visit prefers edit if the local API is up). If they explicitly
-		// chose view, stay in view even when the API is reachable. Edit always falls back to view
-		// when the API is unreachable.
-		if (modePref.value === 'view') {
-			await loadViewData();
-		} else if (!(await enableEditMode())) {
-			await loadViewData();
-		}
-	});
-
-	// The preference records what the user ASKED for, not what they got. Recording the resolved mode
-	// instead made a transient failure permanent: load the page while the API is restarting and edit
-	// mode falls back to view, which then persisted as if it had been chosen — so every later load
-	// took the "they explicitly chose view" branch and never retried the API again.
-	function rememberMode(chosen: 'edit' | 'view'): void {
-		modePref.value = chosen;
-	}
+	onMount(loadData);
 
 	// --- scroll offset per tab ---
 	//
@@ -128,6 +107,9 @@
 	function switchTab(next: Tab) {
 		flush(); // the tab being left, while `tabPref` still names it
 		hold = panelEl?.offsetHeight ?? null;
+		// Arranging deliberately SURVIVES the switch: laying the app out is one job across several
+		// boards, and having to re-enter it per tab made that job four jobs. Nothing is lost by leaving
+		// — each board commits on every gesture, so the one you were on is already saved.
 		tabPref.value = next;
 		restore(next);
 	}
@@ -140,13 +122,8 @@
 		restore(tabPref.value);
 	});
 
-	function showHint(msg: string) {
-		hint = msg;
-		setTimeout(() => (hint = ''), 7000);
-	}
-
 	function onsaved() {
-		void refreshEditData();
+		void refreshData();
 	}
 </script>
 
@@ -156,17 +133,19 @@
 
 <a class="skip" href="#view-panel">Skip to content</a>
 
-<div class="wrap">
-	<NavMenu />
+<!-- The grid measures itself from this element: its content box IS the board's width, so the two
+     can't disagree about whether the full 48 columns fit. -->
+<div class="wrap" bind:clientWidth={env.width}>
 	<header class="top">
 		<div class="left">
+			<NavMenu />
 			<a href="/" class="brand">
 				<span class="dot"></span>
 				<h1 class="serif">Yala</h1>
 			</a>
 			<span class="cap">
 				{#if $data}
-					{edit ? 'live · editing' : 'personal finance'} ·
+					{$live ? 'live' : 'snapshot'} ·
 					{$data.meta.transaction_count.toLocaleString()} txns ·
 					{$data.meta.years[0]}–{$data.meta.years[$data.meta.years.length - 1]}
 				{:else}
@@ -185,7 +164,7 @@
 				elevated
 			/>
 			<div class="tgls">
-				<EditToggle onhint={showHint} onchosen={rememberMode} />
+				<ArrangeToggle />
 				<ThemeToggle />
 			</div>
 		</div>
@@ -193,15 +172,25 @@
 
 	<div aria-live="polite" aria-atomic="true">
 		{#if $loadState.status === 'loading'}
-			<div class="banner">Loading <code>data.json</code>…</div>
+			<Banner>Loading <code>data.json</code>…</Banner>
 		{:else if $loadState.status === 'error'}
-			<div class="banner" role="alert">{$loadState.message}</div>
-		{/if}
-
-		{#if hint}
-			<div class="banner" role="status">{hint}</div>
+			<Banner role="alert">{$loadState.message}</Banner>
 		{/if}
 	</div>
+
+	<!-- A standing notice, not a transient one: the local API is either there or it isn't, and every
+	     edit affordance on the page stays visible either way. The banner explains why a save will be
+	     refused, and the single write guard in `load.ts` is what actually refuses it. -->
+	{#if $loadState.status === 'ready' && !$live && !bannerClosed}
+		<Banner
+			role="status"
+			closeLabel="Dismiss the read-only notice"
+			onclose={() => (bannerClosed = true)}
+		>
+			Reading the built <code>data.json</code>: the local API isn't running, so nothing can be
+			saved. Start it with <code>make serve-api</code>.
+		</Banner>
+	{/if}
 
 	{#if $data && $loadState.status === 'ready'}
 		<div
@@ -213,13 +202,13 @@
 			style:min-height={hold == null ? null : `${hold}px`}
 		>
 			{#if tabPref.value === 'home'}
-				<HomeView data={$data} accounts={$accounts} {edit} {onsaved} />
+				<HomeView data={$data} accounts={$accounts} {onsaved} />
 			{:else if tabPref.value === 'activity'}
-				<ActivityView data={$data} {edit} accounts={$accounts} {onsaved} />
+				<ActivityView data={$data} accounts={$accounts} {onsaved} />
 			{:else if tabPref.value === 'networth'}
-				<NetWorthView data={$data} accounts={$accounts} {edit} {onsaved} />
+				<NetWorthView data={$data} accounts={$accounts} {onsaved} />
 			{:else}
-				<ManageView data={$data} accounts={$accounts} {edit} {onsaved} />
+				<ManageView data={$data} accounts={$accounts} {onsaved} />
 			{/if}
 		</div>
 	{/if}

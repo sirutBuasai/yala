@@ -35,9 +35,8 @@
 
 	interface Props {
 		transactions: TxnRow[];
-		/** Edit mode: rows become clickable to open the transaction editor. */
-		edit: boolean;
-		onedit: (locator: string) => void;
+		/** Supply to make rows clickable — they open the transaction editor. */
+		onedit?: (locator: string) => void;
 		/** Hide the per-row date (e.g. when the surrounding pane already names the day). */
 		showDate?: boolean;
 		/** Which columns to render between the payee and the amount, in order. */
@@ -45,21 +44,14 @@
 		/** Field to order rows by; omit to keep the given order. Pair with TransactionSortMenu. */
 		sortKey?: TxnSort;
 		sortDir?: 'asc' | 'desc';
-		/** Fix the list to this many rows tall, then scroll (see RowList). */
-		fixedRows?: number;
-		/** Remembers this list's expanded state (see RowList). */
-		prefKey?: string;
 	}
 	let {
 		transactions,
-		edit,
 		onedit,
 		showDate = true,
 		fields = ['source'],
 		sortKey,
-		sortDir = 'desc',
-		fixedRows,
-		prefKey
+		sortDir = 'desc'
 	}: Props = $props();
 
 	function column(t: TxnRow, f: TxnField): string {
@@ -103,11 +95,8 @@
 
 <RowList
 	items={rows}
-	{edit}
 	{onedit}
 	{columnTracks}
-	{fixedRows}
-	{prefKey}
 	dotColor={(t) => categoryVar(t.category)}
 	dateOf={showDate ? (t) => t.date : undefined}
 >

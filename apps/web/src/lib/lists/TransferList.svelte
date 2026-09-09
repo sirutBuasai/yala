@@ -19,24 +19,17 @@
 
 	interface Props {
 		transfers: TransferRow[];
-		edit: boolean;
-		onedit: (locator: string) => void;
+		/** Supply to make rows clickable — they open the bill-pay editor. */
+		onedit?: (locator: string) => void;
 		showDate?: boolean;
-		/** Fix the list to this many rows tall, then scroll (see RowList). */
-		fixedRows?: number;
-		/** Remembers this list's expanded state (see RowList). */
-		prefKey?: string;
 	}
-	let { transfers, edit, onedit, showDate = true, fixedRows, prefKey }: Props = $props();
+	let { transfers, onedit, showDate = true }: Props = $props();
 </script>
 
 <!-- No metadata columns: the route IS the row's detail, and it lives in `main`. -->
 <RowList
 	items={transfers}
-	{edit}
 	{onedit}
-	{fixedRows}
-	{prefKey}
 	dotColor={(t) => accountVar(t.from_account)}
 	dateOf={showDate ? (t) => t.date : undefined}
 >

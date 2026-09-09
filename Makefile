@@ -4,7 +4,7 @@
 help:
 	@echo "make bootstrap   install backend + frontend deps (first run)"
 	@echo "make gen         regenerate contract: data.schema.json + types.ts"
-	@echo "make serve       clean, generate data.json, build, serve view-only site (PORT=/WORKTREE= to override)"
+	@echo "make serve       clean, generate data.json, build, serve the snapshot alone (PORT=/WORKTREE= to override)"
 	@echo "make serve-api   clean, generate data.json, build, serve site + edit API (PORT=/WORKTREE= to override)"
 	@echo "make test        run backend + frontend test suites"
 	@echo "make test-api    run backend tests"

@@ -30,47 +30,53 @@
 </script>
 
 {#if slices.length}
-	<div class="donut">
-		<!-- aria-hidden, deliberately: the legend below is the same data as text (name, amount,
+	<!-- `.sizebox` (app.css): fills the pane and becomes the size container the layout below queries,
+	     so the keys move beside or under the ring on the PANE's shape rather than the viewport's. It
+	     used to be the caller's job, which meant every pane holding a donut had to know the donut had
+	     two layouts — and only one of them ever did. -->
+	<div class="sizebox">
+		<div class="donut">
+			<!-- aria-hidden, deliberately: the legend below is the same data as text (name, amount,
 		     share), which is strictly more useful to a screen reader than a labelled image. -->
-		<svg class="chart" viewBox="0 0 {R * 2} {R * 2}" aria-hidden="true">
-			<g transform="translate({R},{R})">
-				{#each arcs as a (a.data.name)}
-					<path
-						d={arcGen(a) ?? ''}
-						fill={a.data.color}
-						stroke="var(--surface)"
-						stroke-width="2"
-						role="presentation"
-						onmousemove={(e) =>
-							showTip(
-								`<b>${esc(a.data.name)}</b><br>${money(a.data.value)} · ${pctOf(a.data.value)}%`,
-								e
-							)}
-						onmouseleave={hideTip}
-					/>
-					{#if a.endAngle - a.startAngle > 0.32}
-						{@const c = arcGen.centroid(a)}
-						<text
-							x={c[0]}
-							y={c[1] + 4}
-							text-anchor="middle"
-							style="font-size: var(--text-caption); font-weight: var(--fw-semibold)"
-							fill="var(--on-accent)">{pctOf(a.data.value)}%</text
-						>
-					{/if}
+			<svg class="chart" viewBox="0 0 {R * 2} {R * 2}" aria-hidden="true">
+				<g transform="translate({R},{R})">
+					{#each arcs as a (a.data.name)}
+						<path
+							d={arcGen(a) ?? ''}
+							fill={a.data.color}
+							stroke="var(--surface)"
+							stroke-width="2"
+							role="presentation"
+							onmousemove={(e) =>
+								showTip(
+									`<b>${esc(a.data.name)}</b><br>${money(a.data.value)} · ${pctOf(a.data.value)}%`,
+									e
+								)}
+							onmouseleave={hideTip}
+						/>
+						{#if a.endAngle - a.startAngle > 0.32}
+							{@const c = arcGen.centroid(a)}
+							<text
+								x={c[0]}
+								y={c[1] + 4}
+								text-anchor="middle"
+								style="font-size: var(--text-caption); font-weight: var(--fw-semibold)"
+								fill="var(--on-accent)">{pctOf(a.data.value)}%</text
+							>
+						{/if}
+					{/each}
+				</g>
+			</svg>
+			<ul class="legend-list">
+				{#each slices as s (s.name)}
+					<li>
+						<span class="sw" style:background={s.color}></span>
+						<span class="nm" title={s.name}>{s.name}</span>
+						<span class="val">{money(s.value)} · {pctOf(s.value)}%</span>
+					</li>
 				{/each}
-			</g>
-		</svg>
-		<ul class="legend-list">
-			{#each slices as s (s.name)}
-				<li>
-					<span class="sw" style:background={s.color}></span>
-					<span class="nm" title={s.name}>{s.name}</span>
-					<span class="val">{money(s.value)} · {pctOf(s.value)}%</span>
-				</li>
-			{/each}
-		</ul>
+			</ul>
+		</div>
 	</div>
 {:else}
 	<Empty>No data.</Empty>
@@ -105,9 +111,10 @@
 		columns: 13rem;
 		column-gap: var(--space-11);
 	}
-	/* When an ancestor is a size-container (the Monthly donut pane, which stretches to the
-	   paycheck+bill column) and it gets tall, stack instead: the keys drop below the ring and the
-	   ring grows into the height. A container query, so it reacts to the pane, not the viewport. */
+	/* Once the pane is tall, stack: the keys drop below the ring and the ring grows into the height.
+	   THIS is the reflow that makes the donut's minimum a frontier rather than a pair of numbers —
+	   dropping the keys underneath needs more height, not less, and how much more depends on how many
+	   categories there are. Nothing predicts it; the resize measures it. */
 	@container (min-height: 300px) {
 		.donut {
 			flex-direction: column;

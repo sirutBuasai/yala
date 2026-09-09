@@ -15,14 +15,17 @@ import sys
 from decimal import Decimal
 from pathlib import Path
 
-from yala.ledger import Ledger
+from yala.ledger import Ledger, payroll
+from yala.ledger.constants import CASH, CREDIT_CARDS, INVESTMENTS, SWEEP_META
 from yala.ledger.income import Paycheck
 from yala.ledger.institutions import colors as institution_colors
 from yala.ledger.naming import account_name, institution_of
+from yala.ledger.settings import SETTINGS
 from yala.money import money
 from yala.schema import (
     SCHEMA_VERSION,
     AccountInfo,
+    AccountLists,
     CategoryAmount,
     DashboardData,
     DateRange,
@@ -38,6 +41,8 @@ from yala.schema import (
     NetWorthSnapshot,
     Overview,
     PaycheckOut,
+    PayrollOption,
+    SettingField,
     SettingsSection,
     Transfer,
     Txn,
@@ -113,6 +118,53 @@ def _accounts(ledger) -> dict[str, AccountInfo]:
         )
 
     return {account: info(account, meta) for account, meta in sorted(account_meta.items())}
+
+
+def account_lists(ledger) -> AccountLists:
+    """The pickable account sets, for the forms and the Manage panels.
+
+    Shared by the snapshot and by ``GET /api/accounts`` so the two can't describe different sets of
+    accounts — the frontend reads whichever is available and can't tell them apart.
+    """
+    cash = ledger.active_accounts(CASH)
+    funding = sorted(cash + ledger.active_accounts(CREDIT_CARDS))
+
+    return AccountLists(
+        spending_categories=ledger.spending.categories(),
+        funding_accounts=funding,
+        employers=payroll.employers(ledger),
+        payroll_options=[
+            PayrollOption(kind=o.kind, label=o.label, employer=o.employer, account=o.account)
+            for o in payroll.options(ledger)
+        ],
+        cash_accounts=cash,
+        credit_accounts=funding,
+        investment_accounts=ledger.active_accounts(INVESTMENTS),
+        balance_accounts=ledger.net_worth.loggable_accounts(),
+        liability_accounts=ledger.net_worth.loggable_liabilities(),
+        sweeps={a: m[SWEEP_META] for a, m in ledger.account_meta().items() if m.get(SWEEP_META)},
+    )
+
+
+def setting_fields() -> list[SettingField]:
+    """The spec behind every setting, as the form needs it.
+
+    Shared by the snapshot and by ``GET /api/settings``, for the same reason as the account lists:
+    the frontend reads whichever source is up and must not be able to tell them apart. Derived from
+    :data:`yala.ledger.settings.SETTINGS`, so adding a setting still means editing one place.
+    """
+    return [
+        SettingField(
+            key=s.key,
+            label=s.label,
+            kind=s.kind,
+            min=float(s.minimum),
+            max=float(s.maximum),
+            default=None if s.default is None else float(s.default),
+            help=s.help,
+        )
+        for s in SETTINGS
+    ]
 
 
 def _meta(ledger, spending, income, categories, all_years, all_months, networth_has_data) -> Meta:
@@ -333,6 +385,8 @@ def build(ledger: Ledger) -> DashboardData:
         income=_income(income),
         networth=networth_section,
         settings=_settings(ledger.settings),
+        setting_specs=setting_fields(),
+        account_lists=account_lists(ledger),
     )
 
 

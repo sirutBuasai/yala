@@ -9,7 +9,7 @@
 	import { esc } from '$lib/utils/format';
 	import { formatUnit, type Unit } from '$lib/data/primitives';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
-	import { labelIndices } from '$lib/charts/axis';
+	import { labelIndices, plotSize } from '$lib/charts/axis';
 	import Legend from '$lib/charts/Legend.svelte';
 
 	interface Band {
@@ -31,8 +31,9 @@
 	const W = $derived(boxW || 900);
 	const H = $derived(boxH || 300);
 	const m = { t: 12, r: 16, b: 28, l: 46 };
-	const iw = $derived(W - m.l - m.r);
-	const ih = $derived(H - m.t - m.b);
+	const plot = $derived(plotSize(W, H, m));
+	const iw = $derived(plot.iw);
+	const ih = $derived(plot.ih);
 	const n = $derived(labels.length);
 
 	const xPos = (i: number) => (n > 1 ? (iw * i) / (n - 1) : iw / 2);

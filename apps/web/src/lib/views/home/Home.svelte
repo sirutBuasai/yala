@@ -1,28 +1,49 @@
 <script lang="ts">
-	// Home — the logging hub, and the only place editing happens. The calendar leads because it is
-	// the weekly job; balances and the pending queue sit below it as the monthly and occasional
-	// ones. Nothing here is time-scoped except the month stepper, which the calendar and the
-	// balance snapshot share.
+	// Home — the logging hub. The calendar leads because it is the weekly job; the day's entries sit
+	// beside it, and balances are the monthly job below. Nothing here is time-scoped except the month
+	// stepper, which the calendar and the balance snapshot share.
+	//
+	// The arrangement below is only the DEFAULT. Every pane can be moved and resized, and what the
+	// user settles on is stored under this board's own key — so this table says where things start,
+	// not where they are.
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
+	import type { Layout } from '$lib/layout/grid/types';
 	import { pendingRows } from '$lib/data/pending';
 	import { latestMonthKey } from '$lib/data/scope';
-	import { money } from '$lib/utils/format';
+	import { money, MONTHS } from '$lib/utils/format';
 	import { matching, Pref } from '$lib/utils/persist.svelte';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
+	import Board from '$lib/layout/grid/Board.svelte';
 	import MonthNav from '$lib/nav/MonthNav.svelte';
 	import BalanceChecklist from '$lib/balance/BalanceChecklist.svelte';
 	import PendingPane from '$lib/lists/PendingPane.svelte';
-	import CalendarBoard from '$lib/calendar/CalendarBoard.svelte';
+	import CalendarPanes from '$lib/calendar/CalendarPanes.svelte';
 	import EditModals from '$lib/entries/EditModals.svelte';
 
 	interface Props {
 		data: DashboardData;
 		accounts: AccountsInfo | null;
-		edit: boolean;
 		onsaved: () => void;
 	}
-	let { data, accounts, edit, onsaved }: Props = $props();
+	let { data, accounts, onsaved }: Props = $props();
+
+	// The calendar is a CHART, not a list: it reserves six week rows so a five-week month gets taller
+	// cells rather than a blank sixth week, which is what keeps the page still as you page months. So
+	// it scales to its pane, and its only minimum is a legibility floor — which is why 26 rows here is
+	// close to the smallest it will accept.
+	//
+	// The day's entries take a SET height, matched to the calendar beside them, so the row keeps a line
+	// and the pane holds still as you move between a quiet day and a busy one (it scrolls instead).
+	// Balances simply fit: the list is as long as your accounts are. Pending is capped — it earns its
+	// place on a clean month by hosting the add button, so it must not vanish, but nor should it
+	// reserve a screenful for three rows.
+	const LAYOUT = {
+		calendar: { x: 0, y: 0, w: 29, h: 26, content: 'scale' },
+		day: { x: 29, y: 0, w: 19, h: 26, content: 'flow', mode: 'fixed' },
+		balances: { x: 0, y: 26, w: 30, h: 18, content: 'flow', mode: 'fit' },
+		pending: { x: 30, y: 26, w: 18, h: 10, content: 'flow', mode: 'cap', cap: 10 }
+	} satisfies Layout;
 
 	const pending = $derived(pendingRows(data));
 
@@ -49,6 +70,19 @@
 	]);
 
 	let modals: ReturnType<typeof EditModals>;
+	/** The day an add was launched from, so the form opens on it. */
+	let addDate = $state('');
+
+	function addOn(iso: string) {
+		addDate = iso;
+		modals.add();
+	}
+
+	const addTitle = $derived.by(() => {
+		if (!addDate) return 'Add entry';
+		const [, m, d] = addDate.split('-');
+		return `Add entry · ${MONTHS[Number(m) - 1]} ${Number(d)}`;
+	});
 </script>
 
 <ViewHeader title="Home">
@@ -63,28 +97,34 @@
 	</dl>
 </ViewHeader>
 
-<div class="sec">
-	<CalendarBoard {data} {edit} {accounts} {onsaved} {monthKey}>
-		{#snippet railBelow()}
-			<PendingPane
-				transactions={pending}
-				{edit}
-				onedit={(l) => modals.editTransaction(l)}
-				fixedRows={3}
-				prefKey="home-pending"
-			/>
-		{/snippet}
-	</CalendarBoard>
-</div>
+<Board key="home" layout={LAYOUT}>
+	<CalendarPanes
+		{data}
+		{monthKey}
+		onadd={addOn}
+		oneditTransaction={(l) => modals.editTransaction(l)}
+		oneditPaycheck={(l) => modals.editPaycheck(l)}
+		oneditTransfer={(l) => modals.editTransfer(l)}
+	/>
+	<PendingPane
+		id="pending"
+		transactions={pending}
+		cap="Fronted, waiting to be paid back"
+		onedit={(l) => modals.editTransaction(l)}
+	/>
+	<BalanceChecklist id="balances" {data} {accounts} {onsaved} {monthKey} />
+</Board>
 
-<BalanceChecklist {data} {accounts} {edit} {onsaved} {monthKey} />
-
-<EditModals bind:this={modals} {accounts} {onsaved} />
+<EditModals
+	bind:this={modals}
+	{accounts}
+	{onsaved}
+	kinds={['transaction', 'paycheck', 'transfer']}
+	presetDate={addDate || undefined}
+	{addTitle}
+/>
 
 <style>
-	.sec {
-		margin-bottom: var(--gap-grid);
-	}
 	/* Month flow, sitting on the header's baseline beside the stepper. Wraps rather than squeezing,
 	   so a narrow header drops it to its own line intact. */
 	.totals {

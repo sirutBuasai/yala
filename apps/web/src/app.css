@@ -216,8 +216,8 @@
 	--pad-cell: var(--space-4); /* 8 — calendar / table cells */
 	--pad-listrow: var(--space-4) var(--pad-card-x); /* 8×20 — compact list rows, inset to card edge */
 	--pad-listrow-comfortable: var(--space-6) var(--pad-card-x); /* 12×20 — roomier row density */
-	/* Approx height of one list row — used to fix a list at N rows tall (RowList fixedRows).
-	   Two values track the two row densities so the box lands on a whole row either way. */
+	/* Approx height of one list row. A list no longer caps itself at N rows — the PANE's height does
+	   that job now — so this is only used where a box needs a sensible floor in row units. */
 	--listrow-h: 52px;
 	--listrow-h-comfortable: 58px;
 
@@ -246,9 +246,21 @@
 	/* ── Figure sizing ────────────────────────────────────────────────────────
 	   A chart in a stretched pane grows to fill it; these bound how far that can go, so
 	   one tall figure can never drag the panes beside it out of alignment. An individual
-	   instance can widen its own ceiling by setting --figure-h-max inline. */
+	   instance can widen its own ceiling by setting --figure-h-max inline.
+	   On the pane grid the pane's height is that answer instead, so min/max are lifted there
+	   (see grid/Cell) — all except the FLOOR below, which is load-bearing. */
 	--figure-h-min: 240px;
 	--figure-h-max: 460px;
+	/* THE universal floor for a plot area, shared by every vector chart.
+	   Two jobs, and the second is the interesting one:
+	   · A pure vector chart never overflows — it only gets illegible — so a declared floor is the
+	     only limit it can have. We trust the user to size it to be readable.
+	   · It is what makes a DETACHED legend count towards the pane's minimum. The legend sits beside
+	     the plot in the card's flex column, so with a floor of zero the plot collapses to nothing,
+	     the legend always fits, and the pane's minimum is a constant. With a floor, the minimum
+	     becomes `floor + the legend's own height` — which grows with the number of keys and with how
+	     many rows they wrap onto, so it is a function of the DATA, exactly like the donut's. */
+	--figure-h-floor: 5rem;
 
 	/* ── List row columns ─────────────────────────────────────────────────────
 	   The fixed tracks of a list row (see RowList). The amount track is a floor, not a
@@ -334,22 +346,17 @@ a {
 	transform: none;
 }
 
-/* The page column. Its left padding is a variable rather than a constant because the fixed
-   hamburger lives in the left gutter: wide viewports have gutter to spare, but once the
-   viewport stops being wider than the column plus that gutter, the column has to indent so
-   content (header AND cards together, so they stay aligned) can't slide under the button. */
+/* The page column, locked to the pane grid's ruler: 1344px of content (48 columns × 28px) plus
+   --space-11 of padding each side. The grid depends on the exact figure — one unit is content/48,
+   which is what puts a snap line on every dot — so this max-width is not a taste decision and
+   `--space-11` is not interchangeable with another step.
+   NOTE the hamburger now lives IN the header, not in the left gutter. Its old fixed position needed
+   an asymmetric `padding-left` below 1460px, which indented the column by 32px on one side only and
+   so pulled the grid off its own dots at every width in that band. */
 .wrap {
-	max-width: 1400px;
+	max-width: 1392px;
 	margin: 0 auto;
 	padding: var(--space-11) var(--space-11) 90px;
-}
-/* The hamburger is fixed to the page's left edge. Wide viewports leave a gutter that holds it,
-   but once that gutter shrinks, indent the whole column so the content (header + cards, together,
-   so they stay aligned) can never slide underneath the hamburger. */
-@media (max-width: 1460px) {
-	.wrap {
-		padding-left: 56px;
-	}
 }
 
 .card {
@@ -657,21 +664,6 @@ input[type='checkbox']:checked {
 .chipbtn:hover {
 	background: var(--inset);
 }
-/* pane grid shared by the Overview / Yearly / Monthly tabs: full-width rows, or `.two`
-   for a pair of side-by-side panes that share the taller one's height */
-.panes {
-	display: grid;
-	gap: var(--gap-grid);
-	margin-bottom: var(--gap-grid);
-}
-/* A pair of panes that share the taller one's height, dropping to one column as soon as a
-   column would fall under ~26rem. auto-fit rather than a viewport breakpoint, so the row
-   reflows off its OWN width — correct inside a narrower container, and correct at any zoom
-   level, where a px breakpoint silently moves. */
-.panes.two {
-	grid-template-columns: repeat(auto-fit, minmax(min(26rem, 100%), 1fr));
-	align-items: stretch;
-}
 /* round prev/next stepper button (period navigation next to a picker) */
 .navbtn {
 	display: flex;
@@ -802,6 +794,20 @@ svg.chart {
 	position: absolute;
 	inset: 0;
 	height: 100%;
+}
+/* A figure box whose CONTENTS reflow on the pane's shape — the donut moving its keys from beside the
+   ring to under it. Size containment is what lets a `@container` query the box's height, and it comes
+   with a sharp edge: a size container computes its own box WITHOUT REGARD TO ITS CONTENTS, so given a
+   parent with no height of its own it collapses to zero and the figure spills out of the card. That is
+   fine on the pane grid, where the pane's height is the answer — and wrong in a folded layout, where
+   the card hugs its content. So the grid turns the containment off when it folds (see grid/Cell), and
+   nothing else may rely on it being on. */
+.sizebox {
+	container-type: size;
+	flex: 1 1 auto;
+	width: 100%;
+	min-height: var(--figure-h-min);
+	max-height: var(--figure-h-max);
 }
 .chart .axis text {
 	fill: var(--ink-3);

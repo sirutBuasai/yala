@@ -1,12 +1,21 @@
 <script lang="ts">
+	// Manage — categories, accounts and the few assumptions the ledger can't derive.
+	//
+	// On the board like every other view, so a column of forms can be arranged into whatever shape
+	// suits the screen. The panes themselves are unchanged: they are `density="panel"` — the quieter
+	// card, a form block rather than a dashboard figure. Every one of them fits its content, because a
+	// form's height is a fact about the form, not a choice.
 	import type { DashboardData } from '$lib/data/types';
 	import { addAccount, addInvestment, closeAccount, type AccountsInfo } from '$lib/data/load';
+	import type { Layout } from '$lib/layout/grid/types';
 	import { formatAccount } from '$lib/utils/format';
 	import { accountVar } from '$lib/utils/theme';
 	import { SaveState } from '$lib/forms/saveState.svelte';
 	import { LEAF_MAX, problems, validateLeaf } from '$lib/forms/validate';
 	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
+	import Board from '$lib/layout/grid/Board.svelte';
+	import Cell from '$lib/layout/grid/Cell.svelte';
 	import DeleteConfirm from '$lib/ui/DeleteConfirm.svelte';
 	import Select from '$lib/forms/fields/Select.svelte';
 	import AccountRow from '$lib/views/manage/AccountRow.svelte';
@@ -15,7 +24,6 @@
 	import SettingsPanel from '$lib/views/manage/SettingsPanel.svelte';
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import ItemList from '$lib/ui/ItemList.svelte';
-	import Panel from '$lib/ui/Panel.svelte';
 
 	/** Ledger prefix for credit cards, to pick them out of the mixed payback-source list. */
 	const LIABILITY = 'Liabilities:';
@@ -23,11 +31,25 @@
 	interface Props {
 		data: DashboardData;
 		accounts: AccountsInfo | null;
-		edit: boolean;
 		/** Called after a change that alters ledger data (drain-close), to refresh the dashboard. */
 		onsaved?: () => void;
 	}
-	let { accounts, edit, onsaved }: Props = $props();
+	let { accounts, onsaved }: Props = $props();
+
+	// "Add one" beside "here are the ones you have", in two columns. The y values only set the reading
+	// order and the priority: every pane fits its content, so the real heights settle on first render
+	// and the push rule closes whatever overlap that causes.
+	const LAYOUT = {
+		settings: { x: 0, y: 0, w: 24, h: 24, content: 'flow', mode: 'fit' },
+		addcategory: { x: 24, y: 0, w: 24, h: 4, content: 'flow', mode: 'fit' },
+		categories: { x: 24, y: 4, w: 24, h: 22, content: 'flow', mode: 'fit' },
+		addbank: { x: 0, y: 24, w: 24, h: 12, content: 'flow', mode: 'fit' },
+		banks: { x: 24, y: 26, w: 24, h: 10, content: 'flow', mode: 'fit' },
+		addcard: { x: 0, y: 36, w: 24, h: 13, content: 'flow', mode: 'fit' },
+		cards: { x: 24, y: 36, w: 24, h: 12, content: 'flow', mode: 'fit' },
+		addinvestment: { x: 0, y: 49, w: 24, h: 16, content: 'flow', mode: 'fit' },
+		investments: { x: 24, y: 48, w: 24, h: 15, content: 'flow', mode: 'fit' }
+	} satisfies Layout;
 
 	const categories = $derived(accounts?.spending_categories ?? []);
 	const banks = $derived(accounts?.cash_accounts ?? []);
@@ -99,20 +121,17 @@
 	<span class="cap">Categories, accounts &amp; assumptions</span>
 </ViewHeader>
 
-{#if !edit}
-	<p class="cap">
-		Managing categories and accounts needs the local edit API. Start it with
-		<code>make serve-api</code> and enable edit mode.
-	</p>
-{:else}
-	<Panel
+<Board key="manage" layout={LAYOUT}>
+	<Cell
+		id="settings"
 		title="Planning assumptions"
 		cap="The few figures the ledger can't work out on its own. Everything else on the dashboard is derived from your entries. Saved into the ledger itself, dated — so revising one leaves the old value behind as history."
+		density="panel"
 	>
 		<SettingsPanel onsaved={() => onsaved?.()} />
-	</Panel>
+	</Cell>
 
-	<Panel title="Add a spending category">
+	<Cell id="addcategory" title="Add a spending category" density="panel">
 		<AddRow
 			bind:value={name}
 			ariaLabel="new category name"
@@ -121,9 +140,9 @@
 			onadd={add}
 		/>
 		<SaveFeedback save={cat} />
-	</Panel>
+	</Cell>
 
-	<Panel title="Existing categories" count={categories.length}>
+	<Cell id="categories" title="Existing categories" count={categories.length} density="panel">
 		<ItemList any={categories.length > 0} empty="No spending categories yet.">
 			{#each categories as category (category)}
 				<li class="simple">
@@ -138,38 +157,26 @@
 				</li>
 			{/each}
 		</ItemList>
-	</Panel>
+	</Cell>
 
-	<AddAccountPanel
+	<Cell
+		id="addbank"
 		title="Add a bank account"
 		cap="Named by institution alone — a second account at the same bank is when a product name starts to earn its place."
-		withAccountName={false}
-		open={(naming) => addAccount('funding_cash', naming)}
-	/>
+		density="panel"
+	>
+		<AddAccountPanel
+			withAccountName={false}
+			open={(naming) => addAccount('funding_cash', naming)}
+		/>
+	</Cell>
 
-	<AddAccountPanel
-		title="Add a credit card"
-		cap="Issuer plus the card's own name, both spelled out — the ledger keeps the full name and the short forms only stand in when a row can't fit it."
-		accountNamePlaceholder="e.g. Cash Rewards"
-		accountNameLabel="Card name"
-		open={(naming) => addAccount('funding_credit', naming)}
-	/>
-
-	<Panel title="Your credit cards" count={cards.length}>
-		<ItemList any={cards.length > 0} empty="No credit cards yet.">
-			{#each cards as account (account)}
-				<li class="row">
-					<i class="dot" style:background={accountVar(account)}></i>
-					<span>{formatAccount(account)}</span>
-				</li>
-			{/each}
-		</ItemList>
-	</Panel>
-
-	<Panel
+	<Cell
+		id="banks"
 		title="Your bank accounts"
 		count={banks.length}
 		cap="Set a passthrough's sweep destination, or retire an account (drain its balance to another account, then close it)."
+		density="panel"
 	>
 		<ItemList any={banks.length > 0} empty="No bank accounts yet.">
 			{#each banks as account (account)}
@@ -181,66 +188,97 @@
 				/>
 			{/each}
 		</ItemList>
-	</Panel>
+	</Cell>
 
-	<AddAccountPanel
+	<Cell
+		id="addcard"
+		title="Add a credit card"
+		cap="Issuer plus the card's own name, both spelled out — the ledger keeps the full name and the short forms only stand in when a row can't fit it."
+		density="panel"
+	>
+		<AddAccountPanel
+			accountNamePlaceholder="e.g. Cash Rewards"
+			accountNameLabel="Card name"
+			open={(naming) => addAccount('funding_credit', naming)}
+		/>
+	</Cell>
+
+	<Cell id="cards" title="Your credit cards" count={cards.length} density="panel">
+		<ItemList any={cards.length > 0} empty="No credit cards yet.">
+			{#each cards as account (account)}
+				<li class="row">
+					<i class="dot" style:background={accountVar(account)}></i>
+					<span>{formatAccount(account)}</span>
+				</li>
+			{/each}
+		</ItemList>
+	</Cell>
+
+	<Cell
+		id="addinvestment"
 		title="Add an investment account"
 		cap="Share accounts open unconstrained + seeded; a USD-only plan is tickerless."
-		institutionPlaceholder="e.g. Example Brokerage"
-		accountNamePlaceholder="e.g. Roth IRA"
-		accountAliasPlaceholder="short account name (e.g. Roth)"
-		validateExtra={validatePayrollFields}
-		open={(naming) =>
-			addInvestment({
-				...naming,
-				subtree: invSubtree as 'Taxable' | 'TaxAdvantaged',
-				holds_shares: invShares,
-				employer: invContributable && invEmployer.trim() ? invEmployer.trim() : null,
-				labels: invContributable ? splitCsv(invLabels) : []
-			})}
+		density="panel"
 	>
-		{#snippet extra()}
-			<div class="subtree">
-				<Select
-					ariaLabel="investment subtree"
-					bind:value={invSubtree}
-					options={['Taxable', 'TaxAdvantaged']}
-				/>
-			</div>
-			<label class="chk"
-				><input type="checkbox" bind:checked={invShares} /> Holds tickers (shares)</label
-			>
-			<label class="chk">
-				<input type="checkbox" bind:checked={invContributable} /> Payroll-contributable
-			</label>
-			{#if invContributable}
-				<input
-					aria-label="employer"
-					bind:value={invEmployer}
-					placeholder="employer (e.g. Employer1)"
-					maxlength={LEAF_MAX}
-				/>
-				<input
-					aria-label="labels"
-					bind:value={invLabels}
-					placeholder="contribution options, comma-separated (e.g. Roth401k,Trad401k,AfterTax401k)"
-				/>
-			{/if}
-		{/snippet}
-	</AddAccountPanel>
+		<AddAccountPanel
+			institutionPlaceholder="e.g. Example Brokerage"
+			accountNamePlaceholder="e.g. Roth IRA"
+			accountAliasPlaceholder="short account name (e.g. Roth)"
+			validateExtra={validatePayrollFields}
+			open={(naming) =>
+				addInvestment({
+					...naming,
+					subtree: invSubtree as 'Taxable' | 'TaxAdvantaged',
+					holds_shares: invShares,
+					employer: invContributable && invEmployer.trim() ? invEmployer.trim() : null,
+					labels: invContributable ? splitCsv(invLabels) : []
+				})}
+		>
+			{#snippet extra()}
+				<div class="subtree">
+					<Select
+						ariaLabel="investment subtree"
+						bind:value={invSubtree}
+						options={['Taxable', 'TaxAdvantaged']}
+					/>
+				</div>
+				<label class="chk"
+					><input type="checkbox" bind:checked={invShares} /> Holds tickers (shares)</label
+				>
+				<label class="chk">
+					<input type="checkbox" bind:checked={invContributable} /> Payroll-contributable
+				</label>
+				{#if invContributable}
+					<input
+						aria-label="employer"
+						bind:value={invEmployer}
+						placeholder="employer (e.g. Employer1)"
+						maxlength={LEAF_MAX}
+					/>
+					<input
+						aria-label="labels"
+						bind:value={invLabels}
+						placeholder="contribution options, comma-separated (e.g. Roth401k,Trad401k,AfterTax401k)"
+					/>
+				{/if}
+			{/snippet}
+		</AddAccountPanel>
+	</Cell>
 
-	<Panel
+	<Cell
+		id="investments"
 		title="Your investments"
 		count={investments.length}
 		cap="Retire an account to value its holdings in USD and split that total across destinations."
+		density="panel"
 	>
 		<ItemList any={investments.length > 0} empty="No investment accounts yet.">
 			{#each investments as account (account)}
 				<InvestmentRow {account} destinations={investDestinations} onchanged={() => onsaved?.()} />
 			{/each}
 		</ItemList>
-	</Panel>
-{/if}
+	</Cell>
+</Board>
 
 <style>
 	.subtree {

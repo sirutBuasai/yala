@@ -3,7 +3,7 @@
 	// labels); two or more render as grouped bars (with a legend). The user picks "Bar" and
 	// adds one or more data — they never choose between "column" and "grouped bars".
 	import { scaleBand } from 'd3-scale';
-	import { moneyYScale } from '$lib/charts/axis';
+	import { moneyYScale, plotSize } from '$lib/charts/axis';
 	import { money, moneyK, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Legend from '$lib/charts/Legend.svelte';
@@ -28,8 +28,9 @@
 	const W = $derived(boxW || 1100);
 	const H = $derived(boxH || 300);
 	const m = { t: 22, r: 14, b: 30, l: 56 };
-	const iw = $derived(W - m.l - m.r);
-	const ih = $derived(H - m.t - m.b);
+	const plot = $derived(plotSize(W, H, m));
+	const iw = $derived(plot.iw);
+	const ih = $derived(plot.ih);
 
 	const flat = $derived(series.flatMap((s) => s.values));
 	const outer = $derived(scaleBand<string>().domain(labels).range([0, iw]).padding(0.28));

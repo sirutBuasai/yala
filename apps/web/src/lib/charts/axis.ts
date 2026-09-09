@@ -9,6 +9,27 @@ export interface ValueScale<S extends (v: number) => number = (v: number) => num
 	ticks: number[];
 }
 
+/** A chart's margins: top, right, bottom, left. */
+export interface Margins {
+	t: number;
+	r: number;
+	b: number;
+	l: number;
+}
+
+/**
+ * The plot area inside a measured box, FLOORED AT ZERO on both axes.
+ *
+ * The floor is the whole point. A pane on the grid can be made shorter than a chart's own margins,
+ * at which case `H - top - bottom` goes negative — and a negative height is not merely ugly: the
+ * browser rejects `<rect height="-5">` outright, and every d3 scale built on that range comes out
+ * inverted, so the chart draws upside down from a plot area that isn't there. Every measured chart
+ * routes through here so none of them can forget.
+ */
+export function plotSize(w: number, h: number, m: Margins): { iw: number; ih: number } {
+	return { iw: Math.max(0, w - m.l - m.r), ih: Math.max(0, h - m.t - m.b) };
+}
+
 /**
  * Zero-anchored linear value→pixel Y scale, plus its tick values. Shared by the bar and
  * line charts so they all include zero, `nice()`-round the domain, and tick identically.

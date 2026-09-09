@@ -1,44 +1,29 @@
-// Data loading, mode detection, and schema-version guard.
+// Data loading, liveness, and the schema-version guard.
 //
-// View mode (default, hosted): fetch the static ./data.json.
-// Edit mode (local API reachable): use /api/data + /api/accounts.
+// ONE read path, tried in order: the local API, else the static `data.json` the builder wrote.
+// There is no view-only mode and no edit toggle — whether the API answered is a FACT about the
+// environment, not a mode the user chooses, so it is reported (`live`) rather than switched.
+//
+// Both sources carry the same account lists (the API serves them, the builder snapshots them from
+// the same function), so every form and every Manage panel renders either way. What differs is
+// whether a write can land, and that is answered in exactly one place: `postJson`.
 
-import { writable } from 'svelte/store';
+import { get, writable } from 'svelte/store';
 import { asset } from '$app/paths';
 import { setAccountDirectory } from '$lib/data/directory.svelte';
-import type { DashboardData, SchemaVersion } from '$lib/data/types';
+import type { AccountLists, DashboardData, SchemaVersion, SettingField } from '$lib/data/types';
 
 // Typed as the contract's own version (types.ts is generated from schema.py), so bumping the schema
 // makes this line a compile error rather than a stale runtime comparison.
 const EXPECTED_SCHEMA: SchemaVersion = 1;
 
-/** A selectable paycheck line item, scoped to an employer (or generic when employer is null). */
-export interface PayrollOption {
-	kind: 'deduction' | 'contribution';
-	label: string;
-	employer: string | null;
-	account: string;
-}
+/** The pickable account sets. Contract-generated, so it can't drift from what the backend sends. */
+export type AccountsInfo = AccountLists;
+export type PayrollOption = AccountLists['payroll_options'][number];
 
-export interface AccountsInfo {
-	spending_categories: string[];
-	funding_accounts: string[];
-	employers: string[];
-	payroll_options: PayrollOption[];
-	cash_accounts: string[];
-	credit_accounts: string[];
-	/** Active `Assets:Investments:*` accounts. Always sent by the API. */
-	investment_accounts?: string[];
-	/** Cash + investment accounts with an `Equity:Adjustments:*` plug (loggable balances). */
-	balance_accounts?: string[];
-	/** Active liability accounts. Snapshot-able, but verify-only: they have no plug, so a figure
-	    that disagrees with the ledger is rejected rather than padded. */
-	liability_accounts?: string[];
-	/** Passthrough routing: account → its `sweep_to` destination. Always sent by the API. */
-	sweeps?: Record<string, string>;
-}
-
-export type Mode = 'view' | 'edit';
+/** What every write says when there is no API to write to. */
+export const API_UNAVAILABLE =
+	'The local API is not running, so nothing can be saved. Start it with `make serve-api`.';
 
 export interface LoadState {
 	status: 'loading' | 'ready' | 'error';
@@ -47,7 +32,8 @@ export interface LoadState {
 
 export const data = writable<DashboardData | null>(null);
 export const accounts = writable<AccountsInfo | null>(null);
-export const mode = writable<Mode>('view');
+/** True when the document came from the local API, and so when writes can land. */
+export const live = writable(false);
 export const loadState = writable<LoadState>({ status: 'loading' });
 
 // Account display names and institutions live in the document, but are read by pure helpers
@@ -127,6 +113,14 @@ export async function postJson<T = Record<string, unknown>>(
 	url: string,
 	body: unknown
 ): Promise<PostResult<T>> {
+	// THE write guard, and the only one. Every mutation in the app is a POST through here, so one
+	// check answers for all of them — before any request goes out, and without each caller having to
+	// remember to ask. `status: 0` is the same shape a network failure produces, so callers need no
+	// new branch either.
+	if (!get(live)) {
+		return { ok: false, data: {} as T, error: API_UNAVAILABLE, status: 0 };
+	}
+
 	try {
 		const res = await fetch(url, {
 			method: 'POST',
@@ -164,65 +158,62 @@ export function invalidateDerivedCache(): void {
 	derivedCache.clear();
 }
 
-/** Load the static snapshot (view mode). Sets loadState accordingly. */
-export async function loadViewData(): Promise<void> {
+/** Publish a validated document and the account lists that came with it. */
+function publish(doc: DashboardData, fromApi: boolean, lists: AccountsInfo | null): void {
+	data.set(doc);
+	accounts.set(lists ?? doc.account_lists ?? null);
+	live.set(fromApi);
+	loadState.set({ status: 'ready' });
+}
+
+/**
+ * Load the dashboard: the local API first, the built snapshot second.
+ *
+ * Tried in that order rather than offered as a choice. A previous version persisted which one the
+ * user had "chosen", which made a transient failure permanent — load the page while the API is
+ * restarting, fall back, and every later load took the "they chose the snapshot" branch and never
+ * retried. Liveness is re-established on every load instead.
+ */
+export async function loadData(): Promise<void> {
 	loadState.set({ status: 'loading' });
+
+	try {
+		const doc = await fetchJson<DashboardData>('/api/data');
+		if (!checkSchema(doc)) {
+			let lists: AccountsInfo | null = null;
+			try {
+				lists = await fetchJson<AccountsInfo>('/api/accounts');
+			} catch {
+				// The API answered for the document but not for the lists (an older build). Its
+				// snapshot of them is the next best thing.
+			}
+			publish(doc, true, lists);
+			return;
+		}
+	} catch {
+		// No API on this port. Expected on a hosted copy; the snapshot is the answer.
+	}
 
 	try {
 		const doc = await fetchJson<DashboardData>(asset('/data.json'));
 		const problem = checkSchema(doc);
-
 		if (problem) {
 			loadState.set({ status: 'error', message: problem });
 			return;
 		}
-
-		data.set(doc);
-		mode.set('view');
-		accounts.set(null);
-		loadState.set({ status: 'ready' });
+		publish(doc, false, null);
 	} catch (err) {
 		loadState.set({
 			status: 'error',
-			message: `Could not load data.json (${(err as Error).message}). Run \`python -m yala.api\` or rebuild with \`python -m yala.builder\`.`
+			message: `Could not load data.json (${(err as Error).message}). Rebuild it with \`python -m yala.builder\`, or start the API with \`make serve-api\`.`
 		});
 	}
 }
 
-/**
- * Verify the local API is reachable and switch to edit mode.
- * Returns true on success; on failure the caller stays in view mode.
- */
-export async function enableEditMode(): Promise<boolean> {
-	try {
-		const doc = await fetchJson<DashboardData>('/api/data');
-
-		if (checkSchema(doc)) return false;
-
-		data.set(doc);
-
-		try {
-			accounts.set(await fetchJson<AccountsInfo>('/api/accounts'));
-		} catch {
-			accounts.set(null);
-		}
-
-		mode.set('edit');
-		loadState.set({ status: 'ready' }); // enableEditMode can be the primary loader on startup
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-/** Leave edit mode and fall back to the static snapshot. */
-export async function disableEditMode(): Promise<void> {
-	await loadViewData();
-}
-
-/** Re-pull live data after a write in edit mode. */
-export async function refreshEditData(): Promise<void> {
+/** Re-pull the document after a write. No-op when there is no API to pull from. */
+export async function refreshData(): Promise<void> {
 	invalidateDerivedCache();
+	if (!get(live)) return;
 	try {
 		data.set(await fetchJson<DashboardData>('/api/data'));
 	} catch {
@@ -243,7 +234,8 @@ export async function deleteTransaction(locator: string): Promise<string | null>
  * screen, so refreshing them first would flash its raw leaf before the directory knew its name.
  */
 async function refreshAccounts(): Promise<void> {
-	await refreshEditData();
+	await refreshData();
+	if (!get(live)) return;
 
 	try {
 		accounts.set(await fetchJson<AccountsInfo>('/api/accounts'));
@@ -417,17 +409,9 @@ export async function networthAt(date: string): Promise<NetWorthAt | null> {
 
 // --- settings ---
 
-/** One settable figure, as the API describes it. The form renders from this rather than restating
-    labels, bounds, and help text that the backend already owns. */
-export interface SettingSpec {
-	key: string;
-	label: string;
-	kind: 'percent' | 'age' | 'year';
-	min: number;
-	max: number;
-	default: number | null;
-	help: string;
-}
+/** One settable figure, as the backend describes it. Contract-generated, so the form renders from
+    the labels, bounds and help text the backend already owns rather than restating them. */
+export type SettingSpec = SettingField;
 
 export interface SettingsInfo {
 	values: Record<string, number | null>;
@@ -435,10 +419,48 @@ export interface SettingsInfo {
 }
 
 /**
- * Effective settings plus their specs. It reports *why* it failed rather than just null: a 404 means
- * the running API predates this page and needs a restart, a different fix from the API being down.
+ * The settings the snapshot carries, in the same shape the API serves, so the form cannot tell the
+ * two apart.
+ *
+ * The re-keying is the whole reason this needs a function. A setting's real key is hyphenated
+ * (`real-return`) because that is how it reads as a word in the ledger, and that is what the specs
+ * and the write endpoint use — but a hyphen is not a legal field name, so the CONTRACT spells the
+ * same keys with underscores. Reading `settings` straight through therefore populates only `swr`, the
+ * one key with no hyphen in it, and every other field silently renders blank.
+ */
+function snapshotSettings(): SettingsInfo | null {
+	const doc = get(data);
+	if (!doc?.settings || !doc.setting_specs) return null;
+
+	const stored = doc.settings as unknown as Record<string, number | null | undefined>;
+	// Keyed off the specs, so a setting can never appear in the form without a value beside it.
+	const values = Object.fromEntries(
+		doc.setting_specs.map((spec) => [spec.key, stored[spec.key.replaceAll('-', '_')] ?? null])
+	);
+	return { values, specs: doc.setting_specs };
+}
+
+/**
+ * Effective settings plus their specs. Reports *why* it failed rather than just null, because the
+ * remaining reasons need different actions: a 404 from a live API means the running API predates
+ * this page and needs a restart; anything else is the API's own words.
  */
 export async function getSettings(): Promise<{ info: SettingsInfo | null; error: string | null }> {
+	// No API: read the snapshot's own copy, so the form renders and reads correctly. Same rule as
+	// every other form — everything renders, and only the WRITE is refused (by the one guard in
+	// `postJson`). Checked first, because a static host answers 404 for every path and that would
+	// otherwise read as a stale API and tell the user to restart something that isn't running.
+	if (!get(live)) {
+		const info = snapshotSettings();
+		return info
+			? { info, error: null }
+			: {
+					info: null,
+					error:
+						'This `data.json` predates the settings form. Rebuild it with `python -m yala.builder`, or start the API with `make serve-api`.'
+				};
+	}
+
 	const { ok, data, error, status } = await getJson<SettingsInfo>('/api/settings');
 	if (ok) return { info: data, error: null };
 

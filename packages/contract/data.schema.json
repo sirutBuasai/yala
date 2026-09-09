@@ -39,6 +39,96 @@
       "title": "AccountInfo",
       "type": "object"
     },
+    "AccountLists": {
+      "additionalProperties": false,
+      "description": "The pickable account sets the entry forms and the Manage panels choose from.\n\nSnapshotted into ``data.json`` as well as served live from ``/api/accounts`` (both from one\nbuilder function) so the forms still render \u2014 and Manage still lists what you have \u2014 when the\nlocal API is down. Writes are refused by the frontend's single write guard, not by an absent\nlist: a form that vanishes reads as a missing feature rather than as an unreachable server.",
+      "properties": {
+        "spending_categories": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Spending Categories",
+          "type": "array"
+        },
+        "funding_accounts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Funding Accounts",
+          "type": "array"
+        },
+        "employers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Employers",
+          "type": "array"
+        },
+        "payroll_options": {
+          "items": {
+            "$ref": "#/$defs/PayrollOption"
+          },
+          "title": "Payroll Options",
+          "type": "array"
+        },
+        "cash_accounts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cash Accounts",
+          "type": "array"
+        },
+        "credit_accounts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Credit Accounts",
+          "type": "array"
+        },
+        "investment_accounts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Investment Accounts",
+          "type": "array"
+        },
+        "balance_accounts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Balance Accounts",
+          "type": "array"
+        },
+        "liability_accounts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Liability Accounts",
+          "type": "array"
+        },
+        "sweeps": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Sweeps",
+          "type": "object"
+        }
+      },
+      "required": [
+        "spending_categories",
+        "funding_accounts",
+        "employers",
+        "payroll_options",
+        "cash_accounts",
+        "credit_accounts",
+        "investment_accounts",
+        "balance_accounts",
+        "liability_accounts",
+        "sweeps"
+      ],
+      "title": "AccountLists",
+      "type": "object"
+    },
     "CategoryAmount": {
       "additionalProperties": false,
       "properties": {
@@ -547,6 +637,105 @@
       "title": "PaycheckOut",
       "type": "object"
     },
+    "PayrollOption": {
+      "additionalProperties": false,
+      "description": "One selectable paycheck line, scoped to an employer (null = offered by every employer).",
+      "properties": {
+        "kind": {
+          "enum": [
+            "deduction",
+            "contribution"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "employer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Employer"
+        },
+        "account": {
+          "title": "Account",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "label",
+        "employer",
+        "account"
+      ],
+      "title": "PayrollOption",
+      "type": "object"
+    },
+    "SettingField": {
+      "additionalProperties": false,
+      "description": "The spec behind one setting: how the form names it, bounds it, and explains it.\n\nSnapshotted alongside the values so the settings form renders with no API running \u2014 the same\nrule every other form follows. Writing one still needs the API, and the frontend's single write\nguard is what says so.",
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "percent",
+            "age",
+            "year",
+            "months"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "min": {
+          "title": "Min",
+          "type": "number"
+        },
+        "max": {
+          "title": "Max",
+          "type": "number"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Default"
+        },
+        "help": {
+          "title": "Help",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "kind",
+        "min",
+        "max",
+        "default",
+        "help"
+      ],
+      "title": "SettingField",
+      "type": "object"
+    },
     "SettingsSection": {
       "additionalProperties": false,
       "description": "Effective user settings: what the ledger states, else the built-in default.\n\nA null means the setting is unset and has no default \u2014 features depending on it stay hidden\nrather than guessing. Keys mirror :data:`yala.ledger.settings.SETTINGS`; ``test_settings``\nasserts the two can't drift.",
@@ -806,6 +995,32 @@
       "anyOf": [
         {
           "$ref": "#/$defs/SettingsSection"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "setting_specs": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/SettingField"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Setting Specs"
+    },
+    "account_lists": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AccountLists"
         },
         {
           "type": "null"

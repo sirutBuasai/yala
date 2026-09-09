@@ -23,7 +23,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
 
 from yala import config, projections
-from yala.builder import build_dict
+from yala.builder import account_lists, build_dict, setting_fields
 from yala.ledger import Ledger, payroll
 from yala.ledger.constants import (
     ASSETS,
@@ -48,7 +48,7 @@ from yala.ledger.naming import (
     to_leaf,
 )
 from yala.ledger.networth import adjustment_account
-from yala.ledger.settings import SETTINGS, SETTINGS_BY_KEY
+from yala.ledger.settings import SETTINGS_BY_KEY
 from yala.ledger.sweep import is_sweep, reconcile_months, resolve_terminal, retire_passthrough
 from yala.money import round_cents
 from yala.sink import FileLedgerSink
@@ -328,30 +328,9 @@ def get_data() -> dict:
 
 @app.get("/api/accounts")
 def get_accounts() -> dict:
-    ledger = _ledger()
-    cash = ledger.active_accounts(CASH)
-    funding = sorted(cash + ledger.active_accounts(CREDIT_CARDS))
-
-    return {
-        "spending_categories": ledger.spending.categories(),
-        "funding_accounts": funding,
-        "employers": payroll.employers(ledger),
-        "payroll_options": [
-            {
-                "kind": o.kind,
-                "label": o.label,
-                "employer": o.employer,
-                "account": o.account,
-            }
-            for o in payroll.options(ledger)
-        ],
-        "cash_accounts": cash,
-        "credit_accounts": funding,
-        "investment_accounts": ledger.active_accounts(INVESTMENTS),
-        "balance_accounts": ledger.net_worth.loggable_accounts(),
-        "liability_accounts": ledger.net_worth.loggable_liabilities(),
-        "sweeps": {a: m[SWEEP_META] for a, m in ledger.account_meta().items() if m.get(SWEEP_META)},
-    }
+    # One implementation, shared with the snapshot (see `yala.builder.account_lists`): the frontend
+    # reads whichever source is up and must not be able to tell them apart.
+    return account_lists(_ledger()).model_dump(mode="json")
 
 
 # --- transactions ---
@@ -995,18 +974,8 @@ def get_settings() -> dict:
     values = _ledger().settings.values()
     return {
         "values": {k: (None if v is None else float(v)) for k, v in values.items()},
-        "specs": [
-            {
-                "key": s.key,
-                "label": s.label,
-                "kind": s.kind,
-                "min": float(s.minimum),
-                "max": float(s.maximum),
-                "default": None if s.default is None else float(s.default),
-                "help": s.help,
-            }
-            for s in SETTINGS
-        ],
+        # One implementation, shared with the snapshot (see `yala.builder.setting_fields`).
+        "specs": [f.model_dump(mode="json") for f in setting_fields()],
     }
 
 

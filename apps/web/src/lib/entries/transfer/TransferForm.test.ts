@@ -1,18 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
-import type { AccountsInfo } from '$lib/data/load';
 import { lastTransferFrom, lastTransferTo } from '$lib/utils/editPrefs';
 import TransferForm from '$lib/entries/transfer/TransferForm.svelte';
+import { makeAccounts } from '$lib/data/__fixtures__/dashboard';
 
-const accounts: AccountsInfo = {
-	spending_categories: [],
+const accounts = makeAccounts({
 	funding_accounts: ['Assets:Cash:BankA', 'Liabilities:CC:CardA'],
-	employers: [],
-	payroll_options: [],
 	cash_accounts: ['Assets:Cash:BankA'],
 	credit_accounts: ['Liabilities:CC:CardA']
-};
+});
 
 function okFetch() {
 	return vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true }) });
@@ -47,7 +44,7 @@ describe('TransferForm (add) — bill pay', () => {
 	it('offers banks and passthroughs as pay-toward targets, excluding the source account', async () => {
 		const fetchSpy = okFetch();
 		vi.stubGlobal('fetch', fetchSpy);
-		const wide: AccountsInfo = {
+		const wide = makeAccounts({
 			...accounts,
 			cash_accounts: ['Assets:Cash:BankA'],
 			credit_accounts: [
@@ -56,7 +53,7 @@ describe('TransferForm (add) — bill pay', () => {
 				'Assets:Cash:Passthrough',
 				'Liabilities:CC:CardA'
 			]
-		};
+		});
 		render(TransferForm, { props: { accounts: wide, onsaved: vi.fn() } });
 
 		await fireEvent.input(screen.getByLabelText('Amount'), { target: { value: '100' } });

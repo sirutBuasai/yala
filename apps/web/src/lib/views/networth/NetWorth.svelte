@@ -19,10 +19,9 @@
 	interface Props {
 		data: DashboardData;
 		accounts: AccountsInfo | null;
-		edit: boolean;
 		onsaved: () => void;
 	}
-	let { data, accounts, edit, onsaved }: Props = $props();
+	let { data, accounts, onsaved }: Props = $props();
 
 	const RANGES: { id: Range; label: string }[] = [
 		{ id: 'year', label: 'Year' },
@@ -65,9 +64,9 @@
 			<span class="cap">Lifetime · {span}</span>
 		{/if}
 	{/if}
-	{#if edit && accounts && range.value === 'year'}
+	{#if range.value === 'year'}
 		<button class="btn-accent pill" onclick={() => modals.add('balance')}>+ Log balance</button>
-	{:else if hasData && range.value === 'all'}
+	{:else if hasData}
 		<!-- Says why there's no add button here, so its absence reads as intent, not omission. -->
 		<span class="cap quiet push-end"
 			>read-only — a balance belongs to the month it was taken in</span
@@ -83,12 +82,7 @@
 	{/if}
 {:else}
 	<p class="cap pad">
-		No balances logged yet.
-		{#if edit}
-			Use <b>+ Log balance</b> to snapshot a cash or investment account.
-		{:else}
-			Start the local API (<code>make serve-api</code>) to log balances.
-		{/if}
+		No balances logged yet. Use <b>+ Log balance</b> to snapshot a cash or investment account.
 	</p>
 {/if}
 

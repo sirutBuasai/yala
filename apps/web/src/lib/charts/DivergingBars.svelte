@@ -51,9 +51,13 @@
 </div>
 
 <style>
+	/* Rows spread through whatever height the pane has, rather than stacking at the top and leaving
+	   an empty band under the last one — the same "a figure fills its pane" rule the charts follow. */
 	.dev {
 		display: flex;
+		flex: 1 1 auto;
 		flex-direction: column;
+		justify-content: space-evenly;
 		gap: var(--gap-row);
 	}
 	.r {

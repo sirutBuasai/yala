@@ -26,7 +26,7 @@ The `Makefile` is the single entrypoint; the actual recipes live in `scripts/`.
 ```bash
 make bootstrap   # install backend + frontend deps (first run)
 make gen         # regenerate the contract: data.schema.json + types.ts
-make serve       # clean → generate data.json → build → serve view-only site (localhost:4173)
+make serve       # clean → generate data.json → build → serve the snapshot alone (localhost:4173)
 make serve-api   # clean → generate data.json → build → serve site + edit API (127.0.0.1:8000)
 make test        # backend + frontend test suites
 make test-api    # backend only (pytest)

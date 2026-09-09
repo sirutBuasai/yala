@@ -5,18 +5,38 @@ import { get } from 'svelte/store';
 vi.mock('$app/paths', () => ({ asset: (p: string) => p }));
 
 import {
+	accounts,
+	API_UNAVAILABLE,
 	data,
 	deleteTransaction,
-	enableEditMode,
 	invalidateDerivedCache,
+	live,
+	loadData,
 	loadState,
 	getSettings,
-	loadViewData,
-	mode,
 	networthAt,
 	setSetting
 } from '$lib/data/load';
-import { makeData } from '$lib/data/__fixtures__/dashboard';
+import { makeAccounts, makeData } from '$lib/data/__fixtures__/dashboard';
+
+/**
+ * A fetch stub that answers per URL. The loader tries the API first and the snapshot second, so
+ * which of the two answered is the thing under test in most of these — a single canned response
+ * can't express that.
+ */
+function routed(routes: Record<string, unknown>, missing: string[] = []) {
+	return vi.fn((url: string) => {
+		if (missing.some((m) => url.includes(m))) return Promise.reject(new Error('unreachable'));
+		const key = Object.keys(routes).find((k) => url.includes(k));
+		if (!key) return Promise.reject(new Error(`no route for ${url}`));
+		return Promise.resolve({
+			ok: true,
+			status: 200,
+			statusText: 'OK',
+			json: async () => routes[key]
+		});
+	});
+}
 
 function mockFetchOnce(body: unknown, ok = true, status = 200) {
 	return vi.fn().mockResolvedValue({
@@ -29,26 +49,69 @@ function mockFetchOnce(body: unknown, ok = true, status = 200) {
 
 beforeEach(() => {
 	data.set(null);
+	accounts.set(null);
+	live.set(false);
 });
 
 afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
-describe('loadViewData', () => {
-	it('loads a valid snapshot and marks state ready', async () => {
-		vi.stubGlobal('fetch', mockFetchOnce(makeData()));
-		await loadViewData();
+describe('loadData', () => {
+	it('prefers the local API, and reports itself live', async () => {
+		const lists = makeAccounts({ spending_categories: ['Grocery'] });
+		vi.stubGlobal('fetch', routed({ '/api/data': makeData(), '/api/accounts': lists }));
+
+		await loadData();
+
 		expect(get(loadState).status).toBe('ready');
-		expect(get(mode)).toBe('view');
-		expect(get(data)?.schema_version).toBe(1);
+		expect(get(live)).toBe(true);
+		expect(get(accounts)?.spending_categories).toEqual(['Grocery']);
 	});
 
-	it('reports a schema-version mismatch as an error', async () => {
+	it('falls back to the snapshot when there is no API, and reports itself NOT live', async () => {
+		const doc = makeData();
+		doc.account_lists = makeAccounts({ spending_categories: ['FromSnapshot'] });
+		vi.stubGlobal('fetch', routed({ 'data.json': doc }, ['/api/']));
+
+		await loadData();
+
+		expect(get(loadState).status).toBe('ready');
+		expect(get(live)).toBe(false);
+		// The account lists come from the snapshot, so the forms still have something to pick from.
+		expect(get(accounts)?.spending_categories).toEqual(['FromSnapshot']);
+	});
+
+	it('falls back when the API answers with a document this build cannot read', async () => {
 		const bad = makeData();
 		(bad as { schema_version: number }).schema_version = 2;
-		vi.stubGlobal('fetch', mockFetchOnce(bad));
-		await loadViewData();
+		vi.stubGlobal('fetch', routed({ '/api/data': bad, 'data.json': makeData() }));
+
+		await loadData();
+
+		expect(get(loadState).status).toBe('ready');
+		expect(get(live)).toBe(false);
+	});
+
+	it('stays live when the API serves the document but not the account lists', async () => {
+		// An older API on the port: it can still take writes, so liveness must not hinge on the lists.
+		const doc = makeData();
+		doc.account_lists = makeAccounts({ spending_categories: ['FromSnapshot'] });
+		vi.stubGlobal('fetch', routed({ '/api/data': doc }, ['/api/accounts']));
+
+		await loadData();
+
+		expect(get(live)).toBe(true);
+		expect(get(accounts)?.spending_categories).toEqual(['FromSnapshot']);
+	});
+
+	it('reports a schema-version mismatch in the SNAPSHOT as an error', async () => {
+		const bad = makeData();
+		(bad as { schema_version: number }).schema_version = 2;
+		vi.stubGlobal('fetch', routed({ 'data.json': bad }, ['/api/']));
+
+		await loadData();
+
 		expect(get(loadState).status).toBe('error');
 		expect(get(loadState).message).toContain('schema v2');
 	});
@@ -56,34 +119,36 @@ describe('loadViewData', () => {
 	it('reports an empty ledger (no month_keys) as an error', async () => {
 		const empty = makeData();
 		empty.meta.month_keys = [];
-		vi.stubGlobal('fetch', mockFetchOnce(empty));
-		await loadViewData();
+		vi.stubGlobal('fetch', routed({ 'data.json': empty }, ['/api/']));
+
+		await loadData();
+
 		expect(get(loadState).status).toBe('error');
 		expect(get(loadState).message).toContain('No transactions');
 	});
 
-	it('surfaces a network failure as an error', async () => {
+	it('surfaces a total failure as an error', async () => {
 		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('boom')));
-		await loadViewData();
+		await loadData();
 		expect(get(loadState).status).toBe('error');
 		expect(get(loadState).message).toContain('boom');
 	});
 });
 
-describe('enableEditMode', () => {
-	it('switches to edit mode when the API and schema are good', async () => {
-		vi.stubGlobal('fetch', mockFetchOnce(makeData()));
-		expect(await enableEditMode()).toBe(true);
-		expect(get(mode)).toBe('edit');
-	});
+describe('the write guard', () => {
+	it('refuses every write before a request is made when the API is not live', async () => {
+		const f = mockFetchOnce({ ok: true });
+		vi.stubGlobal('fetch', f);
+		live.set(false);
 
-	it('returns false and stays put when the API is unreachable', async () => {
-		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('no api')));
-		expect(await enableEditMode()).toBe(false);
+		expect(await deleteTransaction('id:x')).toBe(API_UNAVAILABLE);
+		expect(f).not.toHaveBeenCalled();
 	});
 });
 
 describe('deleteTransaction', () => {
+	beforeEach(() => live.set(true));
+
 	it('returns null on success', async () => {
 		vi.stubGlobal('fetch', mockFetchOnce({ ok: true }));
 		expect(await deleteTransaction('id:x')).toBeNull();
@@ -101,7 +166,10 @@ describe('deleteTransaction', () => {
 });
 
 describe('networthAt caching', () => {
-	beforeEach(() => invalidateDerivedCache());
+	beforeEach(() => {
+		invalidateDerivedCache();
+		live.set(true);
+	});
 
 	it('fetches a date once and serves repeats from cache', async () => {
 		const f = mockFetchOnce({ accounts: [], adjustments: [], logged: {} });
@@ -148,39 +216,135 @@ describe('networthAt caching', () => {
 });
 
 describe('getSettings', () => {
-	const body = { values: { swr: 4 }, specs: [{ key: 'swr' }] };
+	it('reads the SNAPSHOT when there is no API, so the form still renders', async () => {
+		// The rule for every form: it renders either way, and only the write is refused. The specs come
+		// from the same builder function the API serves, so the form cannot tell the two apart.
+		const doc = makeData();
+		doc.settings = { swr: 4, real_return: 5, retire_age: 60, runway_target: 6, birth_year: null };
+		doc.setting_specs = [
+			{
+				key: 'swr',
+				label: 'Withdrawal rate',
+				kind: 'percent',
+				min: 0.1,
+				max: 20,
+				default: 4,
+				help: 'h'
+			},
+			// A HYPHENATED key, which is the case that matters: the contract has to spell the same key
+			// with an underscore (a hyphen is not a legal field name), so reading `settings` straight
+			// through populates only `swr` and leaves every other field blank.
+			{
+				key: 'real-return',
+				label: 'Expected real return',
+				kind: 'percent',
+				min: 0,
+				max: 15,
+				default: 5,
+				help: 'h'
+			},
+			{
+				key: 'retire-age',
+				label: 'Target retirement age',
+				kind: 'age',
+				min: 30,
+				max: 90,
+				default: 60,
+				help: 'h'
+			}
+		];
+		vi.stubGlobal('fetch', routed({ 'data.json': doc }, ['/api/']));
+		await loadData();
 
-	it('returns the payload when the API answers', async () => {
-		vi.stubGlobal('fetch', mockFetchOnce(body));
 		const { info, error } = await getSettings();
 
 		expect(error).toBeNull();
-		expect(info?.values.swr).toBe(4);
+		expect(info?.specs.map((s) => s.key)).toEqual(['swr', 'real-return', 'retire-age']);
+		// Every spec the form renders has its value beside it, whatever its key looks like.
+		expect(info?.values).toEqual({ swr: 4, 'real-return': 5, 'retire-age': 60 });
 	});
 
-	it('tells the user to restart the API when the endpoint is missing', async () => {
-		// A 404 here means the running API predates this build, not that a record is absent.
-		vi.stubGlobal('fetch', mockFetchOnce({}, false, 404));
+	it('gives a spec the snapshot has no value for a null rather than dropping the field', async () => {
+		const doc = makeData();
+		doc.settings = { swr: 4, real_return: 5, retire_age: 60, runway_target: 6, birth_year: null };
+		doc.setting_specs = [
+			{
+				key: 'birth-year',
+				label: 'Birth year',
+				kind: 'year',
+				min: 1900,
+				max: 2100,
+				default: null,
+				help: 'h'
+			},
+			{
+				key: 'invented-later',
+				label: 'Invented later',
+				kind: 'percent',
+				min: 0,
+				max: 1,
+				default: null,
+				help: 'h'
+			}
+		];
+		vi.stubGlobal('fetch', routed({ 'data.json': doc }, ['/api/']));
+		await loadData();
+
+		expect((await getSettings()).info?.values).toEqual({
+			'birth-year': null,
+			'invented-later': null
+		});
+	});
+
+	it('says the snapshot is too old rather than showing a blank panel', async () => {
+		const doc = makeData();
+		doc.settings = { swr: 4, real_return: 5, retire_age: 60, runway_target: 6, birth_year: null };
+		doc.setting_specs = null;
+		vi.stubGlobal('fetch', routed({ 'data.json': doc }, ['/api/']));
+		await loadData();
+
 		const { info, error } = await getSettings();
-
 		expect(info).toBeNull();
-		expect(error).toContain('Restart');
-		expect(error).toContain('serve-api');
+		expect(error).toContain('yala.builder');
 	});
 
-	it('reports an unreachable API distinctly from a missing endpoint', async () => {
-		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
-		const { error } = await getSettings();
+	describe('with an API', () => {
+		beforeEach(() => live.set(true));
 
-		expect(error).toContain('unreachable');
-		expect(error).not.toContain('Restart');
-	});
+		const body = { values: { swr: 4 }, specs: [{ key: 'swr' }] };
 
-	it('surfaces a rejected value as the API worded it', async () => {
-		vi.stubGlobal(
-			'fetch',
-			mockFetchOnce({ detail: 'Withdrawal rate must be between 0.1 and 20' }, false, 422)
-		);
-		expect(await setSetting('swr', 99)).toBe('Withdrawal rate must be between 0.1 and 20');
+		it('returns the payload when the API answers', async () => {
+			vi.stubGlobal('fetch', mockFetchOnce(body));
+			const { info, error } = await getSettings();
+
+			expect(error).toBeNull();
+			expect(info?.values.swr).toBe(4);
+		});
+
+		it('tells the user to restart the API when the endpoint is missing', async () => {
+			// A 404 here means the running API predates this build, not that a record is absent.
+			vi.stubGlobal('fetch', mockFetchOnce({}, false, 404));
+			const { info, error } = await getSettings();
+
+			expect(info).toBeNull();
+			expect(error).toContain('Restart');
+			expect(error).toContain('serve-api');
+		});
+
+		it('reports an unreachable API distinctly from a missing endpoint', async () => {
+			vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
+			const { error } = await getSettings();
+
+			expect(error).toContain('unreachable');
+			expect(error).not.toContain('Restart');
+		});
+
+		it('surfaces a rejected value as the API worded it', async () => {
+			vi.stubGlobal(
+				'fetch',
+				mockFetchOnce({ detail: 'Withdrawal rate must be between 0.1 and 20' }, false, 422)
+			);
+			expect(await setSetting('swr', 99)).toBe('Withdrawal rate must be between 0.1 and 20');
+		});
 	});
 });

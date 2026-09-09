@@ -3,8 +3,10 @@
 	// nothing to edit at this range; every element here answers a question the Month view can't.
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
-	import Board from '$lib/layout/Board.svelte';
-	import Pane from '$lib/ui/Pane.svelte';
+	import type { Layout } from '$lib/layout/grid/types';
+	import Board from '$lib/layout/grid/Board.svelte';
+	import Cell from '$lib/layout/grid/Cell.svelte';
+	import FigureCell, { type FigureSpec } from '$lib/layout/grid/FigureCell.svelte';
 	import StatStrip from '$lib/charts/StatStrip.svelte';
 	import StatMatrix from '$lib/charts/StatMatrix.svelte';
 
@@ -15,6 +17,43 @@
 	let { data, year }: Props = $props();
 
 	const yr = $derived<Scope>({ level: 'year', year });
+
+	// The statistics pane fits its content — it is a block of figures, not a chart, and its height is
+	// entirely a function of how many rows of them there are. Everything below it is a chart, so it
+	// scales to whatever the user gives it.
+	const LAYOUT = {
+		stats: { x: 0, y: 0, w: 48, h: 13, content: 'flow', mode: 'fit' },
+		trend: { x: 0, y: 13, w: 48, h: 15, content: 'scale' },
+		flow: { x: 0, y: 28, w: 48, h: 19, content: 'scale' },
+		heatmap: { x: 0, y: 47, w: 48, h: 17, content: 'scale' }
+	} satisfies Layout;
+
+	const FIGURES = $derived<Record<string, FigureSpec>>({
+		trend: {
+			figure: 'overview.income_spent_saved',
+			scope: yr,
+			chart: 'bar',
+			title: 'Income vs spending vs saved',
+			cap: `${year} · per month`
+		},
+		flow: {
+			figure: 'money.flow',
+			scope: yr,
+			chart: 'sankey',
+			title: 'Money flow',
+			cap: `${year} · gross → deductions → spending → saved`
+		},
+		// The heatmap carries the category ranking implicitly — rows arrive ordered biggest-first — so
+		// it defaults to the full width, where twelve columns plus the category gutter have room.
+		heatmap: {
+			figure: 'spending.category_by_month',
+			scope: yr,
+			chart: 'heatmap',
+			title: 'Category by month',
+			cap: 'Biggest category first · each row scaled to its own max, so a quiet category stays readable'
+		}
+	});
+
 	const activeMonths = $derived(
 		(data.years[String(year)]?.matrix ?? []).filter(
 			(r) => r.income > 0 || Object.keys(r.spent).length > 0
@@ -53,57 +92,26 @@
 			]
 		}
 	]);
-
-	const trend = $derived([
-		{
-			id: 'overview.income_spent_saved',
-			scope: yr,
-			chart: 'bar',
-			title: 'Income vs spending vs saved',
-			cap: `${year} · per month`,
-			span: 6
-		}
-	]);
-
-	const flow = $derived([
-		{
-			id: 'money.flow',
-			scope: yr,
-			chart: 'sankey',
-			title: 'Money flow',
-			cap: `${year} · gross → deductions → spending → saved`,
-			span: 6
-		}
-	]);
-
-	// The heatmap takes the full width: twelve columns plus the category gutter need the room, and
-	// it already carries the category ranking implicitly — rows arrive ordered biggest-first.
-	const heatmap = $derived([
-		{
-			id: 'spending.category_by_month',
-			scope: yr,
-			chart: 'heatmap',
-			title: 'Category by month',
-			cap: 'Biggest category first · each row scaled to its own max, so a quiet category stays readable',
-			span: 6
-		}
-	]);
 </script>
 
-<!-- One statistics pane: the gross→net chain across the top, then the same three measures as
-     totals and as a monthly run-rate. Splitting these into two cards implied they were unrelated
-     readings when they are one account of the year. -->
-<div class="panes">
-	<Pane title={`${year} statistics`} cap="Gross through to what you keep, then totals and run-rate">
+<Board key="activity:year" layout={LAYOUT}>
+	<!-- One statistics pane: the gross→net chain across the top, then the same three measures as
+	     totals and as a monthly run-rate. Splitting these into two cards implied they were unrelated
+	     readings when they are one account of the year. -->
+	<Cell
+		id="stats"
+		title={`${year} statistics`}
+		cap="Gross through to what you keep, then totals and run-rate"
+	>
 		<StatStrip {data} cells={income} />
 		<div class="rule"></div>
 		<StatMatrix {data} {columns} rows={cashflow} />
-	</Pane>
-</div>
+	</Cell>
 
-<Board {data} cells={trend} />
-<Board {data} cells={flow} />
-<Board {data} cells={heatmap} />
+	{#each ['trend', 'flow', 'heatmap'] as id (id)}
+		<FigureCell {id} {data} spec={FIGURES[id]!} />
+	{/each}
+</Board>
 
 <style>
 	/* Separates the two halves of the statistics pane without implying two cards. */

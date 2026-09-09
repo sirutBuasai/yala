@@ -1,6 +1,32 @@
 // A small, valid DashboardData factory for unit tests. Returns a fresh object
 // each call so tests can mutate freely.
-import type { DashboardData, MonthMatrixRow, NetWorthSnapshot } from '$lib/data/types';
+import type {
+	AccountLists,
+	DashboardData,
+	MonthMatrixRow,
+	NetWorthSnapshot
+} from '$lib/data/types';
+
+/**
+ * The pickable account sets, as the API (and the snapshot) send them. A factory rather than a literal
+ * per test file: the contract owns this shape, and four hand-written copies of it meant four edits
+ * every time it grew a field — and four chances to describe a set of accounts the backend never sends.
+ */
+export function makeAccounts(over: Partial<AccountLists> = {}): AccountLists {
+	return {
+		spending_categories: [],
+		funding_accounts: [],
+		employers: [],
+		payroll_options: [],
+		cash_accounts: [],
+		credit_accounts: [],
+		investment_accounts: [],
+		balance_accounts: [],
+		liability_accounts: [],
+		sweeps: {},
+		...over
+	};
+}
 
 function matrix(byMonth: Record<number, { spent: Record<string, number>; income: number }>) {
 	const rows: MonthMatrixRow[] = [];

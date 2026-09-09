@@ -1,8 +1,8 @@
 <script lang="ts">
 	// Activity — spending and income at three ranges, replacing the old Overview / Yearly / Monthly
 	// trio. Range is a control on this page rather than three tabs, because those tabs were the same
-	// data at three zoom levels; each range is still its own layout, since a month wants raw records
-	// and a decade wants trends. Editing lives only in Month (entries are logged at day/month level)
+	// data at three zoom levels; each range is still its own BOARD — with its own stored arrangement —
+	// since a month wants raw records and a decade wants trends. Editing lives only in Month (entries are logged at day/month level)
 	// and on the Home hub.
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
@@ -20,11 +20,10 @@
 
 	interface Props {
 		data: DashboardData;
-		edit: boolean;
 		accounts: AccountsInfo | null;
 		onsaved: () => void;
 	}
-	let { data, edit, accounts, onsaved }: Props = $props();
+	let { data, accounts, onsaved }: Props = $props();
 
 	const RANGES: { id: Range; label: string }[] = [
 		{ id: 'month', label: 'Month' },
@@ -87,7 +86,7 @@
 </ViewHeader>
 
 {#if range.value === 'month'}
-	<MonthView {data} {monthKey} {edit} {accounts} {onsaved} />
+	<MonthView {data} {monthKey} {accounts} {onsaved} />
 {:else if range.value === 'year'}
 	<YearView {data} {year} />
 {:else}

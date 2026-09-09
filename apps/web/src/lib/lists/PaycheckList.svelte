@@ -14,27 +14,14 @@
 
 	interface Props {
 		paychecks: PaycheckOut[];
-		/** Edit mode: rows become clickable to open the paycheck editor. */
-		edit?: boolean;
+		/** Supply to make rows clickable — they open the paycheck editor. */
 		onedit?: (locator: string) => void;
 		/** Hide the per-row date (e.g. in the calendar day panel, which already names the day). */
 		showDate?: boolean;
 		/** Which figures to break out into columns, in order. Trailing amount is always net. */
 		fields?: PaycheckField[];
-		/** Fix the list to this many rows tall, then scroll (see RowList). */
-		fixedRows?: number;
-		/** Remembers this list's expanded state (see RowList). */
-		prefKey?: string;
 	}
-	let {
-		paychecks,
-		edit = false,
-		onedit,
-		showDate = true,
-		fields = ['gross', 'takehome'],
-		fixedRows,
-		prefKey
-	}: Props = $props();
+	let { paychecks, onedit, showDate = true, fields = ['gross', 'takehome'] }: Props = $props();
 
 	const LABELS: Record<PaycheckField, string> = {
 		gross: 'gross',
@@ -74,11 +61,8 @@
 <div class="pc">
 	<RowList
 		items={paychecks}
-		{edit}
 		{onedit}
 		columnTracks="auto"
-		{fixedRows}
-		{prefKey}
 		density="comfortable"
 		dotColor={() => 'var(--role-income)'}
 		dateOf={showDate ? (p) => p.date : undefined}

@@ -1,11 +1,13 @@
 <script lang="ts">
-	// The calendar board: a month grid beside the selected day's entries. This file owns only the
-	// wiring — which day is selected, and the Add/Edit overlays the day panel opens. The grid draws
-	// itself (CalendarGrid), the rail draws itself (DayPanel), and the month arithmetic is pure
-	// (days.ts), so each of the three can be read, changed or tested without the other two.
-	import type { Snippet } from 'svelte';
+	// The calendar and the selected day, as two panes on the board. This file owns only the wiring —
+	// which day is selected — so the grid draws itself (CalendarGrid), the entries draw themselves
+	// (DayEntries), and the month arithmetic stays pure (days.ts).
+	//
+	// It renders TWO cells at its root and no wrapper. That matters: a grid item must be a direct child
+	// of its grid, and a Svelte component adds no element of its own, so both cells land straight in
+	// the board and can be placed and moved independently — which is the whole point of the grid. Its
+	// predecessor wrapped them in a two-column `Split`, and that pairing was fixed in code.
 	import type { DashboardData } from '$lib/data/types';
-	import type { AccountsInfo } from '$lib/data/load';
 	import {
 		dayCells,
 		daysInMonthOf,
@@ -14,25 +16,23 @@
 		latestActivityDay,
 		weekRows
 	} from '$lib/calendar/days';
-	import { MONTHS } from '$lib/utils/format';
+	import { money, MONTHS } from '$lib/utils/format';
 	import { matching, Pref } from '$lib/utils/persist.svelte';
+	import Cell from '$lib/layout/grid/Cell.svelte';
 	import CalendarGrid from '$lib/calendar/CalendarGrid.svelte';
-	import DayPanel from '$lib/calendar/DayPanel.svelte';
-	import EditModals from '$lib/entries/EditModals.svelte';
-	import Pane from '$lib/ui/Pane.svelte';
-	import Split from '$lib/layout/Split.svelte';
+	import DayEntries from '$lib/calendar/DayEntries.svelte';
 
 	interface Props {
 		data: DashboardData;
-		edit: boolean;
-		accounts: AccountsInfo | null;
-		onsaved: () => void;
 		/** The month on screen, "YYYY-MM" — controlled by the parent so the scope can be shared. */
 		monthKey: string;
-		/** Optional pane pinned under the day panel in the rail. */
-		railBelow?: Snippet;
+		onadd: (iso: string) => void;
+		oneditTransaction: (locator: string) => void;
+		oneditPaycheck: (locator: string) => void;
+		oneditTransfer: (locator: string) => void;
 	}
-	let { data, edit, accounts, onsaved, monthKey, railBelow }: Props = $props();
+	let { data, monthKey, onadd, oneditTransaction, oneditPaycheck, oneditTransfer }: Props =
+		$props();
 
 	const year = $derived(+monthKey.slice(0, 4));
 	const month = $derived(+monthKey.slice(5, 7));
@@ -72,49 +72,43 @@
 	}
 
 	const selected = $derived(selectedDay ? cells[selectedDay - 1] : undefined);
-
-	let modals: ReturnType<typeof EditModals>;
+	const dayTitle = $derived(
+		selected ? `${MONTHS[month - 1]} ${selected.day}, ${year}` : 'No day selected'
+	);
+	/** The day's totals, as the pane's subtitle rather than a header of its own. */
+	const dayCap = $derived.by(() => {
+		if (!selected) return '';
+		const plural = selected.txns.length === 1 ? '' : 's';
+		const income = selected.income ? ` · +${money(selected.income)} income` : '';
+		return `${selected.txns.length} transaction${plural} · ${money(selected.spent)}${income}`;
+	});
 </script>
 
-<Split stretch>
-	{#snippet main()}
-		<!-- A size-container, so the grid inside reacts to the PANE's width rather than the viewport's:
-		     this board is full-width on Home but sits in a Split column, and only the container knows. -->
-		<div class="calpane">
-			<Pane title="Log activity">
-				<CalendarGrid {rows} {monthKey} {firstWeekday} {selectedDay} onpick={pickDay} />
-			</Pane>
-		</div>
-	{/snippet}
+<Cell id="calendar" title="Log activity" cap={`${MONTHS[month - 1]} ${year} · pick a day`}>
+	<!-- A size-container, so the grid inside reacts to the PANE's width rather than the viewport's:
+	     this pane can be anything from a third of the board to all of it. -->
+	<div class="calpane">
+		<CalendarGrid {rows} {monthKey} {firstWeekday} {selectedDay} onpick={pickDay} />
+	</div>
+</Cell>
 
-	{#snippet rail()}
+<Cell id="day" title={dayTitle} cap={dayCap}>
+	{#snippet actions()}
 		{#if selected}
-			<DayPanel
-				day={selected}
-				{month}
-				{year}
-				{edit}
-				onadd={() => modals.add()}
-				oneditTransaction={(l) => modals.editTransaction(l)}
-				oneditPaycheck={(l) => modals.editPaycheck(l)}
-				oneditTransfer={(l) => modals.editTransfer(l)}
-			/>
+			<button class="btn-ghost" onclick={() => onadd(selected.iso)}>+ Add entry</button>
 		{/if}
-		{@render railBelow?.()}
 	{/snippet}
-</Split>
-
-<EditModals
-	bind:this={modals}
-	{accounts}
-	{onsaved}
-	kinds={['transaction', 'paycheck', 'transfer']}
-	presetDate={selected?.iso}
-	addTitle={selected ? `Add entry · ${MONTHS[month - 1]} ${selected.day}` : 'Add entry'}
-/>
+	{#if selected}
+		<DayEntries day={selected} {oneditTransaction} {oneditPaycheck} {oneditTransfer} />
+	{/if}
+</Cell>
 
 <style>
 	.calpane {
 		container-type: inline-size;
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 auto;
+		min-height: 0;
 	}
 </style>

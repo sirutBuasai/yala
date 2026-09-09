@@ -12,7 +12,7 @@
 	// A row that can't be saved blocks (see `blockReason`); "Save" commits the rest and says what it
 	// skipped.
 	import type { DashboardData } from '$lib/data/types';
-	import { type AccountsInfo, logBalance, networthAt, updateBalance } from '$lib/data/load';
+	import { type AccountsInfo, live, logBalance, networthAt, updateBalance } from '$lib/data/load';
 	import { formatAccount, money, moneyExact } from '$lib/utils/format';
 	import { accountVar } from '$lib/utils/theme';
 	import { addMonths } from '$lib/utils/period';
@@ -29,19 +29,20 @@
 		type Group,
 		type Row
 	} from '$lib/balance/checklist';
-	import Pane from '$lib/ui/Pane.svelte';
+	import Cell from '$lib/layout/grid/Cell.svelte';
 	import AmountInput from '$lib/ui/AmountInput.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 
 	interface Props {
+		/** Pane id in the board's layout. */
+		id: string;
 		data: DashboardData;
 		accounts: AccountsInfo | null;
-		edit: boolean;
 		onsaved: () => void;
 		/** Selected month "YYYY-MM" — shared with the calendar via the header stepper. */
 		monthKey: string;
 	}
-	let { data, accounts, edit, onsaved, monthKey }: Props = $props();
+	let { id, data, accounts, onsaved, monthKey }: Props = $props();
 
 	const rows = $derived(
 		buildRows(accounts?.balance_accounts ?? [], accounts?.liability_accounts ?? [], formatAccount)
@@ -67,7 +68,9 @@
 
 	async function refresh() {
 		if (!shownDate || !prevDate) return;
-		if (!edit) {
+		// With no API there is nothing to serve the two dated reads, so the snapshot's current figures
+		// stand in and the columns that compare two dates read as unavailable rather than as wrong.
+		if (!$live) {
 			atNow = toMap((data.networth?.accounts ?? []).map((a) => ({ ...a })));
 			adjNow = toMap(data.networth?.adjustments ?? []);
 			adjPrev = new Map();
@@ -90,7 +93,7 @@
 	}
 	$effect(() => {
 		shownDate;
-		edit;
+		$live;
 		void refresh();
 	});
 
@@ -164,145 +167,137 @@
 	}
 </script>
 
-<div class="balancepane">
-	<Pane title="Log balances">
-		{#snippet actions()}
-			{#if edit && rows.length}
-				<span class="progress">{filled.length}/{rows.length}</span>
-			{/if}
-		{/snippet}
-
-		{#if !edit}
-			<p class="cap">Start the local API (<code>make serve-api</code>) to log balances.</p>
-		{:else if !rows.length}
-			<p class="cap">No loggable accounts yet. Open one under Manage.</p>
-		{:else}
-			<!-- The tally leads: it is what the whole pass is for, and it updates as each figure lands. -->
-			<dl class="agg">
-				<div>
-					<dt>Assets</dt>
-					<dd>{money(assets)}</dd>
-				</div>
-				<div>
-					<dt>Liabilities</dt>
-					<dd>−{money(liabilities)}</dd>
-				</div>
-				<div>
-					<dt>Net worth</dt>
-					<dd>{money(assets - liabilities)}</dd>
-				</div>
-			</dl>
-
-			<!-- A table, not a grid of rows: shared column widths line the figures up at any pane width,
-			     and the wrapper scrolls sideways when six money columns no longer fit. -->
-			<div class="balbox scroller-x">
-				<table class="bal" class:loading>
-					<thead>
-						<tr>
-							<th scope="col">Account</th>
-							<th scope="col" class="num">Previous</th>
-							<th scope="col" class="num">Expected</th>
-							<th scope="col" class="num">Balance</th>
-							<th scope="col" class="num">Change</th>
-							<th scope="col" class="num">Check</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each GROUP_ORDER as group (group)}
-							{@const members = rows.filter((r) => r.group === group)}
-							{#if members.length}
-								<tr class="glabel">
-									<th scope="rowgroup">{group}</th>
-									<td class="num" colspan="5">{money(subtotal(group))}</td>
-								</tr>
-								{#each members as row (row.account)}
-									{@const value = parsed(row)}
-									{@const prev = previous(row.account)}
-									{@const exp = expected(row.account)}
-									{@const chk = check(row)}
-									<tr class:done={value != null && !blockedRow(row)} class:bad={blockedRow(row)}>
-										<td class="nm">
-											<i class="dot" style:background={accountVar(row.account)}></i>
-											<span class="label">{formatAccount(row.account)}</span>
-										</td>
-										<td class="num muted">{prev == null ? '—' : moneyExact(prev)}</td>
-										<td class="num muted">{exp == null ? '—' : moneyExact(exp)}</td>
-										<td class="entrycell">
-											<AmountInput
-												prefix="$"
-												placeholder="—"
-												signed
-												disabled={busy}
-												ariaLabel={`Balance for ${formatAccount(row.account)}`}
-												bind:value={typed[cellKey(row.account)]}
-											/>
-										</td>
-										<td class="num" class:pos={value != null && prev != null && value - prev >= 0}
-											>{value == null || prev == null ? '—' : moneyExact(value - prev)}</td
-										>
-										<td class="num">
-											{#if chk == null}
-												—
-											{:else if matches(row)}
-												<Badge tone="good" filled title="Matches the ledger">✓</Badge>
-											{:else if row.liability}
-												<Badge
-													tone="crit"
-													filled
-													title="Off by {moneyExact(chk)} — an entry is missing">✕</Badge
-												>
-											{:else}
-												<Badge tone="warn" filled title="Adjustment this month would post"
-													>{moneyExact(chk)}</Badge
-												>
-											{/if}
-										</td>
-									</tr>
-								{/each}
-							{/if}
-						{/each}
-					</tbody>
-				</table>
-			</div>
-
-			<div class="foot">
-				{#if blocked.length}
-					<p class="blockmsg" role="status">
-						{#each blocked as row (row.account)}
-							{@const gap = check(row) ?? 0}
-							<span class="bl">
-								<b>{formatAccount(row.account)}</b>
-								{#if whyBlocked(row) === 'negative'}
-									can't hold a negative balance — enter what it is worth, not what it moved.
-								{:else}
-									is off by {moneyExact(Math.abs(gap))} — log the missing {missingEntryKind(gap)}
-									first.
-								{/if}
-							</span>
-						{/each}
-					</p>
-				{/if}
-
-				{#if err}<p class="err" role="alert">{err}</p>{/if}
-				{#if note}<p class="note" role="status">{note}</p>{/if}
-
-				<div class="actions">
-					<button class="btn-primary" onclick={saveAll} disabled={busy || !savable.length}>
-						{busy ? 'Saving…' : savable.length ? `Save ${savable.length}` : 'Save'}
-					</button>
-				</div>
-			</div>
+<Cell {id} title="Log balances" cap="A month's snapshot is its first-of-month assertion">
+	{#snippet actions()}
+		{#if rows.length}
+			<span class="progress">{filled.length}/{rows.length}</span>
 		{/if}
-	</Pane>
-</div>
+	{/snippet}
+
+	{#if !rows.length}
+		<p class="cap">No loggable accounts yet. Open one under Manage.</p>
+	{:else}
+		<!-- The tally leads: it is what the whole pass is for, and it updates as each figure lands. -->
+		<dl class="agg">
+			<div>
+				<dt>Assets</dt>
+				<dd>{money(assets)}</dd>
+			</div>
+			<div>
+				<dt>Liabilities</dt>
+				<dd>−{money(liabilities)}</dd>
+			</div>
+			<div>
+				<dt>Net worth</dt>
+				<dd>{money(assets - liabilities)}</dd>
+			</div>
+		</dl>
+
+		<!-- A table, not a grid of rows: shared column widths line the figures up at any pane width,
+		     and the wrapper scrolls sideways when six money columns no longer fit. -->
+		<div class="balbox scroller-x">
+			<table class="bal" class:loading>
+				<thead>
+					<tr>
+						<th scope="col">Account</th>
+						<th scope="col" class="num">Previous</th>
+						<th scope="col" class="num">Expected</th>
+						<th scope="col" class="num">Balance</th>
+						<th scope="col" class="num">Change</th>
+						<th scope="col" class="num">Check</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each GROUP_ORDER as group (group)}
+						{@const members = rows.filter((r) => r.group === group)}
+						{#if members.length}
+							<tr class="glabel">
+								<th scope="rowgroup">{group}</th>
+								<td class="num" colspan="5">{money(subtotal(group))}</td>
+							</tr>
+							{#each members as row (row.account)}
+								{@const value = parsed(row)}
+								{@const prev = previous(row.account)}
+								{@const exp = expected(row.account)}
+								{@const chk = check(row)}
+								<tr class:done={value != null && !blockedRow(row)} class:bad={blockedRow(row)}>
+									<td class="nm">
+										<i class="dot" style:background={accountVar(row.account)}></i>
+										<span class="label">{formatAccount(row.account)}</span>
+									</td>
+									<td class="num muted">{prev == null ? '—' : moneyExact(prev)}</td>
+									<td class="num muted">{exp == null ? '—' : moneyExact(exp)}</td>
+									<td class="entrycell">
+										<AmountInput
+											prefix="$"
+											placeholder="—"
+											signed
+											disabled={busy}
+											ariaLabel={`Balance for ${formatAccount(row.account)}`}
+											bind:value={typed[cellKey(row.account)]}
+										/>
+									</td>
+									<td class="num" class:pos={value != null && prev != null && value - prev >= 0}
+										>{value == null || prev == null ? '—' : moneyExact(value - prev)}</td
+									>
+									<td class="num">
+										{#if chk == null}
+											—
+										{:else if matches(row)}
+											<Badge tone="good" filled title="Matches the ledger">✓</Badge>
+										{:else if row.liability}
+											<Badge
+												tone="crit"
+												filled
+												title="Off by {moneyExact(chk)} — an entry is missing">✕</Badge
+											>
+										{:else}
+											<Badge tone="warn" filled title="Adjustment this month would post"
+												>{moneyExact(chk)}</Badge
+											>
+										{/if}
+									</td>
+								</tr>
+							{/each}
+						{/if}
+					{/each}
+				</tbody>
+			</table>
+		</div>
+
+		<div class="foot">
+			{#if blocked.length}
+				<p class="blockmsg" role="status">
+					{#each blocked as row (row.account)}
+						{@const gap = check(row) ?? 0}
+						<span class="bl">
+							<b>{formatAccount(row.account)}</b>
+							{#if whyBlocked(row) === 'negative'}
+								can't hold a negative balance — enter what it is worth, not what it moved.
+							{:else}
+								is off by {moneyExact(Math.abs(gap))} — log the missing {missingEntryKind(gap)}
+								first.
+							{/if}
+						</span>
+					{/each}
+				</p>
+			{/if}
+
+			{#if err}<p class="err" role="alert">{err}</p>{/if}
+			{#if note}<p class="note" role="status">{note}</p>{/if}
+
+			<div class="actions">
+				<button class="btn-primary" onclick={saveAll} disabled={busy || !savable.length}>
+					{busy ? 'Saving…' : savable.length ? `Save ${savable.length}` : 'Save'}
+				</button>
+			</div>
+		</div>
+	{/if}
+</Cell>
 
 <style>
-	/* Capped rather than full-width: stretched to a fullscreen desktop, a name and its own figures end
-	   up so far apart that the row stops reading as one. */
-	.balancepane {
-		max-width: 52rem;
-	}
-
+	/* No width cap here any more: a name and its figures ending up too far apart to read as one row
+	   is a question of how wide this PANE is, and the pane is the user's to size. */
 	/* The bleed lives on the wrapper because it is also the sideways scroller; with both on the table,
 	   a narrow viewport scrolled the whole page instead. */
 	.balbox {

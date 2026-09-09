@@ -1,11 +1,17 @@
 <script lang="ts">
-	// Borderless hamburger pinned to the page's top-left corner. Clicking it slides in a left
-	// sidebar (with a dimmed backdrop) to switch between the dashboard (Home) and the throwaway
-	// Development sandbox. Plain <a> links let SvelteKit handle client-side navigation.
+	// Borderless hamburger, INLINE in the page header. Clicking it slides in a left sidebar (with a
+	// dimmed backdrop) to switch between the dashboard (Home) and the throwaway Development sandbox.
+	// Plain <a> links let SvelteKit handle client-side navigation.
+	//
+	// It used to be `position: fixed` in the page's left gutter, which meant the column had to gain an
+	// asymmetric `padding-left` once the viewport stopped being wider than the column plus that gutter
+	// — and that indent pulled the pane grid off its own dot lattice at every width in that band. In
+	// the header it needs no gutter, and the column stays symmetrical at every width.
 	import { page } from '$app/stores';
 	import { fly, fade } from 'svelte/transition';
 	import { focusTrap } from '$lib/utils/focusTrap';
 	import { dur } from '$lib/utils/motion';
+	import Close from '$lib/icons/Close.svelte';
 
 	let open = $state(false);
 
@@ -52,7 +58,9 @@
 		<div class="head">
 			<span id="sidebar-title" class="serif title">Yala</span>
 			<!-- data-dismiss so the focus trap opens the sidebar on its first LINK, not on close. -->
-			<button class="close" data-dismiss aria-label="Close menu" onclick={close}>✕</button>
+			<button class="close iconbtn" data-dismiss aria-label="Close menu" onclick={close}>
+				<Close size={16} />
+			</button>
 		</div>
 		<nav class="links">
 			{#each links as link (link.href)}
@@ -66,10 +74,6 @@
 
 <style>
 	.burger {
-		position: fixed;
-		top: 20px;
-		left: 16px;
-		z-index: 30;
 		display: grid;
 		place-items: center;
 		width: 30px;
@@ -128,16 +132,6 @@
 		font-size: var(--text-dialog);
 		font-weight: var(--fw-semibold);
 		letter-spacing: var(--ls-tight);
-	}
-	.close {
-		border: 0;
-		background: none;
-		color: var(--ink-2);
-		font-size: var(--text-panel);
-		cursor: pointer;
-	}
-	.close:hover {
-		color: var(--ink);
 	}
 	.links {
 		display: flex;

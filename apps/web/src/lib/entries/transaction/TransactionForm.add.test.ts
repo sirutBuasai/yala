@@ -3,18 +3,17 @@ import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
 import { get } from 'svelte/store';
 import { setAccountDirectory } from '$lib/data/directory.svelte';
-import type { AccountsInfo } from '$lib/data/load';
 import { lastCategory, lastFundingAccount } from '$lib/utils/editPrefs';
 import TransactionForm from '$lib/entries/transaction/TransactionForm.svelte';
+import { makeAccounts } from '$lib/data/__fixtures__/dashboard';
 
-const accounts: AccountsInfo = {
+const accounts = makeAccounts({
 	spending_categories: ['Grocery', 'Takeouts'],
 	funding_accounts: ['Liabilities:CC:CardA', 'Assets:Cash:BankA'],
 	employers: ['Employer1'],
-	payroll_options: [],
 	cash_accounts: ['Assets:Cash:BankA'],
 	credit_accounts: ['Assets:Cash:Wallet', 'Liabilities:CC:CardA']
-};
+});
 
 function okFetch(body: unknown = { ok: true, id: 'new-id' }) {
 	return vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => body });

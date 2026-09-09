@@ -1,17 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
-import type { AccountsInfo } from '$lib/data/load';
 import TransactionForm from '$lib/entries/transaction/TransactionForm.svelte';
+import { makeAccounts } from '$lib/data/__fixtures__/dashboard';
 
-const accounts: AccountsInfo = {
+const accounts = makeAccounts({
 	spending_categories: ['Grocery', 'Takeouts'],
 	funding_accounts: ['Liabilities:CC:CardA', 'Assets:Cash:BankA'],
 	employers: ['Employer1'],
-	payroll_options: [],
 	cash_accounts: ['Assets:Cash:BankA'],
 	credit_accounts: ['Assets:Cash:Wallet', 'Liabilities:CC:CardA']
-};
+});
 
 const prefill = {
 	locator: 'id:abc',

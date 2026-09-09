@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { line, area } from 'd3-shape';
-	import { moneyYScale, logYScale, labelIndices } from '$lib/charts/axis';
+	import { moneyYScale, logYScale, labelIndices, plotSize } from '$lib/charts/axis';
 	import { money, esc } from '$lib/utils/format';
 	import { clamp } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
@@ -38,8 +38,9 @@
 	// End labels need room on the right for "Subscription $0.7k"-sized text. That room is a share of
 	// the box rather than a constant, so a half-width card doesn't hand most of its plot to labels.
 	const m = $derived({ t: 16, r: endLabels ? clamp(W * 0.2, 96, 170) : 16, b: 28, l: 60 });
-	const iw = $derived(W - m.l - m.r);
-	const ih = $derived(H - m.t - m.b);
+	const plot = $derived(plotSize(W, H, m));
+	const iw = $derived(plot.iw);
+	const ih = $derived(plot.ih);
 	const n = $derived(labels.length);
 	// Unique gradient id per instance so multiple area charts don't collide.
 	const gid = 'lg-' + Math.random().toString(36).slice(2, 9);
