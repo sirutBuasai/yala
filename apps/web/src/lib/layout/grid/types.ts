@@ -6,11 +6,15 @@
 
 import type { FigureSpec } from './figure';
 
-/** A rectangle on the board: 0-based origin, spans in units. */
-export interface Rect {
+/** A run of columns: 0-based origin, span in units. All the push rule needs to know about width. */
+export interface Span {
 	x: number;
-	y: number;
 	w: number;
+}
+
+/** A rectangle on the board: 0-based origin, spans in units. */
+export interface Rect extends Span {
+	y: number;
 	h: number;
 }
 

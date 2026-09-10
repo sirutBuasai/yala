@@ -6,7 +6,8 @@
 // written.
 
 import { Pref, listOf, type Revive } from '$lib/utils/persist.svelte';
-import { assertNoOverlap, authoredY, clampRect, resolve, boardRows } from './resolve';
+import { assertNoOverlap, clampRect, resolve, boardRows } from './resolve';
+import { lift, type DragOrigin } from './lift';
 import { readingOrder } from './fold';
 import { effectiveMode, hugs, scrolls, sizePanes } from './sizing';
 import { COLS, MIN_H, MIN_W, pxForRows, rowsForPx } from './units';
@@ -145,21 +146,17 @@ export class Arrangement {
 		this.#panes = this.#panes.map((p) => (p.id === id ? next(p) : p));
 	}
 
-	/** Move the pane to the front of the priority order, so it wins ties on authored top. */
-	promote(id: string): void {
-		const found = this.#panes.find((p) => p.id === id);
-		if (!found) return;
-		this.#panes = [found, ...this.#panes.filter((p) => p.id !== id)];
+	/**
+	 * The board a drag is about to edit. Handed back to every `dragTo` rather than read off the live
+	 * board, which the gesture is already halfway through changing.
+	 */
+	beginDrag(id: string): DragOrigin {
+		return { authored: this.snapshot(), placed: this.#placed, carried: this.placed(id).offset };
 	}
 
-	/**
-	 * Drop a pane at a position in PLACED coordinates — where it is on screen. `offset` is the
-	 * displacement it was carrying at the press; `authoredY` subtracts it back out.
-	 */
-	drop(id: string, x: number, y: number, offset: number): void {
-		const { w, h } = this.authored(id);
-		const rect = clampRect({ x, y: authoredY(y, offset), w, h });
-		this.#update(id, (p) => ({ ...p, x: rect.x, y: rect.y }));
+	/** One pointer move of a drag, in PLACED coordinates — where the pane is on screen (see `lift`). */
+	dragTo(id: string, x: number, y: number, origin: DragOrigin): void {
+		this.#panes = lift(id, x, y, origin);
 	}
 
 	/** Resize a pane. On a capped pane the bottom edge sets the CEILING, not the height. */

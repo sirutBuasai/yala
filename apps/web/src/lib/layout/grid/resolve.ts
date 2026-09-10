@@ -8,9 +8,9 @@
 // the gaps the user left: the authored top is a floor, not a target.
 
 import { COLS, MIN_H, MIN_W } from './units';
-import type { PlacedPane, Rect, SizedPane } from './types';
+import type { PlacedPane, Rect, SizedPane, Span } from './types';
 
-export function sharesColumns(a: Rect, b: Rect): boolean {
+export function sharesColumns(a: Span, b: Span): boolean {
 	return a.x < b.x + b.w && b.x < a.x + a.w;
 }
 

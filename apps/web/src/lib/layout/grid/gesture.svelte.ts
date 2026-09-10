@@ -8,7 +8,8 @@
 
 import { EDGES, moveRect, resizeRect, type Edge } from './resize';
 import { UNIT } from './units';
-import type { AuthoredPane, HeightMode, PlacedPane, Rect } from './types';
+import type { DragOrigin } from './lift';
+import type { AuthoredPane, HeightMode, Rect } from './types';
 
 /**
  * What a gesture needs from the arrangement it is editing. Declared structurally rather than by
@@ -16,12 +17,11 @@ import type { AuthoredPane, HeightMode, PlacedPane, Rect } from './types';
  */
 export interface GestureTarget {
 	authored(id: string): AuthoredPane;
-	placed(id: string): PlacedPane;
 	mode(id: string): HeightMode;
 	snapshot(): AuthoredPane[];
 	restore(panes: AuthoredPane[]): void;
-	promote(id: string): void;
-	drop(id: string, x: number, y: number, offset: number): void;
+	beginDrag(id: string): DragOrigin;
+	dragTo(id: string, x: number, y: number, origin: DragOrigin): void;
 	resizeTo(id: string, rect: Rect): void;
 	commit(): void;
 }
@@ -47,8 +47,8 @@ export class PaneGesture {
 	#before: AuthoredPane[] | null = null;
 	/** The rectangle the deltas apply to. Deltas are cumulative from the press, never incremental. */
 	#base: Rect | null = null;
-	/** Displacement the pane carried at the press — subtracted before a drop is stored. */
-	#carried = 0;
+	/** The board a move re-derives from, so a swap made mid-drag can be undone by dragging back. */
+	#origin: DragOrigin | null = null;
 	/** The most recent candidate whose content fitted; where a rejected resize is held. */
 	#fitting: Rect | null = null;
 	/** Serial, so a superseded spill check cannot undo a newer candidate. */
@@ -78,22 +78,22 @@ export class PaneGesture {
 		if (this.#before) this.#arrangement.restore(this.#before);
 		this.#before = null;
 		this.#base = null;
+		this.#origin = null;
 		this.invalid = false;
 		this.#attempt++;
 	}
 
 	beginMove(): void {
-		this.#before = this.#arrangement.snapshot();
-		const placed = this.#arrangement.placed(this.#id);
-		this.#base = { ...placed };
-		this.#carried = placed.offset;
-		this.#arrangement.promote(this.#id);
+		const origin = this.#arrangement.beginDrag(this.#id);
+		this.#before = origin.authored;
+		this.#origin = origin;
+		this.#base = origin.placed.find((p) => p.id === this.#id) ?? null;
 	}
 
 	moveTo(dx: number, dy: number): void {
-		if (!this.#base) return;
+		if (!this.#base || !this.#origin) return;
 		const { x, y } = moveRect(this.#base, dx, dy);
-		this.#arrangement.drop(this.#id, x, y, this.#carried);
+		this.#arrangement.dragTo(this.#id, x, y, this.#origin);
 	}
 
 	endMove(dx: number, dy: number): void {
@@ -101,6 +101,7 @@ export class PaneGesture {
 		this.#arrangement.commit();
 		this.#before = null;
 		this.#base = null;
+		this.#origin = null;
 	}
 
 	beginResize(): void {

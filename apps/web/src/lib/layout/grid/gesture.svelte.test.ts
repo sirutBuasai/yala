@@ -4,7 +4,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { PaneGesture, type GestureTarget } from '$lib/layout/grid/gesture.svelte';
-import { authoredY, clampRect } from '$lib/layout/grid/resolve';
+import { lift } from '$lib/layout/grid/lift';
+import { clampRect } from '$lib/layout/grid/resolve';
 import { MIN_H, UNIT } from '$lib/layout/grid/units';
 import type { AuthoredPane, PlacedPane } from '$lib/layout/grid/types';
 
@@ -19,12 +20,13 @@ const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 interface Fake extends GestureTarget {
 	panes: AuthoredPane[];
 	committed: AuthoredPane[] | null;
-	drops: { x: number; y: number; offset: number }[];
+	drags: { x: number; y: number }[];
 }
 
 /**
- * A board with two panes, the one under test SECOND so its promotion is visible. `drop` and
+ * A board with two panes, the one under test SECOND so its promotion is visible. `dragTo` and
  * `resizeTo` reuse the same pure rules as `Arrangement`, so what the test pins down is the gesture.
+ * Every pane carries the same `offset`, which is enough to exercise the displacement round-trip.
  */
 function fake(over: Partial<AuthoredPane> = {}, offset = 0): Fake {
 	const patch = (id: string, next: (i: AuthoredPane) => AuthoredPane) => {
@@ -37,25 +39,28 @@ function fake(over: Partial<AuthoredPane> = {}, offset = 0): Fake {
 			{ id: ID, x: 4, y: 4, w: 12, h: 6, mode: 'fixed', cap: 10, ...over }
 		],
 		committed: null,
-		drops: [],
+		drags: [],
 		authored: (id) => self.panes.find((i) => i.id === id)!,
-		placed: (id): PlacedPane => {
-			const i = self.authored(id);
-			return { id, x: i.x, y: i.y + offset, w: i.w, h: i.h, offset };
-		},
 		mode: (id) => self.authored(id).mode,
 		snapshot: () => self.panes.map((i) => ({ ...i })),
 		restore: (panes) => {
 			self.panes = panes.map((i) => ({ ...i }));
 		},
-		promote: (id) => {
-			self.panes = [self.authored(id), ...self.panes.filter((i) => i.id !== id)];
-		},
-		drop: (id, x, y, off) => {
-			self.drops.push({ x, y, offset: off });
-			const { w, h } = self.authored(id);
-			const rect = clampRect({ x, y: authoredY(y, off), w, h });
-			patch(id, (i) => ({ ...i, x: rect.x, y: rect.y }));
+		beginDrag: () => ({
+			authored: self.snapshot(),
+			placed: self.panes.map((i): PlacedPane => ({
+				id: i.id,
+				x: i.x,
+				y: i.y + offset,
+				w: i.w,
+				h: i.h,
+				offset
+			})),
+			carried: offset
+		}),
+		dragTo: (id, x, y, origin) => {
+			self.drags.push({ x, y });
+			self.panes = lift(id, x, y, origin);
 		},
 		resizeTo: (id, rect) => {
 			if (self.mode(id) === 'cap') {
@@ -106,7 +111,7 @@ describe('moving', () => {
 
 		// Dropped in PLACED coordinates — where it is on screen — with the push it was carrying handed
 		// back, so the authored top moves by the two rows the pointer travelled and not by five.
-		expect(arrangement.drops).toEqual([{ x: 5, y: 4 + 3 + 2, offset: 3 }]);
+		expect(arrangement.drags).toEqual([{ x: 5, y: 4 + 3 + 2 }]);
 		expect(arrangement.authored(ID)).toMatchObject({ x: 5, y: 6 });
 		expect(arrangement.committed).toEqual(arrangement.panes);
 	});
@@ -127,18 +132,18 @@ describe('moving', () => {
 		const arrangement = fake();
 		const { s } = gesture(arrangement);
 		s.moveTo(px(4), 0);
-		expect(arrangement.drops).toEqual([]);
+		expect(arrangement.drags).toEqual([]);
 	});
 });
 
 describe('abandoning', () => {
-	it('puts the whole board back, including the promotion the press did on the way in', () => {
+	it('puts the whole board back, including the promotion the move made on the way', () => {
 		const arrangement = fake();
 		const { s } = gesture(arrangement);
 
 		s.beginMove();
-		expect(arrangement.panes.map((i) => i.id)).toEqual([ID, 'a']);
 		s.moveTo(px(6), px(6));
+		expect(arrangement.panes.map((i) => i.id)).toEqual([ID, 'a']);
 
 		s.abandon();
 

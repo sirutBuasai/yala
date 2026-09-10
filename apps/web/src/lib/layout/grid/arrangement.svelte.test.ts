@@ -25,6 +25,11 @@ function wideEnv(): GridEnv {
 /** Card pixels for `n` units of grid, so a measurement lands on a whole row. */
 const rows = (n: number) => n * UNIT - GAP;
 
+/** One whole drag, the way a gesture drives it: the board captured at the press, then a position in
+    PLACED coordinates. */
+const dragTo = (b: Arrangement, id: string, x: number, y: number) =>
+	b.dragTo(id, x, y, b.beginDrag(id));
+
 let seq = 0;
 /** A board on a key nothing else has used, so one test's storage can't reach another's. */
 function arrangement(env = wideEnv()) {
@@ -88,10 +93,10 @@ describe('fitted panes', () => {
 	});
 });
 
-describe('drop', () => {
+describe('dragging', () => {
 	it('stores where the pane was dropped when it was carrying no displacement', () => {
 		const { arrangement: b } = arrangement();
-		b.drop('top', 24, 4, 0);
+		dragTo(b, 'top', 24, 4);
 		expect(b.placed('top').y).toBe(4);
 	});
 
@@ -103,7 +108,7 @@ describe('drop', () => {
 		expect(before.offset).toBe(8);
 
 		// Pick it up and put it back down in the same place, as a gesture with zero delta does.
-		b.drop('wide', before.x, before.y, before.offset);
+		dragTo(b, 'wide', before.x, before.y);
 
 		expect(b.placed('wide').y).toBe(before.y);
 		expect(b.authored('wide').y).toBe(12); // the authored top is untouched
@@ -114,7 +119,7 @@ describe('drop', () => {
 		b.setMeasured('bottom', rows(14));
 		const before = b.placed('wide'); // authored at 12, resting at 20 (offset 8)
 
-		b.drop('wide', before.x, before.y + 12, before.offset);
+		dragTo(b, 'wide', before.x, before.y + 12);
 
 		// The push is not added a second time on top of the drag.
 		expect(b.authored('wide').y).toBe(24);
@@ -133,7 +138,7 @@ describe('drop', () => {
 		b.setMeasured('bottom', rows(14));
 		const before = b.placed('wide');
 
-		b.drop('wide', before.x, before.y + 4, before.offset);
+		dragTo(b, 'wide', before.x, before.y + 4);
 
 		expect(b.authored('wide').y).toBe(16);
 		expect(b.placed('wide').y).toBe(20);
@@ -141,19 +146,15 @@ describe('drop', () => {
 
 	it('keeps a dropped pane inside the board', () => {
 		const { arrangement: b } = arrangement();
-		b.drop('top', 40, 0, 0); // a 24-wide pane cannot start at column 40
+		dragTo(b, 'top', 40, 0); // a 24-wide pane cannot start at column 40
 		expect(b.authored('top').x).toBe(24);
-		b.drop('top', -5, -5, 0);
-		// The stored pane is clamped to the origin. Where it RENDERS is another matter: `tall` already
-		// holds that corner, so the push rule sends this pane below it.
+		dragTo(b, 'top', -5, -5);
 		expect(b.authored('top')).toMatchObject({ x: 0, y: 0 });
-		expect(b.placed('top').y).toBe(12);
 	});
 
-	it('lets the pane just dropped win its spot, pushing its neighbour below', () => {
+	it('lets the pane being dragged win the spot, pushing its neighbour below', () => {
 		const { arrangement: b } = arrangement();
-		b.promote('top'); // what `Pane` does at the start of a move
-		b.drop('top', 0, 0, 0); // straight onto `tall`
+		dragTo(b, 'top', 0, 0); // straight onto `tall`
 
 		expect(b.placed('top').y).toBe(0);
 		expect(b.placed('tall').y).toBe(6);
@@ -163,13 +164,27 @@ describe('drop', () => {
 		const env = wideEnv();
 		const key = `test-reload-${seq++}`;
 		const first = new Arrangement(key, LAYOUT, env);
-		first.promote('top');
-		first.drop('top', 0, 0, 0);
+		dragTo(first, 'top', 0, 0);
 		first.commit();
 
 		const reopened = new Arrangement(key, LAYOUT, env);
 		expect(reopened.placed('top').y).toBe(0);
 		expect(reopened.placed('tall').y).toBe(6);
+	});
+
+	it('changes places by the height a pane RESERVES, not the one it declared', () => {
+		// The gesture is handed the resolved board, so a fitted pane's measured height is the distance a
+		// drag has to clear. Declared, `bottom` is 6 rows and thirteen would have been plenty.
+		const { arrangement: b } = arrangement();
+		b.setMeasured('bottom', rows(14)); // reaching from 6 to 20
+
+		dragTo(b, 'wide', 0, 7); // thirteen rows up, one short
+		expect(b.placed('wide').y).toBe(20);
+		expect(b.placed('bottom').y).toBe(6);
+
+		dragTo(b, 'wide', 0, 6); // the fourteenth takes it over
+		expect(b.placed('wide').y).toBe(12);
+		expect(b.placed('bottom').y).toBe(20);
 	});
 });
 
@@ -227,7 +242,7 @@ describe('persistence', () => {
 		const key = `test-commit-${seq++}`;
 		const b = new Arrangement(key, LAYOUT, env);
 
-		b.drop('top', 24, 20, 0);
+		dragTo(b, 'top', 24, 20);
 		expect(new Arrangement(key, LAYOUT, env).placed('top').y).toBe(0);
 
 		b.commit();
@@ -277,7 +292,7 @@ describe('persistence', () => {
 		const key = `test-reset-${seq++}`;
 		const b = new Arrangement(key, LAYOUT, env);
 
-		b.drop('top', 24, 20, 0);
+		dragTo(b, 'top', 24, 20);
 		b.commit();
 		b.reset();
 
