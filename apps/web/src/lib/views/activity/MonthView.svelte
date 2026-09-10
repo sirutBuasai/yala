@@ -4,13 +4,16 @@
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
 	import type { Scope } from '$lib/data/scope';
-	import type { BoardLayout } from '$lib/layout/grid/types';
-	import { money, monthLabel } from '$lib/utils/format';
+	import type { KpiBoardDefs } from '$lib/kpi/spec';
+	import { monthLabel } from '$lib/utils/format';
 	import { pendingRows } from '$lib/data/pending';
 	import { oneOf, Pref } from '$lib/utils/persist.svelte';
 	import Board from '$lib/layout/grid/Board.svelte';
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import FigurePane from '$lib/layout/grid/FigurePane.svelte';
+	import { KpiBoard } from '$lib/kpi/board.svelte';
+	import { setKpiBoard } from '$lib/kpi/context';
+	import KpiCards from '$lib/kpi/KpiCards.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
 	import TransactionList, { TXN_SORTS, type TxnSort } from '$lib/lists/TransactionList.svelte';
@@ -33,80 +36,65 @@
 	const label = $derived(monthLabel(monthKey));
 	const mo = $derived<Scope>({ level: 'month', monthKey });
 
-	// The stat row, then the month's shape, then its records. A list sitting beside a neighbour takes a
-	// SET height, so the row keeps its line and scrolls once the month is busy; the history below has
-	// nothing to line up with, so it fits its content. Each tile answers a different question, with
-	// related figures riding along as a caption rather than as a tile that restates one.
-	const PANES = $derived({
+	// Two rows of KPIs: the month's three levels with how they moved and the shape of the year behind
+	// each, then the three rates that say how the month was run. A ring on the two that are shares of
+	// income; "vs average" is already a signed deviation, so a chart would only restate it.
+	const KPIS = $derived<KpiBoardDefs>({
 		income: {
-			x: 0,
-			y: 0,
-			w: 12,
-			h: 6,
-			content: 'scale',
-			figure: { figure: 'income.total', scope: mo, caption: 'take-home + saved' }
+			rect: { x: 0, y: 0, w: 16, h: 7 },
+			spec: { figure: 'change.income_mom', scope: mo, chart: 'bar', series: 'trend.income' }
 		},
 		spent: {
-			x: 12,
-			y: 0,
-			w: 12,
-			h: 6,
-			content: 'scale',
-			figure: {
-				figure: 'change.spending_mom',
-				scope: mo,
-				title: 'Spent',
-				caption: `${md?.transactions.length ?? 0} transactions`
-			}
+			rect: { x: 16, y: 0, w: 16, h: 7 },
+			spec: { figure: 'change.spending_mom', scope: mo, chart: 'bar', series: 'trend.spending' }
 		},
 		saved: {
-			x: 24,
-			y: 0,
-			w: 12,
-			h: 6,
-			content: 'scale',
-			figure: { figure: 'saved.total', scope: mo, caption: percentUsed() }
+			rect: { x: 32, y: 0, w: 16, h: 7 },
+			spec: { figure: 'change.saved_mom', scope: mo, chart: 'bar', series: 'trend.saved' }
+		},
+		spendingRate: {
+			rect: { x: 0, y: 7, w: 16, h: 7 },
+			spec: { figure: 'ratio.spending_rate', scope: mo, chart: 'ring' }
+		},
+		savingsRate: {
+			rect: { x: 16, y: 7, w: 16, h: 7 },
+			spec: { figure: 'ratio.savings_rate', scope: mo, chart: 'ring' }
 		},
 		typical: {
-			x: 36,
-			y: 0,
-			w: 12,
-			h: 6,
-			content: 'scale',
-			figure: { figure: 'spending.vs_typical', scope: mo }
-		},
-		pending: { x: 0, y: 6, w: 48, h: 9, content: 'flow', mode: 'fixed' },
-		donut: {
-			x: 0,
-			y: 15,
-			w: 28,
-			h: 14,
-			content: 'scale',
-			figure: {
-				figure: 'spending.where_it_went',
-				scope: mo,
-				chart: 'donut',
-				title: 'Where your income went',
-				caption: donutCaption()
-			}
-		},
-		unusual: { x: 28, y: 15, w: 20, h: 14, content: 'scale' },
-		paychecks: { x: 0, y: 29, w: 24, h: 10, content: 'flow', mode: 'fixed' },
-		transfers: { x: 24, y: 29, w: 24, h: 10, content: 'flow', mode: 'fixed' },
-		history: { x: 0, y: 39, w: 48, h: 20, content: 'flow', mode: 'fit' }
-	} satisfies BoardLayout);
+			rect: { x: 32, y: 7, w: 16, h: 7 },
+			spec: { figure: 'spending.vs_typical', scope: mo }
+		}
+	});
 
-	function percentUsed(): string {
-		const income = md?.total_income ?? 0;
-		if (income <= 0) return 'no income posted';
-		return `${Math.round(((md?.total_spent ?? 0) / income) * 100)}% of income used`;
-	}
+	const kpis = new KpiBoard('activity:month', () => KPIS);
+	setKpiBoard(kpis);
 
-	function donutCaption(): string {
-		if (!md) return '';
-		if (md.total_income <= 0) return `${label} · no income posted — spending only`;
-		return `${label} · net income ${money(md.total_income)}`;
-	}
+	// The KPIs, then the month's shape, then its records. A list sitting beside a neighbour takes a SET
+	// height, so the row keeps its line and scrolls once the month is busy; the history below has
+	// nothing to line up with, so it fits its content.
+	const PANES = $derived(
+		kpis.board({
+			pending: { x: 0, y: 14, w: 48, h: 9, content: 'flow', mode: 'fixed' },
+			donut: {
+				x: 0,
+				y: 23,
+				w: 28,
+				h: 14,
+				content: 'scale',
+				figure: {
+					figure: 'spending.where_it_went',
+					scope: mo,
+					chart: 'donut',
+					title: 'Where your income went',
+					caption: `${label} · income against where it went`
+				}
+			},
+			unusual: { x: 28, y: 23, w: 20, h: 14, content: 'scale' },
+			paychecks: { x: 0, y: 37, w: 24, h: 10, content: 'flow', mode: 'fixed' },
+			transfers: { x: 24, y: 37, w: 24, h: 10, content: 'flow', mode: 'fixed' },
+			history: { x: 0, y: 47, w: 48, h: 20, content: 'flow', mode: 'fit' }
+		})
+	);
 
 	// Deviation needs prior months to average against, so the first tracked month has no norm.
 	const deviation = $derived(build(data, 'spending.vs_average', mo));
@@ -125,12 +113,8 @@
 	let modals: ReturnType<typeof EditModals>;
 </script>
 
-<Board key="activity:month" layout={PANES}>
-	<!-- Written out one by one, not looped: the donut is a figure too but belongs below the pending list. -->
-	<FigurePane id="income" {data} spec={PANES.income.figure} />
-	<FigurePane id="spent" {data} spec={PANES.spent.figure} />
-	<FigurePane id="saved" {data} spec={PANES.saved.figure} />
-	<FigurePane id="typical" {data} spec={PANES.typical.figure} />
+<Board key="activity:month" layout={PANES} onreset={() => kpis.reset()}>
+	<KpiCards {data} />
 
 	<PendingPane
 		id="pending"

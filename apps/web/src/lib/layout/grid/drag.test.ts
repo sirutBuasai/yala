@@ -1,6 +1,6 @@
 // The drag action. jsdom has no layout, so what is testable here is the event contract — which is
-// exactly where the bugs were: cumulative deltas, and the opt-out that lets a drag surface carry its
-// own controls.
+// exactly where the bugs were: cumulative deltas, the movement threshold that lets a control share a
+// spot with a drag, and the opt-out for a control that must never start one.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { drag, type DragDetail } from '$lib/layout/grid/drag';
@@ -40,6 +40,52 @@ afterEach(() => {
 });
 
 describe('drag', () => {
+	// The threshold is what lets a button sit ON a drag surface: a press that does not travel stays a
+	// click, so the control's own handler runs, and the same spot still drags once the pointer moves.
+	describe('movement threshold', () => {
+		it('does not begin a gesture until the pointer has travelled', () => {
+			const { node, calls, moves } = surface();
+
+			press(node, 'pointerdown', 100, 100);
+			press(node, 'pointermove', 102, 101); // a click's worth of wobble
+			expect(calls.start).toBe(0);
+			expect(moves).toEqual([]);
+		});
+
+		it('begins one as soon as it has, measured from the press', () => {
+			const { node, calls, moves } = surface();
+
+			press(node, 'pointerdown', 100, 100);
+			press(node, 'pointermove', 102, 101);
+			press(node, 'pointermove', 120, 100);
+
+			expect(calls.start).toBe(1);
+			expect(moves).toEqual([{ dx: 20, dy: 0 }]);
+		});
+
+		it('reports no end for a press that never moved, so a click is not a zero-length drag', () => {
+			const { node, calls } = surface();
+
+			press(node, 'pointerdown', 100, 100);
+			press(node, 'pointerup', 100, 100);
+
+			expect(calls).toMatchObject({ start: 0, cancel: 0 });
+			expect(calls.end).toEqual([]);
+		});
+
+		it('starts once and only once, however far the pointer goes on', () => {
+			const { node, calls } = surface();
+
+			press(node, 'pointerdown', 0, 0);
+			press(node, 'pointermove', 30, 0);
+			press(node, 'pointermove', 60, 0);
+			press(node, 'pointerup', 60, 0);
+
+			expect(calls.start).toBe(1);
+			expect(calls.end).toEqual([{ dx: 60, dy: 0 }]);
+		});
+	});
+
 	it('reports deltas cumulative from the press, not incremental', () => {
 		const { node, moves } = surface();
 
@@ -137,8 +183,17 @@ describe('drag', () => {
 	it('abandons the gesture when the browser cancels the pointer', () => {
 		const { node, calls } = surface();
 		press(node, 'pointerdown', 0, 0);
+		press(node, 'pointermove', 20, 0); // past the threshold, so a gesture is under way to abandon
 		press(node, 'pointercancel', 10, 10);
 		expect(calls.cancel).toBe(1);
+	});
+
+	it('reports nothing to cancel when the press never became a drag', () => {
+		const { node, calls } = surface();
+		press(node, 'pointerdown', 0, 0);
+		press(node, 'pointercancel', 0, 0);
+		// No gesture began, so there is no snapshot for `oncancel` to put back.
+		expect(calls).toMatchObject({ start: 0, cancel: 0 });
 	});
 
 	it('does nothing while disabled', () => {

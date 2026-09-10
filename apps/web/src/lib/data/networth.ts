@@ -9,7 +9,8 @@ import type {
 	MultiSeries,
 	Scalar,
 	Series,
-	Table
+	Table,
+	Tone
 } from './primitives';
 import { MONEY, MONTHS, PERCENT, YEARS } from './primitives';
 import { categorical } from './categorical';
@@ -50,8 +51,9 @@ function snapshotSeries(
 	);
 }
 
-function upDown(value: number): 'up' | 'down' {
-	return value >= 0 ? 'up' : 'down';
+/** These figures are signed decompositions, so their sign IS their meaning. */
+function bySign(value: number): Tone {
+	return value >= 0 ? 'good' : 'bad';
 }
 
 /** A current-value scalar; net worth also carries its change since the previous snapshot. */
@@ -73,8 +75,7 @@ export function netWorthScalar(
 	const prev = last && current && last.date === current.date ? points[points.length - 2] : last;
 	if (field === 'net_worth' && prev && value != null) {
 		const change = value - prev.net_worth;
-		s.dir = upDown(change);
-		s.delta = { value: change, unit, dir: upDown(change), note: 'since last' };
+		s.delta = { value: change, unit, tone: bySign(change), note: 'since last' };
 	}
 
 	return s;
@@ -217,7 +218,8 @@ function shareNote(part: number, change: number, fallback: string): string {
 	return change ? `${Math.round((part / change) * 100)}% of the change` : fallback;
 }
 
-/** Net worth at the end of a scope, with its change over that scope as a delta. */
+/** Net worth at the end of a scope, with its change over that scope as a delta. The level itself is
+    untoned — it is a position, not a verdict; the delta carries the news. */
 export function netWorthChange(data: DashboardData, scope: Scope): Scalar {
 	const unit = MONEY(data.currency);
 	const { open, close } = bounds(data, scope);
@@ -226,11 +228,10 @@ export function netWorthChange(data: DashboardData, scope: Scope): Scalar {
 
 	if (open && close && open !== close) {
 		const delta = close.net_worth - open.net_worth;
-		s.dir = upDown(delta);
 		s.delta = {
 			value: delta,
 			unit,
-			dir: upDown(delta),
+			tone: bySign(delta),
 			note: scope.level === 'all' ? 'since first snapshot' : 'this year'
 		};
 	}
@@ -247,7 +248,7 @@ export function netWorthSaved(data: DashboardData, scope: Scope): Scalar {
 		unit: MONEY(data.currency),
 		label: 'You saved',
 		value: saved,
-		dir: upDown(saved),
+		tone: bySign(saved),
 		note: shareNote(saved, changeOver(data, scope), 'income − spending')
 	};
 }
@@ -267,7 +268,7 @@ export function netWorthOther(data: DashboardData, scope: Scope): Scalar {
 		unit: MONEY(data.currency),
 		label: 'Market & other',
 		value: other,
-		dir: upDown(other),
+		tone: bySign(other),
 		note: shareNote(other, change, 'growth + unlogged flow')
 	};
 }
@@ -367,7 +368,6 @@ export function fiProgress(data: DashboardData): Scalar {
 		unit: PERCENT,
 		label: 'FI progress',
 		value: target && current !== null ? (current / target) * 100 : null,
-		dir: 'up',
 		note: target ? `of ${money(target)}` : undefined
 	};
 }
@@ -382,7 +382,6 @@ export function yearsOfFreedom(data: DashboardData): Scalar {
 		unit: YEARS,
 		label: 'Years of freedom',
 		value: annual && current !== null ? current / annual : null,
-		dir: 'up',
 		note: annual ? `at ${money(annual)}/yr` : undefined
 	};
 }
@@ -431,7 +430,6 @@ export function coastFi(data: DashboardData): Scalar {
 		unit,
 		label: 'Coast FI',
 		value: (current / needed) * 100,
-		dir: 'up',
 		note: `${money(needed)} needed ${years} yr out`
 	};
 }

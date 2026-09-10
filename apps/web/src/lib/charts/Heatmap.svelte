@@ -51,11 +51,12 @@
 		const s = step(v, i);
 		return s < 0 ? 'var(--inset)' : `var(--s${s + 1})`;
 	}
-	// Light text on the deep end of the ramp, which flips with the theme.
+	// Light text on the deep end of the ramp, which flips with the theme. Judged against the CELL, so
+	// both inks are theme-independent like the ramp itself.
 	function fg(v: number, i: number): string {
 		const s = step(v, i);
 		const lightText = s < 0 ? dark : dark ? s <= 3 : s >= 3;
-		return lightText ? '#f4efe4' : '#2b2621';
+		return lightText ? 'var(--on-accent-light)' : 'var(--on-accent)';
 	}
 	function label(v: number): string {
 		if (v === 0) return '';

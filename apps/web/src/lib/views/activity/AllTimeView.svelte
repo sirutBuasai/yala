@@ -20,12 +20,14 @@
 	const span = $derived(yearSpan(years, 'no tracked years'));
 
 	const PANES = $derived({
-		cashflow: { x: 0, y: 0, w: 48, h: 9, content: 'flow', mode: 'fit' },
+		// A block of figures, not a list: it scales like the KPI cards above it rather than owning its
+		// own height, so it can be given room or taken down to where its rows would clip.
+		cashflow: { x: 0, y: 0, w: 48, h: 10, content: 'scale' },
 		// The full-width charts here are taller than the tops below them leave room for. The push rule
 		// closes each overlap downwards, so the heights are authored and the tops are only floors.
 		flow: {
 			x: 0,
-			y: 9,
+			y: 10,
 			w: 48,
 			h: 25,
 			content: 'scale',
@@ -40,7 +42,7 @@
 		// Levels beside rate: how big, versus how efficient, which the bars alone can't say.
 		levels: {
 			x: 0,
-			y: 28,
+			y: 29,
 			w: 24,
 			h: 15,
 			content: 'scale',
@@ -54,7 +56,7 @@
 		},
 		rate: {
 			x: 24,
-			y: 28,
+			y: 29,
 			w: 24,
 			h: 15,
 			content: 'scale',
@@ -70,7 +72,7 @@
 		// labels replace a legend with one swatch per category.
 		categories: {
 			x: 0,
-			y: 43,
+			y: 44,
 			w: 48,
 			h: 25,
 			content: 'scale',
@@ -98,8 +100,8 @@
 			]
 		},
 		{
+			// No caption: how many years divide into it is each average's own footnote.
 			label: 'Avg / year',
-			caption: `${years.length} tracked year${years.length === 1 ? '' : 's'}`,
 			cells: [
 				{ id: 'avg.income_per_year', scope: all },
 				{ id: 'avg.spending_per_year', scope: all },

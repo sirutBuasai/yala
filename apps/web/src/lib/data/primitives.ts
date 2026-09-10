@@ -34,6 +34,20 @@ export function formatUnit(value: number, unit: Unit): string {
 	}
 }
 
+/**
+ * The same, for a figure whose SIGN is its meaning — a change, a deviation from an average. The
+ * formatters only ever show a minus, so without this a rise and a fall read identically apart from
+ * their colour, and colour alone is not a reading.
+ */
+export function formatDelta(value: number, unit: Unit): string {
+	return (value > 0 ? '+' : '') + formatUnit(value, unit);
+}
+
+/** A delta as it reads on a card: the signed figure, then what it is measured against. */
+export function deltaLabel(delta: NonNullable<Scalar['delta']>): string {
+	return formatDelta(delta.value, delta.unit) + (delta.note ? ` ${delta.note}` : '');
+}
+
 // --- primitive kinds ---
 
 export type PrimitiveKind =
@@ -41,16 +55,23 @@ export type PrimitiveKind =
 
 export type Axis = 'time' | 'ordinal';
 
+/**
+ * Whether a figure reads as good or bad news. NOT its sign: spending going up is bad news and
+ * spending going down is good, so the sign alone can't pick the colour.
+ */
+export type Tone = 'good' | 'bad';
+
 /** A single number in context. `null` means "not applicable" and renders as an em dash. */
 export interface Scalar {
 	kind: 'scalar';
 	unit: Unit;
 	label: string;
 	value: number | null;
-	/** Colour hint for the main value when there's no delta. */
-	dir?: 'up' | 'down';
-	/** A secondary figure (a rate or change) shown under the value. */
-	delta?: { value: number; unit: Unit; dir?: 'up' | 'down'; note?: string };
+	/** Colour for the value. Set only where the SIGN is the figure's meaning — a balance that can go
+	    negative, a deviation from an average. A plain level is never toned. */
+	tone?: Tone;
+	/** A secondary figure — a change or a rate — shown beside the value. */
+	delta?: { value: number; unit: Unit; tone?: Tone; note?: string };
 	/** Free-text footnote (already localized). */
 	note?: string;
 }

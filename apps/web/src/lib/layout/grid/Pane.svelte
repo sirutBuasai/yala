@@ -20,10 +20,10 @@
 	import Grip from '$lib/icons/Grip.svelte';
 	import SizeMode from '$lib/icons/SizeMode.svelte';
 	import { getArrangement, getGridEnv } from './context';
-	import { drag } from './drag';
+	import { drag, type DragParams } from './drag';
 	import { spills } from './spill';
 	import { foldSpan } from './fold';
-	import { EDGES } from './resize';
+	import { EDGES, type Edge } from './resize';
 	import { PaneGesture } from './gesture.svelte';
 
 	interface Props {
@@ -35,9 +35,14 @@
 		actions?: Snippet;
 		tone?: 'default' | 'attention';
 		density?: 'figure' | 'panel';
+		/** Extra arrange-mode controls, drawn over the card alongside the grip and the resize strips.
+		    Outside the card because the card is `inert` while arranging. Anything laid over an edge must
+		    carry `data-no-drag`, or the strip beneath reads a press on it as the start of a resize. */
+		affordances?: Snippet;
 		children: Snippet;
 	}
-	let { id, title, count, caption, actions, tone, density, children }: Props = $props();
+	let { id, title, count, caption, actions, tone, density, affordances, children }: Props =
+		$props();
 
 	const env = getGridEnv();
 	const arrangement = getArrangement();
@@ -78,6 +83,16 @@
 		spills: () => !!cardEl && spills(cardEl, bodyEl),
 		settle: tick
 	});
+
+	/** One edge's resize wiring. Shared by the strips and by anything the view lays over them. */
+	function resizeOn(edge: Edge): DragParams {
+		return {
+			onstart: () => gesture.beginResize(),
+			onmove: ({ dx, dy }) => void gesture.previewResize(edge, dx, dy),
+			onend: ({ dx, dy }) => void gesture.endResize(edge, dx, dy),
+			oncancel: () => gesture.abandon()
+		};
+	}
 
 	const STEPS: Record<string, [number, number]> = {
 		ArrowLeft: [-1, 0],
@@ -163,16 +178,11 @@
 		<!-- Resize strips straddling the card's edges. Not focusable and not announced: the grip is the
 		     keyboard route in, and eight tab stops per pane would bury everything else. -->
 		{#each EDGES[mode] as edge (edge)}
-			<div
-				class="handle {edge}"
-				use:drag={{
-					onstart: () => gesture.beginResize(),
-					onmove: ({ dx, dy }) => void gesture.previewResize(edge, dx, dy),
-					onend: ({ dx, dy }) => void gesture.endResize(edge, dx, dy),
-					oncancel: () => gesture.abandon()
-				}}
-			></div>
+			<div class="handle {edge}" use:drag={resizeOn(edge)}></div>
 		{/each}
+
+		<!-- After the strips, so a control laid over an edge sits on top of the one that resizes it. -->
+		{@render affordances?.()}
 	{/if}
 </div>
 

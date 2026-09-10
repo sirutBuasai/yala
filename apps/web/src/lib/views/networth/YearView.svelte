@@ -2,12 +2,13 @@
 	// Net Worth · Year — the flow half. Balances are logged monthly, so editing belongs at this range.
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
-	import type { BoardLayout } from '$lib/layout/grid/types';
+	import type { KpiBoardDefs } from '$lib/kpi/spec';
 	import Board from '$lib/layout/grid/Board.svelte';
-	import Pane from '$lib/layout/grid/Pane.svelte';
 	import { figurePanes } from '$lib/layout/grid/figure';
 	import FigurePane from '$lib/layout/grid/FigurePane.svelte';
-	import StatStrip from '$lib/charts/StatStrip.svelte';
+	import { KpiBoard } from '$lib/kpi/board.svelte';
+	import { setKpiBoard } from '$lib/kpi/context';
+	import KpiCards from '$lib/kpi/KpiCards.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -17,71 +18,77 @@
 
 	const yr = $derived<Scope>({ level: 'year', year });
 
-	const PANES = $derived({
-		stats: { x: 0, y: 0, w: 48, h: 7, content: 'flow', mode: 'fit' },
-		trend: {
-			x: 0,
-			y: 7,
-			w: 24,
-			h: 15,
-			content: 'scale',
-			figure: {
-				figure: 'networth.by_month',
-				scope: yr,
-				chart: 'line',
-				area: true,
-				title: 'Net worth by month',
-				caption: `${year} · one point per logged snapshot`
-			}
+	// Where you ended, the two forces that got you there, and the rate behind one of them. Net worth is
+	// a position, so its badge carries the year's move; the two forces are signed, so their own sign
+	// carries it.
+	const KPIS = $derived<KpiBoardDefs>({
+		networth: {
+			rect: { x: 0, y: 0, w: 12, h: 7 },
+			spec: { figure: 'networth.change', scope: yr, caption: `end of ${year}` }
 		},
-		mix: {
-			x: 24,
-			y: 7,
-			w: 24,
-			h: 15,
-			content: 'scale',
-			figure: {
-				figure: 'networth.allocation_share',
-				scope: yr,
-				chart: 'stacked-area',
-				title: 'Allocation mix',
-				caption: 'Share of assets · liquid · taxable · tax-advantaged'
-			}
-		},
-		table: {
-			x: 0,
-			y: 22,
-			w: 48,
-			h: 16,
-			content: 'flow',
-			mode: 'fit',
-			figure: {
-				figure: 'networth.monthly_table',
-				scope: yr,
-				chart: 'table',
-				title: 'Monthly snapshots',
-				caption: 'Month-over-month change'
-			}
+		saved: { rect: { x: 12, y: 0, w: 12, h: 7 }, spec: { figure: 'networth.saved', scope: yr } },
+		other: { rect: { x: 24, y: 0, w: 12, h: 7 }, spec: { figure: 'networth.other', scope: yr } },
+		rate: {
+			rect: { x: 36, y: 0, w: 12, h: 7 },
+			spec: { figure: 'ratio.savings_rate', scope: yr, chart: 'ring' }
 		}
-	} satisfies BoardLayout);
+	});
 
-	// One card, not loose tiles: the position, the forces that moved it, and the rate behind one of them.
-	const stats = $derived([
-		{ id: 'networth.change', scope: yr, caption: `end of ${year}` },
-		{ id: 'networth.saved', scope: yr },
-		{ id: 'networth.other', scope: yr },
-		{ id: 'ratio.savings_rate', scope: yr, title: 'Savings rate', caption: 'of income kept' }
-	]);
+	const kpis = new KpiBoard('networth:year', () => KPIS);
+	setKpiBoard(kpis);
+
+	const PANES = $derived(
+		kpis.board({
+			trend: {
+				x: 0,
+				y: 7,
+				w: 24,
+				h: 15,
+				content: 'scale',
+				figure: {
+					figure: 'networth.by_month',
+					scope: yr,
+					chart: 'line',
+					area: true,
+					title: 'Net worth by month',
+					caption: `${year} · one point per logged snapshot`
+				}
+			},
+			mix: {
+				x: 24,
+				y: 7,
+				w: 24,
+				h: 15,
+				content: 'scale',
+				figure: {
+					figure: 'networth.allocation_share',
+					scope: yr,
+					chart: 'stacked-area',
+					title: 'Allocation mix',
+					caption: 'Share of assets · liquid · taxable · tax-advantaged'
+				}
+			},
+			table: {
+				x: 0,
+				y: 22,
+				w: 48,
+				h: 16,
+				content: 'flow',
+				mode: 'fit',
+				figure: {
+					figure: 'networth.monthly_table',
+					scope: yr,
+					chart: 'table',
+					title: 'Monthly snapshots',
+					caption: 'Month-over-month change'
+				}
+			}
+		})
+	);
 </script>
 
-<Board key="networth:year" layout={PANES}>
-	<Pane
-		id="stats"
-		title={`${year} in position`}
-		caption="Where you ended, and the two forces that got you there"
-	>
-		<StatStrip {data} cells={stats} />
-	</Pane>
+<Board key="networth:year" layout={PANES} onreset={() => kpis.reset()}>
+	<KpiCards {data} />
 
 	{#each figurePanes(PANES) as [id, figure] (id)}
 		<FigurePane {id} {data} spec={figure} />

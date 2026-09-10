@@ -22,9 +22,12 @@
 	--good: #9ece6a;
 	--warn: #e0af68;
 	--crit: #e46876;
-	/* Dark ink for text/icons on a bright accent fill. Shared across themes — the accent fills
-	   don't change between light and dark. */
+	/* Ink for text/icons on an accent fill, picked against the FILL rather than the page. Shared across
+	   themes, since the accent fills don't change between light and dark. */
 	--on-accent: #1a1522;
+	--on-accent-light: #f4efe4;
+	/* The dimming behind a modal or a drawer. One value, so every overlay dims by the same amount. */
+	--scrim: rgba(0, 0, 0, 0.5);
 	/* The arrange chrome's accent. The one accent that swaps with the theme, so arranging never
 	   reads as the hue the data itself uses (see the light block). */
 	--arrange-line: var(--lav);
@@ -55,7 +58,6 @@
 	--role-income: var(--lav); /* what came in */
 	--role-deduction: var(--orange); /* taken out before you saw it */
 	--role-market: var(--gold); /* movement you never logged */
-	--role-rate: var(--lav); /* a ratio rather than an amount */
 	/* Allocation buckets are slices of one whole, so they share a blue→green family. */
 	--role-liquid: var(--teal);
 	--role-taxable: var(--blue);
@@ -125,7 +127,8 @@
 
 	/* ── Font-size semantic aliases (by data importance) ──────────────────────
 	   HERO / TITLES — the loudest type. */
-	--text-display: var(--fs-1000); /* hero stat number (StatTile value) */
+	--text-display: var(--fs-1000); /* hero stat number (a KPI's value) */
+	--text-figure: var(--fs-800); /* secondary stat (a matrix cell) */
 	--text-brand: var(--fs-900); /* app wordmark "Yala" */
 	--text-title: var(--fs-800); /* per-view / section title (ViewHeader) */
 	--text-dialog: var(--fs-700); /* modal, sidebar & overlay titles */

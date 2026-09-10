@@ -75,17 +75,18 @@ describe('vsTypical', () => {
 	}
 
 	it('marks spending under the norm as good', () => {
-		expect(vsTypical(makeData(), '2025-01', 'spending').dir).toBe('up');
+		expect(vsTypical(makeData(), '2025-01', 'spending').tone).toBe('good');
 	});
 
 	it('marks spending over the norm as bad', () => {
-		expect(vsTypical(overspending(), '2025-01', 'spending').dir).toBe('down');
+		expect(vsTypical(overspending(), '2025-01', 'spending').tone).toBe('bad');
 	});
 
-	it('flips the direction sense when higher is better', () => {
-		expect(vsTypical(overspending(), '2025-01', 'spending', { higherIsBetter: true }).dir).toBe(
-			'up'
-		);
+	// Polarity comes from the MEASURE, so the same overshoot reads the other way for income.
+	it('marks income over the norm as good', () => {
+		const data = makeData();
+		data.months['2025-01']!.total_income = 9000;
+		expect(vsTypical(data, '2025-01', 'income').tone).toBe('good');
 	});
 
 	it('is null on the first tracked month, where no norm exists', () => {

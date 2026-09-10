@@ -3,10 +3,14 @@
 	// time bases, say. As loose tiles they'd hide that structure and eat a row of height; as a matrix
 	// the layout says it, and a glance down a column compares. Cells are catalog ids, so a new row or
 	// column is data rather than markup.
+	//
+	// A cell's number is a plain level and is never coloured. Where a cell's figure carries a
+	// period-over-period change, that change rides along as a badge, which is where the colour goes.
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
 	import { build } from '$lib/data/catalog';
-	import { formatUnit, type Scalar } from '$lib/data/primitives';
+	import { deltaLabel, formatUnit, type Scalar } from '$lib/data/primitives';
+	import Badge, { badgeTone } from '$lib/ui/Badge.svelte';
 
 	interface Cell {
 		id: string;
@@ -31,10 +35,14 @@
 			...r,
 			values: r.cells.map((c) => {
 				const s = build(data, c.id, c.scope) as Scalar;
+				const d = s.delta;
 				return {
 					key: c.id,
 					text: s.value === null ? '—' : formatUnit(s.value, s.unit),
-					dir: s.dir
+					// The figure's OWN caption, per cell: the divisor behind a run-rate differs by measure,
+					// so no one row caption can state it.
+					note: s.note,
+					badge: d ? { text: deltaLabel(d), tone: badgeTone(d.tone) } : null
 				};
 			})
 		}))
@@ -56,7 +64,13 @@
 					{#if r.caption}<small>{r.caption}</small>{/if}
 				</th>
 				{#each r.values as v (v.key)}
-					<td class={v.dir ?? ''}>{v.text}</td>
+					<td>
+						<span class="figure">
+							{v.text}
+							{#if v.badge}<Badge tone={v.badge.tone}>{v.badge.text}</Badge>{/if}
+						</span>
+						{#if v.note}<small>{v.note}</small>{/if}
+					</td>
 				{/each}
 			</tr>
 		{/each}
@@ -94,17 +108,25 @@
 		text-align: right;
 		padding: var(--space-5) 0 var(--space-5) var(--gap-grid);
 		border-top: 1px solid var(--border);
+	}
+	td small {
+		display: block;
+		color: var(--ink-3);
+		font-size: var(--text-caption);
+	}
+	/* Never wrapped: a cell that reflowed would let the pane go on narrowing while the table quietly
+	   degraded. Overflowing instead is what makes the grid refuse the resize. */
+	.figure {
+		display: inline-flex;
+		align-items: baseline;
+		justify-content: flex-end;
+		white-space: nowrap;
+		gap: 0 var(--gap-row);
 		font-family: var(--font-display);
-		font-size: var(--text-title);
+		font-size: var(--text-figure);
 		font-weight: var(--fw-semibold);
 		font-variant-numeric: tabular-nums;
 		letter-spacing: var(--ls-tighter);
-	}
-	td.up {
-		color: var(--good-text);
-	}
-	td.down {
-		color: var(--crit-text);
 	}
 	.rl {
 		text-align: left;

@@ -96,7 +96,7 @@
 		margin: 0;
 		padding: 0;
 		border: 0;
-		background: rgba(0, 0, 0, 0.45);
+		background: var(--scrim);
 		cursor: pointer;
 	}
 	.sidebar {

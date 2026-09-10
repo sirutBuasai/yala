@@ -17,11 +17,6 @@
 	let { id, data, spec }: Props = $props();
 
 	const primitive = $derived(build(data, spec.figure, spec.scope));
-	// A scalar carries its own label and note; anything else is titled by the view.
-	const title = $derived(spec.title ?? (primitive.kind === 'scalar' ? primitive.label : ''));
-	const caption = $derived(
-		spec.caption ?? (primitive.kind === 'scalar' ? primitive.note : undefined)
-	);
 
 	/** Everything the registry's `adapt` might want, and nothing the pane owns. */
 	const options = $derived({
@@ -37,6 +32,6 @@
 	});
 </script>
 
-<Pane {id} {title} {caption}>
+<Pane {id} title={spec.title} caption={spec.caption}>
 	<Figure {primitive} {...options} />
 </Pane>

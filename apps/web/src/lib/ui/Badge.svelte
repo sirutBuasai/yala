@@ -1,10 +1,19 @@
+<script module lang="ts">
+	import type { Tone as Verdict } from '$lib/data/primitives';
+
+	/** Named by MEANING, not colour, so a tone can be re-themed without renaming call sites. */
+	export type Tone = 'neutral' | 'good' | 'warn' | 'crit' | 'accent';
+
+	/** A figure's good-or-bad-news as a badge tone. No verdict means no colour, not good news. */
+	export function badgeTone(verdict: Verdict | undefined): Tone {
+		return verdict === 'good' ? 'good' : verdict === 'bad' ? 'crit' : 'neutral';
+	}
+</script>
+
 <script lang="ts">
 	// The one small status pill: pending flags, checklist verdicts, counts. They differ only in tone
 	// and whether they carry a dot, so that is what the props are.
 	import type { Snippet } from 'svelte';
-
-	/** Named by MEANING, not colour, so a tone can be re-themed without renaming call sites. */
-	type Tone = 'neutral' | 'good' | 'warn' | 'crit' | 'accent';
 
 	interface Props {
 		tone?: Tone;

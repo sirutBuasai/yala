@@ -89,7 +89,7 @@ describe('growth decomposition', () => {
 		const s = scalar('networth.change', { level: 'year', year: 2025 });
 		expect(s.value).toBe(6000);
 		expect(s.delta?.value).toBe(3000);
-		expect(s.delta?.dir).toBe('up');
+		expect(s.delta?.tone).toBe('good');
 	});
 
 	it('per-year bars pair saved against everything else', () => {
@@ -145,6 +145,16 @@ describe('targets', () => {
 		const s = scalar('networth.years_of_freedom');
 		expect(s.unit).toEqual(YEARS);
 		expect(s.value).toBeCloseTo(6000 / 993, 5);
+	});
+
+	// The figure is a KPI on the net-worth board, and the lifestyle it measures against is the RECENT
+	// one: spending more over the trailing window has to shorten it, not leave it alone.
+	it('shortens years of freedom when recent spending rises', () => {
+		const before = scalar('networth.years_of_freedom').value!;
+		const data = makeNetWorthData();
+		data.months['2025-01']!.total_spent = 4000;
+		const after = (build(data, 'networth.years_of_freedom', { level: 'all' }) as Scalar).value!;
+		expect(after).toBeLessThan(before);
 	});
 
 	it('measures runway from liquid cash against monthly spending', () => {
