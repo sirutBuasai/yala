@@ -1,7 +1,7 @@
 // What a drag adds to the push rule: it shoves whatever it is touching in the direction it is going,
-// and only travel that could not be absorbed — which is only ever upward — changes places with the pane
-// above. Pure, so every case is an authored board in and an authored board out, plus what `resolve`
-// then puts on screen.
+// nothing else moves at all, and only travel that could not be absorbed — which is only ever upward —
+// changes places with the pane above. Pure, so every case is an authored board in and an authored board
+// out, plus what `resolve` then puts on screen.
 
 import { describe, expect, it } from 'vitest';
 import { lift, type DragOrigin } from '$lib/layout/grid/lift';
@@ -25,15 +25,14 @@ const sized = (panes: AuthoredPane[]): SizedPane[] =>
 const tops = (panes: { id: string; y: number }[]) =>
 	Object.fromEntries(panes.map((q) => [q.id, q.y]));
 
-/** The board as a press on `id` finds it: authored panes in priority order, and the same resolved. */
-function origin(authored: AuthoredPane[], id: string): DragOrigin {
-	const placed = resolve(sized(authored));
-	return { authored, placed, carried: placed.find((q) => q.id === id)!.offset };
+/** The board as a press finds it: authored panes in priority order, and the same resolved. */
+function origin(authored: AuthoredPane[]): DragOrigin {
+	return { authored, placed: resolve(sized(authored)) };
 }
 
 /** One pointer move: where `id` ends up authored, where the board then renders, and the new order. */
 function drag(authored: AuthoredPane[], id: string, x: number, y: number) {
-	const next = lift(id, x, y, origin(authored, id));
+	const next = lift(id, x, y, origin(authored));
 	return { authored: tops(next), placed: tops(resolve(sized(next))), order: next.map((q) => q.id) };
 }
 
@@ -80,38 +79,50 @@ describe('pushing the stack up', () => {
 		const board = [p('l', 0, 3, 24, 6), p('r', 24, 0, 24, 12), p('pane', 0, 12, 24, 6)];
 		const { authored } = drag(board, 'pane', 24, 9);
 		expect(authored.pane).toBe(12);
-		expect(lift('pane', 24, 9, origin(board, 'pane'))[0]!.x).toBe(24);
+		expect(lift('pane', 24, 9, origin(board))[0]!.x).toBe(24);
 	});
 
-	it('brings the panes lower down up behind it, keeping the gap they were left', () => {
-		const board = [p('a', 0, 3, 48, 6), p('b', 0, 9, 48, 6), p('c', 0, 19, 48, 4)];
+	it('leaves every pane below where it is, resting on it or not', () => {
+		// `c` is stacked against `b` and `d` has slack under it. Neither is towed: the rise opens a gap
+		// under `b` rather than taking the board with it.
+		const board = [
+			p('a', 0, 3, 48, 6),
+			p('b', 0, 9, 48, 6),
+			p('c', 0, 15, 24, 4),
+			p('d', 24, 19, 24, 4)
+		];
 		const { authored, placed } = drag(board, 'b', 0, 7);
 
-		expect(authored).toMatchObject({ a: 1, b: 7, c: 17 });
-		expect(placed).toMatchObject({ a: 1, b: 7, c: 17 }); // `c` still sits four rows under `b`
+		expect(authored).toMatchObject({ a: 1, b: 7, c: 15, d: 19 });
+		expect(placed).toMatchObject({ a: 1, b: 7, c: 15, d: 19 });
 	});
 
-	it('holds a pane lower down where it is when a pane in its other columns did not move', () => {
-		// `c` spans both columns, and the right-hand one is unchanged: it has nowhere to rise to.
-		const board = [p('a', 0, 5, 24, 6), p('b', 24, 0, 24, 20), p('c', 0, 26, 48, 4)];
-		const { authored, placed } = drag(board, 'a', 0, 0);
-
-		expect(authored).toMatchObject({ a: 0, c: 26 });
-		expect(placed).toMatchObject({ c: 26 });
-	});
-
-	it('follows a pane that came up as a PUSH, not as a move of its own', () => {
-		// `b` is authored above where it rests, pushed down by `a`. When `a` rises, `b` comes back up
-		// without its authored top changing at all — so `c` has to follow the rows `b` actually moved on
-		// screen, or it is left sitting over a hole where the push used to be.
-		const board = [p('a', 0, 12, 48, 9), p('b', 0, 15, 28, 14), p('c', 0, 39, 24, 10)];
+	it('lets a pane that was only ever PUSHED here rise on its own', () => {
+		// `b` is authored above where it rests, pushed down by `a`. When `a` rises, `b` comes back up to
+		// the top it was authored at all along — `resolve` alone, with no authored top changing — and `c`
+		// stays put, because nothing pushed it.
+		const board = [p('a', 0, 12, 48, 9), p('b', 0, 15, 28, 14), p('c', 0, 35, 24, 10)];
 		const { authored, placed } = drag(board, 'a', 0, 6);
 
-		expect(authored).toMatchObject({ a: 6, b: 15, c: 33 });
-		expect(placed).toMatchObject({ a: 6, b: 15, c: 33 });
+		expect(authored).toMatchObject({ a: 6, b: 15, c: 35 });
+		expect(placed).toMatchObject({ a: 6, b: 15, c: 35 });
 	});
 
-	it('never writes the push a pane below was already carrying into its authored top', () => {
+	it('moves a merged KPI card alone, and pushes only what it runs into', () => {
+		// `kpi` is two cards joined across, so it spans both panes below it: `left` is stacked against it
+		// and `right` was left a gap. Rising it takes neither; falling it takes only `left`.
+		const board = [
+			p('top', 0, 0, 48, 4),
+			p('kpi', 0, 8, 32, 6),
+			p('left', 0, 14, 16, 6),
+			p('right', 16, 16, 16, 6)
+		];
+
+		expect(drag(board, 'kpi', 0, 5).placed).toMatchObject({ kpi: 5, left: 14, right: 16 });
+		expect(drag(board, 'kpi', 0, 10).placed).toMatchObject({ kpi: 10, left: 16, right: 16 });
+	});
+
+	it('leaves the authored top of a pane it never touched alone', () => {
 		const board = [p('a', 0, 2, 48, 10), p('b', 0, 6, 48, 4)];
 		const { authored, placed } = drag(board, 'a', 0, 0);
 
@@ -136,20 +147,21 @@ describe('pushing the panes below down', () => {
 	});
 
 	it('never changes places with a pane it is pushing, however far it goes', () => {
-		// The authored top of a pushed pane travels with it. Left where it was, the moment `a` passed it
+		// A pushed pane is authored where it comes to rest. Left where it was, the moment `a` passed it
 		// `b` would win the slot on authored order and the two would flip — a swap nobody asked for.
 		const board = [p('a', 0, 0, 48, 6), p('b', 0, 6, 48, 40)];
 		expect(drag(board, 'a', 0, 7).placed).toMatchObject({ a: 7, b: 13 });
 		expect(drag(board, 'a', 0, 20).placed).toMatchObject({ a: 20, b: 26 });
 	});
 
-	it('leaves a pushed pane the displacement it was carrying', () => {
-		// `b` is authored above where it rests. Pushed down, it must store its own top plus the travel,
-		// not where it came to rest — that would write in a push it never asked for.
+	it('stores a pushed pane where it came to rest, displacement and all', () => {
+		// `b` is authored above where it rests, pushed down by `a`. Store its own top plus the travel and
+		// the push stays latent in the gap between the two, so `b` springs back up the moment `a` moves
+		// away — following a drag it was never part of.
 		const board = [p('a', 0, 2, 48, 10), p('b', 0, 6, 48, 4)];
 		const { authored, placed } = drag(board, 'a', 0, 5);
 
-		expect(authored).toMatchObject({ a: 5, b: 9 });
+		expect(authored).toMatchObject({ a: 5, b: 15 });
 		expect(placed).toMatchObject({ a: 5, b: 15 });
 	});
 });
@@ -175,7 +187,7 @@ describe('changing places', () => {
 	});
 
 	it('is undone by dragging back down, because every move re-derives from the press', () => {
-		const at = origin(pair(), 'b');
+		const at = origin(pair());
 		expect(tops(resolve(sized(lift('b', 0, 0, at))))).toMatchObject({ b: 0, a: 10 });
 		expect(tops(resolve(sized(lift('b', 0, 1, at))))).toMatchObject({ a: 0, b: 10 });
 	});
@@ -191,13 +203,11 @@ describe('changing places', () => {
 		expect(drag(board, 'pane', 0, 0).placed).toMatchObject({ pane: 0, one: 4, two: 8 });
 	});
 
-	it('pushes and changes places in one move, leaving the pane below unmoved on screen', () => {
+	it('leaves the pane below where it is, since the pane it swapped with fills the rows it left', () => {
 		const board = [p('a', 0, 0, 48, 10), p('b', 0, 10, 48, 10), p('c', 0, 20, 48, 6)];
 		const { authored, placed } = drag(board, 'b', 0, 0);
 
-		// `c` follows `b` up by however far it rose, and lands back where it was, since `a` now fills
-		// the rows `b` left.
-		expect(authored).toMatchObject({ b: 0, c: 10 });
+		expect(authored).toMatchObject({ b: 0, a: 0, c: 20 });
 		expect(placed).toMatchObject({ b: 0, a: 10, c: 20 });
 	});
 });
@@ -205,12 +215,12 @@ describe('changing places', () => {
 describe('guards', () => {
 	it('hands the board back untouched for a pane it does not hold', () => {
 		const board = [p('a', 0, 0, 48, 6)];
-		expect(lift('nope', 0, 20, origin(board, 'a'))).toBe(board);
+		expect(lift('nope', 0, 20, origin(board))).toBe(board);
 	});
 
 	it('keeps the dragged pane inside the board', () => {
 		const board = [p('a', 0, 0, 24, 6)];
 		expect(drag(board, 'a', 40, -5).authored).toMatchObject({ a: 0 });
-		expect(lift('a', 40, -5, origin(board, 'a'))[0]!.x).toBe(24);
+		expect(lift('a', 40, -5, origin(board))[0]!.x).toBe(24);
 	});
 });

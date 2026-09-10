@@ -1,12 +1,14 @@
 // What a drag does to the board, beyond what the push rule can say on its own. Pure, no DOM.
 //
 // The dragged pane is a piston: it travels a row at a time, taking with it whatever it TOUCHES in the
-// direction it is going, and every pane it moves has its authored top moved with it. Everything
-// re-derives from the board as the PRESS found it, never from the board the gesture is already
-// editing — the same fixed-origin rule the pointer deltas follow.
+// direction it is going, and every pane it moves has its authored top moved with it. Pushing is the
+// ONLY thing that moves another pane — nothing is ever towed along behind one. A pane with slack in
+// front of it is free there, and a pane the piston leaves behind keeps the position the user gave it,
+// gap and all. Everything re-derives from the board as the PRESS found it, never from the board the
+// gesture is already editing — the same fixed-origin rule the pointer deltas follow.
 
-import { authoredY, clampRect, resolve, sharesColumns } from './resolve';
-import type { AuthoredPane, PlacedPane, SizedPane } from './types';
+import { clampRect, sharesColumns } from './resolve';
+import type { AuthoredPane, PlacedPane } from './types';
 
 /** The board as a press found it. */
 export interface DragOrigin {
@@ -14,8 +16,6 @@ export interface DragOrigin {
 	authored: AuthoredPane[];
 	/** The same board, resolved. */
 	placed: PlacedPane[];
-	/** Displacement the dragged pane was carrying. */
-	carried: number;
 }
 
 type Board = Map<string, PlacedPane>;
@@ -69,24 +69,6 @@ function climbed(id: string, over: number, board: Board, authored: AuthoredPane[
 	return top;
 }
 
-/**
- * The panes directly above `pane`: the nearest one in each column it spans. A column with nothing
- * above contributes none rather than the board's top edge — the pane is free there, so nothing in
- * that column can hold it back.
- */
-function directlyAbove(placed: PlacedPane[], pane: PlacedPane): PlacedPane[] {
-	const nearest = new Map<string, PlacedPane>();
-	for (let col = pane.x; col < pane.x + pane.w; col++) {
-		let best: PlacedPane | undefined;
-		for (const q of placed) {
-			if (q.id === pane.id || col < q.x || col >= q.x + q.w || q.y + q.h > pane.y) continue;
-			if (!best || q.y + q.h > best.y + best.h) best = q;
-		}
-		if (best) nearest.set(best.id, best);
-	}
-	return [...nearest.values()];
-}
-
 /** The dragged pane first: the priority order's way of saying it wins ties on authored top. */
 function promoted(panes: AuthoredPane[], id: string): AuthoredPane[] {
 	const self = panes.find((p) => p.id === id)!;
@@ -114,48 +96,23 @@ export function lift(id: string, x: number, y: number, origin: DragOrigin): Auth
 	let moved = 0;
 	while (moved < Math.abs(travel) && step(id, up, board)) moved++;
 
-	// Every pane the piston moved keeps the displacement it was carrying: its authored top travels the
-	// same rows rather than being set to where the pane came to rest. Set it, and a pane that a GROWING
-	// neighbour had pushed down to here would store that push as though the user had asked for it —
-	// which for the dragged pane itself is what `authoredY` subtracts back out.
-	const shifted = (p: AuthoredPane) => Math.max(0, p.y + (board.get(p.id)!.y - press.get(p.id)!));
+	// A pane the piston moved is authored where it came to REST, displacement and all. Travel the rows
+	// instead and any push the pane was carrying stays latent in the gap between its top and its row,
+	// so it springs back up the moment the pusher leaves — the pane would follow a drag it was never
+	// part of. The cost is deliberate: a push the DATA made, by growing a neighbour, is baked in as
+	// though the user had asked for it once a drag moves that pane. Panes the piston never reached keep
+	// their authored top untouched, so a displacement elsewhere on the board is left transient.
+	const resting = (p: AuthoredPane) =>
+		board.get(p.id)!.y === press.get(p.id)! ? p.y : board.get(p.id)!.y;
 
 	const top = up
-		? Math.min(shifted(self), climbed(id, travel - moved, board, origin.authored))
-		: authoredY(board.get(id)!.y, origin.carried);
+		? Math.min(board.get(id)!.y, climbed(id, travel - moved, board, origin.authored))
+		: board.get(id)!.y;
 
-	let panes = promoted(
+	return promoted(
 		origin.authored.map((p) =>
-			p.id === id ? { ...p, x: column, y: top } : { ...p, y: shifted(p) }
+			p.id === id ? { ...p, x: column, y: top } : { ...p, y: resting(p) }
 		),
 		id
 	);
-	// Going down, `resolve` cascades the rest on its own from the tops the piston just wrote.
-	if (!up) return panes;
-
-	// Heights come from the RESOLVED board: a fitted pane reserves what it measured, not what it
-	// declared, and re-resolving on the declared height would misplace every pane below it.
-	const sized = (of: AuthoredPane[]): SizedPane[] =>
-		of.map((p) => ({ id: p.id, x: p.x, y: p.y, w: p.w, h: board.get(p.id)?.h ?? p.h }));
-
-	// Now the panes lower down. Each comes up by however far the nearest pane above it has ACTUALLY
-	// come up, which is why the board is re-resolved as we go: a pane that was only ever pushed down
-	// here has an authored top that never moved, and following that would leave a hole where the push
-	// used to be. A single unmoved neighbour in any column a pane spans keeps it where it is.
-	for (const pane of [...origin.placed].sort((a, b) => a.y - b.y)) {
-		const above = directlyAbove(origin.placed, pane);
-		const authored = panes.find((p) => p.id === pane.id);
-		if (pane.id === id || !above.length || !authored) continue;
-
-		const now = new Map(resolve(sized(panes)).map((q) => [q.id, q]));
-		const falls = Math.min(...above.map((q) => q.y - now.get(q.id)!.y));
-		if (falls <= 0) continue;
-
-		// Never past the new bottom of what it is following, which is what keeps the gap it was left.
-		const floor = above.reduce((v, q) => Math.max(v, now.get(q.id)!.y + now.get(q.id)!.h), 0);
-		const next = Math.min(authored.y, Math.max(authored.y - falls, floor));
-		if (next !== authored.y) panes = panes.map((p) => (p.id === pane.id ? { ...p, y: next } : p));
-	}
-
-	return panes;
 }

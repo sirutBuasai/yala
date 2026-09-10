@@ -55,8 +55,7 @@ function fake(over: Partial<AuthoredPane> = {}, offset = 0): Fake {
 				w: i.w,
 				h: i.h,
 				offset
-			})),
-			carried: offset
+			}))
 		}),
 		dragTo: (id, x, y, origin) => {
 			self.drags.push({ x, y });
@@ -101,7 +100,7 @@ function gesture(arrangement: Fake, answers: boolean[] = [], gates?: (() => void
 }
 
 describe('moving', () => {
-	it('commits the dropped position with the carried displacement subtracted', () => {
+	it('commits the position it was dropped at, push and all', () => {
 		// The pane is sitting three rows below where it was authored, pushed down by a neighbour.
 		const arrangement = fake({}, 3);
 		const { s } = gesture(arrangement);
@@ -109,10 +108,10 @@ describe('moving', () => {
 		s.beginMove();
 		s.endMove(px(1), px(2));
 
-		// Dropped in PLACED coordinates — where it is on screen — with the push it was carrying handed
-		// back, so the authored top moves by the two rows the pointer travelled and not by five.
+		// Dropped in PLACED coordinates — where it is on screen — and stored there: the push it was
+		// carrying is now its own top, so the two rows the pointer travelled move it two rows.
 		expect(arrangement.drags).toEqual([{ x: 5, y: 4 + 3 + 2 }]);
-		expect(arrangement.authored(ID)).toMatchObject({ x: 5, y: 6 });
+		expect(arrangement.authored(ID)).toMatchObject({ x: 5, y: 9 });
 		expect(arrangement.committed).toEqual(arrangement.panes);
 	});
 

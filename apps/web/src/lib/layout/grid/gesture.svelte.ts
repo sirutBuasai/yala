@@ -17,7 +17,7 @@ export interface GestureTarget {
 	mode(id: string): HeightMode;
 	snapshot(): AuthoredPane[];
 	restore(panes: AuthoredPane[]): void;
-	beginDrag(id: string): DragOrigin;
+	beginDrag(): DragOrigin;
 	dragTo(id: string, x: number, y: number, origin: DragOrigin): void;
 	resizeTo(id: string, rect: Rect): void;
 	commit(): void;
@@ -82,7 +82,7 @@ export class PaneGesture {
 	}
 
 	beginMove(): void {
-		const origin = this.#arrangement.beginDrag(this.#id);
+		const origin = this.#arrangement.beginDrag();
 		this.#before = origin.authored;
 		this.#origin = origin;
 		this.#base = origin.placed.find((p) => p.id === this.#id) ?? null;

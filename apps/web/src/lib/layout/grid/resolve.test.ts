@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
 	assertNoOverlap,
-	authoredY,
 	boardRows,
 	clampRect,
 	firstOverlap,
@@ -129,50 +128,6 @@ describe('assertNoOverlap', () => {
 			{ id: 'b', x: 0, y: 2, w: 24, h: 6, offset: 0 }
 		];
 		expect(() => assertNoOverlap(bad)).toThrow(/board overlap: a .* vs b /);
-	});
-});
-
-describe('authoredY — the drag round-trip', () => {
-	it('subtracts the displacement the pane was carrying', () => {
-		expect(authoredY(6, 2)).toBe(4);
-	});
-
-	it('a drag that moves nothing changes nothing, so the pane cannot jump', () => {
-		// The pane is authored at 4 and rendered at 6 because something above it grew. Drop it where
-		// it already is: the stored top must come back as 4, or the next render applies the push
-		// again and the pane leaves the pointer behind.
-		const pushed = resolve([p('a', 0, 0, 48, 6), p('b', 0, 4, 48, 4)]);
-		const b = pushed.find((q) => q.id === 'b')!;
-		expect(b.y).toBe(6);
-		expect(authoredY(b.y, b.offset)).toBe(4);
-
-		// And re-resolving from that stored top reproduces the same screen position.
-		const again = resolve([p('a', 0, 0, 48, 6), p('b', 0, authoredY(b.y, b.offset), 48, 4)]);
-		expect(at(again, 'b')).toBe(6);
-	});
-
-	it('applies a downward drag once, not once per render', () => {
-		// `b` is resting below where it was authored, pushed there by `a`. Dragging it down stores the
-		// travel and renders at the same place — the push is not added again on top of the drag.
-		const pushed = resolve([p('a', 0, 0, 48, 6), p('b', 0, 4, 48, 4)]);
-		const b = pushed.find((q) => q.id === 'b')!;
-		const stored = authoredY(b.y + 4, b.offset);
-		expect(stored).toBe(8);
-		expect(at(resolve([p('a', 0, 0, 48, 6), p('b', 0, stored, 48, 4)]), 'b')).toBe(8);
-	});
-
-	it('absorbs a downward drag that only takes up the slack it was already pushed by', () => {
-		// The accepted consequence of subtracting the offset: `b` is authored above where it rests, so a
-		// downward drag first closes that gap in the STORED position, without moving the pane.
-		const pushed = resolve([p('a', 0, 0, 48, 6), p('b', 0, 4, 48, 4)]);
-		const b = pushed.find((q) => q.id === 'b')!;
-		const stored = authoredY(b.y + 2, b.offset);
-		expect(stored).toBe(6);
-		expect(at(resolve([p('a', 0, 0, 48, 6), p('b', 0, stored, 48, 4)]), 'b')).toBe(6);
-	});
-
-	it('cannot be dragged above the top of the board', () => {
-		expect(authoredY(1, 4)).toBe(0);
 	});
 });
 
