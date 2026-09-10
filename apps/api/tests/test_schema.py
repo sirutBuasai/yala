@@ -38,7 +38,7 @@ def example_data() -> DashboardData:
             date_range=DateRange(start="2024-12-05", end="2025-01-20"),
             categories=["Grocery", "Takeouts"],
             accounts={
-                "Liabilities:CC:CardA": AccountInfo(name="Card A", institution="Bank of Example"),
+                "Liabilities:CC:CardA": AccountInfo(name="Card A", institution="BankA"),
                 "Expenses:Grocery": AccountInfo(name="Grocery"),
             },
             domains=Domains(
@@ -84,7 +84,7 @@ def example_data() -> DashboardData:
                         payee="Example Grocery",
                         amount=30.00,
                         category="Grocery",
-                        source="Liabilities:CC:ExampleCard",
+                        source="Liabilities:CC:CardA",
                         pending=False,
                         locator="line:spending/2025.beancount:5",
                         bill=None,
@@ -94,7 +94,7 @@ def example_data() -> DashboardData:
                         payee="Example Cafe",
                         amount=15.50,
                         category="Takeouts",
-                        source="Liabilities:CC:ExampleCard",
+                        source="Liabilities:CC:CardA",
                         pending=True,
                         locator="id:00000000-0000-0000-0000-000000000001",
                         bill=50.00,

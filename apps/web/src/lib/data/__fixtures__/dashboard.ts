@@ -7,11 +7,7 @@ import type {
 	NetWorthSnapshot
 } from '$lib/data/types';
 
-/**
- * The pickable account sets, as the API (and the snapshot) send them. A factory rather than a literal
- * per test file: the contract owns this shape, and four hand-written copies of it meant four edits
- * every time it grew a field — and four chances to describe a set of accounts the backend never sends.
- */
+/** The pickable account sets, as the API sends them — a factory so the shape is declared once. */
 export function makeAccounts(over: Partial<AccountLists> = {}): AccountLists {
 	return {
 		spending_categories: [],
@@ -153,11 +149,8 @@ export function makeData(): DashboardData {
 }
 
 /**
- * The base fixture plus a net-worth section and settings, for the Net Worth page's metrics.
- *
- * Figures are chosen so the growth decomposition is checkable by hand against the base fixture's
- * `saved` rows: 2025 opens at the 2024-12 snapshot (3000) and closes at 6000, a change of 3000
- * against a logged saving of 2254.5 — so "market & other" must come out at 745.5.
+ * The base fixture plus a net-worth section and settings. Its figures are chosen so the growth
+ * decomposition is checkable by hand against the base fixture's `saved` rows.
  */
 export function makeNetWorthData(): DashboardData {
 	const snapshot = (
@@ -188,16 +181,22 @@ export function makeNetWorthData(): DashboardData {
 		series,
 		accounts: [
 			{
-				account: 'Assets:Investments:Taxable:Big',
-				label: 'Big',
+				account: 'Assets:Investments:Taxable:BrokerageA',
+				label: 'BrokerageA',
 				group: 'investment',
 				bucket: 'Taxable',
 				value: 3000
 			},
-			{ account: 'Assets:Cash:Bank', label: 'Bank', group: 'cash', bucket: 'Liquid', value: 2000 },
 			{
-				account: 'Assets:Investments:TaxAdvantaged:Plan',
-				label: 'Plan',
+				account: 'Assets:Cash:BankA',
+				label: 'BankA',
+				group: 'cash',
+				bucket: 'Liquid',
+				value: 2000
+			},
+			{
+				account: 'Assets:Investments:TaxAdvantaged:PlanA',
+				label: 'PlanA',
 				group: 'investment',
 				bucket: 'Tax-advantaged',
 				value: 1500

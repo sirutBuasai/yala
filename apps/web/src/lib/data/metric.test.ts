@@ -11,10 +11,6 @@ import {
 	ratio
 } from './metric';
 
-// Fixture recap: 2024 {spent 120, income 2300, saved 2180}, 2025 {spent 45.5, income 2300,
-// saved 2254.5}. income.by_year: both years gross 3000, net 2300, take_home 1550,
-// deductions 700, contributions 750. 2025-01 has one paycheck; 2024-12 has one txn (70).
-
 describe('amount', () => {
 	it('sums aggregate fields across the lifetime', () => {
 		const d = makeData();
@@ -33,7 +29,6 @@ describe('amount', () => {
 		const d = makeData();
 		expect(amount(d, { level: 'month', monthKey: '2024-12' }, 'spending').value).toBe(120);
 		expect(amount(d, { level: 'month', monthKey: '2024-12' }, 'saved').value).toBe(2180);
-		// 2025-01 paycheck: deductions {Tax 600, Benefits 100} = 700, contributions 750.
 		expect(amount(d, { level: 'month', monthKey: '2025-01' }, 'gross').value).toBe(3000);
 		expect(amount(d, { level: 'month', monthKey: '2025-01' }, 'deductions').value).toBe(700);
 		expect(amount(d, { level: 'month', monthKey: '2025-01' }, 'contributions').value).toBe(750);
@@ -55,13 +50,13 @@ describe('average', () => {
 	it('per year divides lifetime by tracked years', () => {
 		const d = makeData();
 		const avg = average(d, 'income', 'year');
-		expect(avg.value).toBe(2300); // 4600 / 2
+		expect(avg.value).toBe(2300);
 		expect(avg.note).toBe('2 tracked years');
 	});
 
 	it('per month divides a year by ACTIVE months, not a flat 12', () => {
 		const d = makeData();
-		// 2024 has one active month (Dec): 120 spending / 1 = 120, not 120/12.
+		// 2024 has a single active month, so its spending is not divided by twelve.
 		const avg = average(d, 'spending', 'month', 2024);
 		expect(avg.value).toBe(120);
 		expect(avg.note).toBe('1 active months');
@@ -78,7 +73,6 @@ describe('ratio', () => {
 
 	it('is null when the denominator is 0', () => {
 		const d = makeData();
-		// A year with no data → income 0 → null.
 		expect(ratio(d, { level: 'year', year: 2099 }, 'saved', 'income').value).toBeNull();
 	});
 });
@@ -125,7 +119,6 @@ describe('extremum', () => {
 describe('change', () => {
 	it('reports the current value with a YoY percentage delta', () => {
 		const d = makeData();
-		// spending 2025 = 45.5 vs 2024 = 120 → down ~62%.
 		const c = change(d, 'spending', 'year', 2025);
 		expect(c.value).toBe(45.5);
 		expect(c.delta?.dir).toBe('down');
@@ -135,7 +128,7 @@ describe('change', () => {
 
 	it('omits the delta when the prior period is 0', () => {
 		const d = makeData();
-		// 2024 has no prior year in the fixture → prior income 0 → no delta.
+		// The fixture's first year has no prior year to compare against.
 		expect(change(d, 'income', 'year', 2024).delta).toBeUndefined();
 	});
 });

@@ -1,6 +1,5 @@
-// Scope: which slice of the dashboard a data/metric builder reads — everything
-// ('all'), one year, or one month. Kept in its own module so both the primitive
-// catalog and the metric layer can depend on it without importing each other.
+// Scope: which slice of the dashboard a data/metric builder reads. Its own module so both the
+// primitive catalog and the metric layer can depend on it without importing each other.
 
 import type { DashboardData } from '$lib/data/types';
 
@@ -19,20 +18,17 @@ export function latestYear(data: DashboardData): number {
 }
 
 /**
- * The most recent tracked month as "YYYY-MM", or '' for an untracked ledger. What a month-scoped
- * view opens on the first time it is ever used. Sorted defensively: the contract doesn't promise an
- * order, and picking the wrong end here would silently strand a view on the oldest month.
+ * The most recent tracked month as "YYYY-MM", or '' for an untracked ledger. Sorted because the
+ * contract doesn't promise `month_keys` in order.
  */
 export function latestMonthKey(data: DashboardData): string {
 	return [...data.meta.month_keys].sort().at(-1) ?? '';
 }
 
 /**
- * The most recent date anything is logged on, as ISO "YYYY-MM-DD", or '' for an empty ledger.
- *
- * This is the honest default for a new entry's date. Today is not: you log a week of spending on a
- * Sunday, so "today" is nearly always wrong and re-picking the date was the first thing every add
- * needed. Reads only the latest month with data, since nothing earlier can be the maximum.
+ * The most recent date anything is logged on, as ISO "YYYY-MM-DD", or '' for an empty ledger. This is
+ * what a new entry's date defaults to — "today" is nearly always wrong, since a week of spending is
+ * logged in one sitting.
  */
 export function latestEntryDate(data: DashboardData): string {
 	const keys = data.meta.month_keys.filter((k) => data.months[k]);

@@ -81,9 +81,9 @@ describe('drag', () => {
 
 	it('does NOT start a gesture on a press inside an opted-out control', () => {
 		// The regression this exists for: Svelte delegates pointer events to the document root, so a
-		// `stopPropagation` on the control's own handler runs strictly AFTER this action has already
-		// seen the press and called preventDefault on it — which also swallows the click. Every button
-		// inside a drag surface was dead. The opt-out has to be checked here.
+		// `stopPropagation` on the control's own handler runs AFTER this action has already called
+		// preventDefault on the press — which swallows the click. Every button inside a drag surface was
+		// dead until the opt-out was checked here.
 		const { control, calls, moves } = surface();
 
 		press(control, 'pointerdown', 0, 0);

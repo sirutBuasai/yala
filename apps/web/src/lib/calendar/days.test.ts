@@ -1,7 +1,3 @@
-// The calendar's arithmetic. Everything here is a month-boundary question — where a month starts,
-// how many days it has, how a keypress behaves at an edge — which is exactly the class of thing that
-// is easy to get subtly wrong and invisible until a particular month rolls around.
-
 import { describe, expect, it } from 'vitest';
 import { makeData } from '$lib/data/__fixtures__/dashboard';
 import {
@@ -39,12 +35,10 @@ describe('daysInMonthOf', () => {
 
 describe('firstWeekdayOf', () => {
 	it('is 0 for a month starting on a Sunday', () => {
-		// 1 Feb 2026 is a Sunday.
 		expect(firstWeekdayOf('2026-02')).toBe(0);
 	});
 
 	it('is 3 for a month starting on a Wednesday', () => {
-		// 1 Jul 2026 is a Wednesday.
 		expect(firstWeekdayOf('2026-07')).toBe(3);
 	});
 });
@@ -71,7 +65,6 @@ describe('dayCells', () => {
 		];
 		const cell = dayCells(d, '2024-12')[4]!;
 		expect(cell.spent).toBe(100);
-		// Takeouts is the bigger spend, so it leads the dots.
 		expect(cell.cats).toEqual(['Takeouts', 'Grocery']);
 		expect(cell.more).toBe(false);
 	});
@@ -125,7 +118,6 @@ describe('weekRows', () => {
 	});
 
 	it('needs six rows when a long month starts late in the week', () => {
-		// 31 days + 5 leading blanks = 36 slots, which cannot fit in five rows.
 		expect(weekRows(dayCells(makeData(), '2024-12'), 5)).toHaveLength(6);
 	});
 
@@ -146,13 +138,12 @@ describe('latestActivityDay', () => {
 	});
 
 	it('counts a paycheck, not just spending', () => {
-		// The fixture's only January entry is a paycheck on the 15th.
 		expect(latestActivityDay(dayCells(makeData(), '2025-01'))).toBe(15);
 	});
 });
 
 describe('dayForKey', () => {
-	// July 2026 starts on a Wednesday (weekday 3) and has 31 days.
+	// July 2026 starts on a Wednesday, hence the weekday 3.
 	const jul = (key: string, day: number) => dayForKey(key, day, '2026-07', 3);
 
 	it('steps a day sideways and a week vertically', () => {
@@ -170,10 +161,9 @@ describe('dayForKey', () => {
 	});
 
 	it('Home and End go to the ends of the WEEK', () => {
-		// The 1st is a Wednesday, so its week runs from the (clamped) 1st to Saturday the 4th.
+		// The 1st is a Wednesday, so its week is clamped at that end.
 		expect(jul('End', 1)).toBe(4);
 		expect(jul('Home', 4)).toBe(1);
-		// A whole week later: Sunday the 5th through Saturday the 11th.
 		expect(jul('Home', 8)).toBe(5);
 		expect(jul('End', 8)).toBe(11);
 	});

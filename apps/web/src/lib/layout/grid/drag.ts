@@ -1,19 +1,13 @@
 // One pointer-drag action, shared by moving and resizing. It knows about the DOM and nothing about
 // the board: it reports how far the pointer has travelled, and the pane decides what that means.
+// Deltas are CUMULATIVE from the press, so the board's clamping is re-derived from a fixed origin
+// rather than accumulated — dragging a pane into a wall and back out again is exact.
 //
-// Deltas are CUMULATIVE from the press, never incremental. An incremental delta accumulates every
-// clamp the board applies, so dragging a pane into a wall and back out again leaves it short by
-// however long you leaned on the wall. Cumulative deltas replay from a fixed origin, so the board's
-// clamping is re-derived rather than remembered.
-//
-// A drag surface usually has to carry its own controls, and `[data-no-drag]` is how they opt out. It
-// is checked HERE rather than left to a `stopPropagation` on the control's own handler, and that is
-// not a stylistic choice: Svelte DELEGATES pointer events to the document root, so a component's
-// handler runs strictly after this action's direct listener has already seen the press and called
-// `preventDefault()` on it — which also swallows the click that was supposed to follow. Every button
-// inside a drag surface was dead until this check existed.
+// `[data-no-drag]` opts a subtree out, and it is checked HERE rather than by a `stopPropagation` in
+// the control's own handler: Svelte DELEGATES pointer events to the document root, so a component's
+// handler runs strictly after this action's direct listener has already called `preventDefault()` on
+// the press — which swallows the click too. Every button inside a drag surface was dead until this.
 
-/** Marks a subtree inside a drag surface as not draggable — its own controls. */
 const OPT_OUT = '[data-no-drag]';
 
 export interface DragDetail {
@@ -42,9 +36,9 @@ export function drag(node: HTMLElement, params: DragParams) {
 		dy: e.clientY - (origin?.y ?? e.clientY)
 	});
 
-	/** Pointer capture is best-effort: it is what keeps the gesture alive once the pointer leaves the
-	    handle, but a stale or synthetic pointer id makes the call throw, and losing capture is far
-	    better than losing the gesture. */
+	/** Pointer capture is best-effort: it keeps the gesture alive once the pointer leaves the handle,
+	    but a stale or synthetic pointer id makes the call throw, and losing capture beats losing the
+	    gesture. */
 	function capture(take: boolean): void {
 		try {
 			if (take) node.setPointerCapture(pointer);

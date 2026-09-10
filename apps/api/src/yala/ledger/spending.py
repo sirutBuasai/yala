@@ -1,7 +1,7 @@
 """Spending domain: discretionary ``Expenses:*`` transactions.
 
-Plain-Python aggregation over the loaded ledger. **Discretionary** excludes the
-``Expenses:Deductions:*`` subtree — payroll deductions belong to income, not spending.
+**Discretionary** excludes the ``Expenses:Deductions:*`` subtree — payroll deductions belong to
+income, not spending.
 
 **Invariant:** a discretionary spending transaction has exactly one ``Expenses:*`` posting.
 """
@@ -21,18 +21,12 @@ if TYPE_CHECKING:
 
 
 def _is_discretionary(account: str) -> bool:
-    """An Expenses account that counts as spending (excludes the payroll-deductions subtree)."""
     return account.startswith(EXPENSES) and not account.startswith(DEDUCTIONS)
 
 
 @dataclass
 class SpendingTransaction:
-    """A transaction seen through the spending lens: exactly one category, its expense amount.
-
-    ``category`` and ``amount`` are non-optional here — this view only exists for transactions
-    that passed the one-category invariant, so the ambiguity that makes them optional on the
-    generic entity is already resolved.
-    """
+    """A transaction seen through the spending lens: exactly one category, its expense amount."""
 
     date: dt.date
     payee: str
@@ -62,7 +56,7 @@ class Spending:
             expense_postings = [p for p in t.postings if _is_discretionary(p.account)]
 
             if not expense_postings:
-                continue  # non-spending directive (a paycheck, transfer, etc.)
+                continue  # not a spending directive
             if len(expense_postings) > 1:
                 raise ValueError(
                     f"spending txn {t.date} {t.payee!r} has "
@@ -91,9 +85,8 @@ class Spending:
         return out
 
     def categories(self) -> list[str]:
-        """Discretionary spending categories from open ``Expenses:*`` accounts (excludes
-        Deductions and closed accounts), sorted. A closed category drops out here so it can't be
-        picked for new spending, while historical transactions still report against it."""
+        """Discretionary categories from *active* ``Expenses:*`` accounts, sorted. A closed category
+        drops out so it can't be picked, while historical transactions still report against it."""
         return sorted(
             a.split(":", 1)[1] for a in self._led.active_accounts(EXPENSES) if _is_discretionary(a)
         )

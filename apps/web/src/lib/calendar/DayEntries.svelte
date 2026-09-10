@@ -1,9 +1,6 @@
 <script lang="ts">
-	// The selected day's entries, one section per kind. Content only: the day's name, its totals and
-	// the add button are the PANE's header (see `CalendarPanes`), and the pane owns the height — which
-	// is why there is no sizing here at all. This file used to carry a careful `flex: 1 1 0` and an
-	// overflow cap to stop a busy day pushing the calendar's row taller; the pane's height mode says
-	// that now, and says it for every list in the app rather than for this one.
+	// The selected day's entries, one section per kind. Content only: the name, totals and add button
+	// are the PANE's header (see `CalendarPanes`), and the pane owns the height, so nothing here sizes.
 	import type { DayCell } from '$lib/calendar/days';
 	import Empty from '$lib/ui/Empty.svelte';
 	import PaycheckList from '$lib/lists/PaycheckList.svelte';

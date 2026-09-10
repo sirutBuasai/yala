@@ -26,7 +26,7 @@
 	let { transfers, onedit, showDate = true }: Props = $props();
 </script>
 
-<!-- No metadata columns: the route IS the row's detail, and it lives in `main`. -->
+<!-- No metadata columns: the route is the row's detail, and it lives in `main`. -->
 <RowList
 	items={transfers}
 	{onedit}

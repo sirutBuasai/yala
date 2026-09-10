@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { addAccount, type CreatableAccountKind } from '$lib/data/load';
+	import { openAccount, type CreatableAccountKind } from '$lib/data/load';
 	import { LEAF_MAX, validateLeaf } from '$lib/forms/validate';
 	import Select from '$lib/forms/fields/Select.svelte';
 
@@ -50,7 +50,7 @@
 	async function commit() {
 		const trimmed = leaf.trim();
 		// A category field lists leaves, so the duplicate check bites here; a funding field lists full
-		// account names, where the API is what rejects a name already open.
+		// account names, where the API is what rejects one already open.
 		const problem =
 			validateLeaf(trimmed, `${label.toLowerCase()} name`) ??
 			(options.includes(trimmed) ? `${trimmed} already exists.` : null);
@@ -60,7 +60,7 @@
 		}
 		busy = true;
 		err = '';
-		const { account, error } = await addAccount(kind as CreatableAccountKind, trimmed);
+		const { account, error } = await openAccount(kind as CreatableAccountKind, trimmed);
 		if (account) {
 			value = deriveValue(account);
 			adding = false;

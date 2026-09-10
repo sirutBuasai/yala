@@ -64,12 +64,11 @@ describe('catalog integrity', () => {
 
 describe('growth decomposition', () => {
 	it('splits a year’s change into what was saved and what was not', () => {
-		// 2025 opens at the 2024-12 snapshot (3000) and closes at 6000 → a change of 3000.
 		const saved = scalar('networth.saved', { level: 'year', year: 2025 });
 		const other = scalar('networth.other', { level: 'year', year: 2025 });
 
-		expect(saved.value).toBe(2254.5); // the fixture's logged income − spending for 2025
-		expect(other.value).toBe(745.5); // the remainder
+		expect(saved.value).toBe(2254.5);
+		expect(other.value).toBe(745.5);
 		expect((saved.value ?? 0) + (other.value ?? 0)).toBe(3000);
 	});
 
@@ -77,7 +76,6 @@ describe('growth decomposition', () => {
 		const saved = scalar('networth.saved');
 		const other = scalar('networth.other');
 
-		// lifetime opens at the first snapshot (1000) and closes at 6000
 		expect((saved.value ?? 0) + (other.value ?? 0)).toBe(5000);
 		expect(saved.value).toBe(2180 + 2254.5);
 	});
@@ -100,7 +98,6 @@ describe('growth decomposition', () => {
 
 		expect(p.series.map((s) => s.name)).toEqual(['You saved', 'Market & other']);
 		expect(p.labels).toEqual(['2024', '2025']);
-		// 2025's pair matches the scalars above
 		expect(p.series[0]!.points[1]!.value).toBe(2254.5);
 		expect(p.series[1]!.points[1]!.value).toBe(745.5);
 	});
@@ -113,7 +110,7 @@ describe('growth decomposition', () => {
 // --- targets derived from spending ---
 
 describe('targets', () => {
-	// The fixture logs 120 + 45.5 over two months → an annualized 993/yr, 82.75/mo.
+	// The fixture's two months of spending annualize to 993/yr.
 	it('sizes the FI number from trailing spending at the stated rate', () => {
 		const s = scalar('networth.fi_number');
 		expect(s.value).toBeCloseTo(993 / 0.04, 5);
@@ -176,15 +173,14 @@ describe('rates and risk', () => {
 		const s = scalar('networth.balance_growth');
 		expect(s.label).toBe('Balance growth');
 		expect(s.note).toContain('not a return');
-		// 1000 → 6000 over ~1.4 years is a large but finite annualized figure
 		expect(s.value!).toBeGreaterThan(100);
 	});
 
 	it('reports the largest account as a share of assets, and names it', () => {
 		const s = scalar('networth.top_account');
-		// assets are 3000 + 2000 + 1500; the liability is excluded
+		// The liability is excluded from the denominator.
 		expect(s.value).toBeCloseTo((3000 / 6500) * 100, 5);
-		expect(s.note).toContain('Big');
+		expect(s.note).toContain('BrokerageA');
 	});
 });
 
@@ -196,7 +192,6 @@ describe('allocation and accounts', () => {
 		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
 
 		expect(p.unit).toEqual(PERCENT);
-		// the last snapshot holds 1300 / 2600 / 2600 against 6500 of assets
 		expect(p.series.map((s) => s.points[2]!.value)).toEqual([20, 40, 40]);
 	});
 
@@ -204,7 +199,7 @@ describe('allocation and accounts', () => {
 		const p = build(makeNetWorthData(), 'networth.accounts', { level: 'all' });
 		if (p.kind !== 'categorical') throw new Error('expected categorical');
 		// Liabilities are excluded: a negative bar has no share of a whole.
-		expect(p.points.map((pt) => pt.key)).toEqual(['Big', 'Bank', 'Plan']);
+		expect(p.points.map((pt) => pt.key)).toEqual(['BrokerageA', 'BankA', 'PlanA']);
 	});
 
 	it('keeps liabilities on their own series so the net-worth axis stays readable', () => {
@@ -214,7 +209,6 @@ describe('allocation and accounts', () => {
 
 		const liabilities = build(makeNetWorthData(), 'networth.liabilities_trend', { level: 'all' });
 		if (liabilities.kind !== 'series') throw new Error('expected series');
-		// the fixture only carries a liability on its last snapshot
 		expect(liabilities.points.map((pt) => pt.value)).toEqual([0, 0, 500]);
 	});
 });
@@ -228,7 +222,7 @@ describe('duration formatting', () => {
 	});
 
 	it('keeps durations of different periods incompatible', () => {
-		expect(dataOfKind('scalar').length).toBeGreaterThan(0); // sanity: registry loaded
+		expect(dataOfKind('scalar').length).toBeGreaterThan(0);
 		expect(formatUnit(1, MONTHS)).not.toBe(formatUnit(1, YEARS));
 	});
 });
@@ -244,7 +238,7 @@ describe('thresholds bullet', () => {
 
 		const runway = p.rows.find((r) => r.label === 'Cash runway')!;
 		expect(runway.target).toBe(9);
-		// bands track the target, so changing it moves the shading with it
+		// Bands track the target, so changing it moves the shading with it.
 		expect(runway.bands).toEqual([4.5, 9]);
 	});
 
@@ -288,7 +282,7 @@ describe('net worth against assets', () => {
 		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
 
 		expect(p.series.map((s) => s.name)).toEqual(['Net worth', 'Assets']);
-		// the fixture's last snapshot owes 500, so assets sit exactly that far above net worth
+		// Assets sit above net worth by exactly what is owed.
 		const [nw, assets] = p.series;
 		expect(assets!.points[2]!.value! - nw!.points[2]!.value!).toBe(500);
 	});

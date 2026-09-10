@@ -1,7 +1,5 @@
 """The write abstraction for edit-mode writes back to the ledger.
 
-Writes never scatter file I/O across the API. They go through a :class:`LedgerSink`.
-
 Every write re-loads the ledger strictly; if the result is broken the touched file is rolled back
 to its prior state and the error re-raised, so a bad write never leaves a corrupt ledger on disk.
 """
@@ -46,7 +44,7 @@ from yala.ledger.settings import (
 )
 from yala.money import round_cents
 
-#: Ledger file holding the ``custom "yala-setting"`` directives, relative to the ledger dir.
+#: Settings-directive file, relative to the ledger dir.
 SETTINGS_FILE = "settings.beancount"
 
 Credit = tuple[str, Decimal]
@@ -57,31 +55,26 @@ ContributionLeg = tuple[str, str | None, Decimal]  # (account, label or None, am
 def _stored_amount(account: str, amount: Decimal) -> Decimal:
     """The signed figure a ``balance`` assertion carries for ``account``.
 
-    Liability balances are entered the way a bank app shows them — the amount *owed*, positive —
-    but beancount keeps them negative, so one rule flips them for every write path."""
+    Liabilities are passed in as the amount *owed*, positive, but beancount keeps them negative."""
     return -abs(amount) if account.startswith(LIABILITIES) else amount
 
 
 def _meta_line(key: str, value: str) -> str:
-    """One indented ``key: "value"`` metadata line, with the string escaped.
+    """One indented ``key: "value"`` metadata line.
 
-    Account metadata is written as text rather than through beancount's printer, so a quote or
-    backslash in a name typed by hand has to be escaped here — unescaped, it ends the string early
-    and the file no longer parses."""
+    Written as text rather than through beancount's printer, so a quote or backslash has to be
+    escaped here — unescaped, it ends the string early and the file no longer parses."""
     escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
     return f'  {key}: "{escaped}"'
 
 
 def _build_posting(account: str, number: Decimal, meta: dict | None = None) -> data.Posting:
-    """Construct a single USD posting with no cost/price/flag; optional posting meta (e.g.
-    ``label``)."""
     return data.Posting(
         account, Amount(number, "USD"), cost=None, price=None, flag=None, meta=meta or None
     )
 
 
 def _atomic_write(path: Path, content: str) -> None:
-    """Write ``content`` to ``path`` atomically: temp file in the same dir, fsync, then rename."""
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".yala-", suffix=path.suffix)
     try:
         with os.fdopen(fd, "w") as f:
@@ -96,14 +89,14 @@ def _atomic_write(path: Path, content: str) -> None:
         raise
 
 
-# A `balance` line: "<date> balance <account>" then the right-aligned number and its currency.
-# None of the three leading tokens can contain a space, so they split cleanly.
+# "<date> balance <account>" then the right-aligned number and its currency; none of the three
+# leading tokens can contain a space, so they split cleanly.
 _BALANCE_LINE_RE = re.compile(r"^(?P<head>\S+ \S+ \S+)(?P<gap> +)(?P<num>[\d,.-]+)(?P<tail> .*)$")
 
 
 def _reamount(line: str, amount: Decimal) -> str:
-    """Swap the amount on a ``balance`` line, holding the number's right edge so the assets files
-    keep their aligned column."""
+    """Swap the amount on a ``balance`` line, holding the number's right edge so the file keeps its
+    aligned column."""
     m = _BALANCE_LINE_RE.match(line.rstrip("\n"))
     if m is None:
         raise ValueError(f"unparsable balance line: {line!r}")
@@ -117,9 +110,8 @@ def _reamount(line: str, amount: Decimal) -> str:
 def _balance_directive(date: dt.date, account: str, amount: Decimal, entry_id: str) -> str:
     """A ``balance`` assertion plus the ``id`` meta that makes it addressable by locator.
 
-    Assertions are bare directives rather than transactions, so they carry no id unless written
-    with one — and without it the only handle is the source line, which shifts whenever anything
-    above it in the file changes."""
+    Assertions carry no id unless written with one, and without it the only handle is the source
+    line, which shifts whenever anything above it in the file changes."""
     return (
         f"{date.isoformat()} {BALANCE} {account}    {amount:,.2f} {DEFAULT_CURRENCY}\n"
         f'  id: "{entry_id}"'
@@ -132,8 +124,7 @@ _MAX_PAD_ROUNDS = 6
 
 
 def _block_end(lines: list[str], begin: int) -> int:
-    """Index one past the directive starting at ``begin``, consuming its indented continuation
-    lines (meta keys, postings). A blank or unindented line ends the block."""
+    """Index one past the directive starting at ``begin``; a blank or unindented line ends it."""
     end = begin + 1
     while end < len(lines) and lines[end].startswith((" ", "\t")) and lines[end].strip():
         end += 1
@@ -141,9 +132,8 @@ def _block_end(lines: list[str], begin: int) -> int:
 
 
 def _pad_insert_index(lines: list[str], pad_date: dt.date, balance_index: int) -> int:
-    """Where to slot a new ``pad``: joining that date's existing pad group when the file has one
-    (an assets month lists its pads together, then its balances), else above the assertion it
-    serves."""
+    """Where to slot a new ``pad``: joining that date's existing pad group if there is one, else
+    above the assertion it serves."""
     tag = f"{pad_date} {PAD} "
     group = [n for n, line in enumerate(lines) if line.startswith(tag)]
     if not group:
@@ -156,8 +146,6 @@ def _pad_insert_index(lines: list[str], pad_date: dt.date, balance_index: int) -
 
 
 def _year_header(subdir: str, year: int) -> str:
-    """The ``; <Title> for <year>`` header line a new year-file opens with."""
-    # Comment title each dated ``<subdir>/<year>.beancount`` file opens with.
     _file_titles = {
         "spending": "Spending transactions",
         "income": "Income",
@@ -285,7 +273,6 @@ class FileLedgerSink(LedgerSink):
         links=(),
         extra_meta: dict | None = None,
     ) -> data.Transaction:
-        """Build a balanced beancount ``Transaction`` for a spending directive."""
         meta: dict = {"id": entry_id, "funding": funding_account}
 
         total = round_cents(amount)
@@ -355,7 +342,6 @@ class FileLedgerSink(LedgerSink):
         pending: bool = False,
         credits: list[Credit] | None = None,
     ) -> str:
-        """Replace the located transaction in place; assign an id if it lacked one."""
         entry, entry_id, carried, resolved_date = self._locate_for_update(locator, date)
         credit_legs = [(a, Decimal(amt)) for a, amt in (credits or [])]
 
@@ -401,11 +387,10 @@ class FileLedgerSink(LedgerSink):
         links=(),
         extra_meta: dict | None = None,
     ) -> data.Transaction:
-        """Build a balanced beancount paycheck ``Transaction`` (validates accounts + legs).
+        """Build a balanced paycheck ``Transaction``; raises if the legs exceed ``gross``.
 
-        Legs are pre-resolved to full accounts; a contribution's label (Roth401k/…) is stamped as
-        a ``label`` posting-meta on its leg so the money stays in one account (net worth sees one
-        401k pot) while income can still break out the split.
+        A contribution's label is stamped as a ``label`` posting-meta rather than split into its own
+        account, so the money stays in one holding while income can still break the split out.
         """
         gross = round_cents(gross)
         deduction_legs = [(a, round_cents(v)) for a, v in deduction_legs]
@@ -523,8 +508,8 @@ class FileLedgerSink(LedgerSink):
         links=(),
         extra_meta: dict | None = None,
     ) -> data.Transaction:
-        """Build a balanced transfer ``Transaction``: amount out of ``from_account`` into
-        ``to_account`` (no Expenses/Income legs, so it's neither spending nor income)."""
+        """Build a balanced transfer ``Transaction`` — no Expenses/Income legs, so the read domains
+        classify it as neither spending nor income."""
         amt = round_cents(amount)
         self._assert_accounts_active(date, [from_account, to_account])
 
@@ -596,8 +581,6 @@ class FileLedgerSink(LedgerSink):
     # --- delete + account directives ---
 
     def delete_entry(self, locator: str) -> None:
-        """Remove the located entry (spending, paycheck, or transfer) from its file, then
-        strict-reload."""
         entry = find_entry(
             Ledger(self.main_ledger, strict=True).load().entries, locator
         )  # raises KeyError if unknown
@@ -627,15 +610,13 @@ class FileLedgerSink(LedgerSink):
         currency: str = DEFAULT_CURRENCY,
         date: dt.date | None = None,
     ) -> None:
-        """Append a ``balance`` assertion, e.g. a starting 0.00 balance for a new account."""
         date = date or dt.date.today()
         self._append_account_directive(
             account, f"{date.isoformat()} {BALANCE} {account} {amount} {currency}"
         )
 
     def close_account(self, account: str, date: dt.date | None = None) -> None:
-        """Append a ``close`` directive. A strict reload rejects an unopened or already-closed
-        account."""
+        """Append a ``close``; the strict reload rejects an unopened or already-closed account."""
         date = date or dt.date.today()
         self._append_account_directive(account, f"{date.isoformat()} {CLOSE} {account}")
 
@@ -643,15 +624,14 @@ class FileLedgerSink(LedgerSink):
         self, ledger: Ledger, account: str, date: dt.date
     ) -> tuple[list[data.Posting], Decimal]:
         """Postings that drain every holding of ``account`` to USD at ``date`` prices, plus the
-        total USD weight drained. Non-USD legs carry an ``@ price`` (``posting.price`` set); the
-        USD leg (if any) is a plain amount. Shared by :meth:`close_investment` (drain to legs) and
-        :meth:`log_balance` (reclassify share lots to USD in place)."""
+        total USD weight drained. Non-USD legs carry an ``@ price``; the USD leg is a plain amount.
+        Raises if a held ticker has no price on or before ``date``."""
         holdings = ledger.holdings(account, date)
         price_map = prices.build_price_map(ledger.entries)
         usd = ledger.currency
 
         postings: list[data.Posting] = []
-        weight_out = Decimal(0)  # USD value leaving the account
+        weight_out = Decimal(0)
         for cur, qty in holdings.items():
             if cur == usd:
                 amt = round_cents(qty)
@@ -673,8 +653,8 @@ class FileLedgerSink(LedgerSink):
         self, account: str, date: dt.date, legs: list[tuple[str, Decimal]], plug: str | None
     ) -> None:
         """Convert every holding to USD at ``date`` prices, split the total across ``legs``, then
-        close the account. ``plug`` absorbs the sub-cent rounding gap, or is None when there is
-        none."""
+        close the account. ``plug``, when given, absorbs the sub-cent rounding gap so the entry
+        balances exactly, and is closed too."""
         ledger = Ledger(self.main_ledger, strict=True).load()
         usd = ledger.currency
 
@@ -683,7 +663,6 @@ class FileLedgerSink(LedgerSink):
         for dest, amount in legs:
             postings.append(_build_posting(dest, round_cents(amount)))
 
-        # The plug carries the sub-cent gap so the entry balances exactly.
         residual = weight_out - round_cents(sum((a for _, a in legs), Decimal(0)))
         if residual != 0 and plug is not None:
             postings.append(data.Posting(plug, Amount(residual, usd), None, None, None, None))
@@ -708,21 +687,17 @@ class FileLedgerSink(LedgerSink):
     def log_balance(
         self, account: str, amount: Decimal, date: dt.date, counter_account: str
     ) -> str:
-        """Snapshot ``account`` to ``amount`` USD as of ``date``, appended to
-        ``assets/<year>.beancount`` as a ``balance`` assertion, preceded by a ``pad`` when one is
-        needed.
+        """Snapshot ``account`` to ``amount`` USD as of ``date`` as a ``balance`` assertion,
+        preceded by a ``pad`` into ``counter_account`` when one is needed.
 
-        The ``balance`` is the snapshot: it is always written, so logging the same figure month
-        after month builds the history even when nothing moved. The ``pad`` (dated the day before,
-        so it lands before the start-of-day assertion) is only written when the account's projected
-        balance differs from ``amount``, routing that untracked delta into ``counter_account`` (the
-        account's ``Equity:Adjustments:*`` plug). beancount rejects a pad it doesn't need
-        ("Unused Pad entry"), so emitting one unconditionally would make an unchanged balance
-        impossible to log.
+        The ``balance`` is always written, so logging the same figure month after month builds the
+        history even when nothing moved. The ``pad`` is dated the day before (assertions are checked
+        at start of day) and only written when the projected balance differs from ``amount``:
+        beancount rejects a pad it doesn't need, so emitting one unconditionally would make an
+        unchanged balance impossible to log.
 
-        If the account still holds share lots, they are first reclassified to USD at ``date``
-        prices in place — a net-worth-neutral conversion — so the single USD assertion is
-        authoritative and nothing double-counts."""
+        Any share lots are first reclassified to USD at ``date`` prices in place — a
+        net-worth-neutral conversion — so the single USD assertion is authoritative."""
         amount = round_cents(amount)
         pad_date = date - dt.timedelta(days=1)
         self._assert_accounts_active(date, [account, counter_account])
@@ -732,8 +707,7 @@ class FileLedgerSink(LedgerSink):
         drain, _ = self._liquidate_postings(ledger, account, pad_date)
         share_legs = [p for p in drain if p.price is not None]  # non-USD legs carry an @ price
 
-        # What the account will hold once any share lots are reclassified: its USD component plus
-        # the converted share value. Compared against `amount` to decide whether a pad is needed.
+        # What the account will hold once any share lots are reclassified.
         projected = ledger.holdings(account, pad_date).get(usd, Decimal(0))
 
         blocks: list[str] = []
@@ -774,13 +748,9 @@ class FileLedgerSink(LedgerSink):
         """Snapshot an account that has no adjustment plug (a liability): ``balance`` only, never a
         ``pad``.
 
-        Because nothing can absorb a difference, the figure has to agree with what the ledger
-        already computes. A card balance that disagrees means spending or a bill payment hasn't
-        been entered yet, so the gap is reported and nothing is written — the mismatch is the
-        signal, and padding it would hide it. (``_append`` strict-reloads and rolls back too, so a
-        stale projection can't slip a bad assertion through; this check just names the fix.)
-
-        ``amount`` is the figure owed, positive; it is stored negative."""
+        With nothing to absorb a difference, the figure has to agree with what the ledger computes;
+        a mismatch means an entry is missing, so it is raised as a ``ValueError`` naming the gap and
+        nothing is written. ``amount`` is the figure owed, positive; it is stored negative."""
         amount = _stored_amount(account, round_cents(amount))
         self._assert_accounts_active(date, [account])
 
@@ -809,16 +779,11 @@ class FileLedgerSink(LedgerSink):
         """Rewrite the amount on the existing ``balance`` assertion at ``locator``, reconciling its
         ``pad`` so the edited figure still loads. Returns ``(account, date, locator)``.
 
-        Editing an assertion changes how much must be absorbed at its date, which can flip whether
-        a pad is required: raising a figure that had no pad leaves the delta unexplained (the
-        assertion fails), while setting one back to its carried value makes an existing pad unused
-        (beancount rejects that). So a pad is ensured up front, then dropped again only if beancount
-        reports it unused — which it pinpoints by source line.
-
-        A migrated assertion carries no ``id``, so it is only addressable by source line; editing
-        one stamps an id on it and returns the stable locator to use from then on.
-
-        A liability's ``amount`` is the figure owed, positive, as on the way in."""
+        Editing an assertion can flip whether a pad is required: raising a figure that had no pad
+        leaves the delta unexplained (the assertion fails), while restoring the carried value makes
+        an existing pad unused (beancount rejects that). An assertion with no ``id`` is stamped with
+        one, so the returned locator is the stable handle to use from then on. A liability's
+        ``amount`` is the figure owed, positive, as on the way in."""
         entry = find_balance(Ledger(self.main_ledger, strict=True).load().entries, locator)
         account, date = entry.account, entry.date
         amount = _stored_amount(account, round_cents(amount))
@@ -849,8 +814,7 @@ class FileLedgerSink(LedgerSink):
             lines[i + 1 : i + 1] = [f'  id: "{entry_id}"\n']
 
         if account.startswith(LIABILITIES):
-            # Verify-only account: there is no plug to settle, so the edited figure simply has to
-            # hold — _commit rolls the file back if it doesn't.
+            # No plug to settle, so the edited figure simply has to hold; _commit rolls back if not.
             self._commit(path, "".join(lines), original)
         else:
             self._settle_pads(account, {path: lines}, {path: original})
@@ -861,12 +825,11 @@ class FileLedgerSink(LedgerSink):
     ) -> None:
         """Write ``work``, then add or drop ``account``'s pads until the ledger loads clean.
 
-        An assertion is a checkpoint, so editing one shifts the running balance onward until the
-        next assertion re-pins it — needing a pad at the edited date *and* usually at that next
-        one, which may live in another year's file. Rather than predict them, each round writes the
-        candidate files and lets beancount name what is missing (a failed assertion → add its pad)
-        or redundant (an unused pad → drop it). Any other error, or exhausting the rounds, restores
-        every touched file and re-raises."""
+        Editing an assertion shifts the running balance until the next assertion re-pins it, so a
+        pad may be needed at the edited date *and* at that next one, possibly in another year's
+        file. Rather than predict them, each round writes the candidate files and lets beancount
+        name what is missing (failed assertion → add its pad) or redundant (unused pad → drop it).
+        Any other error, or exhausting the rounds, restores every touched file and re-raises."""
         try:
             for _ in range(_MAX_PAD_ROUNDS):
                 for path, lines in work.items():
@@ -927,7 +890,7 @@ class FileLedgerSink(LedgerSink):
 
     @staticmethod
     def _working(path: Path, work: dict[Path, list[str]], originals: dict[Path, str]) -> list[str]:
-        """The mutable line buffer for ``path``, reading (and remembering) it on first touch."""
+        """The mutable line buffer for ``path``, recording its original text on first touch."""
         if path not in work:
             originals[path] = path.read_text()
             work[path] = originals[path].splitlines(keepends=True)
@@ -935,7 +898,7 @@ class FileLedgerSink(LedgerSink):
 
     def set_account_meta(self, account: str, key: str, value: str | None) -> None:
         """Set (or, when ``value`` is None, remove) a string meta key on an account's ``open``
-        directive in place, then strict-reload. Raises ``KeyError`` for an unknown account."""
+        directive. Raises ``KeyError`` for an unknown account."""
         opens = [
             e
             for e in Ledger(self.main_ledger, strict=True).load().entries
@@ -951,7 +914,6 @@ class FileLedgerSink(LedgerSink):
         original = path.read_text()
         lines = original.splitlines(keepends=True)
 
-        # The open's meta lines are the indented block right below its header.
         end = _block_end(lines, begin)
 
         key_re = re.compile(rf"^\s*{re.escape(key)}\s*:")
@@ -966,8 +928,7 @@ class FileLedgerSink(LedgerSink):
         value. Raises ``KeyError`` for an unknown key, ``ValueError`` for an out-of-range value.
 
         A directive already dated ``date`` for this key is rewritten in place; otherwise a new one
-        is appended. That way repeated edits on one day don't pile up, while a change on a later
-        day supersedes rather than erases — the old value stays as history (see
+        is appended, so a later change supersedes rather than erases (see
         :mod:`yala.ledger.settings`).
         """
         spec = SETTINGS_BY_KEY.get(key)
@@ -1002,11 +963,11 @@ class FileLedgerSink(LedgerSink):
 
     def _account_file(self, account: str) -> Path:
         """The ``.beancount`` file a directive for ``account`` belongs in, so it lands beside its
-        siblings regardless of how the ledger splits its account files.
+        siblings however the ledger splits its account files.
 
         An existing ``open`` for the same account wins (a close goes in the file that declared it);
         otherwise the file most of the account's same-parent siblings live in; failing that, the
-        top-level ``accounts.beancount`` for a wholly new family.
+        top-level ``accounts.beancount``.
         """
         opens = [e for e in Ledger(self.main_ledger).load().entries if isinstance(e, data.Open)]
 
@@ -1029,17 +990,13 @@ class FileLedgerSink(LedgerSink):
         return self.ledger_dir / "accounts.beancount"
 
     def _append_directive(self, target: Path, directive: str) -> None:
-        """Append one standalone directive to ``target``, normalizing the trailing newline, with
-        strict-reload/rollback. Shared by every writer that adds a whole-line directive rather
-        than editing an entry in place."""
+        """Append one standalone directive to ``target``, normalizing the trailing newline."""
         original = target.read_text() if target.exists() else ""
         text = original if not original or original.endswith("\n") else original + "\n"
 
         self._commit(target, f"{text}{directive}\n", original)
 
     def _append_account_directive(self, account: str, directive: str) -> None:
-        """Append one account directive to the file holding the account's family (see
-        ``_account_file``)."""
         self._append_directive(self._account_file(account), directive)
 
     # --- internals: locate, write, roll back ---
@@ -1047,9 +1004,8 @@ class FileLedgerSink(LedgerSink):
     def _locate_for_update(
         self, locator: str, date: dt.date | None
     ) -> tuple[data.Transaction, str, dict, dt.date]:
-        """Shared preamble for both updates: strict-load, resolve the locator, and derive the
-        target entry, its id (assigned if missing), the meta to carry forward, and the resolved
-        date (the edit's date, or the entry's own if unchanged)."""
+        """Resolve ``locator`` to ``(entry, id, meta to carry forward, resolved date)``. The id is
+        assigned if the entry lacked one; the date falls back to the entry's own."""
         entry = find_entry(Ledger(self.main_ledger, strict=True).load().entries, locator)
         entry_id = (entry.meta or {}).get("id") or str(uuid.uuid4())
         carried = {
@@ -1064,9 +1020,8 @@ class FileLedgerSink(LedgerSink):
     ) -> tuple[Path, str, list[str], int, int]:
         """Locate an entry's source block: ``(path, original_text, lines, begin, end)``.
 
-        Guards against a stale locator — the ``begin`` line must still be the entry's
-        ``<date> <flag>`` header, or we'd clobber the wrong entry — then consumes the entry's
-        indented meta/posting lines (a blank line ends the block) to find ``end``."""
+        Raises on a stale locator: the ``begin`` line must still be the entry's ``<date> <flag>``
+        header, or the rewrite would clobber a different entry."""
         path = Path(entry.meta["filename"])
         start = int(entry.meta["lineno"])
 
@@ -1084,7 +1039,6 @@ class FileLedgerSink(LedgerSink):
         return path, original, lines, begin, _block_end(lines, begin)
 
     def _append_entry(self, subdir: str, entry: data.Transaction) -> None:
-        """Format ``entry`` and append it to its dated ``<subdir>/<year>.beancount`` file."""
         year = entry.date.year
         self._append(subdir, year, _year_header(subdir, year), printer.format_entry(entry))
 
@@ -1125,8 +1079,8 @@ class FileLedgerSink(LedgerSink):
             raise
 
     def _commit(self, path: Path, content: str, original: str) -> None:
-        """Write ``content`` to ``path``, strict-reload, and roll ``path`` back to ``original``
-        (re-raising) if the reload fails — so a bad write never sticks."""
+        """Write ``content`` to ``path``, then roll back to ``original`` and re-raise if the strict
+        reload fails."""
         _atomic_write(path, content)
         try:
             Ledger(self.main_ledger, strict=True).load()
@@ -1138,14 +1092,10 @@ class FileLedgerSink(LedgerSink):
     def _replace_located(
         self, entry: data.Transaction, resolved_date: dt.date, block: str, subdir: str, locator: str
     ) -> None:
-        """Swap ``entry``'s source block for ``block``, then strict-reload with rollback.
-
-        If ``resolved_date`` falls in a different year than the entry, relocate it to
-        ``<subdir>/<year>.beancount`` instead of rewriting in place."""
+        """Swap ``entry``'s source block for ``block``, relocating it to
+        ``<subdir>/<year>.beancount`` when ``resolved_date`` falls in a different year."""
         path, original, lines, begin, end = self._entry_span(entry, locator)
 
-        # A date edit that crosses into a different year must relocate the entry to that year's
-        # file, not leave it stranded in the original year's file.
         if resolved_date.year != entry.date.year:
             _atomic_write(path, "".join(lines[:begin] + lines[end:]))  # drop from the old file
 
@@ -1166,7 +1116,7 @@ class FileLedgerSink(LedgerSink):
 
     @staticmethod
     def _restore(path: Path, before: str | None) -> None:
-        """Undo a touched file: delete it if it didn't exist before, else rewrite prior content."""
+        """Undo a touched file; ``before=None`` means it did not exist and is deleted."""
         if before is None:
             path.unlink(missing_ok=True)
 
@@ -1174,9 +1124,9 @@ class FileLedgerSink(LedgerSink):
             _atomic_write(path, before)
 
     def _ensure_include(self, subdir: str, include_line: str) -> None:
-        """Register a new year file's include in the ``{subdir}.beancount`` aggregator (which main
-        includes), so a new year joins the same load path as the existing ones — not scattered
-        into main. Wires the aggregator into main too, for a fresh ledger."""
+        """Register a new year file's include in the ``{subdir}.beancount`` aggregator, so a new
+        year joins the same load path as the existing ones rather than being scattered into main.
+        Wires the aggregator into main too, for a fresh ledger."""
         self._ensure_main_include(f'include "{subdir}.beancount"')
 
         aggregator = self.ledger_dir / f"{subdir}.beancount"
@@ -1197,7 +1147,6 @@ class FileLedgerSink(LedgerSink):
         _atomic_write(aggregator, "\n".join(lines) + "\n")
 
     def _ensure_main_include(self, include_line: str) -> None:
-        """Idempotently ensure ``include_line`` is present in main.beancount (appends if absent)."""
         text = self.main_ledger.read_text() if self.main_ledger.exists() else ""
         if include_line in text:
             return

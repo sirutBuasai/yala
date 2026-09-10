@@ -1,6 +1,4 @@
-// Shared chart tooltip singleton. Chart components call showTip/hideTip from
-// pointer handlers; Tooltip.svelte (mounted once at the app root) renders the
-// current content near the cursor.
+// Shared chart tooltip singleton; Tooltip.svelte, mounted once at the app root, renders the content.
 
 import { writable } from 'svelte/store';
 

@@ -70,7 +70,7 @@ def test_log_balance_usd_account_pads_to_asserted_value(ledger_dir: Path):
 
     led = _load(ledger_dir)
     assert led.balance(account, SEP) == Decimal("1000.00")
-    # the untracked delta lands in the account's own adjustment plug (non-zero)
+    # the untracked delta lands in the account's own plug
     assert led.balance("Equity:Adjustments:BankA", SEP) != 0
 
     text = (ledger_dir / "assets" / "2026.beancount").read_text()
@@ -91,8 +91,7 @@ def test_log_balance_stamps_an_id_for_later_editing(ledger_dir: Path):
 def test_log_balance_monthly_history_skips_unneeded_pads(ledger_dir: Path):
     """Logging month after month keeps every snapshot, changed or not.
 
-    beancount rejects a pad it doesn't need ("Unused Pad entry"), so a pad is written only for the
-    months where the balance moved — otherwise re-logging an unchanged figure would fail."""
+    beancount rejects a pad it doesn't need, so one is written only for the months that moved."""
     account = "Assets:Cash:BankA"
     plug = adjustment_account(account)
     sink = FileLedgerSink(ledger_dir)
@@ -135,7 +134,7 @@ def test_update_balance_edits_the_located_assertion_in_place(ledger_dir: Path):
 
     led = _load(ledger_dir)
     assert led.balance(account, dt.date(2026, 9, 1)) == Decimal("1250.00")
-    # the later month keeps its own figure — the edit did not run away forward
+    # the later month keeps its own figure: the edit did not run forward
     assert led.balance(account, dt.date(2026, 10, 1)) == Decimal("1000.00")
     dates = sorted(
         e.date for e in led.entries if isinstance(e, data.Balance) and e.account == account
@@ -147,7 +146,7 @@ def test_update_balance_adds_then_drops_pads_as_the_figure_requires(ledger_dir: 
     """A pad appears where a delta needs absorbing and goes away once it doesn't.
 
     Raising a figure needs a pad at its own date *and* at the next assertion that re-pins the
-    account; setting it back leaves both unused, and beancount rejects an unused pad."""
+    account; setting it back leaves both unused, which beancount rejects."""
     account = "Assets:Cash:BankA"
     plug = adjustment_account(account)
     _log_months(
@@ -172,20 +171,19 @@ def test_update_balance_adds_then_drops_pads_as_the_figure_requires(ledger_dir: 
     locator = _load(ledger_dir).net_worth.logged_at(dt.date(2026, 9, 1))[account]
     sink.update_balance(locator, Decimal("1000.00"))
     assert pads() == seeded  # the extra pad is gone again
-    # and the round trip left no residue behind in the plug
+    # the round trip left no residue in the plug
     assert _load(ledger_dir).balance(plug) == seeded_plug
 
 
 def test_update_balance_stamps_an_id_on_a_migrated_assertion(ledger_dir: Path):
-    """Migrated assertions have only a source line to go by; editing one gives it a stable id.
-
-    A line handle shifts whenever anything above it moves — including the pads an edit inserts — so
-    the id is what makes a second edit of the same snapshot safe."""
+    """An assertion with no id has only a source line to go by, and that line shifts whenever
+    anything above it moves — including the pads an edit inserts. Editing one stamps an id, which is
+    what makes a second edit of the same snapshot safe."""
     account = "Assets:Cash:BankA"
     sink = FileLedgerSink(ledger_dir)
     entry_id = sink.log_balance(account, Decimal("1000.00"), SEP, adjustment_account(account))
 
-    # strip the id back off, leaving the bare directive a migrated snapshot has
+    # strip the id back off, leaving a bare directive
     path = ledger_dir / "assets" / "2026.beancount"
     path.write_text(path.read_text().replace(f'  id: "{entry_id}"\n', ""))
 
@@ -195,7 +193,7 @@ def test_update_balance_stamps_an_id_on_a_migrated_assertion(ledger_dir: Path):
     _, _, stable = sink.update_balance(line_locator, Decimal("1200.00"))
     assert stable.startswith("id:")
 
-    # the id still resolves on a second edit, though the first one moved lines around
+    # the id still resolves on a second edit, though the first moved lines around
     _, _, again = sink.update_balance(stable, Decimal("1300.00"))
     assert again == stable
     assert _load(ledger_dir).balance(account, SEP) == Decimal("1300.00")
@@ -263,10 +261,10 @@ def test_log_balance_reclassifies_shares_to_usd(tmp_path: Path):
 
     led = Ledger(root / "main.beancount", strict=True).load()
     assert led.errors == []
-    # shares are gone; the account holds only the asserted USD (no double-count)
+    # the shares are gone, so nothing double-counts
     assert led.holdings(account, SEP) == {"USD": Decimal("5200.00")}
     assert led.value(account, SEP) == Decimal("5200.00")
-    # only the untracked delta (5200 - 5000) hit the adjustment plug — not the whole 5000 value
+    # only the untracked delta reached the plug, not the whole share value
     assert led.balance("Equity:Adjustments:Investments:Brokerage", SEP) == Decimal("-200.00")
 
 
@@ -296,7 +294,7 @@ def test_networth_series_and_adjustments(ledger_dir: Path):
 def test_loggable_accounts_excludes_swept(ledger_dir: Path):
     loggable = _load(ledger_dir).net_worth.loggable_accounts()
     assert "Assets:Cash:BankA" in loggable
-    # The passthrough sweeps to savings and has no adjustment plug → not loggable
+    # a swept passthrough has no plug to pad into
     assert "Assets:Cash:Passthrough" not in loggable
 
 
@@ -411,7 +409,6 @@ def test_post_liability_balance_rejects_a_mismatch(client: TestClient):
     assert r.status_code == 422, r.text
     assert "spending or bill pay" in r.json()["detail"]
 
-    # nothing was written
     assert CARD not in client.get("/api/networth?date=2026-09-01").json()["logged"]
 
 
@@ -424,7 +421,7 @@ def test_patch_liability_balance_keeps_the_owed_sign(client: TestClient):
     )
     locator = client.get("/api/networth?date=2026-09-01").json()["logged"][CARD]
 
-    # editing to a figure that no longer holds is refused, leaving the original in place
+    # editing to a figure that no longer holds is refused
     edit = client.post("/api/balance/update", json={"locator": locator, "amount": 999.0})
     assert edit.status_code >= 400
     at = client.get("/api/networth?date=2026-09-01").json()

@@ -57,7 +57,7 @@ describe('labelIndices', () => {
 	});
 
 	it('drops the neighbour that would collide with the last label', () => {
-		// 9 points in a narrow box: a plain stride would place one right beside the final label.
+		// A narrow box, where a plain stride would place one label right beside the final one.
 		const shown = labelIndices(9, 300, dates(9));
 		const [secondLast, last] = shown.slice(-2);
 		expect(last! - secondLast!).toBeGreaterThan(1);
@@ -71,8 +71,8 @@ describe('labelIndices', () => {
 
 describe('fitFontSize', () => {
 	it('shrinks to fit a long label in a tight gutter', () => {
-		const tight = fitFontSize(60, ['Tax-advantaged:CharlesSchwabIndividual']);
-		const roomy = fitFontSize(200, ['Tax-advantaged:CharlesSchwabIndividual']);
+		const tight = fitFontSize(60, ['Tax-advantaged:BrokerageAIndividual']);
+		const roomy = fitFontSize(200, ['Tax-advantaged:BrokerageAIndividual']);
 		expect(tight).toBeLessThan(roomy);
 	});
 

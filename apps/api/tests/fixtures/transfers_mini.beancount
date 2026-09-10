@@ -13,8 +13,8 @@ option "operating_currency" "USD"
   Assets:Cash:BankA      -250.00 USD
   Liabilities:CC:CardA    250.00 USD
 
-; cash sweep (bank -> venmo): a transfer
-2025-08-06 * "venmo sweep"
+; cash sweep (bank -> passthrough): a transfer
+2025-08-06 * "passthrough sweep"
   Assets:Cash:BankA       -30.00 USD
   Assets:Cash:Passthrough        30.00 USD
 

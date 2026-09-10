@@ -10,7 +10,7 @@ import { makeAccounts } from '$lib/data/__fixtures__/dashboard';
 const accounts = makeAccounts({
 	spending_categories: ['Grocery', 'Takeouts'],
 	funding_accounts: ['Liabilities:CC:CardA', 'Assets:Cash:BankA'],
-	employers: ['Employer1'],
+	employers: ['EmployerA'],
 	cash_accounts: ['Assets:Cash:BankA'],
 	credit_accounts: ['Assets:Cash:Wallet', 'Liabilities:CC:CardA']
 });
@@ -25,8 +25,8 @@ beforeEach(() => {
 	lastCategory.set('');
 	// account pickers label their options from the directory, so seed it alongside the lists
 	setAccountDirectory({
-		'Liabilities:CC:CardA': { name: 'Card A', institution: 'Bank of Example' },
-		'Assets:Cash:BankA': { name: 'Bank A', institution: 'Bank of Example' },
+		'Liabilities:CC:CardA': { name: 'Card A', institution: 'BankA' },
+		'Assets:Cash:BankA': { name: 'Bank A', institution: 'BankA' },
 		'Assets:Cash:Wallet': { name: 'Wallet' }
 	});
 });

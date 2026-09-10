@@ -1,6 +1,6 @@
 // Page-level grid state: how wide the content column actually is, and whether the user is
-// arranging. Runes only — no DOM. The page measures itself and writes `width` here; everything
-// else about how the board folds is derived, so no two components can disagree about it.
+// arranging. Runes only — the page measures itself and writes `width` here, and everything about
+// how the board folds is derived from it, so no two components can disagree.
 
 import { foldMode, foldColumns, WRAP_PAD, type FoldMode } from './units';
 
@@ -9,15 +9,11 @@ export class GridEnv {
 	width = $state(0);
 
 	/**
-	 * Whether the user has ASKED for the arrange affordances. Whether they are actually showing is
-	 * `arranging`, which also weighs whether the board can be arranged at all.
+	 * Whether the user has ASKED for the arrange affordances; `arranging` is whether they show.
 	 *
 	 * Page-level, so it holds across a tab switch — laying the app out is one job spanning several
-	 * boards, and re-entering the mode per tab made it four jobs. Nothing is at risk in carrying it
-	 * over: a board commits on every gesture, so the one being left is already saved.
-	 *
-	 * Not PERSISTED, though: arranging is something you are doing, not a mode the app is in, and
-	 * coming back tomorrow to a board wearing drag grips is a worse greeting than one extra click.
+	 * boards. Nothing is at risk: a board commits on every gesture. Not persisted, though: coming back
+	 * tomorrow to a board wearing drag grips is a worse greeting than one extra click.
 	 */
 	arrangeRequested = $state(false);
 
@@ -26,8 +22,7 @@ export class GridEnv {
 	readonly folded = $derived(this.foldMode !== 'full');
 	readonly columns = $derived(foldColumns(this.foldMode));
 
-	/** Arranging is only offered when the full content column fits: the stored coordinates describe
-	    a 48-column board, and there is nothing honest to do with them on a narrower one. */
+	/** Arranging is only offered when the full content column fits (see `foldMode`). */
 	readonly canArrange = $derived(this.foldMode === 'full');
 
 	/** Requested AND able to — the one every component reads. */

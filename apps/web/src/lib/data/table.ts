@@ -1,5 +1,4 @@
-// Table primitive: tabular rows with typed columns (paycheck breakdowns). Numeric
-// columns carry a unit so the renderer formats them consistently.
+// Table primitive: tabular rows whose numeric columns carry a unit, so the renderer formats them.
 
 import type { DashboardData } from '$lib/data/types';
 import type { PaycheckOut } from '$lib/data/types';

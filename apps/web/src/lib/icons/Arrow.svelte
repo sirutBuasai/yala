@@ -1,6 +1,5 @@
 <script lang="ts">
 	// A directional arrow (shaft + head), e.g. the transaction sort-order toggle.
-	// One source of truth for the glyph so every arrow matches.
 	interface Props {
 		dir: 'up' | 'down';
 		size?: number;

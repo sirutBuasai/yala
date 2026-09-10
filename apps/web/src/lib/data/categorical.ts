@@ -1,6 +1,5 @@
-// Categorical primitives: named parts of a whole (spending by category, the
-// "where it went" donut). Pure over plain `{category, amount}` inputs so both the
-// catalog and views can reuse them; colour is assigned later by the chart registry.
+// Categorical primitives: named parts of a whole, over plain `{category, amount}` inputs so both the
+// catalog and views can reuse them.
 
 import type { DashboardData } from '$lib/data/types';
 import type { Categorical, CategoricalPoint, Unit } from './primitives';
@@ -33,11 +32,7 @@ export function categorical(items: Amount[], unit: Unit = MONEY(), limit = 10): 
 	return { kind: 'categorical', unit, points };
 }
 
-/**
- * "Where it all went": spending categories (rolled up) plus a distinct `Saved`
- * slice when income exceeded spending. Shared by the Overview and Monthly donuts,
- * which previously each rebuilt this inline.
- */
+/** Spending categories (rolled up) plus a `Saved` slice when income exceeded spending. */
 export function whereItWent(
 	items: Amount[],
 	income: number,
@@ -59,13 +54,9 @@ export function whereItWent(
 }
 
 /**
- * Per-category deviation of one month from the trailing average of the months before it —
- * signed, so positive means "spent more than usual". This is the actionable counterpart to the
- * composition donut: a second ranking of the same amounts would only restate the donut, whereas
- * the delta says which categories actually broke from the norm.
- *
- * The baseline uses up to `window` prior months that have data. With fewer than two such months
- * there's no norm to compare against, so the result is empty and the caller shows an empty state.
+ * Per-category deviation of one month from the trailing average of the months before it — signed, so
+ * positive means "spent more than usual". The baseline uses up to `window` prior months that have
+ * data; with none, the result is empty and the caller shows an empty state.
  */
 export function categoryDeviation(data: DashboardData, monthKey: string, window = 12): Categorical {
 	const unit = MONEY(data.currency);
@@ -78,8 +69,8 @@ export function categoryDeviation(data: DashboardData, monthKey: string, window 
 	const spendOf = (key: string, cat: string) =>
 		(data.months[key]?.by_category ?? []).find((b) => b.category === cat)?.amount ?? 0;
 
-	// Union of categories active this month or in the baseline, so a category that stopped
-	// entirely still shows as a negative deviation.
+	// Union of categories active this month or in the baseline, so one that stopped entirely still
+	// shows as a negative deviation.
 	const cats = new Set<string>(md.by_category.map((b) => b.category));
 	for (const k of prior) for (const b of data.months[k]?.by_category ?? []) cats.add(b.category);
 
@@ -88,7 +79,7 @@ export function categoryDeviation(data: DashboardData, monthKey: string, window 
 			const avg = prior.reduce((s, k) => s + spendOf(k, c), 0) / prior.length;
 			return { key: c, value: spendOf(monthKey, c) - avg };
 		})
-		// Rank by how far from normal, in either direction — the biggest surprises first.
+		// Ranked by distance from normal in either direction, so the biggest surprises lead.
 		.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
 
 	return { kind: 'categorical', unit, points };

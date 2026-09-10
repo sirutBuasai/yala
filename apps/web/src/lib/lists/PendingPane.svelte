@@ -1,10 +1,7 @@
 <script lang="ts">
-	// The pending queue as a board pane: fronted money, waiting to be paid back.
-	//
-	// One component for both places it appears — the Home hub (every month) and Activity · Month (one
-	// month) — which previously carried two near-identical copies of this markup that had already
-	// drifted on the tally and the add button. The caller supplies the already-scoped rows, so the
-	// scoping stays where the scope is known.
+	// The pending queue as a board pane: fronted money, waiting to be paid back. One component for
+	// every place it appears; the caller supplies already-scoped rows, so scoping stays where the
+	// scope is known.
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import TransactionList, { type TxnRow } from '$lib/lists/TransactionList.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
@@ -24,8 +21,7 @@
 	const total = $derived(transactions.reduce((s, t) => s + t.amount, 0));
 </script>
 
-<!-- It stays put on a clean month because it hosts the add button: the empty state then reads as
-     reassurance rather than as absence. -->
+<!-- Stays put on a clean month because it hosts the add button. -->
 <Pane {id} title="Pending transactions" {caption} tone="attention">
 	{#snippet actions()}
 		<div class="pactions">

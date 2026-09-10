@@ -1,7 +1,6 @@
 // Data primitives — the vocabulary of shapes the dashboard can compute, decoupled from how they're
-// drawn. A primitive is pure numbers + structure + a `unit`; it carries NO colors or chart config
-// (those belong to the visualization layer). The `unit` names the measurement scale, which is what
-// lets one formatter render every figure the same way.
+// drawn. A primitive is numbers + structure + a `unit`, and carries no colours or chart config. The
+// `unit` names the measurement scale, which is what lets one formatter render every figure.
 
 import { money } from '$lib/utils/format';
 
@@ -11,7 +10,7 @@ export type Unit =
 	| { kind: 'money'; currency: string }
 	| { kind: 'percent' }
 	| { kind: 'count' }
-	/** A span of time — how long something lasts, e.g. months of runway, years of freedom. */
+	/** A span of time — how long something lasts. */
 	| { kind: 'duration'; period: 'month' | 'year' };
 
 export const MONEY = (currency = 'USD'): Unit => ({ kind: 'money', currency });
@@ -29,8 +28,7 @@ export function formatUnit(value: number, unit: Unit): string {
 			return `${Math.round(value)}%`;
 		case 'count':
 			return Math.round(value).toLocaleString();
-		// One decimal: a runway of "14.6 mo" is a materially different answer from "15 mo", and
-		// these are always small numbers where the fraction reads clearly.
+		// Durations keep a decimal: they are small numbers where rounding changes the answer.
 		case 'duration':
 			return `${value.toFixed(1)} ${unit.period === 'month' ? 'mo' : 'yr'}`;
 	}
@@ -41,11 +39,9 @@ export function formatUnit(value: number, unit: Unit): string {
 export type PrimitiveKind =
 	'scalar' | 'categorical' | 'series' | 'multiseries' | 'flow' | 'matrix' | 'table' | 'bullet';
 
-/** Ordered axis a series is plotted against. */
 export type Axis = 'time' | 'ordinal';
 
-/** A single number in context — powers KPI / stat tiles. `null` means "not
- *  applicable" (e.g. a ratio with no denominator) and renders as an em dash. */
+/** A single number in context. `null` means "not applicable" and renders as an em dash. */
 export interface Scalar {
 	kind: 'scalar';
 	unit: Unit;
@@ -64,7 +60,7 @@ export interface CategoricalPoint {
 	value: number;
 }
 
-/** Named parts of a whole — powers pie / donut / ranked bars. */
+/** Named parts of a whole. */
 export interface Categorical {
 	kind: 'categorical';
 	unit: Unit;
@@ -76,7 +72,7 @@ export interface SeriesPoint {
 	value: number | null;
 }
 
-/** One ordered sequence — powers lines / columns. Layerable with compatible peers. */
+/** One ordered sequence, layerable with compatible peers. */
 export interface Series {
 	kind: 'series';
 	unit: Unit;
@@ -85,7 +81,7 @@ export interface Series {
 	points: SeriesPoint[];
 }
 
-/** Several compatible series sharing one axis — powers multi-line / grouped bars. */
+/** Several compatible series sharing one axis. */
 export interface MultiSeries {
 	kind: 'multiseries';
 	unit: Unit;
@@ -94,7 +90,7 @@ export interface MultiSeries {
 	series: Series[];
 }
 
-/** Role drives the visualization layer's node colouring without baking colour into data. */
+/** What a flow node is, which the visualization layer maps to a colour. */
 export type FlowRole = 'gross' | 'takehome' | 'deduction' | 'saving' | 'category';
 
 export interface FlowNode {
@@ -112,7 +108,7 @@ export interface FlowLink {
 	value: number;
 }
 
-/** A conserved flow between nodes — powers Sankey diagrams. */
+/** A conserved flow between nodes. */
 export interface Flow {
 	kind: 'flow';
 	unit: Unit;
@@ -120,7 +116,7 @@ export interface Flow {
 	links: FlowLink[];
 }
 
-/** A rows × cols grid of a single measure — powers heatmaps. */
+/** A rows × cols grid of a single measure. */
 export interface Matrix {
 	kind: 'matrix';
 	unit: Unit;
@@ -136,7 +132,7 @@ export interface TableColumn {
 	unit?: Unit;
 }
 
-/** Tabular rows — powers data tables. */
+/** Tabular rows. */
 export interface Table {
 	kind: 'table';
 	columns: TableColumn[];
@@ -144,12 +140,9 @@ export interface Table {
 }
 
 /**
- * One measured value against the threshold it's being judged by.
- *
- * Each row carries its own unit and is scaled independently, because the rows in one bullet set
- * usually answer the same *question* ("how close am I?") in different measures — months of runway
- * beside a percentage of a target. Bands are optional qualitative cut-points along the row's own
- * scale (ascending), for shading "lean / adequate / comfortable" behind the bar.
+ * One measured value against the threshold it's being judged by. Each row carries its own unit and
+ * is scaled independently, since rows in one bullet set answer the same question in different
+ * measures.
  */
 export interface BulletRow {
 	label: string;
@@ -163,7 +156,7 @@ export interface BulletRow {
 	note?: string;
 }
 
-/** Several value-against-threshold rows — powers bullet graphs. */
+/** Several value-against-threshold rows. */
 export interface Bullet {
 	kind: 'bullet';
 	rows: BulletRow[];

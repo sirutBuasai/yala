@@ -1,5 +1,5 @@
-"""Passthrough sweep configuration (sweep_to open-meta) and the drain-close retirement flow,
-exercised through the API path."""
+"""Passthrough sweep configuration (``sweep_to`` open-meta) and the drain-and-close retirement
+flow, exercised through the API path."""
 
 from __future__ import annotations
 
@@ -121,18 +121,16 @@ def test_sweep_to_unopened_account_is_rejected(client: TestClient):
 
 
 def test_setting_sweep_replaces_previous_destination(client: TestClient):
-    # sweep_to is a single meta value, so an account can only sweep to one place — re-setting
-    # replaces rather than accumulates.
+    # sweep_to is a single meta value, so re-setting replaces rather than accumulates.
     assert _set_sweep(client, BANK_A, SAVINGS).status_code == 200
     assert _set_sweep(client, BANK_A, BANK_B).status_code == 200
     assert client.get("/api/accounts").json()["sweeps"][BANK_A] == BANK_B
 
 
-# --- drain-close ---
+# --- drain and close ---
 
 
 def test_drain_close_zeroes_and_closes_the_account(client: TestClient):
-    # Give BankA a balance, then retire it into BankB (which carries its own fixture balance).
     bank_b_before = _balance(client, BANK_B)
     client.post(
         "/api/transfer",
@@ -141,11 +139,11 @@ def test_drain_close_zeroes_and_closes_the_account(client: TestClient):
     assert _balance(client, BANK_A) == Decimal("500.00")
 
     r = client.post(
-        "/api/account/drain-close",
+        "/api/account/close",
         json={"account": BANK_A, "destination": BANK_B, "date": "2026-02-05"},
     )
     assert r.status_code == 200
-    assert r.json()["drained"] == 500.00
+    assert r.json()["moved"] == 500.00
     assert _balance(client, BANK_A) == 0
     assert _balance(client, BANK_B) == bank_b_before  # 500 out then 500 back nets to zero change
     assert BANK_A not in client.get("/api/accounts").json()["cash_accounts"]
@@ -153,22 +151,21 @@ def test_drain_close_zeroes_and_closes_the_account(client: TestClient):
 
 def test_drain_close_with_zero_balance_just_closes(client: TestClient):
     r = client.post(
-        "/api/account/drain-close",
+        "/api/account/close",
         json={"account": BANK_A, "destination": BANK_B, "date": "2026-02-05"},
     )
     assert r.status_code == 200
-    assert r.json()["drained"] == 0
+    assert r.json()["moved"] == 0
     assert BANK_A not in client.get("/api/accounts").json()["cash_accounts"]
 
 
 def test_drain_close_passthrough_retires_sweep_and_config(client: TestClient):
-    # The passthrough is kept near-zero by its month-end sweep. Retiring it must delete that
-    # sweep, strip sweep_to, drain the real balance, and close — leaving nothing dated after close.
+    # The month-end sweep would fall after the close date, so retiring must delete it first.
     _spend(client, PASSTHROUGH, "2026-02-10", 30.00)
     assert _sweeps(client, "2026-02", SWEEP_PAYEE)  # auto-sweep exists
 
     r = client.post(
-        "/api/account/drain-close",
+        "/api/account/close",
         json={"account": PASSTHROUGH, "destination": SAVINGS, "date": "2026-02-15"},
     )
     assert r.status_code == 200
@@ -181,15 +178,15 @@ def test_drain_close_passthrough_retires_sweep_and_config(client: TestClient):
 
 
 def test_drain_close_same_account_is_rejected(client: TestClient):
-    r = client.post("/api/account/drain-close", json={"account": BANK_A, "destination": BANK_A})
+    r = client.post("/api/account/close", json={"account": BANK_A, "destination": BANK_A})
     assert r.status_code == 422
 
 
 def test_failing_passthrough_is_isolated_and_surfaced(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    # Two passthroughs; one fails. The loop must still reconcile the other, then raise an
-    # aggregated error naming the failure (rather than aborting on the first).
+    # Two passthroughs, one failing: the loop must still reconcile the other, then raise an
+    # aggregated error naming the failure.
     import yala.ledger.sweep as sweep
     from yala.sink import FileLedgerSink
 

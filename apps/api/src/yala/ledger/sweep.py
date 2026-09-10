@@ -1,9 +1,9 @@
 """Auto-maintained passthrough sweeps.
 
-A passthrough declares a ``sweep_to`` destination on its ``open`` and holds no money of its own; a
-monthly transfer keeps it at zero. Sweeps chain transitively: the sweep routes to the terminal (the
-first account in the chain with no ``sweep_to``), so intermediates are bypassed. Reconciling runs
-on every write and is safe to repeat, since the sweeps' own legs are excluded from the net.
+A passthrough declares a ``sweep_to`` destination on its ``open`` and holds no money of its own: a
+monthly transfer keeps it at zero. Sweeps chain transitively, so the transfer routes to the terminal
+(the first account with no ``sweep_to``) and bypasses intermediates. Reconciling runs on every write
+and is safe to repeat, since a sweep's own legs are excluded from the net it is computed from.
 """
 
 from __future__ import annotations
@@ -138,8 +138,8 @@ def _reconcile_one(
     month: int,
     date: dt.date,
 ) -> None:
-    """Reconcile a single passthrough's sweep for the month (see :func:`reconcile_month`)."""
-    # Skip a closed source/terminal; retiring a passthrough clears its sweep_to first.
+    """Reconcile a single passthrough's sweep for the month."""
+    # A closed source or terminal is skipped; retiring a passthrough clears its sweep_to first.
     if source not in active or terminal not in active:
         return
 
@@ -194,7 +194,7 @@ def reconcile_month(sink: "FileLedgerSink", year: int, month: int) -> None:
     for source, terminal in sweep_targets(ledger).items():
         try:
             _reconcile_one(sink, ledger, active, source, terminal, year, month, date)
-        except Exception as e:  # one bad passthrough can't strand the others
+        except Exception as e:
             failures.append(f"{source}: {e}")
 
     if failures:

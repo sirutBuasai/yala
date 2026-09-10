@@ -96,8 +96,8 @@ def test_meta_helper_independently():
 
 
 def test_account_directory_covers_every_declared_account():
-    """A directory with gaps would push callers back onto a naming rule of their own, so it holds
-    every account the ledger declares — closed ones included, since they still appear in history."""
+    """The directory holds every declared account, closed ones included: they still appear in
+    history, and a gap would push callers onto a naming rule of their own."""
     ledger, *rest = _handles()
     meta = _meta(ledger, *rest, False)
 
@@ -130,8 +130,7 @@ def _closed_category_data():
 
 
 def test_closed_category_keeps_its_lifetime_history():
-    """A closed category with spend stays in analytics: the picker drops it, but the overview
-    lifetime list and meta still include it so its history is visible."""
+    """A closed category stays in analytics — the picker drops it, the lifetime lists keep it."""
     led = Ledger(Path(__file__).parent / "fixtures" / "closed_category.beancount").load()
     assert led.spending.categories() == ["Grocery"]  # picker: active only
 
@@ -142,8 +141,8 @@ def test_closed_category_keeps_its_lifetime_history():
 
 
 def test_closed_category_present_in_its_active_year_matrix():
-    """The 2025 matrix carries both the closed (Gym) and active (Grocery) categories, since both
-    have spend that year — the frontend heatmap unions these keys into its columns."""
+    """A year's matrix carries every category with spend that year, closed or not, because the
+    heatmap unions those keys into its columns."""
     d = _closed_category_data()
     spent_keys = {c for row in d.years["2025"].matrix for c in row.spent}
     assert spent_keys == {"Grocery", "Gym"}

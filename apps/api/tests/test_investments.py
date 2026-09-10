@@ -1,5 +1,5 @@
-"""Add/close investment accounts: currency constraint, genesis seed + plug, meta, and the
-value-to-USD split-drain retirement flow. Exercised through the API path."""
+"""Opening and closing investment accounts through the shared account routes: currency constraint,
+genesis seed + plug, meta, and the value-to-USD split-drain retirement flow."""
 
 from __future__ import annotations
 
@@ -71,8 +71,8 @@ def _seed_shares(client: TestClient, price: str = "500.00") -> None:
 
 def test_add_share_account_is_unconstrained_with_seed_and_plug(client: TestClient):
     r = client.post(
-        "/api/investment",
-        json={"subtree": "Taxable", "leaf": "AcctA", "holds_shares": True},
+        "/api/account",
+        json={"kind": "investment", "subtree": "Taxable", "leaf": "AcctA", "holds_shares": True},
     )
     assert r.status_code == 200
     led = _ledger(client)
@@ -85,8 +85,9 @@ def test_add_share_account_is_unconstrained_with_seed_and_plug(client: TestClien
 
 def test_add_usd_only_plan_is_constrained_without_seed_or_plug(client: TestClient):
     r = client.post(
-        "/api/investment",
+        "/api/account",
         json={
+            "kind": "investment",
             "subtree": "TaxAdvantaged",
             "leaf": "PlanA",
             "holds_shares": False,
@@ -107,14 +108,21 @@ def test_add_usd_only_plan_is_constrained_without_seed_or_plug(client: TestClien
 def test_add_nested_name_and_bad_segment(client: TestClient):
     assert (
         client.post(
-            "/api/investment",
-            json={"subtree": "TaxAdvantaged", "leaf": "GroupA:AcctB", "holds_shares": True},
+            "/api/account",
+            json={
+                "kind": "investment",
+                "subtree": "TaxAdvantaged",
+                "leaf": "GroupA:AcctB",
+                "holds_shares": True,
+            },
         ).status_code
         == 200
     )
     assert "Assets:Investments:TaxAdvantaged:GroupA:AcctB" in _ledger(client).active_accounts()
     # lowercase-initial segment is a beancount parse error → rejected up front
-    bad = client.post("/api/investment", json={"subtree": "Taxable", "leaf": "acctA"})
+    bad = client.post(
+        "/api/account", json={"kind": "investment", "subtree": "Taxable", "leaf": "acctA"}
+    )
     assert bad.status_code == 422
 
 
@@ -124,7 +132,7 @@ def test_add_nested_name_and_bad_segment(client: TestClient):
 def test_close_share_account_values_and_splits(client: TestClient):
     _seed_shares(client)  # 10 shares @ 500 = 5000 USD
     r = client.post(
-        "/api/investment/close",
+        "/api/account/close",
         json={
             "account": BROKERAGE,
             "date": "2026-02-01",
@@ -135,7 +143,7 @@ def test_close_share_account_values_and_splits(client: TestClient):
         },
     )
     assert r.status_code == 200
-    assert r.json()["value"] == 5000.00
+    assert r.json()["moved"] == 5000.00
     led = _ledger(client)
     assert led.holdings(BROKERAGE) == {}
     assert BROKERAGE not in led.active_accounts()
@@ -145,7 +153,7 @@ def test_close_share_account_values_and_splits(client: TestClient):
 def test_close_legs_must_sum_to_value(client: TestClient):
     _seed_shares(client)  # worth 5000
     r = client.post(
-        "/api/investment/close",
+        "/api/account/close",
         json={
             "account": BROKERAGE,
             "date": "2026-02-01",
@@ -169,7 +177,7 @@ def test_close_without_price_is_422(client: TestClient):
         """,
     )
     r = client.post(
-        "/api/investment/close",
+        "/api/account/close",
         json={
             "account": BROKERAGE,
             "date": "2026-02-01",
@@ -184,8 +192,13 @@ def test_close_usd_plan_splits_without_plug(client: TestClient):
     # The API opens as of today, so fund/close on today or later.
     today = dt.date.today().isoformat()
     client.post(
-        "/api/investment",
-        json={"subtree": "TaxAdvantaged", "leaf": "PlanA", "holds_shares": False},
+        "/api/account",
+        json={
+            "kind": "investment",
+            "subtree": "TaxAdvantaged",
+            "leaf": "PlanA",
+            "holds_shares": False,
+        },
     )
     account = "Assets:Investments:TaxAdvantaged:PlanA"
     client.post(
@@ -193,7 +206,7 @@ def test_close_usd_plan_splits_without_plug(client: TestClient):
         json={"date": today, "from_account": BANK_B, "to_account": account, "amount": 900.00},
     )
     r = client.post(
-        "/api/investment/close",
+        "/api/account/close",
         json={
             "account": account,
             "date": today,

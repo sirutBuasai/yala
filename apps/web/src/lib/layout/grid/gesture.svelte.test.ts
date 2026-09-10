@@ -24,8 +24,7 @@ interface Fake extends GestureTarget {
 
 /**
  * A board with two panes, the one under test SECOND so its promotion is visible. `drop` and
- * `resizeTo` mirror `Arrangement`'s by reusing the same pure rules, so what the test pins down is
- * the gesture's behaviour and not a re-statement of the arrangement's.
+ * `resizeTo` reuse the same pure rules as `Arrangement`, so what the test pins down is the gesture.
  */
 function fake(over: Partial<AuthoredPane> = {}, offset = 0): Fake {
 	const patch = (id: string, next: (i: AuthoredPane) => AuthoredPane) => {

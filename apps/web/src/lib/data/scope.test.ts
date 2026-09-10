@@ -32,11 +32,8 @@ describe('scopeKey', () => {
 	});
 });
 
-// This is what a new entry's date defaults to. "Today" is the wrong default — a week of spending is
-// logged in one sitting — so the rule is "wherever the ledger currently ends".
 describe('latestEntryDate', () => {
 	it('is the newest date across transactions, paychecks and transfers', () => {
-		// The fixture's last month holds only a paycheck, dated after the previous month's spending.
 		expect(latestEntryDate(makeData())).toBe('2025-01-15');
 	});
 

@@ -1,6 +1,6 @@
-// The state layer, driven the way a gesture drives it. The pure math has its own tests; what this
-// covers is the wiring around it — what gets persisted, what gets re-derived, and the round-trip a
-// drag makes through storage.
+// The state layer, driven the way a gesture drives it. The pure math has its own tests; this covers
+// the wiring — what gets persisted, what gets re-derived, and the round-trip a drag makes through
+// storage.
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Arrangement } from '$lib/layout/grid/arrangement.svelte';
@@ -116,8 +116,7 @@ describe('drop', () => {
 
 		b.drop('wide', before.x, before.y + 12, before.offset);
 
-		// Stored top = 20 + 12 − 8 = 24, and 24 is where it renders. The push is not added a second
-		// time on top of the drag, which is the failure this whole subtraction exists to prevent.
+		// The push is not added a second time on top of the drag.
 		expect(b.authored('wide').y).toBe(24);
 		expect(b.placed('wide').y).toBe(24);
 
@@ -127,11 +126,9 @@ describe('drop', () => {
 	});
 
 	it('absorbs a downward drag that only takes up the slack the pane was pushed by', () => {
-		// The accepted consequence of subtracting the offset. `wide` is authored at 12 and resting at 20,
-		// so the first eight rows of a downward drag close that gap in the STORED position without moving
-		// the pane: its floor has not changed, so neither has where it renders. The alternative — storing
-		// where it was dropped — would re-baseline the pane onto a push it never asked for, and the board
-		// would creep downward every time the data grew and the user then touched it.
+		// The accepted consequence of subtracting the offset: a downward drag first closes the slack the
+		// pane was pushed by, in the STORED position, without moving it. Storing where it was dropped
+		// instead would re-baseline the pane onto a push it never asked for.
 		const { arrangement: b } = arrangement();
 		b.setMeasured('bottom', rows(14));
 		const before = b.placed('wide');
@@ -292,7 +289,6 @@ describe('persistence', () => {
 describe('folding', () => {
 	it('sequences the folded layout in the arrangement’s reading order', () => {
 		const { arrangement: b } = arrangement();
-		// tall (0,0) · top (24,0) · bottom (24,6) · wide (0,12)
 		expect(b.order).toEqual({ tall: 0, top: 1, bottom: 2, wide: 3 });
 	});
 

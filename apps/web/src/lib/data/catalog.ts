@@ -1,7 +1,6 @@
-// The data catalog: the registry of named, bindable data instances. Each entry
-// knows what primitive KIND it produces and at which scopes, and builds a concrete
-// primitive from the dashboard document. This is what a "pick your data" UI reads;
-// the chart registry then answers "which charts can draw this kind?".
+// The data catalog: named, bindable data instances. Each entry declares what primitive kind it
+// produces and at which scopes, and builds it from the dashboard document. The chart registry then
+// answers which charts can draw that kind.
 
 import type { DashboardData } from '$lib/data/types';
 import type { Primitive, PrimitiveKind } from './primitives';
@@ -71,7 +70,7 @@ interface DataDef {
 	build(data: DashboardData, scope: Scope): Primitive;
 }
 
-// --- chart definitions: multi-value data (categorical, series, flow, matrix, table) ---
+// --- multi-value data (categorical, series, flow, matrix, table) ---
 
 const CHART_DEFS: DataDef[] = [
 	{
@@ -293,8 +292,7 @@ const NETWORTH_STATS: DataDef[] = [
 		scopes: ['all'] as ScopeLevel[],
 		build: (data: DashboardData) => netWorthScalar(data, s.field, s.label)
 	})),
-	// Scope-aware: the same three figures answer "where am I and how did I get here" for a year or
-	// for the whole history, so the page passes its range rather than having two sets of ids.
+	// Scope-aware, so a page passes its range rather than there being two sets of ids.
 	{
 		id: 'networth.change',
 		label: 'Net worth',
@@ -316,7 +314,6 @@ const NETWORTH_STATS: DataDef[] = [
 		scopes: ['all', 'year'],
 		build: (data, scope) => netWorthOther(data, scope)
 	},
-	// Derived from your own spending; only the rate and the age come from settings.
 	{
 		id: 'networth.fi_number',
 		label: 'FI number',
@@ -368,10 +365,10 @@ const NETWORTH_STATS: DataDef[] = [
 	}
 ];
 
-// --- stat definitions: single-figure data (scalar metrics) ---
+// --- single-figure data (scalar metrics) ---
 //
-// Named instances of the metric builders. Kept data-config-driven (small tables →
-// generated entries) rather than one hand-written entry per metric.
+// Named instances of the metric builders, generated from small tables rather than hand-written one
+// entry per metric.
 
 const ALL_SCOPES: ScopeLevel[] = ['all', 'year', 'month'];
 
@@ -463,7 +460,6 @@ const CHANGES: {
 	}
 ];
 
-// A month against its own trailing norm — the "is this month normal?" tile.
 const VS_TYPICAL: DataDef[] = [
 	scalarDef('spending.vs_typical', 'vs your average', ['month'], (data, scope) =>
 		scope.monthKey
@@ -529,7 +525,7 @@ export function dataOfKind(kind: PrimitiveKind): DataDef[] {
 	return CATALOG.filter((d) => d.kind === kind);
 }
 
-/** Convenience: build a primitive by catalog id. */
+/** Build a primitive by catalog id. Throws on an unknown id. */
 export function build(data: DashboardData, id: string, scope: Scope): Primitive {
 	const def = CATALOG_BY_ID[id];
 	if (!def) throw new Error(`unknown catalog id: ${id}`);
@@ -537,8 +533,8 @@ export function build(data: DashboardData, id: string, scope: Scope): Primitive 
 }
 
 // --- data-dependent metric defs ---
-// These can't be static: their instances come from the loaded document (which categories
-// exist, which paycheck line-items appear). A picker enumerates them per document/scope.
+// These can't be static: their instances come from the loaded document, so a picker enumerates them
+// per document and scope.
 
 /** Per-category scalar metrics (spend + share of spending) over the tracked categories. */
 export function categoryMetricDefs(data: DashboardData): DataDef[] {
@@ -550,7 +546,7 @@ export function categoryMetricDefs(data: DashboardData): DataDef[] {
 	]);
 }
 
-/** Per-line-item paycheck scalar metrics (Tax, 401k, …) present in a scope's paychecks. */
+/** Per-line-item paycheck scalar metrics present in a scope's paychecks. */
 export function componentMetricDefs(data: DashboardData, scope: Scope): DataDef[] {
 	const { deductions, contributions } = componentKeys(data, scope);
 	const mk = (group: 'deductions' | 'contributions', key: string) =>

@@ -1,12 +1,10 @@
 <script lang="ts">
-	// Net Worth — your position over two ranges, replacing the old Overview / Yearly subtabs.
-	//
-	// There is no Month range on purpose: a month's net worth is just the latest snapshot, which the
-	// Year view already shows as a point. Year carries the flows (what moved, and why) and is where
-	// logging a balance belongs; All time carries the stocks and rates (how far this has got you).
+	// Net Worth — your position over two ranges. There is no Month range on purpose: a month's net
+	// worth is just the latest snapshot, which the Year view already shows as a point.
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
 	import { number, oneOf, Pref } from '$lib/utils/persist.svelte';
+	import { yearSpan } from '$lib/utils/format';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import Segmented from '$lib/nav/Segmented.svelte';
 	import YearNav from '$lib/nav/YearNav.svelte';
@@ -27,25 +25,21 @@
 		{ id: 'year', label: 'Year' },
 		{ id: 'all', label: 'All time' }
 	];
-	// Range and year are remembered, so a refresh (or a trip through another tab) comes back to the
-	// same view. This page keeps its own year rather than sharing Activity's: only years with a
-	// logged snapshot mean anything here, and they're rarely the same set.
+	// Its own year rather than Activity's: only years with a logged snapshot mean anything here.
 	const range = new Pref<Range>('networth-range', 'year', oneOf(RANGES.map((r) => r.id)));
 	const year = new Pref('networth-year', 0, number(0, 9999));
 
 	const hasData = $derived(!!data.meta.domains.networth);
 
-	// Years with a logged snapshot — the only years this page has anything to say about.
 	const years = $derived([
 		...new Set((data.networth?.series ?? []).map((p) => Number(p.date.slice(0, 4))))
 	]);
-	// Fall back to the latest snapshot year when nothing is remembered, or when what was remembered
-	// is a year this ledger no longer has snapshots for.
+	// Fall back to the latest snapshot year when the remembered one has no snapshots in this ledger.
 	$effect(() => {
 		if (years.length && !years.includes(year.value)) year.value = years[years.length - 1]!;
 	});
 
-	const span = $derived(years.length ? `${years[0]}–${years[years.length - 1]}` : '');
+	const span = $derived(yearSpan(years));
 
 	let modals: ReturnType<typeof EditModals>;
 </script>
@@ -89,8 +83,7 @@
 <EditModals bind:this={modals} {accounts} {onsaved} addTitle="Log balance" />
 
 <style>
-	/* Voice comes from the shared `.cap`; only the standalone spacing is local, since this line
-	   stands in for a whole page of panes rather than sitting under a title. */
+	/* Only the standalone spacing is local; the voice comes from the shared `.cap`. */
 	.pad {
 		padding: var(--space-8) 0;
 	}

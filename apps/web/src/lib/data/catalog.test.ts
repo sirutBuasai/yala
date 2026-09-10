@@ -50,7 +50,6 @@ describe('scope year fallback', () => {
 	it('year scope without an explicit year uses the latest year', () => {
 		const p = build(makeData(), 'spending.by_month', { level: 'year' });
 		if (p.kind !== 'series') throw new Error('expected series');
-		// latest year is 2025, whose only spend is in January (30 + 15.5)
 		expect(p.points[0]).toEqual({ label: 'Jan', value: 45.5 });
 	});
 
@@ -77,14 +76,14 @@ describe('income.paychecks table', () => {
 			'Net',
 			'Take-home'
 		]);
-		// Deductions 600+100=700, Contributions 150+600=750
+		// The deduction and contribution maps collapse to one column each.
 		expect(p.rows[0]).toEqual(['2025-01-15', 3000, 700, 750, 2300, 1550]);
 	});
 
 	it('year scope filters recent_paychecks by date prefix', () => {
 		const p = build(makeData(), 'income.paychecks', { level: 'year', year: 2024 });
 		if (p.kind !== 'table') throw new Error('expected table');
-		expect(p.rows).toEqual([]); // the only paycheck is 2025
+		expect(p.rows).toEqual([]);
 	});
 });
 
@@ -92,11 +91,11 @@ describe('spending.category_by_month matrix', () => {
 	it('produces a categories × 12-month value grid', () => {
 		const p = build(makeData(), 'spending.category_by_month', { level: 'year', year: 2025 });
 		if (p.kind !== 'matrix') throw new Error('expected matrix');
-		expect(p.cols).toHaveLength(12); // months across
+		expect(p.cols).toHaveLength(12);
 		expect(p.rows).toEqual(['Grocery', 'Takeouts']); // biggest first
-		// values[categoryIndex][monthIndex] — January holds the fixture's only spend.
-		expect(p.values[0]![0]).toBe(30); // Grocery, January
-		expect(p.values[1]![0]).toBe(15.5); // Takeouts, January
+		// values[categoryIndex][monthIndex]
+		expect(p.values[0]![0]).toBe(30);
+		expect(p.values[1]![0]).toBe(15.5);
 	});
 });
 

@@ -1,10 +1,9 @@
 """Net-worth domain: assets − liabilities over time, derived from ``balance`` snapshots.
 
-Net worth is never stored: it's ``Assets`` (cash + investments valued at price) minus
-``Liabilities`` (credit cards, taxes owed), read at each month's ``balance`` assertion. Snapshots
-are logged as ``pad`` + ``balance`` pairs (see :meth:`FileLedgerSink.log_balance`); the ``pad``
-routes each account's untracked delta to its own ``Equity:Adjustments:*`` plug, which this domain
-surfaces as a per-account sanity check on flows that were never entered as transactions.
+Net worth is never stored — it is recomputed at each logged assertion. Snapshots are written as
+``pad`` + ``balance`` pairs (see :meth:`FileLedgerSink.log_balance`), so each account's untracked
+delta lands in its own ``Equity:Adjustments:*`` plug, which this domain surfaces as a per-account
+sanity check on flows never entered as transactions.
 """
 
 from __future__ import annotations
@@ -38,9 +37,8 @@ if TYPE_CHECKING:
 def adjustment_account(account: str) -> str:
     """The ``Equity:Adjustments:*`` plug account paired with snapshots of ``account``.
 
-    Cash keeps its leaf (``Assets:Cash:BankA`` → ``Equity:Adjustments:BankA``); investments drop the
-    tax tier so both trees share one plug (``Assets:Investments:Taxable:BrokerA`` →
-    ``Equity:Adjustments:Investments:BrokerA``). Raises for anything else."""
+    Cash keeps its leaf; investments drop the tax tier so both tiers of one broker share a plug.
+    Raises ``ValueError`` for an account that has neither form."""
     if account.startswith(CASH):
         return ADJUSTMENTS + account[len(CASH) :]
     if account.startswith(INVEST_TAXABLE):
@@ -50,8 +48,7 @@ def adjustment_account(account: str) -> str:
     raise ValueError(f"no adjustment account for {account}")
 
 
-# Allocation buckets — how an asset account contributes to the "where's my money" split, in
-# display order. Mirrors the net-worth spreadsheet's Liquid / Taxable / Tax-advantaged grouping.
+# Allocation buckets, in display order: how an asset account contributes to the asset split.
 BUCKETS = ("Liquid", "Taxable", "Tax-advantaged")
 
 
@@ -61,7 +58,7 @@ def bucket(account: str) -> str:
         return "Taxable"
     if account.startswith(INVEST_TAX_ADVANTAGED):
         return "Tax-advantaged"
-    return "Liquid"  # cash, gift cards, receivables — the spendable / non-invested pool
+    return "Liquid"  # anything not invested
 
 
 @dataclass
@@ -77,8 +74,7 @@ class AccountValue:
 
 @dataclass
 class NetWorthSnapshot:
-    """A net-worth snapshot at one logged date: assets, liabilities (positive drag), net, and the
-    asset split across allocation buckets."""
+    """One logged date's figures; ``liabilities`` is positive drag."""
 
     date: str  # "YYYY-MM-DD"
     assets: Decimal
@@ -89,7 +85,7 @@ class NetWorthSnapshot:
 
 @dataclass
 class Adjustment:
-    """Cumulative plug in an ``Equity:Adjustments:*`` account — the untracked flow smoke alarm."""
+    """Cumulative plug in an ``Equity:Adjustments:*`` account."""
 
     account: str
     label: str
@@ -123,12 +119,10 @@ class NetWorth:
         )
 
     def accounts(self, as_of: dt.date | None = None) -> list[AccountValue]:
-        """Every currently-active balance-sheet account with its USD value (for the breakdown).
+        """Every currently-active balance-sheet account with its USD value.
 
         Labels come from :func:`yala.ledger.naming.account_name`, the same resolver the account
-        directory uses, so a name can't read one way here and another way elsewhere. Investments
-        previously carried their tax tier in the label (``Taxable:BrokerStocks``); they now read
-        like every other account, since the tier is already on the row as its ``bucket``.
+        directory uses, so a name cannot read one way here and another way elsewhere.
         """
         meta = self._led.account_meta()
         out: list[AccountValue] = []
@@ -146,20 +140,18 @@ class NetWorth:
         return out
 
     def _snapshot_dates(self) -> list[dt.date]:
-        """Every distinct ``balance``-assertion date — the trusted net-worth snapshot points.
+        """Every distinct ``balance``-assertion date — the trusted snapshot points.
 
-        One point per logged *day*, not per month: a month may carry several snapshots (e.g. a
-        month-start balance plus a mid-month reclassification), and collapsing them would silently
-        drop the earlier ones."""
+        One point per logged *day*, not per month: a month may carry several snapshots, and
+        collapsing them would silently drop the earlier ones."""
         return sorted({e.date for e in self._led.entries if isinstance(e, data.Balance)})
 
     def series(self) -> list[NetWorthSnapshot]:
         """Net-worth trend over every logged snapshot date, oldest first.
 
-        Each point is the balance *as asserted* on its date. beancount evaluates a ``balance``
-        directive before that day's postings, so the snapshot value is the total at the end of the
-        preceding day — reading it at end-of-date would fold in transactions posted on the snapshot
-        day itself and drift the trend away from the logged figures."""
+        Each point is valued at the end of the preceding day, because beancount checks a ``balance``
+        before that day's postings; reading it at end-of-date would fold in transactions posted on
+        the snapshot day and drift the trend away from the asserted figures."""
         return [
             replace(self.totals(d - dt.timedelta(days=1)), date=d.isoformat())
             for d in self._snapshot_dates()
@@ -168,10 +160,9 @@ class NetWorth:
     def logged_at(self, date: dt.date) -> dict[str, str]:
         """Locator of each account's editable ``balance`` assertion dated ``date``.
 
-        An account is only listed when that day holds exactly one assertion for it and that
-        assertion is in USD — the shape :meth:`FileLedgerSink.update_balance` can rewrite. A
-        share-based snapshot (several commodity assertions plus a USD residual) is deliberately
-        omitted, since changing one leg of it is not a balance edit."""
+        Listed only when the day holds exactly one USD assertion for the account — the shape
+        :meth:`FileLedgerSink.update_balance` can rewrite. A share-based snapshot is omitted, since
+        changing one leg of it is not a balance edit."""
         by_account: dict[str, list[data.Balance]] = {}
         for e in self._led.entries:
             if isinstance(e, data.Balance) and e.date == date:
@@ -184,7 +175,7 @@ class NetWorth:
         }
 
     def adjustments(self, as_of: dt.date | None = None) -> list[Adjustment]:
-        """Cumulative balance of each ``Equity:Adjustments:*`` plug (untracked-flow smoke alarm)."""
+        """Cumulative balance of each ``Equity:Adjustments:*`` plug."""
         return [
             Adjustment(a, a[len(ADJUSTMENTS) :], self._led.balance(a, as_of))
             for a in self._led.declared_accounts(ADJUSTMENTS)
@@ -200,10 +191,10 @@ class NetWorth:
     def loggable_liabilities(self) -> list[str]:
         """Active liability accounts, which are snapshot-able but *verify-only*.
 
-        They carry no ``Equity:Adjustments:*`` plug on purpose: a card balance is fully determined
-        by the spending and bill payments already entered, so a figure that disagrees means an
-        entry is missing rather than that money moved untracked. Padding the gap would bury that,
-        so :meth:`FileLedgerSink.verify_balance` refuses it instead."""
+        They carry no ``Equity:Adjustments:*`` plug on purpose: a liability balance is fully
+        determined by the entries already made, so a figure that disagrees means one is missing
+        rather than that money moved untracked, and :meth:`FileLedgerSink.verify_balance` refuses
+        to pad it."""
         return self._led.active_accounts(LIABILITIES)
 
 

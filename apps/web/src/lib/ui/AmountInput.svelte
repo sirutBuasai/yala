@@ -1,17 +1,16 @@
 <script lang="ts">
-	// The app's one money input: one place for the `type=number step=0.01 inputmode=decimal` rules
-	// every amount field needs, so a missing one can't make the browser reject "12.50" or cost a phone
-	// user the decimal keypad. The value is `number | null` rather than text — null is "nothing typed
-	// yet", the state the forms validate against, so the parsing stays here.
+	// The app's one money input, so no field can miss the number/step/inputmode rules that make the
+	// browser accept decimals and give a phone the decimal keypad. The value is `number | null`, with
+	// null meaning "nothing typed yet" — the state the forms validate against.
 	interface Props {
-		/** Amount in currency units; null or undefined when empty (bindable). A caller may bind a
-		    not-yet-created slot of a record, where absent and cleared mean the same thing. */
+		/** Amount in currency units; null or undefined when empty (bindable). Undefined is allowed so
+		    a caller can bind a not-yet-created slot of a record. */
 		value: number | null | undefined;
 		id?: string;
 		ariaLabel?: string;
 		placeholder?: string;
 		disabled?: boolean;
-		/** Allow negatives — a refund or an adjustment. Off by default: most amounts are magnitudes. */
+		/** Allow negatives. Off by default: most amounts are magnitudes. */
 		signed?: boolean;
 		/** Render the currency symbol inside the field, for tables where a label won't fit. */
 		prefix?: string;
@@ -60,7 +59,6 @@
 		padding: var(--pad-control);
 		font-size: var(--text-control);
 		font-family: inherit;
-		/* Figures line up down a column of inputs, which is the whole point of a money field. */
 		font-variant-numeric: tabular-nums;
 		text-align: right;
 	}
@@ -78,8 +76,8 @@
 		color: var(--ink-3);
 		font-size: var(--text-meta);
 	}
-	/* The wrapper is the visible field now, so the inner input drops its own chrome — and its ring,
-	   which would otherwise draw inside the border it no longer owns. */
+	/* The wrapper is the visible field, so the inner input drops its chrome — including its ring,
+	   which would otherwise draw inside a border it no longer owns. */
 	.has-prefix input {
 		border: 0;
 		background: none;

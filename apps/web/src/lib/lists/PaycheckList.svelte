@@ -1,7 +1,6 @@
 <script module lang="ts">
-	// Figures a paycheck row can break out into its own aligned column, in the order given. Each
-	// token maps to a fixed figure so columns line up across rows. 'saved' sums the contributions
-	// (401k…); 'deductions' sums every deduction entry.
+	// Figures a paycheck row can break out into its own aligned column. 'saved' sums the
+	// contributions; 'deductions' sums every deduction entry.
 	type PaycheckField = 'gross' | 'tax' | 'benefits' | 'deductions' | 'saved' | 'takehome' | 'net';
 </script>
 
@@ -52,10 +51,8 @@
 		}
 	}
 
-	// The breakout figures live in ONE grid cell (a flex row) rather than one track each, so they
-	// collapse as a unit when the pane is too narrow to read them. RowList drops the whole cell
-	// below its own threshold; this list also thins the figures earlier, since several of them need
-	// more room than a single metadata column does.
+	// The breakout figures share ONE grid cell so they collapse as a unit. RowList drops the cell at
+	// its own threshold; this list thins them earlier, since they need more room than one column.
 </script>
 
 <div class="pc">
@@ -88,7 +85,7 @@
 
 <style>
 	.pc {
-		/* size-container so the figure cell can hide when the pane is too narrow for it */
+		/* size-container so the figure cell can hide when its pane is too narrow */
 		container-type: inline-size;
 		min-width: 0;
 	}
@@ -100,20 +97,19 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
-	/* the breakout figures as one right-aligned group */
 	.figs {
 		display: flex;
 		align-items: center;
 		gap: var(--gap-grid);
 		min-width: 0;
 	}
-	/* Too narrow to read the breakdown → drop it and keep payee + the net amount. */
+	/* Too narrow for the breakdown: drop it, keep the payee and the net. */
 	@container (max-width: 440px) {
 		.figs {
 			display: none;
 		}
 	}
-	/* one figure column: title-case label over its value, right-aligned to line up with the amount */
+	/* one figure column: label over value, right-aligned to line up with the amount */
 	.fig {
 		display: flex;
 		flex-direction: column;

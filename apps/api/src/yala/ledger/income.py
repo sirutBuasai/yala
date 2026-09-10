@@ -1,15 +1,12 @@
-"""Income domain: paycheck transactions.
+"""Income domain: paychecks — any transaction carrying an ``Income:*`` posting.
 
-A paycheck is a transaction with an ``Income:*`` posting. Postings are classified by **prefix**,
-not hardcoded names, so beancount stays the source of truth — adding
-``Expenses:Deductions:Vision`` or ``Assets:Investments:Brokerage`` is picked up automatically:
+Legs are classified by account prefix, not by name, so beancount stays the source of truth:
 
-* ``Expenses:Deductions:*`` — direct money out (tax, insurance): truly gone.
-* ``Assets:Investments:*``  — indirect money out (HSA, 401k): still yours, invested.
+* ``Expenses:Deductions:*`` — direct money out: truly gone.
+* ``Assets:Investments:*``  — indirect money out: still yours, invested.
 * everything else           — take-home cash, the remainder.
 
-Two headline figures: **net** = gross − direct out (money that stayed yours); **take-home**
-= gross − all out (cash deposited to the bank, = net − indirect out).
+Hence the two headline figures: **net** = gross − direct out, **take-home** = net − indirect out.
 """
 
 from __future__ import annotations
@@ -39,12 +36,12 @@ class Paycheck:
 
     @property
     def direct_out(self) -> Decimal:
-        """Money truly gone (all deductions: tax, insurance, …)."""
+        """Money truly gone — the sum of the deductions."""
         return sum(self.deductions.values(), Decimal(0))
 
     @property
     def indirect_out(self) -> Decimal:
-        """Money moved into your investments (all contributions: HSA, 401k, …)."""
+        """Money moved into investments — the sum of the contributions."""
         return sum(self.contributions.values(), Decimal(0))
 
     @property

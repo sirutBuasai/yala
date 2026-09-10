@@ -1,6 +1,6 @@
 <script lang="ts">
-	// "Type a name, press Add" — the shape of every create control in Manage. Extracted because the
-	// copies had diverged on the detail that matters most: whether Enter submits.
+	// "Type a name, press Add" — the shape of every create control in Manage, including whether
+	// Enter submits.
 	import { LEAF_MAX } from '$lib/forms/validate';
 
 	interface Props {

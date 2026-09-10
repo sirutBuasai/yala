@@ -11,7 +11,7 @@ describe('Credits', () => {
 	beforeEach(() =>
 		setAccountDirectory({
 			'Assets:Cash:Wallet': { name: 'Wallet' },
-			'Liabilities:CC:CardA': { name: 'Card A', institution: 'Bank of Example' }
+			'Liabilities:CC:CardA': { name: 'Card A', institution: 'BankA' }
 		})
 	);
 	afterEach(() => setAccountDirectory({}));

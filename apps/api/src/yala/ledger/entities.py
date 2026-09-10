@@ -1,9 +1,7 @@
-"""Lightweight entity wrappers over beancount datatypes.
+"""Lightweight entity wrappers that keep beancount internals out of the rest of the backend.
 
-These shield the rest of the backend from beancount internals: query methods return
-``Transaction`` / ``Posting`` objects rather than raw directives. These types are
-**domain-agnostic** — they carry only what's true of any transaction. Domain-specific
-derivations (a spending category, an expense amount) live in the domain modules, not here.
+These types are **domain-agnostic** — they carry only what is true of any transaction; domain
+derivations belong in the domain modules.
 """
 
 from __future__ import annotations
@@ -38,7 +36,7 @@ class Transaction:
 
     @property
     def source(self) -> str | None:
-        """Funding account: the account that paid for txn."""
+        """Funding account: the ``funding`` meta, else the most-negative non-expense leg."""
         funding = self.meta.get("funding")
 
         if funding:

@@ -1,12 +1,8 @@
 <script lang="ts">
-	// Manage — categories, accounts and the few assumptions the ledger can't derive.
-	//
-	// On the board like every other view, so a column of forms can be arranged into whatever shape
-	// suits the screen. The panes themselves are unchanged: they are `density="panel"` — the quieter
-	// card, a form block rather than a dashboard figure. Every one of them fits its content, because a
-	// form's height is a fact about the form, not a choice.
+	// Manage — categories, accounts and the few assumptions the ledger can't derive. Every pane is a
+	// form block (`density="panel"`) sized to its own content.
 	import type { DashboardData } from '$lib/data/types';
-	import { addAccount, addInvestment, closeAccount, type AccountsInfo } from '$lib/data/load';
+	import { openAccount, closeAccount, type AccountsInfo } from '$lib/data/load';
 	import type { BoardLayout } from '$lib/layout/grid/types';
 	import { formatAccount } from '$lib/utils/format';
 	import { accountVar } from '$lib/utils/theme';
@@ -31,14 +27,13 @@
 	interface Props {
 		data: DashboardData;
 		accounts: AccountsInfo | null;
-		/** Called after a change that alters ledger data (drain-close), to refresh the dashboard. */
+		/** Called after a change that alters ledger data, to refresh the dashboard. */
 		onsaved?: () => void;
 	}
 	let { accounts, onsaved }: Props = $props();
 
-	// "Add one" beside "here are the ones you have", in two columns. The y values only set the reading
-	// order and the priority: every pane fits its content, so the real heights settle on first render
-	// and the push rule closes whatever overlap that causes.
+	// "Add one" beside "here are the ones you have", in two columns. The y values set reading order
+	// only: every pane fits its content, so the real heights settle on first render.
 	const LAYOUT = {
 		settings: { x: 0, y: 0, w: 24, h: 24, content: 'flow', mode: 'fit' },
 		addcategory: { x: 24, y: 0, w: 24, h: 4, content: 'flow', mode: 'fit' },
@@ -68,7 +63,7 @@
 			(categories.includes(leaf) ? `${leaf} already exists.` : null);
 		if (problem) return cat.fail(problem);
 
-		if (await cat.run(() => addAccount('category', leaf).then((r) => r.error), `Added ${leaf}.`)) {
+		if (await cat.run(() => openAccount('category', leaf).then((r) => r.error), `Added ${leaf}.`)) {
 			name = '';
 		}
 	}
@@ -77,9 +72,8 @@
 		cat.run(() => closeAccount(`Expenses:${category}`), `Closed ${category}.`);
 
 	// --- money accounts (banks and cards) ---
-	// AddAccountPanel owns the fields, the busy state and the confirmation; each panel only says which
-	// ledger prefix it opens under. `credit_accounts` mixes cash and cards (it is the payback-source
-	// pool), so the card list filters it rather than being a list of its own.
+	// `credit_accounts` mixes cash and cards (it is the payback-source pool), so the card list filters
+	// it rather than being a list of its own.
 	const cards = $derived((accounts?.credit_accounts ?? []).filter((a) => a.startsWith(LIABILITY)));
 
 	// --- investment accounts ---
@@ -99,11 +93,8 @@
 			.map((x) => x.trim())
 			.filter(Boolean);
 
-	/**
-	 * The payroll half of an investment: an employer and the contribution options it offers. Both are
-	 * written into the ledger as account metadata, so they follow the leaf rule — and a
-	 * payroll-contributable account with neither would offer nothing to contribute to.
-	 */
+	/** The payroll half of an investment. Both halves are written as account metadata, so they follow
+	    the leaf rule, and a contributable account with neither would offer nothing to contribute to. */
 	function validatePayrollFields(): string | null {
 		if (!invContributable) return null;
 
@@ -167,7 +158,7 @@
 	>
 		<AddAccountPanel
 			withAccountName={false}
-			open={(naming) => addAccount('funding_cash', naming)}
+			open={(naming) => openAccount('funding_cash', naming)}
 		/>
 	</Pane>
 
@@ -199,7 +190,7 @@
 		<AddAccountPanel
 			accountNamePlaceholder="e.g. Cash Rewards"
 			accountNameLabel="Card name"
-			open={(naming) => addAccount('funding_credit', naming)}
+			open={(naming) => openAccount('funding_credit', naming)}
 		/>
 	</Pane>
 
@@ -226,8 +217,7 @@
 			accountAliasPlaceholder="short account name (e.g. Roth)"
 			validateExtra={validatePayrollFields}
 			open={(naming) =>
-				addInvestment({
-					...naming,
+				openAccount('investment', naming, {
 					subtree: invSubtree as 'Taxable' | 'TaxAdvantaged',
 					holds_shares: invShares,
 					employer: invContributable && invEmployer.trim() ? invEmployer.trim() : null,
@@ -285,7 +275,6 @@
 		max-width: 14rem;
 		margin-bottom: var(--gap-row);
 	}
-	/* A read-only listed card: there is nothing to configure on one yet, only to see its colour. */
 	.row {
 		display: flex;
 		align-items: center;
@@ -303,7 +292,7 @@
 		border-radius: var(--radius-pill);
 		flex: 0 0 auto;
 	}
-	/* A plain, non-expanding managed item — a category has nothing to configure, only to close. */
+	/* A plain, non-expanding managed item: a category has nothing to configure, only to close. */
 	.simple {
 		display: flex;
 		align-items: center;

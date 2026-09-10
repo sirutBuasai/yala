@@ -1,6 +1,5 @@
 <script lang="ts">
-	// Net Worth · Year — the flow half: what happened to your position this year and why.
-	// Balances are logged monthly, so this is the range where editing belongs.
+	// Net Worth · Year — the flow half. Balances are logged monthly, so editing belongs at this range.
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
 	import type { BoardLayout } from '$lib/layout/grid/types';
@@ -66,8 +65,7 @@
 		}
 	} satisfies BoardLayout);
 
-	// One card, not five tiles: these figures are a single sentence — the position, then the two
-	// forces that moved it, then the rate behind one of them.
+	// One card, not loose tiles: the position, the forces that moved it, and the rate behind one of them.
 	const stats = $derived([
 		{ id: 'networth.change', scope: yr, caption: `end of ${year}` },
 		{ id: 'networth.saved', scope: yr },

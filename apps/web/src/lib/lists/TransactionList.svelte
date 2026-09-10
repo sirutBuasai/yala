@@ -1,5 +1,5 @@
 <script module lang="ts">
-	// The fields a row renders — a superset of both posted (Txn) and pending transactions.
+	// A superset of the fields on both posted and pending transactions.
 	export interface TxnRow {
 		locator: string;
 		date: string;
@@ -11,7 +11,7 @@
 		bill?: number | null;
 	}
 
-	/** A middle column between the payee and the amount. Extend the union to add more. */
+	/** A middle column between the payee and the amount. */
 	export type TxnField = 'source' | 'category' | 'bill';
 
 	/** A field the list can be ordered by via the `sortKey` prop. */
@@ -41,7 +41,7 @@
 		showDate?: boolean;
 		/** Which columns to render between the payee and the amount, in order. */
 		fields?: TxnField[];
-		/** Field to order rows by; omit to keep the given order. Pair with TransactionSortMenu. */
+		/** Field to order rows by; omit to keep the given order. */
 		sortKey?: TxnSort;
 		sortDir?: 'asc' | 'desc';
 	}
@@ -84,12 +84,12 @@
 		const dir = sortDir === 'asc' ? 1 : -1;
 		return [...transactions].sort((a, b) => {
 			const cmp = compare(a, b, key);
-			// Break ties by recency so equal keys keep a stable, sensible order.
+			// Break ties by recency so equal keys keep a stable order.
 			return (cmp || b.date.localeCompare(a.date)) * dir;
 		});
 	});
 
-	// One track per requested field, so the same field lines up down the list.
+	// One track per requested field, so a field lines up down the list.
 	const columnTracks = $derived('auto '.repeat(fields.length).trim());
 </script>
 

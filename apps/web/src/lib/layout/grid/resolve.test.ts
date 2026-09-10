@@ -162,9 +162,8 @@ describe('authoredY — the drag round-trip', () => {
 	});
 
 	it('absorbs a downward drag that only takes up the slack it was already pushed by', () => {
-		// The accepted consequence of subtracting the offset: `b` is authored at 4 but resting at 6,
-		// so the first two rows of a downward drag close that gap in the STORED position without
-		// moving the pane. Its floor has not changed, so neither has where it renders.
+		// The accepted consequence of subtracting the offset: `b` is authored at 4 but resting at 6, so the
+		// first two rows of a downward drag close that gap in the STORED position without moving the pane.
 		const pushed = resolve([p('a', 0, 0, 48, 6), p('b', 0, 4, 48, 4)]);
 		const b = pushed.find((q) => q.id === 'b')!;
 		const stored = authoredY(b.y + 2, b.offset);

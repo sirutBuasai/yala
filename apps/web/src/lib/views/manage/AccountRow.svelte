@@ -1,7 +1,7 @@
 <script lang="ts">
 	// A bank row: set or clear its sweep target, or retire it by draining the balance into another
-	// account and closing it. The row chrome comes from ExpandableRow.
-	import { setSweep, drainCloseAccount } from '$lib/data/load';
+	// account and closing it.
+	import { setSweep, closeAccount } from '$lib/data/load';
 	import { formatAccount } from '$lib/utils/format';
 	import Select from '$lib/forms/fields/Select.svelte';
 	import ControlRow from '$lib/ui/ControlRow.svelte';
@@ -44,7 +44,7 @@
 
 	const saveSweep = () => run(() => setSweep(account, sweepSel || null));
 	const clearSweep = () => run(() => setSweep(account, null));
-	const drainClose = () => run(() => drainCloseAccount(account, drainSel));
+	const drainClose = () => run(() => closeAccount(account, { destination: drainSel }));
 </script>
 
 <ExpandableRow name={label} error={err}>

@@ -1,8 +1,8 @@
 import { scaleLinear, scaleLog, type ScaleLinear, type ScaleLogarithmic } from 'd3-scale';
 
 /**
- * A value→pixel mapping plus the ticks to label it with. Generic in the scale so each builder
- * keeps its full d3 surface (`.domain()` etc.) while callers that only plot can accept either.
+ * A value→pixel mapping plus the ticks to label it with. Generic in the scale so each builder keeps
+ * its full d3 surface while callers that only plot can accept either.
  */
 export interface ValueScale<S extends (v: number) => number = (v: number) => number> {
 	y: S;
@@ -18,22 +18,19 @@ export interface Margins {
 }
 
 /**
- * The plot area inside a measured box, FLOORED AT ZERO on both axes.
+ * The plot area inside a measured box, floored at zero on both axes.
  *
- * The floor is the whole point. A pane on the grid can be made shorter than a chart's own margins,
- * at which case `H - top - bottom` goes negative — and a negative height is not merely ugly: the
- * browser rejects `<rect height="-5">` outright, and every d3 scale built on that range comes out
- * inverted, so the chart draws upside down from a plot area that isn't there. Every measured chart
- * routes through here so none of them can forget.
+ * The floor is the point: a pane can be made shorter than a chart's own margins, and a negative
+ * height makes the browser reject the `<rect>` outright and inverts every d3 scale built on that
+ * range, so the chart draws upside down. Every measured chart routes through here.
  */
 export function plotSize(w: number, h: number, m: Margins): { iw: number; ih: number } {
 	return { iw: Math.max(0, w - m.l - m.r), ih: Math.max(0, h - m.t - m.b) };
 }
 
 /**
- * Zero-anchored linear value→pixel Y scale, plus its tick values. Shared by the bar and
- * line charts so they all include zero, `nice()`-round the domain, and tick identically.
- * `ih` is the inner (plot) height in pixels; the scale maps the max value to y=0 (top).
+ * Zero-anchored linear value→pixel Y scale, plus its tick values. `ih` is the inner (plot) height in
+ * pixels; the scale maps the max value to y=0 (top).
  */
 export function moneyYScale(values: number[], ih: number): ValueScale<ScaleLinear<number, number>> {
 	const y = scaleLinear()
@@ -45,11 +42,9 @@ export function moneyYScale(values: number[], ih: number): ValueScale<ScaleLinea
 }
 
 /**
- * Log10 value→pixel Y scale for series whose magnitudes span orders of magnitude — the
- * category-by-year lines, where the largest category is ~20× the smallest and a linear
- * scale crushes everything below the top one or two. Domain snaps outward to whole decades
- * so gridlines land on round numbers; non-positive values can't be plotted on a log axis
- * and are dropped by the caller (`defined`).
+ * Log10 value→pixel Y scale for series spanning orders of magnitude, which a linear scale crushes
+ * against the axis. Domain snaps outward to whole decades so gridlines land on round numbers;
+ * non-positive values can't be plotted on a log axis and are dropped by the caller (`defined`).
  */
 export function logYScale(
 	values: number[],
@@ -60,7 +55,7 @@ export function logYScale(
 	const hi = pos.length ? 10 ** Math.ceil(Math.log10(Math.max(...pos))) : 10;
 	const y = scaleLog().domain([lo, hi]).range([ih, 0]);
 
-	// Decade ticks, plus 2× / 5× subdivisions when the span is narrow enough to need them.
+	// Decade ticks, subdivided when the span is narrow enough to need them.
 	const decades = Math.log10(hi) - Math.log10(lo);
 	const ticks: number[] = [];
 	for (let d = Math.log10(lo); d <= Math.log10(hi) + 1e-9; d++) {
@@ -74,18 +69,15 @@ export function logYScale(
 }
 
 /**
- * Average glyph width as a fraction of font size, for the app's sans at chart sizes. Measuring
- * text properly needs a canvas or a layout pass; this approximation is what lets label fitting be
- * a pure function, which is worth more here than exactness — being a few percent conservative
- * only ever means slightly smaller type, never a clipped label.
+ * Average glyph width as a fraction of font size, for the app's sans at chart sizes. Approximate on
+ * purpose: measuring properly needs a canvas or a layout pass, and erring small only ever means
+ * slightly smaller type, never a clipped label.
  */
 const GLYPH_RATIO = 0.55;
 
 /**
- * The font size at which the longest of `labels` fits inside `gutter` pixels, clamped to a
- * readable range. Shared by the charts with a fixed label gutter (the ranked bars' row names, the
- * heatmap's category column), which each need the same answer: shrink rather than truncate, but
- * never shrink past legibility.
+ * The font size at which the longest of `labels` fits inside `gutter` pixels, clamped to a readable
+ * range — so charts with a label gutter shrink rather than truncate, but never past legibility.
  */
 export function fitFontSize(gutter: number, labels: string[], min = 8, max = 12): number {
 	const longest = Math.max(1, ...labels.map((l) => l.length));
@@ -93,12 +85,9 @@ export function fitFontSize(gutter: number, labels: string[], min = 8, max = 12)
 }
 
 /**
- * Which x-label indices to draw, given how much room there is.
- *
- * Thinning by count alone crams a narrow pane; thinning without protecting the final label loses
- * the series' end date, which is the one readers look for. So: budget each label the width of the
- * longest one, keep every nth, always keep the last — and drop the neighbour before it when the two
- * would sit on top of each other, which is what made "2026-02-01" and "2026-08-26" overlap.
+ * Which x-label indices to draw, given how much room there is: budget each label the width of the
+ * longest one, keep every nth, and always keep the last — the one readers look for. The neighbour
+ * before the last is dropped when the two would otherwise overlap, which they did on screen.
  */
 export function labelIndices(count: number, innerWidth: number, labels: string[]): number[] {
 	if (count <= 1) return count === 1 ? [0] : [];
@@ -112,7 +101,6 @@ export function labelIndices(count: number, innerWidth: number, labels: string[]
 
 	const last = count - 1;
 	const prev = out[out.length - 1];
-	// Half a stride is the crowding threshold: closer than that and the two labels touch.
 	if (prev !== undefined && last - prev < stride * 0.5) out.pop();
 	out.push(last);
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-	// Add / edit a paycheck. Without `locator` it adds (POST /api/paycheck); with one it prefills
-	// from that entry and saves an update (POST /api/paycheck/update) or deletes it.
+	// Add / edit a paycheck. Without `locator` it adds; with one it prefills from that entry and
+	// saves an update or deletes it.
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data/load';
@@ -26,7 +26,7 @@
 		accounts: AccountsInfo;
 		/** When set, edit that paycheck; when absent, add a new one. */
 		locator?: string;
-		/** Add mode only: pre-fill the date field (e.g. the day clicked in the calendar). */
+		/** Add mode only: pre-fill the date field. */
 		presetDate?: string;
 		/** Called after a successful save or delete (parent refreshes data + closes the modal). */
 		onsaved: () => void;
@@ -46,7 +46,7 @@
 	let msg = $state('');
 	let err = $state(false);
 
-	// Option labels the selected employer offers, plus generic ones (employer === null).
+	// Labels the selected employer offers, plus generic ones (employer === null).
 	const scoped = (kind: 'deduction' | 'contribution'): string[] =>
 		accounts.payroll_options
 			.filter((o) => o.kind === kind && (o.employer === null || o.employer === employer))
@@ -62,9 +62,9 @@
 	const emptyRows = (labels: string[], options: string[]): AmountRow[] =>
 		labels.filter((l) => options.includes(l)).map((value) => ({ value, amount: null }));
 
-	/** Guards the one-time row seeding below; see the comment there for why it can't be reactive. */
+	/** Guards the one-time row seeding below; see there for why it can't be reactive. */
 	let rowsSeeded = false;
-	// Same-label rows sum (e.g. two "Benefits" lines) rather than the last overwriting.
+	// Same-label rows sum rather than the last overwriting.
 	const toMap = (rows: AmountRow[]): Record<string, number> => {
 		const m: Record<string, number> = {};
 		for (const r of rows)
@@ -74,14 +74,13 @@
 
 	$effect(() => {
 		if (locator == null) {
-			// Add mode: employer, deposit account and the deduction/contribution ROWS all carry over — a
-			// paycheck keeps its shape month to month, so only the figures should need typing.
+			// Add mode: employer, deposit account and the deduction/contribution ROWS all carry over,
+			// since a paycheck keeps its shape month to month.
 			if (!date && presetDate) date = presetDate;
 			if (!employer) employer = seed(get(lastEmployer), accounts.employers);
 			if (!deposit_account) deposit_account = seed(get(lastDepositAccount), accounts.cash_accounts);
-			// The ROWS are seeded once and untracked, unlike the scalars above. `scoped()` reads
-			// `employer`, which this same effect just wrote, and the rows are this effect's own output —
-			// tracking either would make the effect depend on what it produces and loop.
+			// The ROWS are seeded once and untracked: `scoped()` reads `employer`, which this effect just
+			// wrote, and the rows are its own output — tracking either loops the effect.
 			if (!rowsSeeded && accounts.payroll_options.length) {
 				rowsSeeded = true;
 				untrack(() => {
@@ -151,7 +150,7 @@
 			lastDepositAccount.set(deposit_account);
 			lastEntryDate.set(date);
 			lastEmployer.set(employer);
-			// Only rows that actually carried a figure: an untouched row is one you didn't want.
+			// Only rows that carried a figure: an untouched row is one you didn't want.
 			lastDeductionLabels.set(Object.keys(toMap(deductions)));
 			lastContributionLabels.set(Object.keys(toMap(contributions)));
 		}

@@ -1,10 +1,8 @@
-"""Build the versioned ``data.json`` from the ledger.
+"""Build the versioned ``data.json`` from the ledger as a validated
+:class:`~yala.schema.DashboardData`.
 
-Querying the ledger and constructing the pydantic contract:
-the builder emits a fully-validated :class:`~yala.schema.DashboardData`.
-
-Run ``python -m yala.builder [OUT]`` to write the snapshot (default:
-``apps/web/static/data.json``; overridable via arg or ``$YALA_DATA_OUT``).
+Run ``python -m yala.builder [OUT]`` to write the snapshot; ``$YALA_DATA_OUT`` overrides the
+default destination.
 """
 
 from __future__ import annotations
@@ -50,8 +48,8 @@ from yala.schema import (
     YearSpend,
 )
 
-# The frontend reads its data snapshot from apps/web/static/data.json, which the vite build
-# copies into apps/web/build/. Writing straight there means no intermediate build/ dir to copy.
+# The vite build copies the web app's static/ dir into its build output, so writing the snapshot
+# straight there needs no extra copy step.
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 _DEFAULT_OUT = _REPO_ROOT / "apps" / "web" / "static" / "data.json"
 
@@ -97,15 +95,12 @@ def _transfer_out(t) -> Transfer:
 
 
 def _accounts(ledger) -> dict[str, AccountInfo]:
-    """The account directory: display name and institution for every account the ledger declares.
+    """The account directory: display name, institution and colour per declared account.
 
-    Every declared account, not just the active or balance-sheet ones — a closed card still appears
-    in historical rows, and a directory with gaps would force callers to keep a fallback naming rule
-    of their own, which is the duplication this exists to remove.
+    Closed accounts are included — they still appear in historical rows, and a directory with gaps
+    would force callers to keep a fallback naming rule of their own.
     """
     account_meta = ledger.account_meta()
-    # Colour is keyed by institution, so it is resolved here rather than per account — one lookup
-    # for the whole directory, and a bank's accounts cannot end up disagreeing.
     palette = institution_colors(ledger.entries)
 
     def info(account: str, meta: dict) -> AccountInfo:
@@ -123,8 +118,8 @@ def _accounts(ledger) -> dict[str, AccountInfo]:
 def account_lists(ledger) -> AccountLists:
     """The pickable account sets, for the forms and the Manage panels.
 
-    Shared by the snapshot and by ``GET /api/accounts`` so the two can't describe different sets of
-    accounts — the frontend reads whichever is available and can't tell them apart.
+    Shared by the snapshot and by the accounts endpoint, which the frontend treats as
+    interchangeable, so the two must not be able to describe different sets.
     """
     cash = ledger.active_accounts(CASH)
     funding = sorted(cash + ledger.active_accounts(CREDIT_CARDS))
@@ -149,9 +144,8 @@ def account_lists(ledger) -> AccountLists:
 def setting_fields() -> list[SettingField]:
     """The spec behind every setting, as the form needs it.
 
-    Shared by the snapshot and by ``GET /api/settings``, for the same reason as the account lists:
-    the frontend reads whichever source is up and must not be able to tell them apart. Derived from
-    :data:`yala.ledger.settings.SETTINGS`, so adding a setting still means editing one place.
+    Derived from :data:`yala.ledger.settings.SETTINGS`, and shared by the snapshot and the settings
+    endpoint for the same reason as :func:`account_lists`.
     """
     return [
         SettingField(
@@ -202,8 +196,7 @@ def _overview(spending, income, all_years) -> Overview:
             )
             for y in all_years
         ],
-        # Lifetime spend per category straight from the transactions, so a closed category's
-        # history still shows here (largest first, empty ones dropped).
+        # Straight from the transactions, so a closed category's history still shows.
         all_time_by_category=sorted(
             (CategoryAmount(category=c, amount=money(v)) for c, v in all_time.items() if v != 0),
             key=lambda ca: ca.amount,
@@ -334,8 +327,7 @@ def _networth(networth) -> NetWorthSection:
 
 
 def _settings(settings) -> SettingsSection:
-    """Effective settings as the contract shape. Setting keys are hyphenated (they read as words in
-    the ledger); contract fields are the same names with underscores."""
+    """Effective settings as the contract shape: hyphenated keys become underscored fields."""
     values = settings.values()
     return SettingsSection(
         **{
@@ -352,9 +344,8 @@ def build(ledger: Ledger) -> DashboardData:
     transfers = ledger.transfers
     networth = ledger.net_worth
 
-    # The analytics category list (for meta, legends, per-category metrics) is every pickable
-    # (active) category plus any category with lifetime spend — so a closed category with history
-    # is still known to the charts, while the /api/accounts picker stays active-only.
+    # Every pickable category plus any with lifetime spend, so a closed category with history stays
+    # known to the charts while the pickers stay active-only.
     categories = sorted(set(spending.categories()) | set(spending.by_category()))
     all_transfers = transfers.transactions()
     income_months = {(p.date.year, p.date.month) for p in income.paychecks()}

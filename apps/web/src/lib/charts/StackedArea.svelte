@@ -1,10 +1,6 @@
 <script lang="ts">
-	// Stacked bands over an ordered axis. Where overlaid lines answer "what is each one doing?",
-	// stacking answers "what is the mix, and how has it shifted?" — the band thickness is the share
-	// and the boundaries move as composition changes.
-	//
-	// Series stack in the order given, first at the bottom. Nothing here knows what it's plotting:
-	// labels, series and unit all arrive as props, and the axis scales to whatever the totals reach.
+	// Stacked bands over an ordered axis: band thickness is the share, and the boundaries move as
+	// composition changes. Series stack in the order given, first at the bottom.
 	import { area, line } from 'd3-shape';
 	import { esc } from '$lib/utils/format';
 	import { formatUnit, type Unit } from '$lib/data/primitives';
@@ -24,8 +20,8 @@
 	}
 	let { labels, series, unit }: Props = $props();
 
-	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also
-	// bounds how tall the chart may grow inside a stretched pane.
+	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also bounds
+	// how tall the chart may grow inside a stretched pane.
 	let boxW = $state(0);
 	let boxH = $state(0);
 	const W = $derived(boxW || 900);
@@ -51,8 +47,7 @@
 	const peak = $derived(Math.max(1, ...(stacks.at(-1)?.upper ?? [1])));
 	const y = $derived((v: number) => ih - (v / peak) * ih);
 
-	// Round ticks over the stacked total: quarters read cleanly for a share chart and stay
-	// reasonable for absolute totals too.
+	// Quarters of the stacked total, which read cleanly for a share chart and reasonably for absolutes.
 	const ticks = $derived([0, 0.25, 0.5, 0.75, 1].map((f) => peak * f));
 
 	const paths = $derived(
@@ -119,6 +114,6 @@
 </div>
 
 {#if series.length > 1}
-	<!-- Reversed and under the plot, so the keys read top-to-bottom in the order the bands stack. -->
+	<!-- Reversed, so the keys read top-to-bottom in the order the bands stack. -->
 	<Legend keys={series} below reverse />
 {/if}

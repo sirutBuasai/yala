@@ -1,17 +1,15 @@
 """Payroll option resolution — shared by read (income), write (sink), and the accounts API.
 
-An employer is an ``Income:Salary:<Employer>`` account; the open set (minus closes) is the
-active-employer list. Deduction and contribution *options* are derived from account metadata so
-beancount stays the source of truth:
+Options are derived from account metadata so beancount stays the source of truth:
 
-* deductions    — ``Expenses:Deductions:*``; label is the account leaf (e.g. ``Tax``). Always
-  generic (offered for every employer).
-* contributions — ``Assets:Investments:*`` carrying an ``employer`` meta (its presence *is* the
-  "payroll-contributable" marker, and scopes it to that employer). The ``labels`` meta (comma-
-  separated) lists the line-item labels the account offers (e.g. ``HSA`` or a 401k's
-  ``Roth401k,Trad401k,AfterTax401k``). Each is one option; the chosen label is written as a
-  ``label`` posting-meta on a leg to the *same* account, so a split is income-only and never
-  fragments the holding.
+* employers     — the leaf of an ``Income:Salary:*`` account.
+* deductions    — every ``Expenses:Deductions:*`` account, labelled by its leaf and offered for
+  every employer.
+* contributions — an ``Assets:Investments:*`` account carrying an ``employer`` meta, whose presence
+  *is* the "payroll-contributable" marker and scopes it to that employer. Its comma-separated
+  ``labels`` meta lists the line items it offers; the chosen one is written as a ``label``
+  posting-meta on a leg to the *same* account, so a split is income-only and never fragments the
+  holding.
 """
 
 from __future__ import annotations
@@ -34,13 +32,10 @@ Leg = tuple[str, Decimal, str | None]
 
 @dataclass(frozen=True)
 class PayrollOption:
-    """A selectable paycheck line item resolved to its ledger account.
-
-    For a contribution, ``label`` doubles as the ``split`` posting-meta the sink stamps.
-    """
+    """A selectable paycheck line item resolved to its ledger account."""
 
     kind: str  # "deduction" | "contribution"
-    label: str  # "Tax", "HSA", "Roth401k"
+    label: str  # for a contribution, also the ``label`` posting-meta the sink stamps
     account: str
     employer: str | None  # scoping employer, or None for generic
 
@@ -102,8 +97,7 @@ def resolve(ledger: "Ledger", kind: str, label: str, employer: str) -> PayrollOp
 class PaycheckSummary:
     """A paycheck's postings classified for display/editing.
 
-    ``other`` holds postings outside Income/Deductions/Investments (deposit candidates); read
-    callers ignore it, the accounts API picks the largest as the deposit.
+    ``other`` holds the postings outside Income/Deductions/Investments — the deposit candidates.
     """
 
     gross: Decimal
@@ -116,8 +110,8 @@ class PaycheckSummary:
 def summarize_paycheck(legs: Iterable[Leg], account_meta: dict[str, dict]) -> PaycheckSummary:
     """Classify paycheck ``legs`` into gross, employer, and deduction/contribution maps.
 
-    Contributions are keyed by their display label (account ``labels`` meta + a leg's ``label``);
-    same-label legs sum, so a 401k split reads back as one Roth401k/Trad401k total.
+    Contributions are keyed by display label and same-label legs sum, so a split reads back as one
+    total per line item.
     """
     gross = Decimal(0)
     employer: str | None = None

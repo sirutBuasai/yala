@@ -1,20 +1,14 @@
 """User settings: the handful of figures the ledger can't derive, stored in the ledger itself.
 
-Most of what the dashboard shows is computed from transactions and balances. A few numbers are
-*assumptions* rather than facts — the withdrawal rate behind a financial-independence target, or
-the age you're aiming to retire at — so they have to be stated. They live as ``custom`` directives
-in the ledger rather than in a config file, so they version with the data they describe and stay
+They are *assumptions* rather than facts, so they have to be stated. They live as ``custom``
+directives rather than in a config file, so they version with the data they describe and stay
 readable without this app::
 
     2026-01-01 custom "yala-setting" "swr" 4.0
-    2026-01-01 custom "yala-setting" "retire-age" 55
 
-Directives are **dated and superseding**: the latest one for a key wins, so changing a rate leaves
-the old value in place as history instead of silently restating the past.
-
-:data:`SETTINGS` is the single source of truth for every key — its type, default, bounds, and
-label. Reads, writes, API validation, and the ``data.json`` contract all derive from it, so adding
-a setting means adding one spec entry.
+Directives are **dated and superseding**: the latest one for a key wins, so a change leaves the old
+value in place as history. :data:`SETTINGS` is the single source of truth for every key — reads,
+writes, API validation and the ``data.json`` contract all derive from it.
 """
 
 from __future__ import annotations
@@ -116,9 +110,9 @@ SETTINGS_BY_KEY: dict[str, SettingSpec] = {s.key: s for s in SETTINGS}
 def coerce(key: str, value: object) -> Decimal:
     """Validate ``value`` for ``key`` and return it as a :class:`Decimal`.
 
-    Shared by every entry point — the ledger reader, the write sink, and the API — so a figure
-    that's rejected in a form is equally rejected when hand-written into the ledger. Raises
-    ``KeyError`` for an unknown key and ``ValueError`` with a user-facing message otherwise.
+    Shared by the ledger reader, the write sink and the API, so a figure rejected in a form is
+    equally rejected when hand-written into the ledger. Raises ``KeyError`` for an unknown key and
+    ``ValueError`` with a user-facing message otherwise.
     """
     spec = SETTINGS_BY_KEY.get(key)
     if spec is None:
@@ -144,7 +138,7 @@ def coerce(key: str, value: object) -> Decimal:
 
 
 def _plain(number: Decimal) -> str:
-    """Render a bound without a trailing ``.0``, so a message reads "between 18 and 100"."""
+    """Render a bound for an error message, without a trailing ``.0``."""
     return str(int(number)) if number == number.to_integral_value() else str(number)
 
 
@@ -165,11 +159,10 @@ class Settings:
         ]
 
     def stored(self) -> dict[str, Decimal]:
-        """Every explicitly-set value, keyed by setting.
+        """Every explicitly-set value, keyed by setting, the latest directive winning.
 
-        Directives are visited in ledger order (beancount sorts by date), so a later directive for
-        the same key supersedes an earlier one. An unparseable or unknown entry is skipped rather
-        than raising: the ledger is hand-editable, and one bad line shouldn't blank the dashboard.
+        An unparseable or unknown entry is skipped rather than raising: the ledger is hand-editable,
+        and one bad line shouldn't blank the dashboard.
         """
         out: dict[str, Decimal] = {}
 

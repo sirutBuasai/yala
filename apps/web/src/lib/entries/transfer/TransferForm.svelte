@@ -1,6 +1,6 @@
 <script lang="ts">
-	// Add / edit a bill payment (a transfer between your own accounts). Without `locator` it adds
-	// (POST /api/transfer); with one it prefills that entry and saves an update or deletes it.
+	// Add / edit a bill payment (a transfer between your own accounts). Without `locator` it adds;
+	// with one it prefills that entry and saves an update or deletes it.
 	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data/load';
 	import { deleteTransaction, getJson, postJson } from '$lib/data/load';
@@ -36,8 +36,7 @@
 	let msg = $state('');
 	let err = $state(false);
 
-	// `credit_accounts` is the full money-in set; a bill pay can target any of them except the account
-	// being paid from.
+	// A bill pay can target any money-in account except the one being paid from.
 	const toAccounts = $derived(accounts.credit_accounts.filter((a) => a !== from_account));
 
 	$effect(() => {

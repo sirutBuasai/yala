@@ -1,11 +1,9 @@
 <script module lang="ts">
 	import { ENTRY_KINDS, type EntryKind } from '$lib/utils/editPrefs';
 
-	// Each entry type carries an icon + accent that drive the switcher pill and the Overlay's
-	// tinted band: transaction = spending outward (↑), paycheck = money coming in (↓), bill pay
-	// = moved between accounts (↑↓). Up/down reuse the shared Arrow; the Swap glyph is the pair.
-	// `accent` is the bright band fill / pill fill; `accentText` is the mode-aware `-text` variant
-	// that keeps the kicker legible on the pale light-mode band.
+	// Each entry type carries an icon + accent driving the switcher pill and the Overlay's tinted
+	// band. `accentText` is the mode-aware variant that keeps the kicker legible on the pale
+	// light-mode band.
 	const LABELS: Record<EntryKind, string> = {
 		transaction: 'Transaction',
 		paycheck: 'Paycheck',
@@ -19,8 +17,6 @@
 		balance: 'swap'
 	};
 
-	// Accents come from the `--entry-*` tokens, so the switcher pill, the Overlay band and the
-	// kicker are all driven by one place in app.css rather than by literals here.
 	const KINDS = ENTRY_KINDS.map((value) => ({
 		value,
 		label: LABELS[value],
@@ -34,9 +30,8 @@
 	>;
 
 	/**
-	 * Which kinds one `add()` call should offer: the requested ones intersected with what the page
-	 * permits, falling back to the page's whole set when the request is absent or entirely
-	 * disallowed. Pure and exported so the rule is unit-testable without mounting the overlay.
+	 * Requested kinds intersected with what the page permits, falling back to the page's whole set
+	 * when the request is absent or entirely disallowed.
 	 */
 	export function resolveKinds(
 		requested: EntryKind | EntryKind[] | undefined,
@@ -50,10 +45,9 @@
 </script>
 
 <script lang="ts">
-	// One Add overlay with a kind switcher (Transaction / Paycheck / Bill pay) plus per-type edit
-	// overlays. Shared by the Monthly and Calendar tabs, which open it imperatively (bind:this)
-	// and refresh their data via `onsaved`. Editing is always type-specific (a row is one kind),
-	// so only adding needs the switcher.
+	// One Add overlay with a kind switcher plus per-type edit overlays. Pages open it imperatively
+	// (bind:this) and refresh via `onsaved`. Editing is always type-specific, so only adding
+	// needs the switcher.
 	import { get } from 'svelte/store';
 	import { data } from '$lib/data/load';
 	import type { AccountsInfo } from '$lib/data/load';
@@ -72,11 +66,10 @@
 		accounts: AccountsInfo | null;
 		/** Called after any successful add / edit / delete (parent re-pulls data). */
 		onsaved: () => void;
-		/** Add-mode date preset (e.g. the calendar day clicked). Overrides the resolved default. */
+		/** Overrides the resolved default add date. */
 		presetDate?: string;
 		addTitle?: string;
-		/** Entry kinds this page may add, in switcher order. Defaults to all four; a page passes a
-		    subset (e.g. the calendar omits `balance`). A single kind hides the switcher. */
+		/** Entry kinds this page may add, in switcher order. A single kind hides the switcher. */
 		kinds?: EntryKind[];
 	}
 	let {
@@ -88,14 +81,9 @@
 	}: Props = $props();
 
 	/**
-	 * The date an add opens on, resolved once here so all four forms agree and none of them has to
-	 * know the rule. In precedence order:
-	 *   1. `presetDate` — the caller was explicit (you clicked a calendar day).
-	 *   2. The date you last logged on — logging runs in batches, so this is usually the right one.
-	 *   3. The ledger's newest entry date — the right answer on a fresh session.
-	 * Today's date is deliberately NOT in the list: you log a week's spending on a Sunday, so today
-	 * is nearly always wrong. An empty result leaves the field blank and the picker opens on today,
-	 * which is correct for an empty ledger.
+	 * The date an add opens on, resolved once so every form agrees. Today is deliberately excluded:
+	 * logging runs in batches, so the last-logged date beats it. An empty result leaves the field
+	 * blank, which is right for an empty ledger.
 	 */
 	const openDate = $derived(
 		presetDate || $lastEntryDate || ($data ? latestEntryDate($data) : '') || undefined
@@ -103,10 +91,8 @@
 
 	let showAdd = $state(false);
 	let addKind = $state<EntryKind>('transaction');
-	// Kinds offered by the CURRENT add invocation. `null` falls back to the page's whole set, so a
-	// bare `add()` still behaves as before.
+	/** Kinds offered by the CURRENT add invocation; `null` falls back to the page's whole set. */
 	let openKinds = $state<EntryKind[] | null>(null);
-	/** Switcher options for this invocation, in the caller's order, restricted to known kinds. */
 	const allowedKinds = $derived(KINDS.filter((k) => (openKinds ?? kinds).includes(k.value)));
 	const addMeta = $derived(KIND[addKind]);
 	let editingTxn = $state<string | null>(null);
@@ -114,14 +100,9 @@
 	let editingTransfer = $state<string | null>(null);
 
 	/**
-	 * Open the add overlay. Pass one kind to go straight into that form (no switcher — the button
-	 * that opened it already said what it adds), or several to offer a choice between them. Omit
-	 * for the page's full set. Requests are intersected with the `kinds` prop, so a page can never
-	 * be talked into an entry type it doesn't allow.
-	 *
-	 * A bare add() lands on the kind you last logged, so a run of bill pays doesn't mean re-picking
-	 * Bill pay every time — but only when this invocation actually offers it, so a button that
-	 * names its own type still opens on that type.
+	 * Open the add overlay on one kind, a choice of several, or (omitted) the page's full set.
+	 * Requests are intersected with the `kinds` prop, and the form opens on the last-logged kind
+	 * whenever this invocation offers it.
 	 */
 	export function add(only?: EntryKind | EntryKind[]) {
 		const offered = resolveKinds(only, kinds);
@@ -171,8 +152,7 @@
 	>
 		{#snippet controls()}
 			{#if allowedKinds.length > 1}
-				<!-- Roving tabindex (ARIA APG): one tab stop for the group, arrows move between kinds,
-				     so switching entry type costs one key rather than four Tabs. -->
+				<!-- Roving tabindex (ARIA APG): one tab stop for the group, arrows move between kinds. -->
 				<div
 					class="switch"
 					role="tablist"

@@ -1,6 +1,6 @@
 <script lang="ts">
-	// Visualization for a Table primitive: numeric columns are right-aligned and
-	// formatted by their unit; text columns are left-aligned.
+	// A Table primitive: numeric columns are right-aligned and formatted by their unit, text columns
+	// left-aligned.
 	import type { Table } from '$lib/data/primitives';
 	import { formatUnit } from '$lib/data/primitives';
 	import Empty from '$lib/ui/Empty.svelte';
@@ -17,10 +17,9 @@
 </script>
 
 {#if table.rows.length}
-	<!-- The table scrolls SIDEWAYS inside its own pane rather than forcing the page to. A financial
-	     table's columns can't be dropped or wrapped — every figure is load-bearing and a wrapped
-	     number stops reading as a number — so once the columns need more width than the pane has,
-	     scrolling them is the only option that keeps them all legible. -->
+	<!-- Scrolls sideways inside its own pane rather than forcing the page to. These columns can't be
+	     dropped or wrapped — every figure is load-bearing — so scrolling is the only way to keep them
+	     all legible once they outgrow the pane. -->
 	<div class="tablebox scroller-x">
 		<table>
 			<thead>
@@ -46,9 +45,9 @@
 {/if}
 
 <style>
-	/* Horizontal only, from `.scroller-x`. No vertical cap: a table that scrolls vertically becomes a
-	   second scroll region the wheel gets captured by, and these tables are short (one row per year
-	   or per month) so the pane can simply be as tall as its data. */
+	/* Horizontal only. No vertical cap: a table that scrolls vertically becomes a second scroll region
+	   the wheel gets captured by, and these tables are short enough for the pane to be as tall as its
+	   data. */
 	.tablebox {
 		min-width: 0;
 	}

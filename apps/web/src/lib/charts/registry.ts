@@ -1,8 +1,5 @@
-// The chart registry — the visualization layer's half of the data/visual split.
-//
-// Each entry declares which primitive KINDS a chart accepts and how to ADAPT a primitive into that
-// chart's props. Colour assignment lives here (never in the data layer), so it's defined once
-// instead of being rebuilt inline by every view.
+// The chart registry: each entry declares which primitive kinds a chart accepts and how to adapt a
+// primitive into that chart's props. Colour is assigned here, never in the data layer.
 
 import type { Component } from 'svelte';
 import type {
@@ -31,7 +28,7 @@ import Heatmap from './Heatmap.svelte';
 import DataTable from './Table.svelte';
 import StatTile from './StatTile.svelte';
 
-/** Extra rendering options a caller can pass to `adapt` (all optional). */
+/** Extra rendering options for `adapt`. */
 interface AdaptOpts {
 	/** Draw a gradient area under a single line. */
 	area?: boolean;
@@ -47,7 +44,7 @@ interface AdaptOpts {
 	endLabels?: boolean;
 	/** Heatmap scaling: per row (default) or one scale for the whole grid. */
 	normalize?: 'row' | 'global';
-	/** Series names to draw as a dotted line — a secondary reading against a primary one. */
+	/** Series names to draw as a dotted line. */
 	dashed?: string[];
 }
 
@@ -59,14 +56,13 @@ export interface ChartDef<P extends Record<string, unknown> = Record<string, unk
 	adapt(primitive: Primitive, opts?: AdaptOpts): P;
 }
 
-/** The props a Svelte component accepts. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PropsOf<C> = C extends Component<infer P, any, any> ? P : never;
 
 /**
- * Register one chart. The props type is inferred from the `component`, and `adapt` is required
- * to return exactly those props — so renaming a chart's prop is caught here at compile time —
- * then the type is erased so the registry array can hold heterogeneous charts.
+ * Register one chart. `adapt` must return exactly the props inferred from `component`, so renaming a
+ * chart's prop is a compile error here; the type is then erased so the registry array can hold
+ * heterogeneous charts.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function def<C extends Component<any, any, any>>(d: {
@@ -79,32 +75,30 @@ function def<C extends Component<any, any, any>>(d: {
 	return d as unknown as ChartDef;
 }
 
-// --- colour assignment (visualization concern) ---
+// --- colour assignment ---
 
 /**
- * What a well-known series MEANS, mapped to the `--role-*` token for that meaning. Keyed by the
- * label the data layer already gives the series, so the data stays colour-blind and a series
- * carries one hue everywhere it appears — spending is salmon on the monthly bars and on the
- * yearly ones, liabilities are salmon (a negative on net worth) rather than an arbitrary
- * palette slot. Anything unnamed cycles the fallback palette.
+ * Role token per well-known series, keyed by the label the data layer gives the series — so the data
+ * stays colour-blind and a series carries one hue everywhere it appears. Anything unnamed cycles the
+ * fallback palette.
  */
 const SERIES_ROLE: Record<string, string> = {
-	// Flows — what moved this period.
+	// Flows.
 	Income: 'var(--role-income)',
 	Spent: 'var(--role-spending)',
 	Spending: 'var(--role-spending)',
 	Saved: 'var(--role-saving)',
 	'Cumulative saved': 'var(--role-saving)',
 	'Savings rate': 'var(--role-rate)',
-	// Stocks — what you stand on.
+	// Stocks.
 	'Net worth': 'var(--role-balance)',
 	Assets: 'var(--role-asset)',
 	Liabilities: 'var(--role-liability)',
-	// Allocation buckets — three slices of assets.
+	// Allocation buckets.
 	Liquid: 'var(--role-liquid)',
 	Taxable: 'var(--role-taxable)',
 	'Tax-advantaged': 'var(--role-taxadv)',
-	// The growth decomposition: what you put aside, and everything else that moved the balance.
+	// Growth decomposition.
 	'You saved': 'var(--role-saving)',
 	'Market & other': 'var(--role-market)'
 };
@@ -123,8 +117,6 @@ const PALETTE = [
 ];
 
 function seriesColor(name: string, index: number): string {
-	// A series named after a spending category takes that category's accent, so the same
-	// category reads the same colour across the donut, the ranked bars and the category lines.
 	return (
 		SERIES_ROLE[name] ??
 		(CATEGORY_TOKEN[name] ? categoryVar(name) : null) ??
@@ -133,16 +125,14 @@ function seriesColor(name: string, index: number): string {
 }
 
 /**
- * How a categorical chart's keys take their colour. The keys of a categorical are just strings;
- * only the caller knows whether they name spending categories, ledger accounts, or roles, so the
- * chart is told rather than left to guess — which is what previously left every bar in "where the
- * money sits" the same fallback lavender.
+ * How a categorical chart's keys take their colour. A categorical's keys are just strings, so only
+ * the caller knows whether they name spending categories, ledger accounts, or roles.
  */
 export type ColorBy = 'category' | 'account' | 'role';
 
 function keyColor(key: string, mode: ColorBy = 'category'): string {
-	// Two reserved keys outrank every mode: `Saved` is the synthetic residual slice and `Other` is
-	// the rolled-up tail, and neither is a member of the set being coloured.
+	// `Saved` (the synthetic residual) and `Other` (the rolled-up tail) are not members of the set
+	// being coloured, so they outrank every mode.
 	if (key === 'Saved') return 'var(--role-saving)';
 	if (key === 'Other') return 'var(--ink-3)';
 	if (mode === 'account') return accountVar(key);
@@ -167,15 +157,20 @@ function seriesOf(p: Series | MultiSeries): { labels: string[]; list: Series[] }
 	return { labels: base.points.map((pt) => pt.label), list };
 }
 
+/**
+ * A lone series may be given an explicit fill; anything plotted alongside others takes its role
+ * colour, since an override could only ever speak for one of them.
+ */
+function fillOf(list: Series[], s: Series, i: number, opts: AdaptOpts): string {
+	return list.length === 1 && opts.color ? opts.color : seriesColor(s.name, i);
+}
+
 function toChartSeries(list: Series[], opts: AdaptOpts) {
 	return list.map((s, i) => ({
 		name: s.name,
 		values: s.points.map((pt) => pt.value),
-		// A lone series may be given an explicit fill; anything plotted alongside others takes its
-		// role colour, since an override would then only be able to speak for one of them.
-		color: list.length === 1 && opts.color ? opts.color : seriesColor(s.name, i),
-		// The area belongs to the primary reading, so it fills the first series whether or not
-		// others are plotted alongside it.
+		color: fillOf(list, s, i, opts),
+		// The area belongs to the primary reading, so it fills the first series only.
 		area: opts.area && i === 0 ? true : undefined,
 		dashed: opts.dashed?.includes(s.name) || undefined
 	}));
@@ -229,8 +224,7 @@ export const CHARTS: ChartDef[] = [
 				series: list.map((s, i) => ({
 					name: s.name,
 					values: s.points.map((pt) => pt.value ?? 0),
-					// A single series may take an explicit fill; multiple use the series palette.
-					color: list.length === 1 && opts.color ? opts.color : seriesColor(s.name, i)
+					color: fillOf(list, s, i, opts)
 				}))
 			};
 		}
@@ -339,12 +333,12 @@ export const CHARTS_BY_ID: Record<string, ChartDef> = Object.fromEntries(
 	CHARTS.map((c) => [c.id, c])
 );
 
-/** Charts that can render a given primitive kind — powers "pick a chart for this data". */
+/** Charts that can render a given primitive kind. */
 export function chartsForKind(kind: PrimitiveKind): ChartDef[] {
 	return CHARTS.filter((c) => c.accepts.includes(kind));
 }
 
-/** The default (first) chart for a primitive kind, or undefined if none. */
+/** The default chart for a primitive kind, or undefined if none accepts it. */
 export function defaultChart(kind: PrimitiveKind): ChartDef | undefined {
 	return chartsForKind(kind)[0];
 }

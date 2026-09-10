@@ -7,7 +7,7 @@ import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
 import InvestmentRow from '$lib/views/manage/InvestmentRow.svelte';
 
-/** `investmentValue` GETs, then `closeInvestment` POSTs; both go through the same fetch. */
+/** `investmentValue` GETs, then `closeAccount` POSTs; both go through the same fetch. */
 function stubFetch(value: number) {
 	const fetchSpy = vi.fn().mockImplementation((url: string) =>
 		Promise.resolve({
@@ -24,7 +24,7 @@ async function openDrawer(destinations: string[], value: number) {
 	const fetchSpy = stubFetch(value);
 	render(InvestmentRow, {
 		props: {
-			account: 'Assets:Investments:Taxable:BrokerZ',
+			account: 'Assets:Investments:Taxable:BrokerageA',
 			destinations,
 			onchanged: vi.fn()
 		}
@@ -36,7 +36,7 @@ async function openDrawer(destinations: string[], value: number) {
 }
 
 const posted = (fetchSpy: ReturnType<typeof vi.fn>) =>
-	fetchSpy.mock.calls.filter(([url]) => String(url) === '/api/investment/close');
+	fetchSpy.mock.calls.filter(([url]) => String(url) === '/api/account/close');
 
 describe('InvestmentRow retire', () => {
 	it('sends the split when it totals the account value', async () => {

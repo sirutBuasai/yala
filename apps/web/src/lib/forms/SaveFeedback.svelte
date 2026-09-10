@@ -1,8 +1,7 @@
 <script lang="ts">
-	// The outcome line under a write control: the error if the last attempt failed, otherwise the
-	// confirmation, otherwise whatever resting hint the caller supplies. Paired with `SaveState` so
-	// every control reports in the same place, with the same roles (`alert` vs `status`) — screen
-	// readers announce a failure immediately and a success politely.
+	// The outcome line under a write control: error, else confirmation, else the caller's resting
+	// hint. Paired with `SaveState` so every control reports in the same place with the same roles
+	// (`alert` vs `status`).
 	import type { Snippet } from 'svelte';
 	import type { SaveState } from '$lib/forms/saveState.svelte';
 

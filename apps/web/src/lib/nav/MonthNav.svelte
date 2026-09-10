@@ -1,7 +1,5 @@
 <script lang="ts">
-	// Month period stepper: prev/next arrows around a month + year picker. Controlled — the
-	// parent owns the value and applies changes via `onchange`. Shared by the Monthly and
-	// Calendar views.
+	// Month period stepper. Controlled: the parent owns the value and applies changes via `onchange`.
 	import Select from '$lib/forms/fields/Select.svelte';
 	import RangeNav from '$lib/nav/RangeNav.svelte';
 	import { monthName } from '$lib/utils/format';
@@ -44,9 +42,8 @@
 </RangeNav>
 
 <style>
-	/* The two pickers share whatever width the header has left, between a floor that still fits
-	   "September" and a ceiling that stops them sprawling on a wide header. Fixed widths overflowed a
-	   320px screen once the arrows and gaps were counted. */
+	/* Bug: fixed widths overflowed a narrow screen once the arrows and gaps were counted, so the two
+	   pickers share whatever width the header has left, between a floor and a ceiling. */
 	.selectors {
 		display: flex;
 		flex-wrap: wrap;

@@ -15,8 +15,7 @@
 	let confirming = $state(false);
 	let confirmEl = $state<HTMLButtonElement>();
 
-	// Move focus onto the confirm button as soon as the question appears, so a keyboard user lands on
-	// the decision instead of having to hunt for where the buttons went.
+	// Focus the confirm button as the question appears, so a keyboard user lands on the decision.
 	$effect(() => {
 		if (confirming) confirmEl?.focus();
 	});
@@ -29,8 +28,8 @@
 
 {#if confirming}
 	<div class="confirm">
-		<!-- role="status" so the question is spoken when it appears; without it, arming the confirm was
-		     silent and the buttons simply changed underneath a screen-reader user. -->
+		<!-- role="status": without it, arming the confirm was silent and the buttons simply changed
+		     underneath a screen-reader user. -->
 		<span class="confirm-q" role="status">{question}</span>
 		<button type="button" class="btn-danger" bind:this={confirmEl} onclick={ondelete}
 			>{confirmLabel}</button

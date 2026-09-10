@@ -1,7 +1,6 @@
 <script lang="ts">
-	// A page-level notice: loading, an error, or the standing "the local API isn't there" message.
-	// One component so the three can't drift on padding, tone or how they're announced — and so the
-	// dismissible one gets a drawn cross rather than a text glyph that never centres.
+	// A page-level notice — loading, an error, or a standing note — as one component so the three
+	// can't drift on padding, tone or how they're announced.
 	import type { Snippet } from 'svelte';
 	import Close from '$lib/icons/Close.svelte';
 
@@ -26,8 +25,7 @@
 </div>
 
 <style>
-	/* Chrome comes from the shared `.banner` in app.css; what's local is the row that makes room for
-	   the dismiss button. */
+	/* Chrome comes from the shared `.banner`; local rules only make room for the dismiss button. */
 	.banner {
 		display: flex;
 		align-items: flex-start;

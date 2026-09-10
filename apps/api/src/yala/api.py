@@ -7,11 +7,11 @@ from __future__ import annotations
 
 import datetime as dt
 import re
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from decimal import Decimal
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, NamedTuple
 
 from beancount.core import data
 from fastapi import FastAPI, HTTPException, Request
@@ -664,57 +664,216 @@ class NamedAccountIn(BaseModel):
 
 
 class AccountIn(NamedAccountIn):
-    """Open a spending category, bank account, or credit card."""
+    """Open an account of any kind. ``kind`` decides the prefix, the leaf rule, and what else is
+    written beside the ``open``; the four investment fields apply to ``kind="investment"`` alone."""
 
-    kind: Literal["category", "funding_credit", "funding_cash"]
+    kind: Literal["category", "funding_cash", "funding_credit", "investment"]
+    subtree: Literal["Taxable", "TaxAdvantaged"] | None = None
+    holds_shares: bool = True
+    employer: OptionalText = None
+    labels: list[str] = Field(default=[], max_length=MAX_LEGS)
 
 
-def _opened(account: str, meta: dict[str, str]) -> dict:
-    """The success body every open-account endpoint returns. It carries the resolved display name so
-    a form can confirm what the account will be called rather than reimplementing the naming
-    rule."""
-    return _ok(f"opened {account}", account=account, name=account_name(account, meta))
+# Sent with a non-investment kind, each of these is a mistake worth reporting rather than dropping:
+# the caller asked for something the account it named cannot have.
+_INVESTMENT_ONLY = ("subtree", "holds_shares", "employer", "labels")
+
+
+class _OpenPlan(NamedTuple):
+    """A resolved open request: the account, the meta to report back, and the writes it takes."""
+
+    account: str
+    meta: dict[str, str]
+    write: Callable[[FileLedgerSink], None]
+
+
+def _flat_plan(body: AccountIn) -> _OpenPlan:
+    account = f"{_ACCOUNT_PREFIX[body.kind]}{_valid_leaf(body.composed_leaf())}"
+    meta = body.naming_meta
+    return _OpenPlan(account, meta, lambda sink: sink.open_account(account, meta=meta))
+
+
+def _investment_plan(body: AccountIn) -> _OpenPlan:
+    """A share account holds any ticker and gets a 0.00 starting balance plus a paired
+    ``Equity:Adjustments`` account; a cash-only plan is USD-constrained and gets neither."""
+    account = f"{_INVEST_SUBTREE[body.subtree]}{_valid_leaf(body.composed_leaf(), nested=True)}"
+
+    meta = body.naming_meta
+    if body.employer:
+        meta["employer"] = _valid_leaf(body.employer, "employer")
+    labels = [_valid_leaf(label, "label") for label in body.labels]
+    if labels:
+        # One comma-joined meta value; the leaf rule already excludes commas from each label.
+        meta["labels"] = ",".join(labels)
+
+    def write(sink: FileLedgerSink) -> None:
+        currency = None if body.holds_shares else DEFAULT_CURRENCY
+        sink.open_account(account, currency=currency, meta=meta)
+        if body.holds_shares:
+            sink.assert_balance(account, "0.00")
+            sink.open_account(adjustment_account(account), currency=None)
+
+    return _OpenPlan(account, meta, write)
+
+
+def _open_plan(body: AccountIn) -> _OpenPlan:
+    if body.kind == "investment":
+        if body.subtree is None:
+            raise HTTPException(status_code=422, detail="subtree is required for an investment")
+        return _investment_plan(body)
+
+    for field in _INVESTMENT_ONLY:
+        if field in body.model_fields_set:
+            raise HTTPException(
+                status_code=422, detail=f"{field} applies only to an investment account"
+            )
+    return _flat_plan(body)
 
 
 @app.post("/api/account")
 def post_account(body: AccountIn) -> dict:
-    leaf = _valid_leaf(body.composed_leaf())
-    account = f"{_ACCOUNT_PREFIX[body.kind]}{leaf}"
-    meta = body.naming_meta
+    """Open an account. The response carries the resolved display name so a form can confirm what
+    the account will be called rather than reimplementing the naming rule."""
+    plan = _open_plan(body)
 
     with _api_errors():
-        _sink().open_account(account, meta=meta)
+        plan.write(_sink())
 
-    return _opened(account, meta)
+    return _ok(
+        f"opened {plan.account}",
+        account=plan.account,
+        name=account_name(plan.account, plan.meta),
+    )
+
+
+class DrainLeg(BaseModel):
+    destination: str
+    amount: Amount
 
 
 class AccountCloseIn(BaseModel):
+    """Close an account of any kind. Which of the optional fields apply is decided by the account's
+    tree, not by the caller: a category takes none, a money account a single ``destination``, an
+    investment a list of ``legs``."""
+
     account: str
+    destination: str | None = None
+    legs: list[DrainLeg] = Field(default=[], max_length=MAX_LEGS)
+    date: str | None = None
+
+
+def _reject_unused(body: AccountCloseIn, *fields: str) -> None:
+    for field in fields:
+        if getattr(body, field):
+            raise HTTPException(
+                status_code=422, detail=f"{field} does not apply to {body.account!r}"
+            )
+
+
+def _close_category(body: AccountCloseIn, account: str) -> tuple[str, Decimal]:
+    _reject_unused(body, "destination", "legs", "date")
+    _sink().close_account(account)
+    return f"closed {account}", Decimal(0)
+
+
+def _close_money(body: AccountCloseIn, account: str) -> tuple[str, Decimal]:
+    """Close a bank account or card, first moving any balance to ``destination`` if one is given."""
+    _reject_unused(body, "legs")
+    sink = _sink()
+    date = _parse_date(body.date)
+
+    if not body.destination:
+        # A bare close is not a write-off. Beancount accepts `close` whatever the account holds, and
+        # the account then drops out of the balance sheet carrying its value with it — an asset
+        # vanishes, a debt is forgiven, and no entry says where it went.
+        held = _ledger().balance(account, date)
+        if held != 0:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"{account} still holds {held}; give a destination to move it to before closing"
+                ),
+            )
+
+        # Close before clearing sweep_to, so a future-dated sweep fails cleanly.
+        sink.close_account(account, date)
+        if _ledger().account_meta().get(account, {}).get(SWEEP_META):
+            sink.set_account_meta(account, SWEEP_META, None)
+        return f"closed {account}", Decimal(0)
+
+    destination = _open_destination(_ledger(), body.destination, account)
+
+    # Retire any sweep first, so the balance reflects only real activity.
+    retire_passthrough(sink, account, date)
+
+    balance = _ledger().balance(account, date)
+    if balance != 0:
+        # A positive asset balance moves out; a negative one (liability) is paid in.
+        source, target = (account, destination) if balance > 0 else (destination, account)
+        sink.append_transfer(
+            date=date,
+            from_account=source,
+            to_account=target,
+            amount=abs(balance),
+            payee=f"close {leaf(account)}",
+        )
+
+    sink.close_account(account, date)
+    _reconcile_sweeps(date)
+    return f"drained and closed {account}", balance
+
+
+def _close_investment(body: AccountCloseIn, account: str) -> tuple[str, Decimal]:
+    """Value an investment account in USD, split it across the legs, then liquidate and close it.
+    The legs must sum to that value (both zero for an empty account)."""
+    _reject_unused(body, "destination")
+    date = _parse_date(body.date)
+
+    ledger = _ledger()
+    for leg in body.legs:
+        _open_destination(ledger, leg.destination, account)
+
+    value = ledger.value(account, date)
+    legs_total = round_cents(sum((_dec(leg.amount) for leg in body.legs), Decimal(0)))
+    if legs_total != value:
+        raise HTTPException(
+            status_code=422,
+            detail=f"legs must sum to the account's USD value {value}; got {legs_total}",
+        )
+
+    plug = adjustment_account(account)
+    plug = plug if ledger.is_open(plug) else None
+    _sink().close_investment(
+        account, date, [(leg.destination, _dec(leg.amount)) for leg in body.legs], plug
+    )
+    _reconcile_sweeps(date)
+    return f"retired {account}", value
+
+
+def _closer(account: str) -> Callable[[AccountCloseIn, str], tuple[str, Decimal]]:
+    if account.startswith(EXPENSES) and not account.startswith(DEDUCTIONS):
+        return _close_category
+    if account.startswith((CASH, LIABILITIES)):
+        return _close_money
+    if account.startswith(INVESTMENTS):
+        return _close_investment
+    raise HTTPException(status_code=422, detail=f"not a closeable account: {account!r}")
 
 
 @app.post("/api/account/close")
 def post_account_close(body: AccountCloseIn) -> dict:
-    """Close a spending category or bank/cash account; drain-close first if it carries a balance."""
+    """Close an account, dispatching on its tree. ``moved`` is what left it: zero for a plain close,
+    the drained balance for a money account, the USD value for an investment."""
     account = _valid_name(body.account)
-
-    is_category = account.startswith(EXPENSES) and not account.startswith(DEDUCTIONS)
-    is_bank = account.startswith(CASH)
-    if not (is_category or is_bank):
-        raise HTTPException(
-            status_code=422, detail=f"not a spending category or bank account: {account!r}"
-        )
+    close = _closer(account)
 
     with _api_errors():
-        sink = _sink()
-        # Close before clearing sweep_to, so a future-dated sweep fails cleanly.
-        sink.close_account(account)
-        if _ledger().account_meta().get(account, {}).get(SWEEP_META):
-            sink.set_account_meta(account, SWEEP_META, None)
+        message, moved = close(body, account)
 
-    return _ok(f"closed {account}", account=account)
+    return _ok(message, account=account, moved=float(moved))
 
 
-# --- passthrough sweep configuration + account retirement ---
+# --- passthrough sweep configuration ---
 
 
 class SweepIn(BaseModel):
@@ -749,80 +908,7 @@ def post_account_sweep(body: SweepIn) -> dict:
     return _ok(f"{account} now sweeps to {dest}", account=account, dest=dest)
 
 
-class DrainCloseIn(BaseModel):
-    account: str
-    destination: str
-    date: str | None = None
-
-
-@app.post("/api/account/drain-close")
-def post_account_drain_close(body: DrainCloseIn) -> dict:
-    """Move a balance-sheet account's balance to ``destination``, then close it at zero."""
-    account = _valid_money_account(body.account)
-    date = _parse_date(body.date)
-
-    with _api_errors():
-        sink = _sink()
-        destination = _open_destination(_ledger(), body.destination, account)
-
-        # Retire any sweep first, so the balance reflects only real activity.
-        retire_passthrough(sink, account, date)
-
-        bal = _ledger().balance(account, date)
-        if bal != 0:
-            # A positive asset balance moves out; a negative one (liability) is paid in.
-            from_account, to_account = (account, destination) if bal > 0 else (destination, account)
-            sink.append_transfer(
-                date=date,
-                from_account=from_account,
-                to_account=to_account,
-                amount=abs(bal),
-                payee=f"close {leaf(account)}",
-            )
-
-        sink.close_account(account, date)
-        _reconcile_sweeps(date)
-
-    return _ok(f"drained and closed {account}", account=account, drained=float(bal))
-
-
-# --- investment accounts ---
-
-
-class InvestmentIn(NamedAccountIn):
-    """Open an investment account. Named like any other; opened differently."""
-
-    subtree: Literal["Taxable", "TaxAdvantaged"]
-    holds_shares: bool = True  # True holds tickers; False is a cash-only plan
-    employer: OptionalText = None
-    labels: list[str] = Field(default=[], max_length=MAX_LEGS)
-
-
-@app.post("/api/investment")
-def post_investment(body: InvestmentIn) -> dict:
-    """Open an investment account. A share account can hold any ticker and gets a 0.00 starting
-    balance plus a paired Equity:Adjustments account; a cash-only plan gets neither."""
-    leaf = _valid_leaf(body.composed_leaf(), nested=True)
-    labels = [_valid_leaf(label, "label") for label in body.labels]
-
-    account = f"{_INVEST_SUBTREE[body.subtree]}{leaf}"
-    meta = body.naming_meta
-    if body.employer:
-        meta["employer"] = _valid_leaf(body.employer, "employer")
-    if labels:
-        # Comma-joined into one meta value; the leaf rule already excludes commas from each label.
-        meta["labels"] = ",".join(labels)
-
-    with _api_errors():
-        sink = _sink()
-        sink.open_account(
-            account, currency=None if body.holds_shares else DEFAULT_CURRENCY, meta=meta
-        )
-        if body.holds_shares:
-            sink.assert_balance(account, "0.00")
-            sink.open_account(adjustment_account(account), currency=None)
-
-    return _opened(account, meta)
+# --- investment holdings ---
 
 
 @app.get("/api/investment/value")
@@ -831,50 +917,6 @@ def get_account_value(account: str) -> dict:
     account = _valid_name(account)
     with _api_errors():
         return {"account": account, "value": float(_ledger().value(account))}
-
-
-class DrainLeg(BaseModel):
-    destination: str
-    amount: Amount
-
-
-class InvestmentCloseIn(BaseModel):
-    account: str
-    legs: list[DrainLeg] = Field(default=[], max_length=MAX_LEGS)
-    date: str | None = None
-
-
-@app.post("/api/investment/close")
-def post_investment_close(body: InvestmentCloseIn) -> dict:
-    """Value an investment account in USD, split it across the legs, then liquidate and close it.
-    The legs must sum to that value (both zero for an empty account)."""
-    account = _valid_name(body.account)
-    if not account.startswith(INVESTMENTS):
-        raise HTTPException(status_code=422, detail=f"not an investment account: {account!r}")
-
-    date = _parse_date(body.date)
-
-    with _api_errors():
-        ledger = _ledger()
-        for leg in body.legs:
-            _open_destination(ledger, leg.destination, account)
-
-        value = ledger.value(account, date)
-        legs_total = round_cents(sum((_dec(leg.amount) for leg in body.legs), Decimal(0)))
-        if legs_total != value:
-            raise HTTPException(
-                status_code=422,
-                detail=f"legs must sum to the account's USD value {value}; got {legs_total}",
-            )
-
-        plug = adjustment_account(account)
-        plug = plug if ledger.is_open(plug) else None
-        _sink().close_investment(
-            account, date, [(leg.destination, _dec(leg.amount)) for leg in body.legs], plug
-        )
-        _reconcile_sweeps(date)
-
-    return _ok(f"retired {account}", account=account, value=float(value))
 
 
 # --- net worth ---

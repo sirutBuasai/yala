@@ -37,19 +37,18 @@ describe('accountVar', () => {
 	});
 
 	it('colours by the declaration, not by the account name', () => {
-		// The paths deliberately say nothing about who holds them, and the colours are swapped
-		// relative to what a name-matching scheme would guess.
+		// The paths are deliberately misleading about who holds each account.
 		setAccountDirectory({
-			'Assets:Cash:CardishName': {
+			'Assets:Cash:CardB': {
 				name: 'Bank A',
 				institution: 'Bank of Example',
 				color: '#4a6f9e'
 			},
-			'Liabilities:CC:BankishName': { name: 'Card A', institution: 'Card Issuer', color: '#d94c4c' }
+			'Liabilities:CC:BankB': { name: 'Card A', institution: 'Card Issuer', color: '#d94c4c' }
 		});
 
-		expect(accountVar('Assets:Cash:CardishName')).toBe('#4a6f9e');
-		expect(accountVar('Liabilities:CC:BankishName')).toBe('#d94c4c');
+		expect(accountVar('Assets:Cash:CardB')).toBe('#4a6f9e');
+		expect(accountVar('Liabilities:CC:BankB')).toBe('#d94c4c');
 	});
 
 	it('colours two accounts at one institution as one family', () => {
@@ -63,9 +62,9 @@ describe('accountVar', () => {
 
 	it('falls back to the neutral swatch when no colour was declared', () => {
 		setAccountDirectory({
-			// An employer — not held anywhere, so it has no institution and no colour.
+			// An employer is not held anywhere, so it has no institution and no colour.
 			'Income:Salary:Employer1': { name: 'Employer 1' },
-			// An institution with no directive in the ledger yet.
+			// An institution with no colour declared in the ledger yet.
 			'Assets:Cash:BankB': { name: 'Bank B', institution: 'Second Example Bank' }
 		});
 
@@ -82,7 +81,6 @@ describe('theme toggle', () => {
 	});
 
 	it('setTheme writes the attribute and the store (persistence is best-effort)', () => {
-		// localStorage is absent in this jsdom setup; setTheme tolerates that by design.
 		setTheme('light');
 		expect(document.documentElement.getAttribute('data-theme')).toBe('light');
 		expect(get(theme)).toBe('light');

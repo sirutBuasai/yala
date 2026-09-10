@@ -1,11 +1,9 @@
-// ARIA APG tablist keyboard model, shared by every roving-tabindex group (the top-level view
-// tabs, the segmented range switches). Arrows move selection AND focus; Home/End jump to the ends.
-// Anything else is left alone so typing still reaches the page.
+// ARIA APG tablist keyboard model, shared by every roving-tabindex group. Anything the model does
+// not own is left alone, so typing still reaches the page.
 
 /**
- * Handle a tablist keydown. Returns the newly selected index, or null when the key wasn't one we
- * own. `select` is called with that index, then focus is moved to the matching `[role="tab"]`
- * inside the event's current target — keeping selection and focus in step, as the APG requires.
+ * Returns the newly selected index, or null when the key isn't one we own. Focus moves to the
+ * matching `[role="tab"]` inside the event's current target, keeping selection and focus in step.
  */
 export function tablistKeydown(
 	e: KeyboardEvent,

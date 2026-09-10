@@ -1,12 +1,9 @@
-// Pending (unreconciled) transactions as row items, shared by the Home hub (all months) and the
-// month-scoped Activity / Monthly views (pass a monthKey).
-
 import type { DashboardData } from '$lib/data/types';
 import type { TxnRow } from '$lib/lists/TransactionList.svelte';
 
 /**
- * Pending transactions as `TxnRow`s, newest first. Scope to one month with `monthKey` ("YYYY-MM"),
- * or omit for all months.
+ * Pending (unreconciled) transactions as `TxnRow`s, newest first. Scope to one month with `monthKey`
+ * ("YYYY-MM"), or omit for all months.
  */
 export function pendingRows(data: DashboardData, monthKey?: string): TxnRow[] {
 	const pages = monthKey

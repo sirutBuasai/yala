@@ -1,10 +1,7 @@
 <script lang="ts">
-	// Several related figures as one card of divided cells, instead of one card each.
-	//
-	// Use it when the numbers form a single chain or set — gross → deductions → contributions → net
-	// is one arithmetic story, so four separate tiles both waste a row of vertical space and hide
-	// the relationship. Cells are built from catalog ids exactly like Board's, so adding a figure is
-	// a one-line change and the labels/units stay owned by the data layer.
+	// Several related figures as one card of divided cells rather than one card each — for numbers that
+	// form a single chain or set, where separate tiles would waste a row of height and hide the
+	// relationship. Cells are catalog ids, so labels and units stay owned by the data layer.
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
 	import { build } from '$lib/data/catalog';
@@ -89,8 +86,8 @@
 	dd.down {
 		color: var(--crit-text);
 	}
-	/* The footnote sits inside the <dd> so it stays glued to its value, but resets the display
-	   font so it reads as body copy. */
+	/* Inside the <dd> so it stays glued to its value, but resetting the display font so it reads as
+	   body copy. */
 	.sub {
 		display: block;
 		color: var(--ink-3);

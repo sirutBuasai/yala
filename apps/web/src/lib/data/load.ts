@@ -1,12 +1,9 @@
 // Data loading, liveness, and the schema-version guard.
 //
-// ONE read path, tried in order: the local API, else the static `data.json` the builder wrote.
-// There is no view-only mode and no edit toggle — whether the API answered is a FACT about the
-// environment, not a mode the user chooses, so it is reported (`live`) rather than switched.
-//
-// Both sources carry the same account lists (the API serves them, the builder snapshots them from
-// the same function), so every form and every Manage panel renders either way. What differs is
-// whether a write can land, and that is answered in exactly one place: `postJson`.
+// ONE read path, tried in order: the local API, else the static `data.json` the builder wrote. Both
+// carry the same account lists, so every form renders either way; whether a write can land is
+// answered in exactly one place (`postJson`). Liveness is a FACT about the environment, reported as
+// `live` rather than offered as a mode to switch.
 
 import { get, writable } from 'svelte/store';
 import { asset } from '$app/paths';
@@ -72,11 +69,9 @@ export interface PostResult<T> {
 	status: number;
 }
 
-/**
- * A readable error message from a failed API response. The API flattens validation failures into a
- * string `detail`, but FastAPI's own default handler returns a list of error objects, which must not
- * surface as "[object Object]".
- */
+/** A readable error message from a failed response. FastAPI's own default handler returns a list of
+    error objects rather than our flattened string `detail`, and that must not surface as
+    "[object Object]". */
 function errorMessage(data: { detail?: unknown }, status: number): string {
 	const d = data.detail;
 	if (typeof d === 'string' && d) return d;
@@ -107,16 +102,13 @@ export async function getJson<T = Record<string, unknown>>(url: string): Promise
 	}
 }
 
-/** POST a JSON body and parse the response, normalizing errors into a `PostResult`. Every write is
- *  a POST to a verb-suffixed path, so there is no method to choose. */
+/** POST a JSON body and parse the response, normalizing errors into a `PostResult`. */
 export async function postJson<T = Record<string, unknown>>(
 	url: string,
 	body: unknown
 ): Promise<PostResult<T>> {
-	// THE write guard, and the only one. Every mutation in the app is a POST through here, so one
-	// check answers for all of them — before any request goes out, and without each caller having to
-	// remember to ask. `status: 0` is the same shape a network failure produces, so callers need no
-	// new branch either.
+	// THE write guard, and the only one: every mutation is a POST through here. `status: 0` is the
+	// same shape a network failure produces, so callers need no new branch.
 	if (!get(live)) {
 		return { ok: false, data: {} as T, error: API_UNAVAILABLE, status: 0 };
 	}
@@ -129,8 +121,7 @@ export async function postJson<T = Record<string, unknown>>(
 		});
 		const data = (await res.json().catch(() => ({}))) as T & { detail?: unknown };
 
-		// Every write can move a derived balance, so the read cache is dropped here rather than in
-		// each caller.
+		// Every write can move a derived balance, so the cache is dropped here, not in each caller.
 		if (res.ok) invalidateDerivedCache();
 
 		return res.ok
@@ -146,11 +137,8 @@ export async function postJson<T = Record<string, unknown>>(
 	}
 }
 
-/**
- * Cache for reads the ledger derives rather than stores. `/api/networth` is fetched twice per
- * month on Home (this month's snapshot date and the previous one) and again on every month step, so
- * paging back and forth otherwise re-walks the ledger for figures that cannot have changed.
- */
+/** Cache for reads the ledger derives rather than stores: paging months back and forth otherwise
+    re-walks the ledger for figures that cannot have changed. */
 const derivedCache = new Map<string, unknown>();
 
 /** Drop every cached derived read. Called from the write path; exported for tests. */
@@ -169,10 +157,9 @@ function publish(doc: DashboardData, fromApi: boolean, lists: AccountsInfo | nul
 /**
  * Load the dashboard: the local API first, the built snapshot second.
  *
- * Tried in that order rather than offered as a choice. A previous version persisted which one the
- * user had "chosen", which made a transient failure permanent — load the page while the API is
- * restarting, fall back, and every later load took the "they chose the snapshot" branch and never
- * retried. Liveness is re-established on every load instead.
+ * Liveness is re-established on every load, never remembered. Persisting which source the user "had
+ * chosen" made a transient failure permanent: fall back once while the API restarts and no later
+ * load ever retried it.
  */
 export async function loadData(): Promise<void> {
 	loadState.set({ status: 'loading' });
@@ -221,18 +208,13 @@ export async function refreshData(): Promise<void> {
 	}
 }
 
-/**
- * Delete a ledger entry (transaction or paycheck) by locator. Resolves to an
- * error message on failure, or null on success.
- */
+/** Delete a ledger entry by locator. Resolves to an error message, or null on success. */
 export async function deleteTransaction(locator: string): Promise<string | null> {
 	return (await postJson('/api/entry/delete', { locator })).error;
 }
 
-/**
- * Re-pull the document and then the account lists, in that order. The lists are what put a new row on
- * screen, so refreshing them first would flash its raw leaf before the directory knew its name.
- */
+/** Re-pull the document and then the account lists, in that order: the lists put a new row on
+    screen, so refreshing them first would flash its raw leaf before the directory knew its name. */
 async function refreshAccounts(): Promise<void> {
 	await refreshData();
 	if (!get(live)) return;
@@ -245,13 +227,12 @@ async function refreshAccounts(): Promise<void> {
 }
 
 /** A kind of account the API can open on demand (the leaf is appended under the kind's prefix). */
-export type CreatableAccountKind =
-	'category' | 'deduction' | 'contribution' | 'funding_credit' | 'funding_cash';
+export type CreatableAccountKind = 'category' | 'funding_cash' | 'funding_credit' | 'investment';
 
 /**
- * How an account is to be named: either a `leaf` written directly, or the descriptive form the Manage
- * panels use — institution and account name as a person writes them, which the API joins into the
- * leaf. The aliases are short forms, used only when the rendered name overruns the display budget.
+ * How an account is to be named: either a `leaf` written directly, or the descriptive form — the
+ * institution and account name as a person writes them, which the API joins into the leaf. The
+ * aliases are short forms, used only when the rendered name overruns the display budget.
  */
 export interface AccountNaming {
 	leaf?: string;
@@ -269,46 +250,39 @@ export interface OpenedAccount {
 	error: string | null;
 }
 
+/** The fields only an investment account has; the API rejects them on any other kind. */
+export interface InvestmentFields {
+	subtree?: 'Taxable' | 'TaxAdvantaged';
+	holds_shares?: boolean;
+	employer?: string | null;
+	labels?: string[];
+}
+
 /**
- * Open a new ledger account (spending category or funding account) and refresh the account lists
- * so the new one appears everywhere. A bare string is shorthand for `{ leaf }`.
+ * Open a ledger account of any kind and refresh the account lists so the new one appears
+ * everywhere. A bare string names it by `leaf`; `extra` carries the investment-only fields.
  */
-export async function addAccount(
+export async function openAccount(
 	kind: CreatableAccountKind,
-	naming: string | AccountNaming
+	naming: string | AccountNaming,
+	extra: InvestmentFields = {}
 ): Promise<OpenedAccount> {
 	const body = typeof naming === 'string' ? { leaf: naming } : naming;
 	const { ok, data, error } = await postJson<{ account?: string; name?: string }>('/api/account', {
 		kind,
-		...body
+		...body,
+		...extra
 	});
 	if (!ok) return { account: null, name: null, error: error ?? 'add failed' };
 	await refreshAccounts();
 	return { account: data.account ?? null, name: data.name ?? null, error: null };
 }
 
-/** Close an account by full name and refresh the lists. Returns an error message, or null. */
-export async function closeAccount(account: string): Promise<string | null> {
-	const { ok, error } = await postJson('/api/account/close', { account });
+/** POST, refresh the account lists on success, and reduce the result to an error message or null. */
+async function writeAccounts(url: string, body: unknown, fallback: string): Promise<string | null> {
+	const { ok, error } = await postJson(url, body);
 	if (ok) await refreshAccounts();
-	return ok ? null : (error ?? 'close failed');
-}
-
-/** Set `account`'s sweep destination (or clear it when `dest` is null); returns an error, or null. */
-export async function setSweep(account: string, dest: string | null): Promise<string | null> {
-	const { ok, error } = await postJson('/api/account/sweep', { account, dest });
-	if (ok) await refreshAccounts();
-	return ok ? null : (error ?? 'sweep update failed');
-}
-
-/** Move an account's balance to `destination`, then close it; returns an error, or null. */
-export async function drainCloseAccount(
-	account: string,
-	destination: string
-): Promise<string | null> {
-	const { ok, error } = await postJson('/api/account/drain-close', { account, destination });
-	if (ok) await refreshAccounts();
-	return ok ? null : (error ?? 'drain-close failed');
+	return ok ? null : (error ?? fallback);
 }
 
 /** A destination + USD amount leg of an investment retirement split. */
@@ -317,22 +291,25 @@ export interface DrainLeg {
 	amount: number;
 }
 
-/** Open an investment account (Taxable or TaxAdvantaged), then refresh the lists; returns an error, or null. */
-export async function addInvestment(
-	body: {
-		subtree: 'Taxable' | 'TaxAdvantaged';
-		holds_shares: boolean;
-		employer?: string | null;
-		labels?: string[];
-	} & AccountNaming
-): Promise<OpenedAccount> {
-	const { ok, data, error } = await postJson<{ account?: string; name?: string }>(
-		'/api/investment',
-		body
-	);
-	if (!ok) return { account: null, name: null, error: error ?? 'add failed' };
-	await refreshAccounts();
-	return { account: data.account ?? null, name: data.name ?? null, error: null };
+/** What a close takes beyond the account, decided by the account itself: a money account may drain
+    to a `destination`, an investment splits its value across `legs`, and either may be dated. */
+export interface CloseOptions {
+	destination?: string;
+	legs?: DrainLeg[];
+	date?: string;
+}
+
+/** Close an account and refresh the lists. Returns an error message, or null. */
+export async function closeAccount(
+	account: string,
+	opts: CloseOptions = {}
+): Promise<string | null> {
+	return writeAccounts('/api/account/close', { account, ...opts }, 'close failed');
+}
+
+/** Set `account`'s sweep destination (or clear it when `dest` is null); returns an error, or null. */
+export async function setSweep(account: string, dest: string | null): Promise<string | null> {
+	return writeAccounts('/api/account/sweep', { account, dest }, 'sweep update failed');
 }
 
 /** Current USD value of an account's holdings (for prefilling the retirement split). */
@@ -345,17 +322,8 @@ export async function investmentValue(
 	return ok ? { value: data.value ?? 0, error: null } : { value: null, error: error ?? 'failed' };
 }
 
-/** Split an investment account's USD value across `legs`, then close it; returns an error, or null. */
-export async function closeInvestment(account: string, legs: DrainLeg[]): Promise<string | null> {
-	const { ok, error } = await postJson('/api/investment/close', { account, legs });
-	if (ok) await refreshAccounts();
-	return ok ? null : (error ?? 'retire failed');
-}
-
-/**
- * Log a USD balance snapshot for a cash or investment account (pad + balance). Share lots are
- * reclassified to USD first. Returns an error message, or null on success.
- */
+/** Log a USD balance snapshot for a cash or investment account (pad + balance); share lots are
+    reclassified to USD first. */
 export async function logBalance(
 	account: string,
 	amount: number,
@@ -371,10 +339,8 @@ export async function logBalance(
 		: { locator: null, error: error ?? 'log failed' };
 }
 
-/**
- * Edit an existing balance snapshot in place, addressed by its locator. Returns the (possibly
- * upgraded) locator — editing a migrated assertion stamps an id on it, replacing its line handle.
- */
+/** Edit a balance snapshot in place. Returns the (possibly upgraded) locator: editing a migrated
+    assertion stamps an id on it, replacing its line handle. */
 export async function updateBalance(
 	locator: string,
 	amount: number
@@ -419,14 +385,11 @@ export interface SettingsInfo {
 }
 
 /**
- * The settings the snapshot carries, in the same shape the API serves, so the form cannot tell the
- * two apart.
+ * The settings the snapshot carries, in the shape the API serves.
  *
- * The re-keying is the whole reason this needs a function. A setting's real key is hyphenated
- * (`real-return`) because that is how it reads as a word in the ledger, and that is what the specs
- * and the write endpoint use — but a hyphen is not a legal field name, so the CONTRACT spells the
- * same keys with underscores. Reading `settings` straight through therefore populates only `swr`, the
- * one key with no hyphen in it, and every other field silently renders blank.
+ * The re-keying is the whole reason this needs a function: a setting's real key is hyphenated, but a
+ * hyphen is not a legal field name, so the CONTRACT spells the same keys with underscores. Reading
+ * `settings` straight through populates only the keys with no hyphen and silently blanks the rest.
  */
 function snapshotSettings(): SettingsInfo | null {
 	const doc = get(data);
@@ -440,16 +403,12 @@ function snapshotSettings(): SettingsInfo | null {
 	return { values, specs: doc.setting_specs };
 }
 
-/**
- * Effective settings plus their specs. Reports *why* it failed rather than just null, because the
- * remaining reasons need different actions: a 404 from a live API means the running API predates
- * this page and needs a restart; anything else is the API's own words.
- */
+/** Effective settings plus their specs. Reports *why* it failed, because the reasons need different
+    actions: a 404 from a live API means the running API predates this page and needs a restart. */
 export async function getSettings(): Promise<{ info: SettingsInfo | null; error: string | null }> {
-	// No API: read the snapshot's own copy, so the form renders and reads correctly. Same rule as
-	// every other form — everything renders, and only the WRITE is refused (by the one guard in
-	// `postJson`). Checked first, because a static host answers 404 for every path and that would
-	// otherwise read as a stale API and tell the user to restart something that isn't running.
+	// No API: read the snapshot's own copy, so the form still renders and only the WRITE is refused.
+	// Checked first, because a static host answers 404 for every path, which would otherwise read as
+	// a stale API and tell the user to restart something that isn't running.
 	if (!get(live)) {
 		const info = snapshotSettings();
 		return info

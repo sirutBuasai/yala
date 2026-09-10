@@ -4,8 +4,8 @@
 </script>
 
 <script lang="ts">
-	// On-brand replacement for <input type="date">: a Popup-hosted calendar. Value is an ISO
-	// "YYYY-MM-DD" string (empty = unset). Keyboard: arrows move the day, Enter selects, Esc closes.
+	// On-brand replacement for <input type="date">: a Popup-hosted calendar. Keyboard: arrows move
+	// the day, Enter selects, Esc closes.
 	import { untrack } from 'svelte';
 	import { MONTHS } from '$lib/utils/format';
 	import Popup from '$lib/overlay/Popup.svelte';

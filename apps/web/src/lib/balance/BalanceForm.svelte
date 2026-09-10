@@ -1,6 +1,6 @@
 <script lang="ts">
-	// Log a USD balance snapshot for a cash or investment account (POST /api/balance): a pad + balance
-	// pair routing the untracked delta to the account's Equity:Adjustments plug.
+	// A balance snapshot posts a pad + balance pair, routing the untracked delta to the account's
+	// Equity:Adjustments plug.
 	import type { AccountsInfo } from '$lib/data/load';
 	import { logBalance } from '$lib/data/load';
 	import { formatAccount, money } from '$lib/utils/format';
@@ -13,9 +13,7 @@
 
 	interface Props {
 		accounts: AccountsInfo;
-		/** Add mode only: pre-fill the date field. */
 		presetDate?: string;
-		/** Called after a successful log. */
 		onsaved: () => void;
 	}
 	let { accounts, presetDate, onsaved }: Props = $props();

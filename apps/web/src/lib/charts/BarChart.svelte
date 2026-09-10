@@ -1,7 +1,6 @@
 <script lang="ts">
-	// One bar chart for 1..n series. A single series renders as plain columns (with value
-	// labels); two or more render as grouped bars (with a legend). The user picks "Bar" and
-	// adds one or more data — they never choose between "column" and "grouped bars".
+	// One bar chart for 1..n series: a single series renders as plain columns with value labels, two
+	// or more as grouped bars with a legend. Callers pick "Bar", never "column" vs "grouped bars".
 	import { scaleBand } from 'd3-scale';
 	import { moneyYScale, plotSize } from '$lib/charts/axis';
 	import { money, moneyK, esc } from '$lib/utils/format';
@@ -21,8 +20,8 @@
 
 	const single = $derived(series.length <= 1);
 
-	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also
-	// bounds how tall the chart may grow inside a stretched pane.
+	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also bounds
+	// how tall the chart may grow inside a stretched pane.
 	let boxW = $state(0);
 	let boxH = $state(0);
 	const W = $derived(boxW || 1100);
@@ -45,7 +44,7 @@
 	const ticks = $derived(axis.ticks);
 	const base = $derived(y(0));
 
-	// A name for the chart, since an unlabelled role="img" announces only "image".
+	// An unlabelled role="img" announces only "image".
 	const label = $derived(
 		`Bar chart: ${series.map((sr) => sr.name).join(', ')} across ${labels.length} periods`
 	);

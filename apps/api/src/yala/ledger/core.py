@@ -1,9 +1,7 @@
-"""Core ledger access: load the beancount file once and expose shared, domain-agnostic primitives.
+"""Core ledger access: load the beancount file once and expose domain-agnostic primitives.
 
-:class:`Ledger` is the single object the backend uses to reach beancount data; domain-specific
-queries live in their own modules and hang off it as uniform namespaces. Aggregation is plain
-Python over the loaded directives, though domains needing cost-basis/price semantics
-(investments, net worth) may use beanquery behind the same interface.
+Domain-specific queries live in their own modules and hang off :class:`Ledger` as uniform
+namespaces.
 """
 
 from __future__ import annotations
@@ -88,9 +86,8 @@ class Ledger:
     def _all_transactions(self) -> list[Transaction]:
         """Convert every directive to a :class:`Transaction` once and cache it.
 
-        The conversion (and sort) is the expensive part; domain queries call
-        :meth:`transactions` dozens of times per build, so building it once and filtering the
-        cached list keeps that from being O(entries × queries)."""
+        Domain queries call :meth:`transactions` dozens of times per build, so the conversion and
+        sort are done once to keep that off the O(entries × queries) path."""
         if self._txn_cache is not None:
             return self._txn_cache
 
@@ -122,7 +119,6 @@ class Ledger:
         return out
 
     def transactions(self, year: int | None = None, month: int | None = None) -> list[Transaction]:
-        """All transaction views, optionally filtered by year/month. Domain-agnostic."""
         txns = self._all_transactions()
 
         if year is None and month is None:
@@ -181,7 +177,7 @@ class Ledger:
         return round_cents(total)
 
     def declared_accounts(self, prefix: str | None = None) -> list[str]:
-        """Ledger account names, optionally filtered by prefix (e.g. ``'Expenses:'``)."""
+        """Every opened account name, whether or not it was later closed."""
 
         self._require()
 
@@ -208,7 +204,6 @@ class Ledger:
         return sorted(a for a in active if prefix is None or a.startswith(prefix))
 
     def is_open(self, account: str) -> bool:
-        """Whether ``account`` is opened without a later close as of today."""
         return account in self.active_accounts()
 
     def account_meta(self) -> dict[str, dict]:
@@ -224,7 +219,7 @@ class Ledger:
 
         return self._meta_cache
 
-    # --- domain query namespaces (uniform shape: Domain(ledger)) ---
+    # --- domain query namespaces ---
 
     @property
     def spending(self) -> "Spending":

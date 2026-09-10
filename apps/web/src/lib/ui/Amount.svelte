@@ -1,10 +1,7 @@
 <script lang="ts">
-	// A money figure. Trivial-looking, and that is exactly why it was copied into every list, pane and
-	// table with slightly different rules each time — some right-aligned, some not; some tabular, some
-	// not; some colouring a negative, some silently showing a refund in the same ink as a charge.
-	//
-	// `sign` is the interesting prop: money out and money in are the same number with opposite
-	// meaning, and which one is "good" depends on the column, not on the sign. So the caller says.
+	// The one money figure. `sign` is the interesting prop: money out and money in are the same
+	// number with opposite meaning, and which reads as "good" depends on the column, so the caller
+	// says which.
 	import { money } from '$lib/utils/format';
 
 	interface Props {

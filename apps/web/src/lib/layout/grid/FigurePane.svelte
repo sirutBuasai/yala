@@ -1,7 +1,7 @@
 <script lang="ts">
-	// A pane whose contents are a catalog figure. The data→visual coupling stays in the registry (see
-	// `Figure`) and the placement stays in the board's pane table; this only joins the two, so a view
-	// adds a chart by adding one entry to that table rather than by importing a chart.
+	// A pane whose contents are a catalog figure. The data→visual coupling stays in the registry and the
+	// placement stays in the board's pane table; this only joins the two, so a view adds a chart by
+	// adding one entry to that table.
 	import type { DashboardData } from '$lib/data/types';
 	import type { FigureSpec } from './figure';
 	import { build } from '$lib/data/catalog';

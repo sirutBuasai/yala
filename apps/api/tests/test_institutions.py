@@ -22,28 +22,28 @@ def directive(*values: object, date: str = "2026-01-01", kind: str = INSTITUTION
 class TestColors:
     def test_reads_one_colour_per_institution(self) -> None:
         entries = [
-            directive("Bank of Example", "#f7768e"),
-            directive("Example Brokerage", "#9ece6a"),
+            directive("BankA", "#f7768e"),
+            directive("BrokerageA", "#9ece6a"),
         ]
 
-        assert colors(entries) == {"Bank of Example": "#f7768e", "Example Brokerage": "#9ece6a"}
+        assert colors(entries) == {"BankA": "#f7768e", "BrokerageA": "#9ece6a"}
 
     def test_later_directive_supersedes(self) -> None:
         """Recolouring leaves the old choice in the file as history rather than rewriting it."""
         entries = [
-            directive("Bank of Example", "#f7768e", date="2026-01-01"),
-            directive("Bank of Example", "#d94c4c", date="2026-06-01"),
+            directive("BankA", "#f7768e", date="2026-01-01"),
+            directive("BankA", "#d94c4c", date="2026-06-01"),
         ]
 
-        assert colors(entries) == {"Bank of Example": "#d94c4c"}
+        assert colors(entries) == {"BankA": "#d94c4c"}
 
     def test_ignores_other_custom_types(self) -> None:
         entries = [
             directive("swr", 4.0, kind="yala-setting"),
-            directive("Bank of Example", "#7dcfff"),
+            directive("BankA", "#7dcfff"),
         ]
 
-        assert colors(entries) == {"Bank of Example": "#7dcfff"}
+        assert colors(entries) == {"BankA": "#7dcfff"}
 
     def test_ignores_non_custom_entries(self) -> None:
         opened = data.Open(
@@ -57,20 +57,20 @@ class TestColors:
         assert colors([opened]) == {}
 
     def test_skips_malformed_entries_rather_than_raising(self) -> None:
-        """The ledger is hand-editable, so one bad line must not blank every dot in the app."""
+        """The ledger is hand-editable, so one bad line must not blank every colour."""
         entries = [
-            directive("Bank of Example"),  # missing the swatch
-            directive("Bank of Example", "#7dcfff", "extra"),  # too many values
+            directive("BankA"),  # missing the swatch
+            directive("BankA", "#7dcfff", "extra"),  # too many values
             directive("", "#7dcfff"),  # no institution
-            directive("Second Example Bank", 42),  # not a string
-            directive("Third Example Bank", "#9ece6a"),  # the only good one
+            directive("BankB", 42),  # not a string
+            directive("BankC", "#9ece6a"),  # the only good one
         ]
 
-        assert colors(entries) == {"Third Example Bank": "#9ece6a"}
+        assert colors(entries) == {"BankC": "#9ece6a"}
 
     def test_accepts_only_hex_literals(self) -> None:
-        """The value reaches a stylesheet, so a colour NAME is not accepted even though CSS would
-        understand it — anything but a hex is dropped and the account falls back to the neutral."""
+        """The value reaches a stylesheet, so anything but a hex literal is dropped — including a
+        colour name CSS would understand."""
         entries = [
             directive("A", "#F7768E"),  # normalized to lowercase
             directive("B", "#abc"),  # shorthand is expanded

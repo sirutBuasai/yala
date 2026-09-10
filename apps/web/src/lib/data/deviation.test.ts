@@ -7,7 +7,6 @@ import { makeData } from '$lib/data/__fixtures__/dashboard';
 describe('categoryDeviation', () => {
 	it('signs each category against the average of the prior months', () => {
 		const data = makeData();
-		// 2024-12: Grocery 70 / Takeouts 50. 2025-01: Grocery 30 / Takeouts 15.5.
 		const p = categoryDeviation(data, '2025-01');
 
 		const by = Object.fromEntries(p.points.map((pt) => [pt.key, pt.value]));
@@ -47,7 +46,6 @@ describe('categorySpendByYear', () => {
 
 		expect(p.labels).toEqual(['2024', '2025']);
 		expect(p.series.map((s) => s.name)).toEqual(['Grocery', 'Takeouts']);
-		// Grocery: 70 in 2024, 30 in 2025.
 		expect(p.series[0]!.points.map((pt) => pt.value)).toEqual([70, 30]);
 		expect(p.series[1]!.points.map((pt) => pt.value)).toEqual([50, 15.5]);
 	});
@@ -63,7 +61,7 @@ describe('categorySpendByYear', () => {
 
 describe('vsTypical', () => {
 	it('measures a month against the average of the months before it', () => {
-		// Only 2024-12 precedes 2025-01, so the norm is that month's 120 spend.
+		// Only one month precedes this one, so the norm is that month's spend.
 		const s = vsTypical(makeData(), '2025-01', 'spending');
 		expect(s.value).toBeCloseTo(45.5 - 120);
 	});

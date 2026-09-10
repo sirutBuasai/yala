@@ -1,7 +1,4 @@
-// The calendar's arithmetic, with no Svelte and no DOM in sight — which is the point: laying a month
-// out onto week rows and deciding which day a keypress lands on are the two things here most likely
-// to be wrong at a month boundary, and both are far easier to trust as pure functions with tests
-// than as expressions buried in a component.
+// The calendar's arithmetic as pure functions, so the month-boundary cases stay testable.
 
 import type { DashboardData } from '$lib/data/types';
 
@@ -11,42 +8,39 @@ export const dayOf = (date: string): number => +date.slice(8, 10);
 /** Everything one day cell needs to render itself, precomputed once per month. */
 export interface DayCell {
 	day: number;
-	/** ISO date, so a caller can preset a form without re-deriving it. */
 	iso: string;
 	txns: DashboardData['months'][string]['transactions'];
 	pays: DashboardData['months'][string]['paychecks'];
 	xfers: NonNullable<DashboardData['months'][string]['transfers']>;
 	spent: number;
 	income: number;
-	/** Up to three category names, busiest first — the cell's colour dots. */
+	/** The cell's colour dots, busiest category first, capped at `MAX_DOTS`. */
 	cats: string[];
 	/** There were more categories than the dots show. */
 	more: boolean;
 	pending: boolean;
 }
 
-/** One week of the grid: seven slots (null either end of the month) and the week's spend. */
+/** One week of the grid: seven slots, null where a slot falls outside the month. */
 export interface WeekRow {
 	cells: (DayCell | null)[];
 	total: number;
 }
 
-/** How many category dots a cell shows before collapsing the rest into a "+". */
 const MAX_DOTS = 3;
 
-/** The weekday index (0 = Sunday) that the 1st of a "YYYY-MM" falls on. */
+/** Weekday index (0 = Sunday) of the 1st of a "YYYY-MM". */
 export function firstWeekdayOf(monthKey: string): number {
 	const [y, m] = monthKey.split('-').map(Number);
 	return new Date(y ?? 1970, (m ?? 1) - 1, 1).getDay();
 }
 
-/** How many days a "YYYY-MM" has. Day 0 of the NEXT month is the last day of this one. */
+/** Day 0 of the NEXT month is the last day of this one. */
 export function daysInMonthOf(monthKey: string): number {
 	const [y, m] = monthKey.split('-').map(Number);
 	return new Date(y ?? 1970, m ?? 1, 0).getDate();
 }
 
-/** Build every day cell for a month, in order. */
 export function dayCells(data: DashboardData, monthKey: string): DayCell[] {
 	const md = data.months[monthKey];
 	const out: DayCell[] = [];
@@ -57,7 +51,7 @@ export function dayCells(data: DashboardData, monthKey: string): DayCell[] {
 		const pays = (md?.paychecks ?? []).filter((p) => dayOf(p.date) === d);
 		const xfers = (md?.transfers ?? []).filter((t) => dayOf(t.date) === d);
 
-		// Dots are ranked by spend, not by first appearance, so the biggest category is always shown.
+		// Ranked by spend, not by first appearance, so the biggest category is always shown.
 		const catTotals = new Map<string, number>();
 		for (const t of txns) catTotals.set(t.category, (catTotals.get(t.category) ?? 0) + t.amount);
 		const ranked = [...catTotals.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
@@ -79,11 +73,7 @@ export function dayCells(data: DashboardData, monthKey: string): DayCell[] {
 	return out;
 }
 
-/**
- * Lay the cells out a week at a time, padding both ends with blanks so every row has seven slots.
- * Rows carry their own spend total, which is what lets the gutter beside the grid read as a small
- * bar chart of the month.
- */
+/** Lay the cells out a week at a time, padding both ends with blanks so every row has seven slots. */
 export function weekRows(cells: DayCell[], firstWeekday: number): WeekRow[] {
 	const slots: (DayCell | null)[] = [...Array(firstWeekday).fill(null), ...cells];
 	while (slots.length % 7) slots.push(null);
@@ -96,7 +86,7 @@ export function weekRows(cells: DayCell[], firstWeekday: number): WeekRow[] {
 	return out;
 }
 
-/** The last day of the month with anything logged on it — the day you'd be logging against. */
+/** The last day of the month with anything logged on it, or 0 for an empty month. */
 export function latestActivityDay(cells: DayCell[]): number {
 	let last = 0;
 	for (const c of cells) if (c.txns.length || c.pays.length || c.xfers.length) last = c.day;
@@ -104,12 +94,9 @@ export function latestActivityDay(cells: DayCell[]): number {
 }
 
 /**
- * Where a grid keypress moves to, or null when the key isn't one the grid owns.
- *
- * Arrows step a day or a week; Home and End go to the ends of the WEEK, the way a spreadsheet grid
- * behaves — the month's own ends are one more keypress away, and crossing months belongs to the
- * header's stepper. Movement clamps at the month's edges instead of wrapping, because wrapping from
- * the 31st to the 1st looks like the month changed when it didn't.
+ * Where a grid keypress moves to, or null when the key isn't one the grid owns. Home and End go to
+ * the ends of the WEEK, as a spreadsheet grid does; crossing months belongs to the header's stepper,
+ * so movement clamps at the month's edges rather than wrapping.
  */
 export function dayForKey(
 	key: string,

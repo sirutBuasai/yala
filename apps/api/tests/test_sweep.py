@@ -16,10 +16,10 @@ from yala.ledger.sweep import sweep_payee
 
 FIXTURE_LEDGER = Path(__file__).parent / "fixtures" / "ledger"
 
-# The fixture ledger's sweep pair: a passthrough kept near-zero, draining to its destination.
+# The fixture ledger's sweep pair.
 PASSTHROUGH = "Assets:Cash:Passthrough"
 PASSTHROUGH_DEST = "Assets:Cash:Savings"
-# Derived exactly as production does, so the test cannot drift from the payee actually written.
+# Derived as production does, so the test cannot drift from the payee actually written.
 SWEEP_PAYEE = sweep_payee(PASSTHROUGH)
 
 
@@ -50,7 +50,9 @@ def _passthrough_balance(client: TestClient) -> Decimal:
     )
 
 
-def _spend_venmo(client: TestClient, date: str, amount: float, payee: str = "venmo pay"):
+def _spend_from_passthrough(
+    client: TestClient, date: str, amount: float, payee: str = "passthrough pay"
+):
     return client.post(
         "/api/transaction",
         json={
@@ -64,7 +66,7 @@ def _spend_venmo(client: TestClient, date: str, amount: float, payee: str = "ven
 
 
 def _fund_passthrough(client: TestClient, date: str, amount: float):
-    """Money into the passthrough (a bank → passthrough bill pay), i.e. net inflow."""
+    """Money into the passthrough — a net inflow."""
     return client.post(
         "/api/transfer",
         json={
@@ -80,7 +82,7 @@ def _fund_passthrough(client: TestClient, date: str, amount: float):
 # --- tests ---
 
 
-def test_no_venmo_activity_means_no_sweep(client: TestClient):
+def test_no_passthrough_activity_means_no_sweep(client: TestClient):
     client.post(
         "/api/transaction",
         json={
@@ -94,8 +96,8 @@ def test_no_venmo_activity_means_no_sweep(client: TestClient):
     assert _sweeps(client, "2026-02") == []
 
 
-def test_first_venmo_payment_creates_month_end_sweep(client: TestClient):
-    _spend_venmo(client, "2026-02-10", 30.00)
+def test_first_passthrough_payment_creates_month_end_sweep(client: TestClient):
+    _spend_from_passthrough(client, "2026-02-10", 30.00)
 
     sweeps = _sweeps(client, "2026-02")
     assert len(sweeps) == 1
@@ -107,18 +109,18 @@ def test_first_venmo_payment_creates_month_end_sweep(client: TestClient):
 
 
 def test_further_payments_accumulate_into_one_entry(client: TestClient):
-    _spend_venmo(client, "2026-02-10", 30.00)
-    _spend_venmo(client, "2026-02-15", 20.00)
+    _spend_from_passthrough(client, "2026-02-10", 30.00)
+    _spend_from_passthrough(client, "2026-02-15", 20.00)
 
     sweeps = _sweeps(client, "2026-02")
-    assert len(sweeps) == 1  # a single accumulating entry, not one per payment
+    assert len(sweeps) == 1  # one accumulating entry, not one per payment
     assert sweeps[0]["amount"] == 50.00
     assert sweeps[0]["from_account"] == PASSTHROUGH_DEST
     assert _passthrough_balance(client) == 0
 
 
 def test_net_zero_removes_the_sweep(client: TestClient):
-    _spend_venmo(client, "2026-02-10", 30.00)
+    _spend_from_passthrough(client, "2026-02-10", 30.00)
     assert _sweeps(client, "2026-02")  # sweep exists after the outflow
     _fund_passthrough(client, "2026-02-12", 30.00)  # equal inflow nets the passthrough to zero
 
@@ -127,7 +129,7 @@ def test_net_zero_removes_the_sweep(client: TestClient):
 
 
 def test_net_inflow_reverses_the_sweep(client: TestClient):
-    _spend_venmo(client, "2026-02-10", 20.00)
+    _spend_from_passthrough(client, "2026-02-10", 20.00)
     _fund_passthrough(client, "2026-02-12", 50.00)  # net +30 into the passthrough
 
     sweeps = _sweeps(client, "2026-02")
@@ -139,7 +141,7 @@ def test_net_inflow_reverses_the_sweep(client: TestClient):
 
 
 def test_editing_the_sweep_is_rejected(client: TestClient):
-    _spend_venmo(client, "2026-02-10", 30.00)
+    _spend_from_passthrough(client, "2026-02-10", 30.00)
     sweep = _sweeps(client, "2026-02")[0]
 
     upd = client.post(
@@ -148,7 +150,7 @@ def test_editing_the_sweep_is_rejected(client: TestClient):
             "locator": sweep["locator"],
             "from_account": PASSTHROUGH_DEST,
             "to_account": PASSTHROUGH,
-            "amount": 999.00,  # a manual edit
+            "amount": 999.00,
         },
     )
     assert upd.status_code == 409
@@ -161,7 +163,7 @@ def test_editing_the_sweep_is_rejected(client: TestClient):
 
 
 def test_deleting_the_sweep_directly_is_rejected(client: TestClient):
-    _spend_venmo(client, "2026-02-10", 30.00)
+    _spend_from_passthrough(client, "2026-02-10", 30.00)
     sweep = _sweeps(client, "2026-02")[0]
 
     d = client.post("/api/entry/delete", json={"locator": sweep["locator"]})
@@ -171,8 +173,8 @@ def test_deleting_the_sweep_directly_is_rejected(client: TestClient):
     assert len(_sweeps(client, "2026-02")) == 1  # still there
 
 
-def test_deleting_the_last_venmo_payment_removes_the_sweep(client: TestClient):
-    add = _spend_venmo(client, "2026-02-10", 30.00)
+def test_deleting_the_last_passthrough_payment_removes_the_sweep(client: TestClient):
+    add = _spend_from_passthrough(client, "2026-02-10", 30.00)
     locator = f"id:{add.json()['id']}"
     assert _sweeps(client, "2026-02")
 
@@ -183,7 +185,7 @@ def test_deleting_the_last_venmo_payment_removes_the_sweep(client: TestClient):
 
 
 def test_unrelated_edit_in_month_does_not_duplicate_sweep(client: TestClient):
-    _spend_venmo(client, "2026-02-10", 30.00)
+    _spend_from_passthrough(client, "2026-02-10", 30.00)
     client.post(
         "/api/transaction",
         json={
@@ -201,41 +203,37 @@ def test_unrelated_edit_in_month_does_not_duplicate_sweep(client: TestClient):
 
 
 def test_sweeps_are_isolated_per_month(client: TestClient):
-    _spend_venmo(client, "2026-02-10", 30.00)
-    _spend_venmo(client, "2026-03-10", 20.00)
+    _spend_from_passthrough(client, "2026-02-10", 30.00)
+    _spend_from_passthrough(client, "2026-03-10", 20.00)
 
     assert _sweeps(client, "2026-02")[0]["amount"] == 30.00
     assert _sweeps(client, "2026-03")[0]["amount"] == 20.00
 
 
-def test_venmo_credit_leg_on_expense_counts_as_inflow(client: TestClient):
-    # A card-funded split bill with a friend's share paid back into the passthrough: a positive
-    # credit
-    # leg sharing an expense transaction. This pattern exists in the historical ledger, so the net
-    # must fold it in like any other passthrough activity.
+def test_passthrough_credit_leg_on_expense_counts_as_inflow(client: TestClient):
+    # A card-funded bill part-reimbursed into the passthrough: the credit leg is passthrough
+    # activity like any other, so the net must fold it in.
     client.post(
         "/api/transaction",
         json={
             "date": "2026-02-10",
             "payee": "utilities",
-            "amount": 100.00,  # total bill
+            "amount": 100.00,
             "category": "Takeouts",
             "funding_account": "Liabilities:CC:CardA",
-            # $30 reimbursed into the passthrough
             "credits": [{"account": PASSTHROUGH, "amount": 30.00}],
         },
     )
 
     sweeps = _sweeps(client, "2026-02")
     assert len(sweeps) == 1
-    # +30 into the passthrough drains back to savings
     assert (sweeps[0]["from_account"], sweeps[0]["to_account"]) == (PASSTHROUGH, PASSTHROUGH_DEST)
     assert sweeps[0]["amount"] == 30.00
     assert _passthrough_balance(client) == 0
 
 
-def test_bank_to_venmo_bill_pay_drains_via_sweep(client: TestClient):
-    _fund_passthrough(client, "2026-02-12", 40.00)  # only activity: money into the passthrough
+def test_bank_to_passthrough_bill_pay_drains_via_sweep(client: TestClient):
+    _fund_passthrough(client, "2026-02-12", 40.00)  # the month's only activity
 
     sweeps = _sweeps(client, "2026-02")
     assert len(sweeps) == 1

@@ -1,7 +1,5 @@
 <script lang="ts">
-	// The per-tab header: a serif title with optional trailing content (a subtitle, month
-	// stepper, year stepper, …). Shared by every view so the title size and row layout live
-	// in one place.
+	// The per-tab header: a serif title with optional trailing content, shared by every view.
 	import type { Snippet } from 'svelte';
 
 	interface Props {

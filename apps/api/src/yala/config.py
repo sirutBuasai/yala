@@ -1,13 +1,7 @@
-"""Configuration: where the ledger lives.
+"""Where the ledger lives: ``$YALA_LEDGER_DIR``, so no private data location is hardcoded here.
 
-Resolves from an environment variable so the public code repo never hardcodes a private
-data location:
-
-  YALA_LEDGER_DIR   where the .beancount files live   (default: ../yala-private-data/ledger)
-
-The ledger itself is the source of truth for currency (``option "operating_currency"``),
-accounts, and categories (the ``Expenses:*`` accounts). Read those from the loaded ledger
-rather than duplicating them here.
+The ledger itself is the source of truth for currency, accounts, and categories — read those from
+the loaded ledger rather than adding them to this module.
 """
 
 from __future__ import annotations

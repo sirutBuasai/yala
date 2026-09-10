@@ -1,10 +1,6 @@
 <script lang="ts">
-	// Design-token gallery. Renders every semantic token defined in app.css at its real
-	// value, grouped by role + data importance, then shows the tokens in context across
-	// charts, tables, fields, panes, a board and the spacing/radius primitives. The point
-	// is coherence: near-duplicate ad-hoc values (10.5/11/11.5px, 12/12.5/13px, …) are
-	// collapsed onto one ramp, and roles that legitimately share a value (subtitle vs
-	// column title) still get their own named token so intent stays explicit.
+	// Design-token gallery: every semantic token in app.css at its real value, then those tokens in
+	// context. Roles that share a value still get their own named token, so intent stays explicit.
 	import '../../app.css';
 	import NavMenu from '$lib/nav/NavMenu.svelte';
 	import Card from '$lib/ui/Card.svelte';
@@ -15,10 +11,8 @@
 	const data = makeData();
 	const all = { level: 'all' } as const;
 
-	// `font` mirrors the app's real family per role: serif (--font-display, the fancy
-	// title face) is applied via .serif to titles/brand/stat value only; everything else
-	// is the modern sans body face. Note text-panel (serif) vs text-amount (sans) share
-	// 16px — same size, different family AND role.
+	// `font` mirrors the app's real family per role, since two tokens of the same size can differ in
+	// family and in role.
 	type TypeToken = {
 		name: string;
 		px: number;
@@ -28,8 +22,7 @@
 	};
 	type Group = { title: string; note: string; tokens: TypeToken[] };
 
-	// Font-size tokens grouped by data importance. `px` is the resolved value (for the
-	// readout); the sample itself is sized by `var(--text-…)`, so it reflects app.css.
+	// `px` is only the readout; the sample itself is sized by `var(--text-…)`, so it reflects app.css.
 	const typeGroups: Group[] = [
 		{
 			title: 'Hero & titles',
@@ -177,7 +170,6 @@
 		}
 	];
 
-	// Font-family tokens: two faces, mapped to a semantic display/body pair.
 	const families = [
 		{
 			name: 'font-display',
@@ -208,7 +200,6 @@
 		{ name: 'ls-wider', v: '0.9px', role: 'Small-caps section labels' }
 	];
 
-	// Spacing: the raw ramp (primitives) plus the named gap aliases components use.
 	const spacePrims = [
 		['space-1', 2],
 		['space-2', 4],
@@ -242,7 +233,7 @@
 		{ name: 'pad-listrow', v: '8 × 20', role: 'List rows (inset to card)' }
 	];
 
-	// Rows for the edge-to-edge bleed demo (mirrors RowList's real markup).
+	// Mirrors RowList's real markup, for the bleed demo below.
 	const bleedRows = [
 		{ label: 'Example Store', amt: '$42' },
 		{ label: 'Rent', amt: '$1,850' },
@@ -258,7 +249,6 @@
 		{ name: 'radius-pill', px: 999, role: 'Pills, round nav, dots' }
 	];
 
-	// Live primitives for the "in context" examples.
 	const stats = ['income.total', 'spending.total', 'saved.total', 'ratio.savings_rate'].map(
 		(id) => ({
 			def: id,
@@ -596,7 +586,6 @@
 		}
 	}
 
-	/* Type / weight / tracking rows: name · meta · role · live sample */
 	.tlist {
 		display: flex;
 		flex-direction: column;
@@ -634,7 +623,6 @@
 		text-overflow: ellipsis;
 	}
 
-	/* Spacing ramp */
 	.ramp {
 		display: flex;
 		flex-direction: column;
@@ -659,7 +647,6 @@
 		background: var(--lav);
 	}
 
-	/* Padding boxes */
 	.padgrid,
 	.radgrid {
 		display: grid;
@@ -736,7 +723,7 @@
 		margin-top: var(--gap-field);
 	}
 
-	/* Bleed demo — mirrors RowList: content + divider inset to --pad-card-x, hover full-bleed. */
+	/* Mirrors RowList: content and divider inset to --pad-card-x, hover full-bleed. */
 	.blrow {
 		position: relative;
 		display: flex;

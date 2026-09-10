@@ -1,8 +1,6 @@
 <script lang="ts">
-	// Visualization for a Scalar primitive: the body of a stat tile (value + delta). Chrome-less
-	// by design — it always lives inside a Pane, which supplies the card, the title (label) and
-	// the subtitle (note), so a stat reads title → subtitle → value just like a chart pane.
-	// Formatting comes from the unit, so data supplies raw numbers.
+	// The body of a stat tile: value + delta, no chrome. It always lives inside a Pane, which supplies
+	// the card, the title and the subtitle, so a stat reads like a chart pane.
 	import type { Scalar } from '$lib/data/primitives';
 	import { formatUnit } from '$lib/data/primitives';
 
@@ -29,9 +27,8 @@
 </div>
 
 <style>
-	/* Fill the pane body so the number can pin to the bottom: across a row, every tile's
-	   main number aligns on one baseline regardless of subtitle length or a delta. Secondary
-	   metrics (the delta) sit at the top under the subtitle and take the flexible space. */
+	/* Fill the pane body so the number pins to the bottom: across a row, every tile's main number then
+	   aligns on one baseline whatever the subtitle length or presence of a delta. */
 	.stat {
 		flex: 1 1 auto;
 		display: flex;

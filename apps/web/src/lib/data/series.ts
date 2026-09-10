@@ -1,6 +1,5 @@
-// Series & multi-series primitives over the canonical sections. A `Series` is one
-// ordered sequence; a `MultiSeries` bundles several that share an axis and labels
-// (so they overlay). No colours here — the chart registry assigns them.
+// Series & multi-series primitives over the canonical sections. A `MultiSeries` bundles series that
+// share an axis and labels, so they overlay.
 
 import type { DashboardData } from '$lib/data/types';
 import type { Axis, MultiSeries, Series, SeriesPoint, Unit } from './primitives';
@@ -8,7 +7,7 @@ import { MONEY, PERCENT } from './primitives';
 import { MONTHS } from '$lib/utils/format';
 import { sumValues } from '$lib/utils/num';
 
-/** Build a Series from parallel labels/values. */
+/** Build a Series from parallel labels/values; a null value becomes 0. */
 export function series(
 	name: string,
 	labels: string[],
@@ -20,7 +19,7 @@ export function series(
 	return { kind: 'series', unit, axis, name, points };
 }
 
-/** Total spent per calendar month (index 0..11) for a year. */
+/** Total spent per calendar month, indexed 0..11, for a year. */
 function yearMonthlySpent(data: DashboardData, year: number): number[] {
 	const yd = data.years[String(year)];
 	return yd ? yd.matrix.map((row) => sumValues(row.spent)) : new Array(12).fill(0);
@@ -82,9 +81,8 @@ export function incomeByYear(data: DashboardData): Series {
 // --- composite ---
 
 /**
- * Income / Spent / Saved as one MultiSeries. Lifetime (`year` omitted) plots per
- * tracked year; a specific `year` plots its twelve months. Overview and Yearly both
- * used to assemble this by hand — now one builder serves both.
+ * Income / Spent / Saved as one MultiSeries. Lifetime (`year` omitted) plots per tracked year; a
+ * specific `year` plots its twelve months.
  */
 export function incomeSpentSaved(data: DashboardData, year?: number): MultiSeries {
 	const unit = MONEY(data.currency);
@@ -142,9 +140,9 @@ export function incomeSpentSaved(data: DashboardData, year?: number): MultiSerie
 }
 
 /**
- * One series per spending category, plotted across the tracked years. Ordered by lifetime
- * total (biggest first) so the right-edge labels and tooltip read by magnitude. Categories
- * span orders of magnitude, so this is drawn on a log axis — see `logYScale`.
+ * One series per spending category across the tracked years, ordered by lifetime total so the
+ * right-edge labels and tooltip read by magnitude. Categories span orders of magnitude, so this is
+ * drawn on a log axis — see `logYScale`.
  */
 export function categorySpendByYear(data: DashboardData): MultiSeries {
 	const unit = MONEY(data.currency);
@@ -154,8 +152,8 @@ export function categorySpendByYear(data: DashboardData): MultiSeries {
 	const totalFor = (year: number, cat: string) =>
 		(data.years[String(year)]?.matrix ?? []).reduce((s, row) => s + (row.spent[cat] ?? 0), 0);
 
-	// Only categories with real spend somewhere in the range; a closed category still shows its
-	// history, and one that never had spend never draws a flat line along the axis.
+	// Only categories with spend somewhere in the range: a closed category still shows its history,
+	// and one that never had spend never draws a flat line along the axis.
 	const cats = data.meta.categories
 		.map((c) => ({ c, values: years.map((y) => totalFor(y, c)) }))
 		.map((e) => ({ ...e, lifetime: e.values.reduce((a, b) => a + b, 0) }))
@@ -171,7 +169,6 @@ export function categorySpendByYear(data: DashboardData): MultiSeries {
 	};
 }
 
-/** Running total of yearly savings. */
 export function cumulativeSaved(data: DashboardData): Series {
 	let run = 0;
 	const by = data.overview.by_year;

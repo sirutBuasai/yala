@@ -1,6 +1,5 @@
 <script lang="ts">
-	// A directional chevron used by the period steppers (month/year nav, date picker).
-	// One source of truth for the glyph so every stepper arrow matches.
+	// A directional chevron, used by the period steppers.
 	interface Props {
 		dir: 'left' | 'right';
 		size?: number;

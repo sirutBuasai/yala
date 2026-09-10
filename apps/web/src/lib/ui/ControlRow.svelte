@@ -1,9 +1,7 @@
 <script lang="ts">
-	// A labelled control with its actions beside it: fixed-width label, the control taking the slack,
-	// then whatever buttons act on it. The shape of every row inside a Manage drawer.
-	//
-	// The label track is a fixed width rather than `auto` so labels line up down a drawer — with `auto`
-	// each row sized to its own label and the controls stepped raggedly across.
+	// A labelled control with its actions beside it — the shape of every row in a Manage drawer.
+	// The label track is a fixed width, not `auto`: with `auto` each row sized to its own label and
+	// the controls stepped raggedly down the drawer.
 	import type { Snippet } from 'svelte';
 
 	interface Props {

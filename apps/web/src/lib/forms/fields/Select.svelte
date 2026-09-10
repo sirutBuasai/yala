@@ -1,12 +1,11 @@
 <script module lang="ts">
-	// Process-wide counter so every Select gets a unique id base for its option ids
-	// (needed for aria-activedescendant), even when the consumer passes no `id`.
+	// Unique id base for option ids (aria-activedescendant), even when the caller passes no `id`.
 	let seq = 0;
 </script>
 
 <script lang="ts">
-	// On-brand replacement for a native <select>: a Popup-hosted listbox.
-	// Keyboard: Up/Down move, Enter/Space select, Esc close, Home/End jump.
+	// On-brand replacement for a native <select>: a Popup-hosted listbox. Keyboard: Up/Down move,
+	// Enter/Space select, Esc close, Home/End jump.
 	import { untrack, type Snippet } from 'svelte';
 	import Popup from '$lib/overlay/Popup.svelte';
 
@@ -19,13 +18,13 @@
 		/** Render an option/value for display (default: the raw value). */
 		optionLabel?: (v: string) => string;
 		placeholder?: string;
-		/** Called with the chosen value (useful when the parent stores a non-string, e.g. a year). */
+		/** Called with the chosen value, for a parent that stores a non-string. */
 		onchange?: (v: string) => void;
 		/** Class on the trigger button (passed through to Popup). */
 		triggerClass?: string;
 		/** Anchor edge for the dropdown (passed through to Popup). */
 		align?: 'left' | 'right';
-		/** Custom trigger content, replacing the default value + chevron (e.g. an icon button). */
+		/** Custom trigger content, replacing the default value + chevron. */
 		customTrigger?: Snippet;
 	}
 	let {
@@ -115,7 +114,7 @@
 	{#snippet children()}
 		<ul id={listboxId} class="listbox scroller trap" role="listbox" tabindex="-1">
 			{#each options as opt, i (opt)}
-				<!-- Keyboard selection is handled on the trigger (arrows/Enter/Esc), which keeps focus. -->
+				<!-- Keyboard selection is handled on the trigger, which keeps focus. -->
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<li
 					id={optionId(i)}

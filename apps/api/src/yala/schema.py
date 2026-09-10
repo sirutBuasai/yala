@@ -96,7 +96,7 @@ class Txn(_Base):
     payee: str
     amount: float  # net share (the single Expenses posting)
     category: str
-    source: str | None  # funding account that paid, e.g. "Liabilities:CC:ExampleCard"
+    source: str | None  # the funding account that paid: a card or a cash account
     pending: bool
     locator: str  # stable edit handle: "id:<uuid>" or "line:<path>:<n>"
     bill: float | None = None  # pre-reimbursement total when the txn was split

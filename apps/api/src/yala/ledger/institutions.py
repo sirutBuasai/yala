@@ -1,21 +1,12 @@
 """Per-institution presentation, declared in the ledger.
 
-An account's colour is a property of the institution holding it, not of the account: a bank's card
-and its savings should read as one family. So it is keyed by the ``institution`` each ``open``
-declares, and stated once per institution rather than repeated on every account::
+Colour belongs to the institution holding an account rather than to the account itself, so it is
+keyed by the ``institution`` each ``open`` declares and stated once per institution::
 
-    2026-09-03 custom "yala-institution" "Bank of Example" "#f7768e"
+    2026-09-03 custom "yala-institution" "BankA" "#f7768e"
 
-Dated and superseding, exactly like the ``yala-setting`` directives — recolouring an institution
-leaves the old choice behind as history instead of rewriting it.
-
-The value is a hex literal, so a colour picker in the UI can write one directly and the ledger stays
-the source of truth for it. That one colour is used as-is in both themes; picking a mid-tone that
-reads on the light and the dark surface alike is the chooser's call, not something the app adjusts
-behind them.
-
-An institution with no directive gets no colour, and the UI falls back to a neutral swatch — a newly
-opened account looks like "an account" rather than vanishing.
+Dated and superseding like the ``yala-setting`` directives, so a recolour leaves the old choice
+behind as history. An institution with no directive gets no colour.
 """
 
 from __future__ import annotations
@@ -27,9 +18,8 @@ from beancount.core import data
 #: ``custom`` directive type that assigns a colour to an institution.
 INSTITUTION_TYPE = "yala-institution"
 
-#: An accepted colour literal: ``#rgb`` or ``#rrggbb``, case-insensitive. Deliberately narrow — the
-#: value ends up in a stylesheet, so a CSS colour *name* is refused even though CSS would understand
-#: it, and anything that could break out of a declaration cannot get through at all.
+#: ``#rgb`` or ``#rrggbb``, case-insensitive. Deliberately narrow: the value ends up in a
+#: stylesheet, so nothing that could break out of a declaration gets through — not even a CSS name.
 HEX_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
 
@@ -44,11 +34,10 @@ def parse_color(value: object) -> str | None:
 
 
 def colors(entries: list[data.Directive]) -> dict[str, str]:
-    """Colour per institution, latest directive winning.
+    """Colour per institution, the latest directive winning (``entries`` arrive date-sorted).
 
-    Entries arrive in ledger order (beancount sorts by date), so a later directive for the same
-    institution overwrites the earlier one. A value that is not a hex literal is skipped rather than
-    raising: the ledger is hand-editable, and one bad line should not blank every dot in the app.
+    A malformed directive is skipped rather than raising: the ledger is hand-editable, and one bad
+    line should not blank every colour in the app.
     """
     out: dict[str, str] = {}
 

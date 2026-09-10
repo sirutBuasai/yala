@@ -7,7 +7,7 @@ import { makeAccounts } from '$lib/data/__fixtures__/dashboard';
 const accounts = makeAccounts({
 	spending_categories: ['Grocery', 'Takeouts'],
 	funding_accounts: ['Liabilities:CC:CardA', 'Assets:Cash:BankA'],
-	employers: ['Employer1'],
+	employers: ['EmployerA'],
 	cash_accounts: ['Assets:Cash:BankA'],
 	credit_accounts: ['Assets:Cash:Wallet', 'Liabilities:CC:CardA']
 });

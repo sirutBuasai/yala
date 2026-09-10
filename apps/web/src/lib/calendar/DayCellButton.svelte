@@ -1,7 +1,6 @@
 <script lang="ts">
-	// One day in the month grid: its number, up to three category dots, and the day's figures. A
-	// gridcell rather than a plain button — the grid around it owns arrow-key movement, and this cell
-	// only reports whether it is the selected one.
+	// One day in the month grid. A gridcell rather than a plain button: the grid around it owns
+	// arrow-key movement, and this cell only reports whether it is the selected one.
 	import type { DayCell } from '$lib/calendar/days';
 	import { money, moneyCompact, MONTHS } from '$lib/utils/format';
 	import { categoryVar } from '$lib/utils/theme';
@@ -14,10 +13,8 @@
 	}
 	let { cell, month, selected, onpick }: Props = $props();
 
-	/**
-	 * The cell's spoken name. Everything visible inside it is aria-hidden, because a dot and a
-	 * compact "$3.5k" mean nothing read aloud — this sentence carries the same information properly.
-	 */
+	/** The cell's spoken name; everything visible inside it is aria-hidden, since a colour dot and an
+	    abbreviated figure mean nothing read aloud. */
 	const label = $derived.by(() => {
 		const parts = [`${MONTHS[month - 1]} ${cell.day}`];
 		if (cell.txns.length)
@@ -58,8 +55,7 @@
 </button>
 
 <style>
-	/* No min-height: the row height comes from the grid's own tracks, so a cell can't disagree with
-	   the track it sits in. --sel and --pend are set by the grid, which swaps them per theme. */
+	/* --sel and --pend are set by the grid, which swaps them per theme. */
 	.cell {
 		background: var(--surface-2);
 		border: 1px solid var(--border);

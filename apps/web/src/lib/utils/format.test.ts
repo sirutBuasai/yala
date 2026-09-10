@@ -32,7 +32,7 @@ describe('money', () => {
 	});
 
 	it('does not render a negative zero', () => {
-		// Math.round(-0.4) === -0, which must still print as "$0" not "-$0".
+		// Math.round(-0.4) is -0, which must still print as "$0".
 		expect(money(-0.4)).toBe('$0');
 	});
 });
@@ -100,22 +100,19 @@ describe('formatAccount', () => {
 
 	it('reads the name the ledger resolved, rather than deriving one', () => {
 		setAccountDirectory({
-			'Liabilities:CC:BankOfExampleCashRewards': {
+			'Liabilities:CC:CardA': {
 				name: 'BoE Cash Rewards',
 				institution: 'Bank of Example'
 			},
-			'Assets:Cash:BankOfExample': { name: 'Bank of Example', institution: 'Bank of Example' }
+			'Assets:Cash:BankA': { name: 'Bank of Example', institution: 'Bank of Example' }
 		});
 
-		// Neither of these is derivable from the path here: one is shortened by a declared alias, the
-		// other needs a lowercase particle that de-CamelCasing alone would capitalize.
-		expect(formatAccount('Liabilities:CC:BankOfExampleCashRewards')).toBe('BoE Cash Rewards');
-		expect(formatAccount('Assets:Cash:BankOfExample')).toBe('Bank of Example');
+		// Neither name is derivable from its path.
+		expect(formatAccount('Liabilities:CC:CardA')).toBe('BoE Cash Rewards');
+		expect(formatAccount('Assets:Cash:BankA')).toBe('Bank of Example');
 	});
 
 	it('falls back to the raw leaf for an account the directory has never heard of', () => {
-		// Deliberately not a second formatting rule: a miss means the account was opened after this
-		// document loaded, and showing the leaf makes that visible instead of inventing a name.
 		expect(formatAccount('Assets:Cash:Bank1Checking')).toBe('Bank1Checking');
 	});
 

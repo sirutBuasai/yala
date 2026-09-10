@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { money, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
-	// Presentation shapes: the flow registry adapts a Flow primitive into these
-	// (adding a colour per node role).
+	// The registry adapts a Flow primitive into these, adding a colour per node role.
 	interface SankeyNode {
 		id: string;
 		label: string;
@@ -26,9 +25,9 @@
 	const H = 540;
 	const NODE_W = 13;
 	const GAP = 20; // minimum vertical gap between nodes within a column
-	const LABEL_MIN_GAP = 15; // minimum vertical spacing between de-collided right labels
-	// Top margin leaves room for the middle columns' above-labels; right margin holds the
-	// last column's de-collided labels + their leader lines.
+	const LABEL_MIN_GAP = 15; // minimum spacing between de-collided right labels
+	// The top margin holds the middle columns' above-labels, the right margin the last column's
+	// de-collided labels and their leader lines.
 	const M = { t: 28, b: 12, l: 92, r: 150 };
 	const iw = W - M.l - M.r;
 	const ih = H - M.t - M.b;
@@ -82,7 +81,8 @@
 			}
 		}
 
-		// Ribbons: constant-width bands (stroked paths). Stack outgoing/incoming in link order.
+		// Constant-width bands, stacked in link order at both ends — so the caller controls which
+		// ribbon sits at the top of each fan.
 		const outOff = new Map<string, number>();
 		const inOff = new Map<string, number>();
 		const ribbons = links
@@ -110,23 +110,22 @@
 		const maxCol = cols[cols.length - 1];
 		const minCol = cols[0];
 
-		// Label side is purely column-position based: the first column reads on the left, the
-		// last on the right, every middle column above its ribbon. This keeps interior labels
-		// off the ribbons and out of each other's way as columns get denser.
+		// Label side follows column position — first on the left, last on the right, middle columns
+		// above their ribbon — which keeps interior labels off the ribbons as columns get denser.
 		const nodeViews = [...placed.values()].map((p) => {
 			const { node } = p;
 			const side: 'left' | 'right' | 'above' =
 				node.col === minCol ? 'left' : node.col === maxCol ? 'right' : 'above';
-			// Each node's share of its own column's throughput. The first column is the root
-			// (trivially 100%), so it's skipped.
+			// Each node's share of its own column's throughput; skipped for the root column, which is
+			// trivially 100%.
 			const colTot = colTotal(node.col);
 			const pct =
 				node.col !== minCol && colTot > 0 ? Math.round((node.value / colTot) * 100) : null;
 			return { ...p, side, pct, cy: p.y + p.h / 2 };
 		});
 
-		// De-collide the last column's labels (the crowded category fan): spread their anchor
-		// y apart, then a leader line reconnects each to its node.
+		// De-collide the last column's labels: spread their anchor y apart, then a leader line
+		// reconnects each to its node.
 		const rightViews = nodeViews.filter((v) => v.side === 'right');
 		const lys = declutter(
 			rightViews.map((v) => ({ cy: v.cy })),
@@ -145,7 +144,6 @@
 		return `M${sx},${sy} C${mx},${sy} ${mx},${ty} ${tx},${ty}`;
 	}
 
-	// Elbow leader from a node's right edge to its de-collided label anchor.
 	function leaderPath(sx: number, sy: number, tx: number, ty: number): string {
 		const bend = sx + Math.min(14, (tx - sx) / 2);
 		return `M${sx},${sy} L${bend},${sy} L${bend},${ty} L${tx},${ty}`;

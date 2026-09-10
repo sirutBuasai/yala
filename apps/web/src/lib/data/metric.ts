@@ -1,8 +1,7 @@
-// Scalar metrics: a small set of parameterized builders that turn the dashboard
-// document into single-figure `Scalar` primitives (raw amounts, averages, ratios,
-// counts, extrema, period-over-period change). No colours or formatting here — the
-// unit drives rendering in the visualization layer. Per-scope aggregates are memoized
-// per DashboardData so many metrics over one document don't recompute the same sums.
+// Scalar metrics: parameterized builders that turn the dashboard document into single-figure
+// `Scalar` primitives (amounts, averages, ratios, counts, extrema, period-over-period change).
+// Per-scope aggregates are memoized per DashboardData so many metrics over one document don't
+// recompute the same sums.
 
 import type { DashboardData, MonthPage, PaycheckOut, Txn } from '$lib/data/types';
 import type { Scalar } from './primitives';
@@ -12,13 +11,13 @@ import { sumValues } from '$lib/utils/num';
 import { addMonths } from '$lib/utils/period';
 import { type Scope, latestYear, scopeYear, scopeKey } from './scope';
 
-// --- measures: what a metric reads ---
+// --- measures ---
 
 /** An aggregate figure available at any scope. */
 export type Field =
 	'income' | 'spending' | 'saved' | 'gross' | 'deductions' | 'contributions' | 'net' | 'takehome';
 
-/** A single line item inside a paycheck's deductions or contributions map (e.g. Tax, 401k). */
+/** A single line item inside a paycheck's deductions or contributions map. */
 export interface Component {
 	group: 'deductions' | 'contributions';
 	key: string;
@@ -83,61 +82,54 @@ function scopeTxns(data: DashboardData, scope: Scope): Txn[] {
 
 type Totals = Record<Field, number>;
 
+/** The yearly rows a non-month scope covers: all of them, or just the scope's year. */
+function yearRows<R extends { year: number }>(rows: R[], data: DashboardData, scope: Scope): R[] {
+	return scope.level === 'all' ? rows : rows.filter((r) => r.year === scopeYear(data, scope));
+}
+
 function totals(data: DashboardData, scope: Scope): Totals {
 	return memo(data, `tot:${scopeKey(scope)}`, () => {
-		let income = 0;
-		let spending = 0;
-		let saved = 0;
-		if (scope.level === 'all') {
-			for (const r of data.overview.by_year) {
-				income += r.income;
-				spending += r.spent;
-				saved += r.saved;
-			}
-		} else if (scope.level === 'year') {
-			const r = data.overview.by_year.find((x) => x.year === scopeYear(data, scope));
-			income = r?.income ?? 0;
-			spending = r?.spent ?? 0;
-			saved = r?.saved ?? 0;
-		} else {
+		const t: Totals = {
+			income: 0,
+			spending: 0,
+			saved: 0,
+			gross: 0,
+			deductions: 0,
+			contributions: 0,
+			net: 0,
+			takehome: 0
+		};
+
+		if (scope.level === 'month') {
 			const md = scope.monthKey ? data.months[scope.monthKey] : undefined;
-			income = md?.total_income ?? 0;
-			spending = md?.total_spent ?? 0;
-			saved = income - spending;
-		}
-
-		let gross = 0;
-		let deductions = 0;
-		let contributions = 0;
-		let net = 0;
-		let takehome = 0;
-		if (scope.level === 'all') {
-			for (const r of data.income.by_year) {
-				gross += r.gross;
-				deductions += r.deductions;
-				contributions += r.contributions;
-				net += r.net;
-				takehome += r.take_home;
-			}
-		} else if (scope.level === 'year') {
-			const r = data.income.by_year.find((x) => x.year === scopeYear(data, scope));
-			gross = r?.gross ?? 0;
-			deductions = r?.deductions ?? 0;
-			contributions = r?.contributions ?? 0;
-			net = r?.net ?? 0;
-			takehome = r?.take_home ?? 0;
-		} else {
-			// Month scope has no annual income row — aggregate the month's paychecks.
+			t.income = md?.total_income ?? 0;
+			t.spending = md?.total_spent ?? 0;
+			t.saved = t.income - t.spending;
+			// A month has no annual income row, so aggregate its paychecks.
 			for (const p of scopePaychecks(data, scope)) {
-				gross += p.gross;
-				net += p.net;
-				takehome += p.take_home;
-				deductions += sumValues(p.deductions);
-				contributions += sumValues(p.contributions);
+				t.gross += p.gross;
+				t.net += p.net;
+				t.takehome += p.take_home;
+				t.deductions += sumValues(p.deductions);
+				t.contributions += sumValues(p.contributions);
 			}
+			return t;
 		}
 
-		return { income, spending, saved, gross, deductions, contributions, net, takehome };
+		for (const r of yearRows(data.overview.by_year, data, scope)) {
+			t.income += r.income;
+			t.spending += r.spent;
+			t.saved += r.saved;
+		}
+		for (const r of yearRows(data.income.by_year, data, scope)) {
+			t.gross += r.gross;
+			t.deductions += r.deductions;
+			t.contributions += r.contributions;
+			t.net += r.net;
+			t.takehome += r.take_home;
+		}
+
+		return t;
 	});
 }
 
@@ -171,11 +163,8 @@ function categorySpend(data: DashboardData, scope: Scope, category: string): num
 }
 
 /**
- * Resolve any measure to a raw number at a scope.
- *
- * Exported because the net-worth metrics need the same spending/income aggregates to answer
- * "how much of this came from saving?" — recomputing them there would duplicate the scope
- * collection and lose this module's memoization.
+ * Resolve any measure to a raw number at a scope. Exported so the net-worth metrics can read the
+ * same aggregates rather than recomputing them and losing this module's memoization.
  */
 export function measureValue(data: DashboardData, scope: Scope, m: Measure): number {
 	if (typeof m === 'string') return totals(data, scope)[m];
@@ -199,15 +188,12 @@ export function componentKeys(
 	return { deductions: [...ded], contributions: [...con] };
 }
 
-// --- shared option shape ---
-
 interface Opts {
 	label?: string;
 	note?: string;
 	dir?: 'up' | 'down';
 }
 
-/** Tag a scalar's direction from its own sign — green when ≥ 0, red when negative. */
 export function signed(s: Scalar): Scalar {
 	return { ...s, dir: (s.value ?? 0) >= 0 ? 'up' : 'down' };
 }
@@ -227,10 +213,9 @@ export function amount(data: DashboardData, scope: Scope, m: Measure, opts: Opts
 }
 
 /**
- * Average of a measure over a period. `per: 'year'` divides the lifetime total by the
- * number of tracked years; `per: 'month'` divides a year's total by that year's ACTIVE
- * months (income-active for income, spend-active for spending, either otherwise) — never
- * a flat 12, so a partial year isn't understated.
+ * Average of a measure. `per: 'year'` divides the lifetime total by the number of tracked years;
+ * `per: 'month'` divides a year's total by that year's ACTIVE months — never a flat 12, so a partial
+ * year isn't understated.
  */
 export function average(
 	data: DashboardData,
@@ -257,11 +242,7 @@ export function average(
 	const y = year ?? latestYear(data);
 	const active = activeMonths(data, y);
 	const divisor =
-		(typeof m === 'string' && m === 'spending'
-			? active.spend
-			: typeof m === 'string' && m === 'income'
-				? active.income
-				: active.any) || 1;
+		(m === 'spending' ? active.spend : m === 'income' ? active.income : active.any) || 1;
 	return {
 		kind: 'scalar',
 		unit,
@@ -292,7 +273,6 @@ export function ratio(
 	};
 }
 
-/** Money spent in a single category at a scope. */
 export function categoryAmount(
 	data: DashboardData,
 	scope: Scope,
@@ -309,7 +289,7 @@ export function categoryAmount(
 	};
 }
 
-/** A category's share of total spending or income at a scope, as a percentage. */
+/** A category's share of spending or income at a scope, as a percentage. */
 export function categoryShare(
 	data: DashboardData,
 	scope: Scope,
@@ -357,7 +337,6 @@ function countValue(data: DashboardData, scope: Scope, of: Countable): number {
 	}
 }
 
-/** A count of things in a scope (transactions, paychecks, active months, categories). */
 export function count(data: DashboardData, scope: Scope, of: Countable, opts: Opts = {}): Scalar {
 	return {
 		kind: 'scalar',
@@ -371,8 +350,8 @@ export function count(data: DashboardData, scope: Scope, of: Countable, opts: Op
 
 export type ExtremumOf = 'transaction' | 'category' | 'month';
 
-/** The largest or smallest transaction, category spend, or month spend in a scope; the
- *  winner's name lands in the note. */
+/** The largest or smallest transaction, category spend, or month spend in a scope; the winner's
+ *  name lands in the note. */
 export function extremum(
 	data: DashboardData,
 	scope: Scope,
@@ -425,16 +404,9 @@ export function extremum(
 }
 
 /**
- * A measure with its period-over-period change as a `delta`. `period: 'year'` compares
- * against the prior year (`at` = a year, default latest); `period: 'month'` against the
- * prior month (`at` = a "YYYY-MM" key). The delta is a percentage; it's omitted when the
- * prior period is 0 (no meaningful ratio).
- */
-/**
  * How far a month sits from its own recent norm: the measure this month minus the average of the
- * prior `window` months that have data. Answers "is this month normal?", which neither the raw
- * total nor a month-over-month delta does — one noisy previous month makes MoM meaningless, while
- * a trailing average is stable. `null` when there's no history to form a norm from.
+ * prior `window` months that have data. A trailing average rather than the previous month, which one
+ * noisy month makes meaningless. `null` when there's no history to form a norm from.
  *
  * Direction is spending-shaped by default (over the norm reads as bad); pass `higherIsBetter` for
  * measures like income where exceeding the norm is good.
@@ -468,6 +440,11 @@ export function vsTypical(
 	};
 }
 
+/**
+ * A measure with its period-over-period change as a `delta`: against the prior year (`at` = a year,
+ * default latest) or the prior month (`at` = a "YYYY-MM" key). The delta is a percentage, omitted
+ * when the prior period is 0.
+ */
 export function change(
 	data: DashboardData,
 	m: Measure,

@@ -7,6 +7,8 @@ vi.mock('$app/paths', () => ({ asset: (p: string) => p }));
 import {
 	accounts,
 	API_UNAVAILABLE,
+	closeAccount,
+	type CloseOptions,
 	data,
 	deleteTransaction,
 	invalidateDerivedCache,
@@ -15,7 +17,9 @@ import {
 	loadState,
 	getSettings,
 	networthAt,
-	setSetting
+	openAccount,
+	setSetting,
+	setSweep
 } from '$lib/data/load';
 import { makeAccounts, makeData } from '$lib/data/__fixtures__/dashboard';
 
@@ -162,6 +166,127 @@ describe('deleteTransaction', () => {
 	it('returns a friendly message when the API is unreachable', async () => {
 		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
 		expect(await deleteTransaction('id:x')).toContain('API unreachable');
+	});
+});
+
+describe('opening and closing accounts', () => {
+	beforeEach(() => live.set(true));
+
+	/**
+	 * A write is followed by an account-list refresh, so the stub has to answer the refresh too —
+	 * feeding it a bogus document would throw inside the directory subscriber.
+	 */
+	function stubWrite(reply: unknown) {
+		const spy = vi.fn((url: string) => {
+			const path = String(url);
+			const answer = path.includes('/api/accounts')
+				? makeAccounts()
+				: path.includes('/api/data')
+					? makeData()
+					: reply;
+			return Promise.resolve({ ok: true, status: 200, statusText: 'OK', json: async () => answer });
+		});
+		vi.stubGlobal('fetch', spy);
+		return spy;
+	}
+
+	const bodiesOf = (spy: ReturnType<typeof vi.fn>, url: string): unknown[] =>
+		spy.mock.calls.filter(([u]) => String(u) === url).map(([, init]) => JSON.parse(init.body));
+
+	const bodyOf = (spy: ReturnType<typeof vi.fn>, url: string) => bodiesOf(spy, url)[0];
+
+	it('opens a simple account from a bare leaf', async () => {
+		const spy = stubWrite({ account: 'Expenses:Gifts', name: 'Gifts' });
+
+		expect(await openAccount('category', 'Gifts')).toEqual({
+			account: 'Expenses:Gifts',
+			name: 'Gifts',
+			error: null
+		});
+		expect(bodyOf(spy, '/api/account')).toEqual({ kind: 'category', leaf: 'Gifts' });
+	});
+
+	it('sends the investment-only fields alongside the naming half', async () => {
+		const spy = stubWrite({ account: 'Assets:Investments:Taxable:BrokerageA' });
+
+		await openAccount(
+			'investment',
+			{ institution: 'Brokerage A' },
+			{ subtree: 'Taxable', holds_shares: false, employer: 'EmployerA', labels: ['OptionA'] }
+		);
+
+		expect(bodyOf(spy, '/api/account')).toEqual({
+			kind: 'investment',
+			institution: 'Brokerage A',
+			subtree: 'Taxable',
+			holds_shares: false,
+			employer: 'EmployerA',
+			labels: ['OptionA']
+		});
+	});
+
+	it('reports the API detail when an open is rejected', async () => {
+		vi.stubGlobal('fetch', mockFetchOnce({ detail: 'account name must be 1-60' }, false, 422));
+
+		expect(await openAccount('category', 'Bad Leaf')).toEqual({
+			account: null,
+			name: null,
+			error: 'account name must be 1-60'
+		});
+	});
+
+	it('closes an account with nothing but its name', async () => {
+		const spy = stubWrite({ ok: true, moved: 0 });
+
+		expect(await closeAccount('Expenses:Gifts')).toBeNull();
+		expect(bodyOf(spy, '/api/account/close')).toEqual({ account: 'Expenses:Gifts' });
+	});
+
+	it('carries a destination for a money account', async () => {
+		const spy = stubWrite({ ok: true, moved: 500 });
+
+		expect(
+			await closeAccount('Assets:Cash:BankA', { destination: 'Assets:Cash:BankB' })
+		).toBeNull();
+		expect(bodyOf(spy, '/api/account/close')).toEqual({
+			account: 'Assets:Cash:BankA',
+			destination: 'Assets:Cash:BankB'
+		});
+	});
+
+	it('carries the split legs for an investment', async () => {
+		const spy = stubWrite({ ok: true, moved: 1500 });
+		const legs = [{ destination: 'Assets:Cash:BankA', amount: 1500 }];
+
+		expect(await closeAccount('Assets:Investments:Taxable:BrokerageA', { legs })).toBeNull();
+		expect(bodyOf(spy, '/api/account/close')).toEqual({
+			account: 'Assets:Investments:Taxable:BrokerageA',
+			legs
+		});
+	});
+
+	// One route now answers for three operations, so its rejection has to stay the API's own words.
+	const rejected: CloseOptions[] = [
+		{},
+		{ destination: 'Assets:Cash:BankB' },
+		{ legs: [{ destination: 'Assets:Cash:BankB', amount: 1 }] }
+	];
+
+	it.each(rejected)('surfaces the API detail as worded, whatever was asked (%o)', async (opts) => {
+		vi.stubGlobal('fetch', mockFetchOnce({ detail: 'legs must sum to 5000' }, false, 422));
+		expect(await closeAccount('Assets:Cash:BankA', opts)).toBe('legs must sum to 5000');
+	});
+
+	it('sets a sweep destination and clears it', async () => {
+		const spy = stubWrite({ ok: true });
+
+		expect(await setSweep('Assets:Cash:BankA', 'Assets:Cash:BankB')).toBeNull();
+		expect(await setSweep('Assets:Cash:BankA', null)).toBeNull();
+
+		expect(bodiesOf(spy, '/api/account/sweep')).toEqual([
+			{ account: 'Assets:Cash:BankA', dest: 'Assets:Cash:BankB' },
+			{ account: 'Assets:Cash:BankA', dest: null }
+		]);
 	});
 });
 

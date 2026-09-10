@@ -1,6 +1,3 @@
-// `seed` is the rule that keeps a remembered choice from outliving the thing it names: every form
-// resolves its sticky preference through here, so a closed account can't leave a select empty.
-
 import { describe, expect, it } from 'vitest';
 import { seed } from '$lib/utils/editPrefs';
 

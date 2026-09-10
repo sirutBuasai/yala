@@ -1,6 +1,3 @@
-// The revivers are the safety layer over localStorage: a stored preference outlives the release
-// that wrote it, so these are what stop a stale or hand-edited value reaching the app.
-
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
 	listOf,

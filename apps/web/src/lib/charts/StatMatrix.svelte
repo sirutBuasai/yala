@@ -1,10 +1,8 @@
 <script lang="ts">
-	// A grid of figures where the ROWS and COLUMNS both carry meaning — e.g. totals vs run-rate
-	// (rows) across income / spent / saved (columns). Six such figures as six loose tiles hide the
-	// structure they already have and eat a whole row of height; as a matrix the layout itself says
-	// "same three measures, two different time bases", and a glance down a column compares them.
-	//
-	// Cells are catalog ids, so a new row or column is data, not markup.
+	// A grid of figures where the rows and columns both carry meaning — the same measures across two
+	// time bases, say. As loose tiles they'd hide that structure and eat a row of height; as a matrix
+	// the layout says it, and a glance down a column compares. Cells are catalog ids, so a new row or
+	// column is data rather than markup.
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
 	import { build } from '$lib/data/catalog';
@@ -16,7 +14,7 @@
 	}
 	interface Row {
 		label: string;
-		/** Small print under the row label (what this time base actually covers). */
+		/** Small print under the row label. */
 		caption?: string;
 		cells: Cell[];
 	}

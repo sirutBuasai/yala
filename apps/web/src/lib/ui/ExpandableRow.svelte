@@ -1,12 +1,7 @@
 <script lang="ts">
-	// A managed item that hides its controls until asked: name on the left, an optional chip, and a
-	// Manage/Done toggle that opens a drawer underneath. Both Manage rows (a bank account, an
-	// investment) were carrying their own copy of this — the same `.head`, `.name`, `.panel`, `.grow`
-	// and `.err` rules, five blocks each, plus their own `open` state and toggle.
-	//
-	// Keeping the controls closed is the point: a column of twelve accounts each showing two selects
-	// and a destructive button is unreadable, and makes the dangerous action as prominent as the safe
-	// one.
+	// A managed item that hides its controls until asked: name, an optional chip, and a Manage/Done
+	// toggle opening a drawer underneath. Keeping the controls closed is the point — a long column of
+	// open drawers is unreadable and makes the destructive action as prominent as the safe one.
 	import type { Snippet } from 'svelte';
 
 	interface Props {
@@ -18,8 +13,8 @@
 		error?: string;
 		/** Verb on the closed toggle — "Manage", "Retire". Closing always says "Done". */
 		action?: string;
-		/** Fired when the drawer opens, for a row whose controls need loading first (valuing an
-		    investment). Deliberately not on close: backing out shouldn't fetch anything. */
+		/** Fired when the drawer opens, for a row whose controls need loading first. Deliberately not
+		    on close: backing out shouldn't fetch anything. */
 		onopen?: () => void;
 		/** The controls, revealed when open. */
 		children: Snippet;
@@ -52,7 +47,6 @@
 </li>
 
 <style>
-	/* The row chrome that used to live in app.css's `.cats li`, now owned by the row itself. */
 	li {
 		display: flex;
 		flex-direction: column;

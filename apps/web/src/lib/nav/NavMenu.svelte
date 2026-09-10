@@ -1,12 +1,7 @@
 <script lang="ts">
-	// Borderless hamburger, INLINE in the page header. Clicking it slides in a left sidebar (with a
-	// dimmed backdrop) to switch between the dashboard (Home) and the throwaway Development sandbox.
-	// Plain <a> links let SvelteKit handle client-side navigation.
-	//
-	// It used to be `position: fixed` in the page's left gutter, which meant the column had to gain an
-	// asymmetric `padding-left` once the viewport stopped being wider than the column plus that gutter
-	// — and that indent pulled the pane grid off its own dot lattice at every width in that band. In
-	// the header it needs no gutter, and the column stays symmetrical at every width.
+	// Hamburger that slides in a left sidebar. It must stay INLINE in the page header: as
+	// `position: fixed` in the page's left gutter it forced an asymmetric `padding-left` on the column
+	// at narrower widths, which pulled the pane grid off its own dot lattice.
 	import { page } from '$app/stores';
 	import { fly, fade } from 'svelte/transition';
 	import { focusTrap } from '$lib/utils/focusTrap';
@@ -114,7 +109,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--gap-row);
-		/* no horizontal padding: children set their own so the full-width square hover reaches the edges */
+		/* No horizontal padding: children set their own, so the full-width hover reaches the edges. */
 		padding: var(--space-8) 0;
 		background: var(--surface);
 		border-right: 1px solid var(--border);
@@ -137,7 +132,6 @@
 		display: flex;
 		flex-direction: column;
 	}
-	/* full-width square hover — the app's standard for vertically stacked items */
 	.links a {
 		padding: var(--space-5) var(--space-9);
 		border-radius: 0;

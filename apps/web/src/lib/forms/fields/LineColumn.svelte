@@ -6,8 +6,8 @@
 </script>
 
 <script lang="ts">
-	// A labeled column of {value, amount} rows: each row picks a value (Select) and an amount.
-	// Reused for a paycheck's deduction/contribution lines and a transaction's credits.
+	// A labeled column of {value, amount} rows, reused for a paycheck's deduction/contribution lines
+	// and a transaction's credits.
 	import Select from '$lib/forms/fields/Select.svelte';
 	import AmountInput from '$lib/ui/AmountInput.svelte';
 
@@ -71,7 +71,7 @@
 		flex: 1;
 		min-width: 0;
 	}
-	/* The amount cell's own chrome lives in AmountInput; here it only needs to share the row. */
+	/* The amount cell's chrome lives in AmountInput; here it only shares the row. */
 	.linerow :global(.amountinput) {
 		flex: 1;
 		min-width: 0;

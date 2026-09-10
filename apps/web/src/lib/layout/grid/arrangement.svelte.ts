@@ -1,11 +1,9 @@
 // One board's state: the authored panes, the measurements a fitted pane needs, and the resolved
-// placement derived from both. Runes only — this layer never touches the DOM, so every rule it
-// applies is the pure one from `resolve.ts` / `sizing.ts` and can be tested without a browser.
+// placement derived from both. Runes only, no DOM.
 //
-// What is persisted is exactly the authored pane: a rectangle, a height mode, a ceiling, and the
-// ORDER of the array (which is the priority order the resolver breaks ties with). Displacement is
-// never written. The array order is authored too — dragging a pane moves it to the front,
-// which is how "drop a pane on its neighbour and the neighbour goes below" survives a reload.
+// What is persisted is exactly the authored pane — rectangle, height mode, ceiling — plus the ORDER
+// of the array, which is the priority order the resolver breaks ties with. Displacement is never
+// written.
 
 import { Pref, listOf, type Revive } from '$lib/utils/persist.svelte';
 import { assertNoOverlap, authoredY, clampRect, resolve, boardRows } from './resolve';
@@ -23,8 +21,7 @@ function whole(v: unknown, min: number): number | undefined {
 
 /**
  * Reviver for a stored board. Every field must survive or the entry is dropped: a half-read
- * rectangle would place a pane somewhere nobody chose, which is worse than falling back to the
- * declared default.
+ * rectangle would place a pane somewhere nobody chose.
  */
 function storedPanes(): Revive<AuthoredPane[]> {
 	return listOf((raw) => {
@@ -74,9 +71,8 @@ export class Arrangement {
 	}
 
 	/**
-	 * Stored panes first, in their stored (priority) order, then any pane the storage predates, in
-	 * declaration order. Entries for panes that no longer exist are dropped rather than kept as
-	 * ghosts that reserve space nothing can fill.
+	 * Stored panes first, in their stored (priority) order, then any pane the storage predates. Panes
+	 * that no longer exist are dropped rather than kept as ghosts reserving space nothing can fill.
 	 */
 	#merge(stored: AuthoredPane[]): AuthoredPane[] {
 		const known = new Map(stored.filter((p) => p.id in this.#specs).map((p) => [p.id, p]));
@@ -90,8 +86,6 @@ export class Arrangement {
 		const placed = resolve(
 			sizePanes(this.#panes, this.#specs, this.#measured, this.#env.arranging)
 		);
-		// The board can never render an overlap. Asserted rather than trusted: a break here is
-		// invisible until two panes visibly stack, by which point the cause is three edits away.
 		if (import.meta.env.DEV) assertNoOverlap(placed);
 		return placed;
 	});
@@ -99,7 +93,6 @@ export class Arrangement {
 	readonly #byId = $derived(new Map(this.#placed.map((p) => [p.id, p])));
 
 	readonly rows = $derived(boardRows(this.#placed));
-	/** Row-major reading order, for sequencing the folded layout. */
 	readonly order = $derived(readingOrder(this.#placed));
 
 	spec(id: string): PaneSpec {
@@ -123,18 +116,17 @@ export class Arrangement {
 		return effectiveMode(this.spec(id).content, this.authored(id).mode);
 	}
 
-	/** The card hugs its content (and so must be measured) rather than filling the cell. */
+	/** The card hugs its content, and so must be measured. Never when folded. */
 	hugs(id: string): boolean {
 		return !this.#env.folded && hugs(this.mode(id));
 	}
 
-	/** The body scrolls once the content overruns the pane. Never when folded — a folded pane hugs
-	    its content, so there is nothing to overrun. */
+	/** The body scrolls once the content overruns. Never when folded — a folded pane hugs its
+	    content, so there is nothing to overrun. */
 	scrolls(id: string): boolean {
 		return !this.#env.folded && scrolls(this.spec(id).content, this.mode(id));
 	}
 
-	/** Ceiling in px for a capped pane, so the card can stop there. */
 	capPx(id: string): number {
 		return pxForRows(this.authored(id).cap);
 	}
@@ -161,9 +153,8 @@ export class Arrangement {
 	}
 
 	/**
-	 * Drop a pane at a board position expressed in PLACED coordinates — where it is on screen.
-	 * `offset` is the displacement it was carrying when the gesture started, and subtracting it is
-	 * what stops the push being counted twice on the next render.
+	 * Drop a pane at a position in PLACED coordinates — where it is on screen. `offset` is the
+	 * displacement it was carrying at the press; `authoredY` subtracts it back out.
 	 */
 	drop(id: string, x: number, y: number, offset: number): void {
 		const { w, h } = this.authored(id);
@@ -190,8 +181,8 @@ export class Arrangement {
 
 	/**
 	 * Switch a list's height mode. Leaving a fitted mode freezes the height at what the content
-	 * currently needs, so "fit it, then hold it there" costs no extra control; entering `cap` seeds
-	 * the ceiling from the same figure, so the pane doesn't jump on the way in.
+	 * currently needs, and entering `cap` seeds the ceiling from the same figure, so the pane does not
+	 * jump either way.
 	 */
 	setMode(id: string, mode: HeightMode): void {
 		const fitted = this.#measured[id] === undefined ? undefined : rowsForPx(this.#measured[id]!);
@@ -219,14 +210,12 @@ export class Arrangement {
 		this.#pref.value = this.#panes.map((p) => ({ ...p }));
 	}
 
-	/** Back to the arrangement the view declares. */
 	reset(): void {
 		this.#pref.value = [];
 		this.#panes = this.#merge([]);
 	}
 
-	/** Columns the board runs at — the full lattice, or the folded count. `$derived.by` rather than
-	    `$derived`: a field initialiser runs BEFORE the constructor body, so reading `#env` directly
-	    here would read it before it is assigned. The closure defers that to first use. */
+	/** Columns the board runs at. `$derived.by` rather than `$derived`: a field initialiser runs BEFORE
+	    the constructor body, so reading `#env` directly here would read it before it is assigned. */
 	readonly columns = $derived.by(() => (this.#env.folded ? this.#env.columns : COLS));
 }

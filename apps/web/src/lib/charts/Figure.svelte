@@ -1,8 +1,7 @@
 <script lang="ts">
-	// Bind a data primitive to a chart. Given a primitive (and optionally which chart and display
-	// options), it asks the registry to adapt it into props and renders the matching chart. Views bind
-	// data here instead of importing charts and hand-shaping props — the data→visual coupling lives
-	// entirely in the registry.
+	// Bind a data primitive to a chart: ask the registry to adapt it into props, then render the
+	// matching chart. Views bind data here rather than importing charts and hand-shaping props, so the
+	// data→visual coupling lives entirely in the registry.
 	import type { Primitive } from '$lib/data/primitives';
 	import { CHARTS_BY_ID, defaultChart, type ColorBy } from './registry';
 	import Empty from '$lib/ui/Empty.svelte';
@@ -13,14 +12,14 @@
 		chart?: string;
 		area?: boolean;
 		color?: string;
-		/** What a categorical's keys name (categories, accounts, roles) — drives their colours. */
+		/** What a categorical's keys name — drives their colours. */
 		colorBy?: ColorBy;
 		total?: number;
 		/** Log-scale a line chart's value axis. */
 		log?: boolean;
 		/** Label lines at their right edge instead of drawing a legend. */
 		endLabels?: boolean;
-		/** Series names to draw dotted — a secondary reading against a primary one. */
+		/** Series names to draw dotted. */
 		dashed?: string[];
 		/** Heatmap scaling: per row (default) or one scale for the whole grid. */
 		normalize?: 'row' | 'global';

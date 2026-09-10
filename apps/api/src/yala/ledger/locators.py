@@ -1,8 +1,7 @@
 """Entry locators: stable handles that identify a ledger entry across edits.
 
-A locator is either ``id:<uuid>`` (preferred — survives line moves) or ``line:<path>:<lineno>``.
-These helpers format a locator from an entry's meta, resolve one back to a beancount transaction,
-and keep ledger paths relative so a private absolute path never leaks into ``data.json``.
+A locator is either ``id:<uuid>`` (preferred — survives line moves) or ``line:<path>:<lineno>``,
+whose path is kept ledger-relative so a private absolute path never leaks into ``data.json``.
 """
 
 from __future__ import annotations
@@ -15,12 +14,8 @@ from yala import config
 
 
 def ledger_relative(filename: str) -> str:
-    """A ledger-relative path, so a private absolute path never leaks into ``data.json``.
-
-    beancount stamps entries with the absolute source path; emitting that verbatim in a
-    ``line:`` locator would embed e.g. ``/Users/<owner>/.../ledger`` in the public snapshot.
-    Falls back to the original path when it can't be made relative (outside the ledger dir,
-    or a different drive on Windows)."""
+    """A ledger-relative path, so the absolute source path beancount stamps on an entry never leaks
+    into ``data.json``. Falls back to the original when it cannot be made relative."""
     base = str(config.LEDGER_DIR)
     try:
         rel = os.path.relpath(filename, base)
@@ -38,8 +33,7 @@ def ledger_relative(filename: str) -> str:
 
 def locator_of(meta: dict | None) -> str:
     """Stable edit handle from an entry's meta: ``id:<uuid>`` if present, else
-    ``line:<ledger-relative-path>:<lineno>``. Shared by the entity view and the raw-entry
-    sink helpers."""
+    ``line:<ledger-relative-path>:<lineno>``."""
     meta = meta or {}
     uid = meta.get("id")
 
@@ -50,18 +44,15 @@ def locator_of(meta: dict | None) -> str:
 
 
 def resolve_ledger_path(path: str) -> str:
-    """Canonical absolute path for a ``line:`` locator path (accepts relative or absolute), so a
-    ledger-relative locator round-trips against beancount's ``filename`` meta even across symlinks
-    (e.g. macOS /var vs /private/var)."""
+    """Canonical absolute path for a ``line:`` locator path (relative or absolute), so a locator
+    round-trips against beancount's ``filename`` meta even across symlinks."""
     absolute = path if os.path.isabs(path) else os.path.join(config.LEDGER_DIR, path)
     return os.path.realpath(absolute)
 
 
 def _find(entries: list, locator: str, directive: type, label: str):
-    """Resolve a locator against the ``directive``-typed entries, or raise ``KeyError``.
-
-    ``line:`` paths are ledger-relative (see :func:`locator_of`); legacy absolute paths still
-    resolve too."""
+    """Resolve a locator against the ``directive``-typed entries, or raise ``KeyError``. A ``line:``
+    path may be ledger-relative or absolute."""
     kind, _, rest = locator.partition(":")
     candidates = [e for e in entries if isinstance(e, directive)]
 
@@ -92,13 +83,9 @@ def find_entry(entries: list, locator: str) -> data.Transaction:
 
 
 def find_balance(entries: list, locator: str) -> data.Balance:
-    """Resolve a locator to a beancount ``balance`` assertion.
-
-    Assertions carry no ``id`` meta (they are written as bare directives, not transactions), so in
-    practice these are always ``line:`` locators."""
+    """Resolve a locator to a beancount ``balance`` assertion."""
     return _find(entries, locator, data.Balance, "balance assertion")
 
 
 def entry_locator(entry: data.Transaction) -> str:
-    """Stable handle for a raw beancount entry: id-form if it carries an id, else line-form."""
     return locator_of(entry.meta)

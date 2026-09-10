@@ -1,10 +1,7 @@
 <script lang="ts">
-	// A stack of managed things — categories, bank accounts, investments — each an inset row with its
-	// name on the left and its controls on the right. The list supplies the stack and the row chrome so
-	// the three call sites can't drift; `ItemRow` is the row itself, exported alongside.
-	//
-	// The empty state is part of the list on purpose: "no categories yet" is the same statement in the
-	// same voice wherever it appears, and making the caller write it invited three wordings.
+	// A stack of managed things, each an inset row with its name left and its controls right.
+	// `ItemRow` is the row itself, exported alongside. The empty state belongs to the list so its
+	// wording and voice stay identical wherever it appears.
 	import type { Snippet } from 'svelte';
 	import Empty from '$lib/ui/Empty.svelte';
 

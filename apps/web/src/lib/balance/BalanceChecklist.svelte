@@ -1,14 +1,5 @@
 <script lang="ts">
-	// "Log balances" — every loggable account on one screen, so a month's snapshot is one pass down the
-	// Balance column. A month's snapshot is its FIRST-of-month assertion, the convention the whole
-	// ledger follows.
-	//
-	// The columns make a figure checkable before it is committed:
-	//   Previous — what stood at the previous month's snapshot
-	//   Expected — what the ledger computes for this one, before anything new is logged
-	//   Change   — Balance − Previous, how much the account moved this month
-	//   Check    — Balance − Expected, only the adjustment this month would post
-	//
+	// Every loggable account on one screen, so a month's snapshot is one pass down the Balance column.
 	// A row that can't be saved blocks (see `blockReason`); "Save" commits the rest and says what it
 	// skipped.
 	import type { DashboardData } from '$lib/data/types';
@@ -34,12 +25,11 @@
 	import Badge from '$lib/ui/Badge.svelte';
 
 	interface Props {
-		/** Pane id in the board's layout. */
 		id: string;
 		data: DashboardData;
 		accounts: AccountsInfo | null;
 		onsaved: () => void;
-		/** Selected month "YYYY-MM" — shared with the calendar via the header stepper. */
+		/** Selected month, "YYYY-MM". */
 		monthKey: string;
 	}
 	let { id, data, accounts, onsaved, monthKey }: Props = $props();
@@ -48,14 +38,13 @@
 		buildRows(accounts?.balance_accounts ?? [], accounts?.liability_accounts ?? [], formatAccount)
 	);
 
-	/** First day of "YYYY-MM" as an ISO date — where a month's snapshot is asserted. Empty until the
-	    parent has resolved a month, so the fetch below can skip that first render. */
+	/** Empty until the parent has resolved a month, so the fetch below can skip that first render. */
 	const firstDayOf = (key: string) => (key ? `${key}-01` : '');
 	const shownDate = $derived(firstDayOf(monthKey));
 	const prevDate = $derived(monthKey ? firstDayOf(addMonths(monthKey, -1)) : '');
 
-	// Two reads: this month's snapshot date and the previous one. Their adjustment totals differ by
-	// exactly what was plugged in between, which is what isolates this month's figure.
+	// Two dated reads: this month's snapshot and the previous one. The difference between their
+	// adjustment totals is what isolates this month's figure.
 	let atNow = $state<Map<string, number>>(new Map());
 	let adjNow = $state<Map<string, number>>(new Map());
 	let adjPrev = $state<Map<string, number>>(new Map());
@@ -68,8 +57,8 @@
 
 	async function refresh() {
 		if (!shownDate || !prevDate) return;
-		// With no API there is nothing to serve the two dated reads, so the snapshot's current figures
-		// stand in and the columns that compare two dates read as unavailable rather than as wrong.
+		// Without the API nothing can serve the dated reads, so the two-date columns read as unavailable
+		// rather than as wrong.
 		if (!$live) {
 			atNow = toMap((data.networth?.accounts ?? []).map((a) => ({ ...a })));
 			adjNow = toMap(data.networth?.adjustments ?? []);
@@ -97,13 +86,12 @@
 		void refresh();
 	});
 
-	/** What the ledger computes for this month before anything new is logged (see checklist.ts). */
 	const expected = (account: string) =>
 		expectedAt(account, atNow, adjNow, adjPrev, locators.has(account));
 	const previous = (account: string) => prevVals.get(account) ?? null;
 
-	// Typed values, keyed by month so switching months never carries an entry across. Liabilities are
-	// typed as the amount owed (positive) and stored negative, the sign the ledger keeps.
+	// Keyed by month so switching months never carries an entry across. Liabilities are typed as the
+	// amount owed and stored negative.
 	let typed = $state<Record<string, number | null>>({});
 	const cellKey = (account: string) => `${monthKey}|${account}`;
 
@@ -113,11 +101,8 @@
 		return signedForLedger(row, n);
 	}
 
-	/** Balance − Expected: the adjustment this month's snapshot would post, on its own. */
 	const check = (row: Row) => checkOf(parsed(row), expected(row.account));
 	const matches = (row: Row) => agrees(check(row));
-	/** Why a row can't be saved: an impossible figure, or a liability that disagrees with the ledger
-	    (unlogged spending, not an adjustment). */
 	const whyBlocked = (row: Row) => blockReason(row, parsed(row), expected(row.account));
 	const blockedRow = (row: Row) => isBlocked(row, parsed(row), expected(row.account));
 
@@ -125,7 +110,6 @@
 	const blocked = $derived(rows.filter(blockedRow));
 	const savable = $derived(filled.filter((r) => !blockedRow(r)));
 
-	/** Effective figure for the aggregation: what was typed, else what the ledger already has. */
 	const effective = (row: Row) =>
 		parsed(row) ?? expected(row.account) ?? previous(row.account) ?? 0;
 	const assets = $derived(rows.filter((r) => !r.liability).reduce((s, r) => s + effective(r), 0));
@@ -177,7 +161,6 @@
 	{#if !rows.length}
 		<p class="cap">No loggable accounts yet. Open one under Manage.</p>
 	{:else}
-		<!-- The tally leads: it is what the whole pass is for, and it updates as each figure lands. -->
 		<dl class="agg">
 			<div>
 				<dt>Assets</dt>
@@ -193,8 +176,7 @@
 			</div>
 		</dl>
 
-		<!-- A table, not a grid of rows: shared column widths line the figures up at any pane width,
-		     and the wrapper scrolls sideways when six money columns no longer fit. -->
+		<!-- A table, so shared column widths line the figures up at any pane width. -->
 		<div class="balbox scroller-x">
 			<table class="bal" class:loading>
 				<thead>
@@ -296,15 +278,12 @@
 </Pane>
 
 <style>
-	/* No width cap here any more: a name and its figures ending up too far apart to read as one row
-	   is a question of how wide this PANE is, and the pane is the user's to size. */
-	/* The bleed lives on the wrapper because it is also the sideways scroller; with both on the table,
-	   a narrow viewport scrolled the whole page instead. */
+	/* Bug: bleed plus sideways scroll on the table itself scrolled the whole page when narrow, so the
+	   bleed lives on the wrapper that scrolls. */
 	.balbox {
 		width: calc(100% + 2 * var(--pad-card-x));
 		margin-inline: calc(-1 * var(--pad-card-x));
 	}
-	/* Column widths come from the content, so nothing is pinned to a fixed size. */
 	.bal {
 		width: 100%;
 		border-collapse: collapse;
@@ -318,8 +297,7 @@
 		white-space: nowrap;
 		vertical-align: middle;
 	}
-	/* The name column absorbs every spare pixel, which pushes the figure columns — each only as wide
-	   as its own widest value — hard against the right edge at any pane width. */
+	/* `width: 100%` makes the name column absorb the spare space, pushing the figure columns right. */
 	.bal th:first-child,
 	.bal td:first-child {
 		width: 100%;
@@ -385,7 +363,6 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
-	/* The entry cell's chrome comes from AmountInput; all that is left here is the row-state tint. */
 	.done .entrycell :global(.amountinput) {
 		border-color: color-mix(in srgb, var(--good) 45%, var(--border));
 	}
@@ -400,8 +377,8 @@
 		flex-direction: column;
 		gap: var(--gap-row);
 	}
-	/* `1fr` alone can't go below its content's min-width, so three columns of six-figure sums overflowed
-	   the card on a phone; auto-fit reflows them into rows. */
+	/* Bug: `1fr` can't go below its content's min-width, so the figures overflowed the card when
+	   narrow; auto-fit reflows them onto more rows instead. */
 	.agg {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
@@ -461,6 +438,4 @@
 		font-size: var(--text-secondary);
 		margin: 0;
 	}
-	/* No breakpoint for the narrow case: `.balbox` scrolls whenever the columns need more width than
-	   the pane has. */
 </style>

@@ -1,27 +1,20 @@
-// Shared client-side validation for every form that writes to the ledger.
-//
-// The first, fast line of defense — specific messages before a round trip; the API re-validates
-// authoritatively (a form is not a security boundary). Problems are collected and reported
-// together, so the user fixes everything at once instead of one prompt at a time.
+// Shared client-side validation for every form that writes to the ledger. A fast first pass only —
+// the API re-validates authoritatively. Problems are collected and reported together.
 
-/** The backend's own ceilings (`MAX_TEXT` / `MAX_LEAF` in api.py), so a form rejects what it would. */
+/** Mirrors the backend's `MAX_TEXT` / `MAX_LEAF` ceilings. */
 export const TEXT_MAX = 200;
 export const LEAF_MAX = 60;
 
-/** A typed amount, once it is known to be present. Non-finite fails the same way as out-of-range. */
 function amountProblem(value: number, label: string, allowZero: boolean): string | null {
 	if (Number.isFinite(value) && (allowZero ? value >= 0 : value > 0)) return null;
 	return allowZero ? `${label} must be 0 or more.` : `${label} must be greater than 0.`;
 }
 
-/** A new account / category name is a single leaf segment (mirrors the backend's `_LEAF_RE`). */
+/** Mirrors the backend's `_LEAF_RE`: a name is a single leaf segment. */
 const LEAF_RE = /^[A-Za-z0-9-]+$/;
 const ALNUM_RE = /[A-Za-z0-9]/;
 
-/**
- * Validate a name typed for a new account, category, employer, or contribution label. Returns a
- * message, or null when it passes. Shared by every "add a …" field so they can't drift apart.
- */
+/** Returns a message, or null when the name passes. */
 export function validateLeaf(leaf: string, noun: string): string | null {
 	if (!leaf) return `Enter ${/^[aeiou]/i.test(noun) ? 'an' : 'a'} ${noun}.`;
 	if (!LEAF_RE.test(leaf)) return 'Use only letters, numbers, or hyphens.';
@@ -30,9 +23,8 @@ export function validateLeaf(leaf: string, noun: string): string | null {
 }
 
 /**
- * Validate a name typed as words — an institution, a product name, a short form. The backend joins
- * these into the stored leaf by keeping only letters and digits, so a value with neither would
- * compose to an empty account name.
+ * Validate a name typed as words. The backend composes the stored leaf from the letters and digits
+ * alone, so a value with neither would compose to an empty account name.
  */
 export function validateName(value: string, label: string): string | null {
 	const text = value.trim();
@@ -47,10 +39,7 @@ export function validateOptionalName(value: string, label: string): string | nul
 	return value.trim() ? validateName(value, label) : null;
 }
 
-/**
- * Validate a number against an inclusive range, optionally requiring a whole number. Mirrors the
- * backend's `coerce`, so a setting rejected in the form is rejected the same way in the ledger.
- */
+/** Inclusive range check mirroring the backend's `coerce`. */
 export function validateRange(
 	value: number | null,
 	label: string,
@@ -65,9 +54,8 @@ export function validateRange(
 }
 
 /**
- * A row is only submitted when it has both a type and an amount, so the two mistakes worth flagging
- * are the ones that lose input or write a bad leg: an amount with no type picked, and a
- * non-positive amount against a type. A wholly empty row is a harmless no-op and passes.
+ * A row is only submitted with both a type and an amount, so a wholly empty row is a no-op and
+ * passes; only an amount with no type, or a non-positive amount, are flagged.
  */
 export function validateRows(
 	rows: { value: string; amount: number | null }[],
@@ -89,22 +77,18 @@ function andList(items: string[]): string {
 }
 
 interface Problems {
-	/** A required free text / selection value. */
 	require(value: string, label: string): Problems;
-	/** A required amount that must be present and strictly positive. */
 	positive(value: number | null, label: string): Problems;
-	/** A required amount that must be present and zero or more (a balance can be nothing). */
 	nonNegative(value: number | null, label: string): Problems;
-	/** Any other one-off check that already produced a full-sentence message (or null). */
+	/** Any other check that already produced a full-sentence message (or null). */
 	add(message: string | null): Problems;
 	/** The combined message, or '' when everything passed. */
 	message(): string;
 }
 
 /**
- * Collect every validation problem so they surface together: missing required fields merge into one
- * clause ("Title and Total bill are required."), and any other problems follow on their own lines
- * ("Total bill must be greater than 0."). Newline-separated so the footer shows one per line.
+ * Collect every problem so they surface together: missing required fields merge into one clause,
+ * other problems follow on their own lines. Newline-separated so the footer shows one per line.
  */
 export function problems(): Problems {
 	const missing: string[] = [];

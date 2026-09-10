@@ -1,4 +1,4 @@
-"""Account display names: the CamelCase renderer and the five-step alias rule."""
+"""Account display names: the CamelCase renderer and the alias rule."""
 
 from __future__ import annotations
 
@@ -12,12 +12,12 @@ from yala.ledger.naming import (
     to_leaf,
 )
 
-# Fictional institutions, following the fixtures' BankA / CardA convention. "Bank of Example" is
-# multi-word on purpose: it exercises the particle rule and gives the bank half room to shorten.
-BANK = "Bank of Example"
-BANK_ALIAS = "BoE"
-BROKER = "Example Brokerage"
-BROKER_ALIAS = "EB"
+# The bank is multi-word on purpose: it exercises the particle rule and gives the bank half of a
+# name room to shorten.
+BANK = "Bank of A"
+BANK_ALIAS = "BkA"
+BROKER = "Brokerage A"
+BROKER_ALIAS = "BrA"
 ISSUER = "Card Issuer"
 
 
@@ -31,9 +31,9 @@ class TestRender:
             ("ABBankChecking", "AB Bank Checking"),
             ("BrokerHSA", "Broker HSA"),
             ("RothIRA", "Roth IRA"),
-            # Interior particles lowercase; a case change alone would give "Bank Of Example".
-            ("BankOfExample", "Bank of Example"),
-            ("BankOfExampleCashRewards", "Bank of Example Cash Rewards"),
+            # Interior particles lowercase; a case change alone would give "Bank Of A".
+            ("BankOfA", "Bank of A"),
+            ("BankOfACashRewards", "Bank of A Cash Rewards"),
             # Letter->digit needs its own split: there is no case change in "r401k".
             ("Employer401k", "Employer 401k"),
             ("BrokerEmployer401k", "Broker Employer 401k"),
@@ -54,54 +54,52 @@ class TestRender:
 
 class TestAccountName:
     def test_short_name_ignores_aliases(self) -> None:
-        """Step 2 wins outright: an alias is a remedy for overflow, not a preference. A bank's cash
-        account can keep its full name while a card at the same bank shortens."""
+        """An alias is a remedy for overflow, not a preference, so a name under the cap keeps its
+        full form even when one is declared."""
         meta = {"institution": BANK, "bank_alias": BANK_ALIAS}
 
-        assert account_name("Assets:Cash:BankOfExample", meta) == "Bank of Example"
+        assert account_name("Assets:Cash:BankOfA", meta) == "Bank of A"
 
     def test_bank_alias_shortens_the_bank_half(self) -> None:
         meta = {"institution": BROKER, "bank_alias": BROKER_ALIAS}
-        name = account_name("Assets:Investments:Taxable:ExampleBrokerageIndividual", meta)
+        name = account_name("Assets:Investments:Taxable:BrokerageAIndividual", meta)
 
-        assert name == "EB Individual"
+        assert name == "BrA Individual"
 
     def test_bank_alias_wins_when_both_are_declared(self) -> None:
-        """Step 3: the bank half goes first, and the re-check stops there when that is enough — so
-        the account half keeps its full wording."""
+        """The bank half goes first, and once that fits the account half keeps its full wording."""
         meta = {
             "institution": BANK,
             "bank_alias": BANK_ALIAS,
             "account_alias": "Cash",
         }
-        name = account_name("Liabilities:CC:BankOfExampleCashRewards", meta)
+        name = account_name("Liabilities:CC:BankOfACashRewards", meta)
 
-        assert name == "BoE Cash Rewards"
+        assert name == "BkA Cash Rewards"
 
     def test_both_aliases_when_the_bank_alias_is_not_enough(self) -> None:
-        """The second half of step 3. No account in the real ledger reaches it — every name that
-        overruns is rescued by the bank alias alone — so this is its only coverage."""
+        """When the bank alias alone still overruns, the account alias goes in as well."""
         meta = {
             "institution": BANK,
             "bank_alias": BANK_ALIAS,
             "account_alias": "Biz Plat",
         }
-        name = account_name("Liabilities:CC:BankOfExampleBusinessPlatinum", meta)
+        name = account_name("Liabilities:CC:BankOfABusinessPlatinum", meta)
 
-        # "BoE Business Platinum" is 21, one over, so the account half shortens as well.
-        assert name == "BoE Biz Plat"
+        # "BkA Business Platinum" is one over the cap, so the account half shortens too.
+        assert name == "BkA Biz Plat"
         assert len(name) <= NAME_CAP
 
     def test_account_alias_alone(self) -> None:
-        """Step 4: no bank alias on file, so the account half shortens and the bank half stays."""
+        """No bank alias on file, so the account half shortens and the bank half stays."""
         meta = {"institution": ISSUER, "account_alias": "Plus"}
         name = account_name("Liabilities:CC:CardIssuerBusinessUnlimited", meta)
 
         assert name == "Card Issuer Plus"
 
     def test_falls_back_to_the_full_name(self) -> None:
-        """Step 5: over the cap with nothing declared. The cap is a target, not a guarantee, so a
-        long name comes through intact rather than being truncated here."""
+        """Over the cap with nothing declared: the cap is a target, so the long name comes through
+        intact rather than being truncated here."""
         name = account_name("Liabilities:CC:SomeVeryLongCardName", {})
 
         assert name == "Some Very Long Card Name"
@@ -114,13 +112,13 @@ class TestAccountName:
         """Without `institution` there is no way to know where the bank half ends, so the rule
         declines to guess and returns the full name."""
         meta = {"bank_alias": BROKER_ALIAS}
-        name = account_name("Assets:Investments:Taxable:ExampleBrokerageIndividual", meta)
+        name = account_name("Assets:Investments:Taxable:BrokerageAIndividual", meta)
 
-        assert name == "Example Brokerage Individual"
+        assert name == "Brokerage A Individual"
 
     def test_institution_that_does_not_prefix_the_name(self) -> None:
-        """A card branded by one company but issued by another: the institution is not part of the
-        account's name, so there is no bank half to substitute and step 4 handles it."""
+        """When the institution is not part of the account's name there is no bank half to
+        substitute, so only the account alias applies."""
         meta = {"institution": ISSUER, "bank_alias": "CI", "account_alias": "Rent"}
         name = account_name("Liabilities:CC:SomeBrandedLongCardName", meta)
 
@@ -133,7 +131,7 @@ class TestInstitutionOf:
 
     @pytest.mark.parametrize("meta", [None, {}, {"institution": ""}])
     def test_absent(self, meta: dict | None) -> None:
-        """An employer account, or one not yet tagged. Never inferred from the account name."""
+        """Never inferred from the account name."""
         assert institution_of(meta) is None
 
 
@@ -141,7 +139,7 @@ class TestToLeaf:
     @pytest.mark.parametrize(
         ("typed", "leaf"),
         [
-            ("Bank of Example", "BankOfExample"),
+            ("Bank of A", "BankOfA"),
             ("Cash Rewards", "CashRewards"),
             ("Roth IRA", "RothIRA"),
             # Caps the user typed survive, so an acronym stays one word.
@@ -158,9 +156,9 @@ class TestToLeaf:
 
     @pytest.mark.parametrize(
         "typed",
-        ["Bank of Example", "Cash Rewards", "Roth IRA", "AB Bank", "Employer 401k"],
+        ["Bank of A", "Cash Rewards", "Roth IRA", "AB Bank", "Employer 401k"],
     )
     def test_round_trips_through_render(self, typed: str) -> None:
-        """What the user typed is what they get back — the two halves of the naming rule agree, so a
-        form can promise the account will read the way it was written."""
+        """What the user typed is what they get back, so a form can promise the account will read
+        the way it was written."""
         assert render(to_leaf(typed)) == typed

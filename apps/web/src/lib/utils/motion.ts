@@ -1,6 +1,5 @@
-// Reduced-motion helper for Svelte transitions. CSS transitions are neutralized globally by a
-// `prefers-reduced-motion` media query in app.css; JS-driven Svelte transitions (fly/fade) can't
-// see that query, so they route their durations through `dur()` to collapse to an instant swap.
+// A `prefers-reduced-motion` media query in app.css neutralizes CSS transitions, but JS-driven
+// Svelte transitions can't see that query, so their durations route through `dur()`.
 
 const query = '(prefers-reduced-motion: reduce)';
 

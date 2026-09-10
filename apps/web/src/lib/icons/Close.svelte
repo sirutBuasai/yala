@@ -1,6 +1,5 @@
 <script lang="ts">
-	// A dismissal cross. One source of truth for the glyph, so every close button matches — and so
-	// none of them is a text "✕", which never centres in a button the way a drawn glyph does.
+	// A dismissal cross. Drawn rather than a text "✕", which never centres in a button.
 	interface Props {
 		size?: number;
 	}

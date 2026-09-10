@@ -1,14 +1,12 @@
 <script lang="ts">
 	// A week's spend in the calendar's gutter: a bar grown from the bottom of its row, plus the figure.
-	// Its own component because it is a mark, not a layout detail — a bar-in-a-gutter beside a row of
-	// cells is the shape any "total per row" gutter wants, and the grid shouldn't own how one is drawn.
 	import type { Snippet } from 'svelte';
 
 	interface Props {
 		total: number;
-		/** The busiest row's total; the bar is a share of this, so the gutter reads as one chart. */
+		/** The busiest row's total; each bar is a share of it, so the gutter reads as one chart. */
 		peak: number;
-		/** Spoken name — the bar and the compact figure are both hidden from assistive tech. */
+		/** Spoken name; the bar and the figure are hidden from assistive tech. */
 		label: string;
 		children: Snippet;
 	}

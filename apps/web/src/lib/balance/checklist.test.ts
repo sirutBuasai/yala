@@ -1,7 +1,3 @@
-// The checklist's rules. Getting these wrong is not cosmetic: `expectedAt` deciding to compare a
-// figure against itself would report agreement for every already-logged month, and `isBlocked`
-// getting the asset/liability asymmetry backwards would paper over a missing entry with a plug.
-
 import { describe, expect, it } from 'vitest';
 import {
 	agrees,
@@ -31,7 +27,6 @@ describe('groupOf', () => {
 	});
 
 	it('tests the tax-advantaged subtree BEFORE the investments subtree it sits inside', () => {
-		// A naive prefix order would call this one "Taxable", since it also starts with Investments:.
 		expect(groupOf('Assets:Investments:TaxAdvantaged:RothIRA')).not.toBe('Taxable');
 	});
 });
@@ -45,12 +40,12 @@ describe('buildRows', () => {
 				'Assets:Investments:Taxable:Zebra',
 				'Assets:Cash:Beta',
 				'Assets:Cash:Alpha',
-				'Assets:Investments:TaxAdvantaged:Yak'
+				'Assets:Investments:TaxAdvantaged:PlanA'
 			],
 			['Liabilities:CC:Card'],
 			label
 		);
-		expect(rows.map((r) => label(r.account))).toEqual(['Alpha', 'Beta', 'Zebra', 'Yak', 'Card']);
+		expect(rows.map((r) => label(r.account))).toEqual(['Alpha', 'Beta', 'Zebra', 'PlanA', 'Card']);
 	});
 
 	it('marks only the liability accounts as liabilities', () => {
@@ -72,7 +67,6 @@ describe('expectedAt', () => {
 	});
 
 	it('backs out THIS month’s adjustment when a snapshot already stands on the date', () => {
-		// 120 of plug total, 100 of which predates this month → 20 belongs to this month.
 		const adjNow = new Map([['A', 120]]);
 		const adjPrev = new Map([['A', 100]]);
 		expect(expectedAt('A', atNow, adjNow, adjPrev, true)).toBe(980);

@@ -46,20 +46,20 @@ def test_append_transaction_grows_file_and_loads(ledger_dir: Path):
     text = target.read_text()
     appended = text[len(before) :]
     assert '"new coffee"' in appended
-    assert "src:" not in appended  # no spreadsheet-import artifact on new entries
+    assert "src:" not in appended
     assert "id:" in appended
     _loads_clean(ledger_dir)
 
 
 def test_append_netted_transaction(ledger_dir: Path):
-    """Model A netting: ``amount`` is the total bill; the Expenses posting is the net share."""
+    """``amount`` is the whole bill; the Expenses posting carries only the net share."""
     FileLedgerSink(ledger_dir).append_transaction(
         date=dt.date(2026, 2, 3),
         payee="dinner with friends",
-        amount=Decimal("300.00"),  # the total bill
+        amount=Decimal("300.00"),
         category="Takeouts",
         funding_account="Liabilities:CC:CardA",
-        credits=[("Assets:Cash:Wallet", Decimal("200.00"))],  # a $200 payback coming in
+        credits=[("Assets:Cash:Wallet", Decimal("200.00"))],
     )
     led = _loads_clean(ledger_dir)
 
@@ -67,38 +67,38 @@ def test_append_netted_transaction(ledger_dir: Path):
     assert len(entries) == 1
     txn = entries[0]
     assert txn.category == "Takeouts"
-    assert txn.amount == Decimal("100.00")  # net share (300 - 200) is the single Expenses posting
-    assert txn.bill == Decimal("300.00")  # bill meta records the total
+    assert txn.amount == Decimal("100.00")
+    assert txn.bill == Decimal("300.00")
 
-    # by_category counts only the net share, not the $300 bill.
+    # by_category counts the net share, not the whole bill.
     assert led.spending.by_category(2026, 2)["Takeouts"] == Decimal("100.00")
 
     text = (ledger_dir / "spending" / "2026.beancount").read_text()
     assert "bill: 300.00 USD" in text
-    # beancount's printer controls column alignment; assert content, not exact spacing.
+    # beancount's printer controls column alignment, so assert content and not spacing.
     assert re.search(r"Expenses:Takeouts\s+100\.00 USD", text)
     assert re.search(r"Assets:Cash:Wallet\s+200\.00 USD", text)
-    assert "-300.00 USD" in text  # funding paid the full bill
+    assert "-300.00 USD" in text  # funding paid the whole bill
 
 
 def test_append_refund_yields_negative_net(ledger_dir: Path):
-    """Σ paybacks > total bill → a negative net_expense (pure refund), and it still loads."""
+    """Credits exceeding the bill give a negative net expense, and it still loads."""
     FileLedgerSink(ledger_dir).append_transaction(
         date=dt.date(2026, 2, 4),
         payee="over-refunded dinner",
-        amount=Decimal("50.00"),  # total bill
+        amount=Decimal("50.00"),
         category="Takeouts",
         funding_account="Liabilities:CC:CardA",
         credits=[("Assets:Cash:Wallet", Decimal("80.00"))],  # credits exceed the bill
     )
     led = _loads_clean(ledger_dir)
     txn = [t for t in led.spending.transactions() if t.payee == "over-refunded dinner"][0]
-    assert txn.amount == Decimal("-30.00")  # net_expense is negative, not rejected
+    assert txn.amount == Decimal("-30.00")
     assert txn.bill == Decimal("50.00")
 
     text = (ledger_dir / "spending" / "2026.beancount").read_text()
     assert re.search(r"Expenses:Takeouts\s+-30\.00 USD", text)
-    assert "-50.00 USD" in text  # funding still balances the full bill
+    assert "-50.00 USD" in text  # funding still balances the whole bill
 
 
 def test_update_transaction_replaces_in_place(ledger_dir: Path):
@@ -117,26 +117,26 @@ def test_update_transaction_replaces_in_place(ledger_dir: Path):
     new_id = sink.update_transaction(
         f"id:{entry_id}",
         payee="lunch",
-        amount=Decimal("40.00"),  # total bill; a friend paid $25 back
+        amount=Decimal("40.00"),
         category="Takeouts",
         funding_account="Liabilities:CC:CardA",
-        pending=False,  # ! -> *
+        pending=False,
         credits=[("Assets:Cash:Wallet", Decimal("25.00"))],
     )
-    assert new_id == entry_id  # id preserved across edit
+    assert new_id == entry_id
 
     text = target.read_text()
-    assert text.count('"lunch"') == 1  # replaced, not duplicated
-    assert '2026-02-05 * "lunch"' in text  # flag flipped to '*'
+    assert text.count('"lunch"') == 1
+    assert '2026-02-05 * "lunch"' in text  # the pending flag was cleared
     led = _loads_clean(ledger_dir)
     txn = [t for t in led.spending.transactions() if t.payee == "lunch"][0]
-    assert txn.amount == Decimal("15.00")  # net share (40 - 25)
+    assert txn.amount == Decimal("15.00")
     assert txn.bill == Decimal("40.00")
     assert txn.pending is False
 
 
 def test_update_by_line_locator_assigns_id(ledger_dir: Path):
-    """A pre-existing fixture entry has no id; updating by line-locator assigns a stable one."""
+    """An entry with no id is addressable only by line; updating one assigns a stable id."""
     led = Ledger(ledger_dir / "main.beancount", strict=True).load()
     fitness = [t for t in led.spending.transactions() if t.payee == "Example Gym"][0]
     assert fitness.locator.startswith("line:")
@@ -148,7 +148,7 @@ def test_update_by_line_locator_assigns_id(ledger_dir: Path):
         category="Subscription",
         funding_account="Liabilities:CC:CardB",
     )
-    assert new_id  # a fresh uuid was assigned
+    assert new_id
 
     led2 = _loads_clean(ledger_dir)
     updated = [t for t in led2.spending.transactions() if t.payee == "Example Gym"][0]
@@ -157,8 +157,7 @@ def test_update_by_line_locator_assigns_id(ledger_dir: Path):
 
 
 def test_line_locator_is_ledger_relative(ledger_dir: Path, monkeypatch):
-    """A line-locator must stay ledger-relative so no private absolute path leaks into data.json,
-    and must still round-trip through the sink."""
+    """A line-locator stays ledger-relative, so no private absolute path leaks into data.json."""
     import yala.config as config_mod
 
     monkeypatch.setattr(config_mod, "LEDGER_DIR", ledger_dir)
@@ -204,11 +203,11 @@ def test_update_rolls_back_on_broken_ledger(ledger_dir: Path):
             funding_account="Assets:Cash:NonExistent",  # unopened account -> load error
         )
 
-    assert target.read_text() == before  # original file intact
+    assert target.read_text() == before
     _loads_clean(ledger_dir)
 
 
-# Resolved payroll accounts (the API layer maps option labels → these).
+# Resolved payroll accounts, as the API layer maps option labels onto them.
 _EMPLOYER = "Income:Salary:Employer1"
 _TAX = "Expenses:Deductions:Tax"
 _INSURANCE = "Expenses:Deductions:Insurance"
@@ -232,8 +231,8 @@ def test_append_paycheck_balances_and_loads(ledger_dir: Path):
 
 
 def test_append_paycheck_splits_share_one_account_via_meta(ledger_dir: Path):
-    """401k splits post to the SAME account, distinguished by a `split` posting-meta — so net
-    worth sees one pot while income breaks out the split."""
+    """Split contributions post to the SAME account, tagged by a ``label`` posting-meta, so net
+    worth sees one holding while income breaks the split out."""
     sink = FileLedgerSink(ledger_dir)
     entry_id = sink.append_paycheck(
         date=dt.date(2026, 2, 15),
@@ -258,7 +257,7 @@ def test_append_paycheck_splits_share_one_account_via_meta(ledger_dir: Path):
 
 
 def test_paycheck_to_unopened_deposit_account_raises_not_found(ledger_dir: Path):
-    """A paycheck deposited to an account that was never opened is rejected up-front."""
+    """An unopened deposit account is rejected before anything is written."""
     target = ledger_dir / "income" / "2026.beancount"
     before = target.read_bytes()
 
@@ -275,11 +274,11 @@ def test_paycheck_to_unopened_deposit_account_raises_not_found(ledger_dir: Path)
     assert msg.startswith("Unable to insert transaction:")
     assert "Assets:Cash:NonExistent" in msg
     assert "does not exist" in msg
-    assert target.read_bytes() == before  # nothing written
+    assert target.read_bytes() == before
 
 
 def test_paycheck_to_closed_account_raises_closed(ledger_dir: Path):
-    """A paycheck dated after a deposit account's close date is rejected with a closed-message."""
+    """A paycheck dated after the deposit account's close is rejected."""
     with pytest.raises(ValueError) as exc:
         FileLedgerSink(ledger_dir).append_paycheck(
             date=dt.date(2025, 3, 2),
@@ -295,7 +294,7 @@ def test_paycheck_to_closed_account_raises_closed(ledger_dir: Path):
 
 
 def test_paycheck_with_unopened_contribution_account_raises(ledger_dir: Path):
-    """The active-on-date check also covers deduction/contribution legs, not just the deposit."""
+    """The active-on-date check covers the contribution legs, not just the deposit."""
     with pytest.raises(ValueError) as exc:
         FileLedgerSink(ledger_dir).append_paycheck(
             date=dt.date(2026, 2, 15),
@@ -334,7 +333,7 @@ def test_update_paycheck_edits_in_place(ledger_dir: Path):
         deposit_account="Assets:Cash:BankB",
     )
     target = ledger_dir / "income" / "2026.beancount"
-    assert target.read_text().count('"paycheck"') == 2  # fixture's 2026-01 + this one
+    assert target.read_text().count('"paycheck"') == 2  # the fixture's, plus this one
 
     new_id = sink.update_paycheck(
         f"id:{entry_id}",
@@ -344,8 +343,8 @@ def test_update_paycheck_edits_in_place(ledger_dir: Path):
         contribution_legs=[(_HSA, None, Decimal("160.00"))],
         deposit_account="Assets:Cash:BankB",
     )
-    assert new_id == entry_id  # id preserved
-    assert target.read_text().count('"paycheck"') == 2  # replaced, not duplicated
+    assert new_id == entry_id
+    assert target.read_text().count('"paycheck"') == 2
 
     led = _loads_clean(ledger_dir)
     pc = led.income.paychecks(2026, 2)[0]
@@ -407,7 +406,7 @@ def test_update_paycheck_to_unopened_account_rejected(ledger_dir: Path):
             contribution_legs=[],
             deposit_account="Assets:Cash:Nope",  # unopened
         )
-    assert target.read_bytes() == before  # nothing clobbered
+    assert target.read_bytes() == before
     _loads_clean(ledger_dir)
 
 
@@ -420,12 +419,12 @@ def test_new_year_file_creates_include(ledger_dir: Path):
         funding_account="Liabilities:CC:CardA",
     )
     assert (ledger_dir / "spending" / "2027.beancount").exists()
-    # the year include joins the spending.beancount aggregator, not main
+    # the include joins the aggregator, not main
     assert 'include "spending/2027.beancount"' in (ledger_dir / "spending.beancount").read_text()
     assert 'include "spending/2027.beancount"' not in (ledger_dir / "main.beancount").read_text()
     _loads_clean(ledger_dir)
 
-    # a second 2027 entry reuses the file/include — no duplicate include
+    # a second 2027 entry reuses the same file and include
     FileLedgerSink(ledger_dir).append_transaction(
         date=dt.date(2027, 2, 9),
         payee="another future latte",
@@ -454,7 +453,7 @@ def _open_file(ledger_dir: Path, account: str) -> Path:
 
 
 def test_open_account_escapes_a_quote_in_metadata(ledger_dir: Path):
-    """A quote in a typed institution is escaped, so the file parses and the value survives."""
+    """A quote or backslash in a typed value is escaped, so the file still parses."""
     sink = FileLedgerSink(ledger_dir)
 
     sink.open_account("Assets:Cash:Quoted", meta={"institution": 'Bank "X" \\ Example'})
@@ -468,19 +467,19 @@ def test_open_account_escapes_a_quote_in_metadata(ledger_dir: Path):
 
 def test_set_account_meta_escapes_a_quote(ledger_dir: Path):
     sink = FileLedgerSink(ledger_dir)
-    sink.open_account("Assets:Cash:Meta")
+    sink.open_account("Assets:Cash:Tagged")
 
-    sink.set_account_meta("Assets:Cash:Meta", "institution", 'A "B"')
+    sink.set_account_meta("Assets:Cash:Tagged", "institution", 'A "B"')
 
     led = _loads_clean(ledger_dir)
     opened = next(
-        e for e in led.entries if isinstance(e, data.Open) and e.account == "Assets:Cash:Meta"
+        e for e in led.entries if isinstance(e, data.Open) and e.account == "Assets:Cash:Tagged"
     )
     assert opened.meta["institution"] == 'A "B"'
 
 
 def test_open_account_lands_beside_its_siblings(ledger_dir: Path):
-    """A new open joins the file that already declares its family, not the aggregator."""
+    """A new open joins the file that already declares its family."""
     sink = FileLedgerSink(ledger_dir)
     family_file = _open_file(ledger_dir, "Expenses:Grocery")
 
@@ -499,8 +498,8 @@ def test_close_account_deactivates_category(ledger_dir: Path):
 
     assert "close Expenses:Gifts" in open_file.read_text()  # close sits with its open
     led = _loads_clean(ledger_dir)
-    assert "Expenses:Gifts" in led.declared_accounts("Expenses:")  # history is preserved
-    assert "Expenses:Gifts" not in led.active_accounts("Expenses:")  # but no longer active
+    assert "Expenses:Gifts" in led.declared_accounts("Expenses:")
+    assert "Expenses:Gifts" not in led.active_accounts("Expenses:")
 
 
 # --- transfers (bill pay) ---
@@ -521,7 +520,7 @@ def test_append_transfer_lists_as_transfer_only(ledger_dir: Path):
     assert xfers[0].from_account == "Assets:Cash:BankA"
     assert xfers[0].to_account == "Liabilities:CC:CardA"
     assert xfers[0].amount == Decimal("250.00")
-    # a transfer counts as neither spending nor income
+    # a transfer is neither spending nor income
     assert all(s.payee != "card autopay" for s in led.spending.transactions())
     assert all(p.payee != "card autopay" for p in led.income.paychecks())
 
@@ -628,11 +627,11 @@ def test_delete_unknown_locator_raises_and_leaves_files_intact(ledger_dir: Path)
     _loads_clean(ledger_dir)
 
 
-# --- regression tests for the hardening fixes ---
+# --- regressions: each of these was a real bug ---
 
 
 def test_update_preserves_narration_tag_and_custom_meta(ledger_dir: Path):
-    """Fix #1: a round-trip update keeps the entry's narration, tags, and custom meta."""
+    """A round-trip update keeps the entry's narration, tags, and custom meta."""
     target = ledger_dir / "spending" / "2026.beancount"
     target.write_text(
         target.read_text() + '\n2026-03-15 * "store" "weekly groceries" #recurring\n'
@@ -668,9 +667,8 @@ def test_update_preserves_narration_tag_and_custom_meta(ledger_dir: Path):
 
 
 def test_update_narration_only_entry_does_not_duplicate_into_payee(ledger_dir: Path):
-    """A beancount entry with only a narration (``* "boba"`` -> payee=None, narration="boba")
-    surfaces that narration as the UI title. Saving it back with payee="boba" must NOT leave a
-    duplicated ``"boba" "boba"``; the redundant narration is dropped."""
+    """An entry written with a single string has that string as its narration, not its payee, and
+    the UI shows it as the title. Saving the title back must not duplicate it into both fields."""
     from beancount.core import data
 
     target = ledger_dir / "spending" / "2026.beancount"
@@ -685,7 +683,7 @@ def test_update_narration_only_entry_does_not_duplicate_into_payee(ledger_dir: P
         for e in Ledger(ledger_dir / "main.beancount", strict=True).load().entries
         if isinstance(e, data.Transaction) and e.meta.get("id") == "narr-only"
     ][0]
-    assert original.payee is None and original.narration == "boba"  # narration-only, as written
+    assert original.payee is None and original.narration == "boba"
 
     FileLedgerSink(ledger_dir).update_transaction(
         "id:narr-only",
@@ -702,36 +700,35 @@ def test_update_narration_only_entry_does_not_duplicate_into_payee(ledger_dir: P
         if isinstance(e, data.Transaction) and e.meta.get("id") == "narr-only"
     ][0]
     assert entry.payee == "boba"
-    assert not entry.narration  # dropped (empty/None), not duplicated to "boba"
+    assert not entry.narration  # dropped, not duplicated into the narration
     assert '"boba" "boba"' not in target.read_text()
 
 
 def test_quantize_first_balances(ledger_dir: Path):
-    """Fix #2: legs are quantized before deriving net/funding, so 10.005 + 10.005 balances
-    exactly."""
+    """Legs are quantized before net/funding are derived, so equal odd-cent legs still balance."""
     FileLedgerSink(ledger_dir).append_transaction(
         date=dt.date(2026, 4, 1),
         payee="odd cents",
-        amount=Decimal("10.005"),  # total bill
+        amount=Decimal("10.005"),
         category="Takeouts",
         funding_account="Liabilities:CC:CardA",
         credits=[("Assets:Cash:Wallet", Decimal("10.005"))],
     )
     led = _loads_clean(ledger_dir)  # loads without residual-balance errors
     txn = [t for t in led.spending.transactions() if t.payee == "odd cents"][0]
-    # q(10.005) - q(10.005) = 10.00 - 10.00 = 0.00 (banker's rounding applied before subtracting)
+    # each leg rounds to 10.00 before the subtraction, so the net is exactly zero
     assert txn.amount == Decimal("0.00")
 
 
 def test_funding_meta_beats_more_negative_split(ledger_dir: Path):
-    """Fix #3: funding is read from the meta, not the most-negative-leg heuristic."""
+    """Funding is read from the meta, not from the most-negative-leg heuristic."""
     FileLedgerSink(ledger_dir).append_transaction(
         date=dt.date(2026, 4, 5),
         payee="netted dinner",
         amount=Decimal("100.00"),
         category="Takeouts",
         funding_account="Liabilities:CC:CardA",
-        # A receivable leg more negative than the funding card would fool the heuristic.
+        # A credit leg more negative than the funding card would fool the heuristic.
         credits=[
             ("Assets:Cash:Wallet", Decimal("200.00")),
             ("Assets:Receivable:Friends", Decimal("-400.00")),
@@ -739,11 +736,11 @@ def test_funding_meta_beats_more_negative_split(ledger_dir: Path):
     )
     led = _loads_clean(ledger_dir)
     txn = [t for t in led.spending.transactions() if t.payee == "netted dinner"][0]
-    assert txn.source == "Liabilities:CC:CardA"  # via meta, not the -400 receivable leg
+    assert txn.source == "Liabilities:CC:CardA"  # from the meta, not the most-negative leg
 
 
 def test_update_raises_on_stale_line_locator(ledger_dir: Path, monkeypatch):
-    """Fix #4: if the resolver hands back a lineno that no longer points at that entry, refuse."""
+    """If the resolver hands back a lineno that no longer holds that entry, refuse the write."""
     from beancount.core import data
 
     import yala.sink as sink_mod
@@ -756,7 +753,7 @@ def test_update_raises_on_stale_line_locator(ledger_dir: Path, monkeypatch):
     }
     boba = txns["boba"]
     fitness = txns["Example Gym"]
-    # boba resolved, but pointed at fitness's line -> stale locator.
+    # One entry resolved, but pointing at another entry's line: a stale locator.
     stale = boba._replace(meta={**boba.meta, "lineno": fitness.meta["lineno"]})
     monkeypatch.setattr(sink_mod, "find_entry", lambda entries, locator: stale)
 
@@ -770,11 +767,11 @@ def test_update_raises_on_stale_line_locator(ledger_dir: Path, monkeypatch):
             category="Takeouts",
             funding_account="Liabilities:CC:CardA",
         )
-    assert target.read_bytes() == before  # nothing clobbered
+    assert target.read_bytes() == before
 
 
 def test_failed_reload_leaves_file_byte_identical(ledger_dir: Path):
-    """Fix #5: a write that fails the strict reload restores the original bytes exactly."""
+    """A write that fails the strict reload restores the original bytes exactly."""
     sink = FileLedgerSink(ledger_dir)
     entry_id = sink.append_transaction(
         date=dt.date(2026, 5, 1),
@@ -794,11 +791,11 @@ def test_failed_reload_leaves_file_byte_identical(ledger_dir: Path):
             category="Takeouts",
             funding_account="Assets:Cash:Nope",  # unopened -> strict reload fails
         )
-    assert target.read_bytes() == before  # byte-identical rollback
+    assert target.read_bytes() == before
 
 
 def test_update_does_not_swallow_next_entry_across_whitespace_line(ledger_dir: Path):
-    """Fix #6: a whitespace-only separator ends the entry span (isn't treated as a continuation)."""
+    """A whitespace-only line ends an entry span rather than reading as a continuation."""
     target = ledger_dir / "spending" / "2026.beancount"
     target.write_text(
         target.read_text() + '\n2026-06-01 * "first"\n'
@@ -822,7 +819,7 @@ def test_update_does_not_swallow_next_entry_across_whitespace_line(ledger_dir: P
     )
     led = _loads_clean(ledger_dir)
     second = [t for t in led.spending.transactions() if t.payee == "second"]
-    assert len(second) == 1  # untouched
+    assert len(second) == 1
     assert second[0].amount == Decimal("6.00")
 
 
@@ -830,8 +827,8 @@ def test_update_does_not_swallow_next_entry_across_whitespace_line(ledger_dir: P
 
 
 def test_update_across_year_moves_entry_to_new_year_file(ledger_dir: Path):
-    """Editing a txn's date into another year removes it from the old file and appends to the
-    new year's file (creating that file + its include when needed)."""
+    """A date edit into another year relocates the entry, creating that year's file and its
+    include when needed."""
     sink = FileLedgerSink(ledger_dir)
     entry_id = sink.append_transaction(
         date=dt.date(2026, 2, 5),
@@ -851,11 +848,11 @@ def test_update_across_year_moves_entry_to_new_year_file(ledger_dir: Path):
         funding_account="Liabilities:CC:CardA",
         date=dt.date(2027, 3, 9),  # crosses 2026 -> 2027
     )
-    assert new_id == entry_id  # id preserved across the move
+    assert new_id == entry_id
 
     dst_file = ledger_dir / "spending" / "2027.beancount"
-    assert '"moving txn"' not in src_file.read_text()  # gone from the old year
-    assert '"moving txn"' in dst_file.read_text()  # landed in the new year
+    assert '"moving txn"' not in src_file.read_text()
+    assert '"moving txn"' in dst_file.read_text()
     assert '2027-03-09 * "moving txn"' in dst_file.read_text()
     assert 'include "spending/2027.beancount"' in (ledger_dir / "spending.beancount").read_text()
 
@@ -867,8 +864,7 @@ def test_update_across_year_moves_entry_to_new_year_file(ledger_dir: Path):
 
 
 def test_update_across_year_with_bad_account_leaves_old_file_intact(ledger_dir: Path):
-    """A year-crossing edit that names an invalid account is rejected before any file is moved,
-    so the original year file is untouched."""
+    """A rejected year-crossing edit leaves the original year file untouched."""
     sink = FileLedgerSink(ledger_dir)
     entry_id = sink.append_transaction(
         date=dt.date(2026, 2, 6),
@@ -890,7 +886,7 @@ def test_update_across_year_with_bad_account_leaves_old_file_intact(ledger_dir: 
             date=dt.date(2027, 1, 1),  # would cross the year boundary
         )
 
-    assert src_file.read_bytes() == before  # original year file byte-identical
+    assert src_file.read_bytes() == before
     _loads_clean(ledger_dir)
 
 
@@ -898,7 +894,7 @@ def test_update_across_year_with_bad_account_leaves_old_file_intact(ledger_dir: 
 
 
 def test_append_before_funding_open_date_raises_clear_error(ledger_dir: Path):
-    """A txn dated before the funding account's open date is rejected with a clean message."""
+    """A txn dated before the funding account opened is rejected, naming the account and date."""
     target = ledger_dir / "spending" / "2026.beancount"
     before = target.read_bytes()
 
@@ -912,14 +908,14 @@ def test_append_before_funding_open_date_raises_clear_error(ledger_dir: Path):
         )
     msg = str(exc.value)
     assert msg.startswith("Unable to insert transaction:")
-    assert "Liabilities:CC:CardC" in msg  # names the account
-    assert "2026-08-14" in msg  # names its open date
+    assert "Liabilities:CC:CardC" in msg
+    assert "2026-08-14" in msg
     assert "not open as of date" in msg
-    assert target.read_bytes() == before  # nothing written
+    assert target.read_bytes() == before
 
 
 def test_append_after_close_date_raises_closed_error(ledger_dir: Path):
-    """A txn dated on/after an account's close date is rejected with a clean closed-message."""
+    """A txn dated on or after an account's close is rejected."""
     with pytest.raises(ValueError) as exc:
         FileLedgerSink(ledger_dir).append_transaction(
             date=dt.date(2025, 3, 2),
@@ -936,7 +932,7 @@ def test_append_after_close_date_raises_closed_error(ledger_dir: Path):
 
 
 def test_append_on_exact_open_date_succeeds(ledger_dir: Path):
-    """Regression: an account opened exactly on the txn date is allowed (don't over-reject)."""
+    """An account opened exactly on the txn date is allowed."""
     FileLedgerSink(ledger_dir).append_transaction(
         date=dt.date(2026, 8, 14),  # == CardC open date
         payee="opening day",
@@ -949,7 +945,7 @@ def test_append_on_exact_open_date_succeeds(ledger_dir: Path):
 
 
 def test_append_split_leg_before_open_date_raises(ledger_dir: Path):
-    """The active-on-date check also covers split-leg accounts, not just funding."""
+    """The active-on-date check covers credit-leg accounts, not just funding."""
     with pytest.raises(ValueError) as exc:
         FileLedgerSink(ledger_dir).append_transaction(
             date=dt.date(2026, 1, 5),

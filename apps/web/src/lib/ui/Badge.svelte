@@ -1,11 +1,9 @@
 <script lang="ts">
-	// A small status pill. Collected from four hand-rolled versions that had already drifted apart —
-	// the "● pending" flag on a transaction row, the same flag on a transfer row (a separate copy of
-	// the same CSS), the ✓/✕/adjustment tags in the balance checklist, and the count beside a Manage
-	// heading. They differ only in tone and whether they carry a dot, so that is what the props are.
+	// The one small status pill: pending flags, checklist verdicts, counts. They differ only in tone
+	// and whether they carry a dot, so that is what the props are.
 	import type { Snippet } from 'svelte';
 
-	/** Named by MEANING, not colour, so a tone can be re-themed without renaming every call site. */
+	/** Named by MEANING, not colour, so a tone can be re-themed without renaming call sites. */
 	type Tone = 'neutral' | 'good' | 'warn' | 'crit' | 'accent';
 
 	interface Props {
@@ -53,7 +51,7 @@
 	.accent {
 		color: var(--lav-text);
 	}
-	/* The filled variant adds the chip: a tint of the tone behind, its own colour on the border. */
+	/* The filled variant adds the chip: the tone tinted behind, its own colour on the border. */
 	.filled {
 		border: 1px solid transparent;
 		border-radius: var(--radius-pill);

@@ -21,8 +21,8 @@
 	const sum = $derived(total ?? rows.reduce((a, r) => a + r.value, 0));
 
 	// Measured on both axes (as the bar/line charts are) so the labels and value text keep a constant
-	// on-screen size instead of shrinking with the pane — a fixed viewBox made these unreadable in
-	// a third-width card.
+	// on-screen size instead of shrinking with the pane — a fixed viewBox made them unreadable in a
+	// narrow card.
 	let boxW = $state(0);
 	let boxH = $state(0);
 	const W = $derived(boxW || 520);
@@ -30,8 +30,7 @@
 	    floor where a row stops being a readable bar with a label beside it. */
 	const rowH = $derived(boxH ? Math.max(24, (boxH - 4) / Math.max(1, rows.length)) : 29);
 	// Both gutters scale with the box between a readable floor and a ceiling that stops them eating
-	// the bars: a third-width card used to clip its row names against a constant 112px gutter, and a
-	// full-width one wasted the same 112px on short ones.
+	// the bars — a constant gutter either clipped names in a narrow card or wasted space in a wide one.
 	const m = $derived({
 		t: 4,
 		l: clamp(W * 0.26, 72, 168),
@@ -41,10 +40,10 @@
 	const H = $derived(m.t + rows.length * rowH);
 	const max = $derived(Math.max(1, ...rows.map((r) => Math.abs(r.value))));
 
-	// A name for the chart, since an unlabelled role="img" announces only "image".
+	// An unlabelled role="img" announces only "image".
 	const label = $derived(`Ranked bars: ${rows.map((r) => r.label).join(', ')}`);
-	// Whatever gutter we end up with, shrink the labels to fit it rather than truncating: an SVG
-	// text node has no ellipsis, so a too-long name would simply run under the bars.
+	// Shrink to fit the gutter rather than truncating: an SVG text node has no ellipsis, so a too-long
+	// name would simply run under the bars.
 	const labelFont = $derived(
 		fitFontSize(
 			m.l - 10,

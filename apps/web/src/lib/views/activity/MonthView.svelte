@@ -1,9 +1,6 @@
 <script lang="ts">
-	// Activity · Month — the working view: this month's shape on top, its raw records below.
-	//
-	// One table says what this view is: every pane, where it starts, who owns its height, and what it
-	// draws. That is only the DEFAULT — the board is the user's to rearrange, and what they settle on
-	// is stored under this view and range's own key.
+	// Activity · Month — the working view: this month's shape on top, its raw records below. The table
+	// below is only the DEFAULT; what the user rearranges is stored under this view and range's key.
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
 	import type { Scope } from '$lib/data/scope';
@@ -36,15 +33,10 @@
 	const label = $derived(monthLabel(monthKey));
 	const mo = $derived<Scope>({ level: 'month', monthKey });
 
-	// A row of four stat panes, then the month's shape, then its records. The lists that sit beside a
-	// neighbour take a set height so the row keeps its line and scroll once the month is busy; the
-	// history below has nothing to line up with and nothing under it, so it simply fits its content.
-	//
-	// Four tiles, four questions, no restatements: what came in · what went out (with its
-	// month-over-month change riding along as the delta, not a tile of its own repeating the same
-	// figure) · did I live within my means (the % of income used is Saved's note, since "saved" and
-	// "% used" are the same fact) · and is this month normal, against a stable trailing average
-	// rather than one possibly-freak previous month.
+	// The stat row, then the month's shape, then its records. A list sitting beside a neighbour takes a
+	// SET height, so the row keeps its line and scrolls once the month is busy; the history below has
+	// nothing to line up with, so it fits its content. Each tile answers a different question, with
+	// related figures riding along as a caption rather than as a tile that restates one.
 	const PANES = $derived({
 		income: {
 			x: 0,
@@ -110,15 +102,13 @@
 		return `${Math.round(((md?.total_spent ?? 0) / income) * 100)}% of income used`;
 	}
 
-	/** A month with no income posted still has spending to show; the subtitle says which it is, so the
-	    figure doesn't need a note of its own above it. */
 	function donutCaption(): string {
 		if (!md) return '';
 		if (md.total_income <= 0) return `${label} · no income posted — spending only`;
 		return `${label} · net income ${money(md.total_income)}`;
 	}
 
-	// Deviation needs prior months to average against; on the first tracked month there's no norm.
+	// Deviation needs prior months to average against, so the first tracked month has no norm.
 	const deviation = $derived(build(data, 'spending.vs_average', mo));
 	const hasDeviation = $derived(deviation.kind === 'categorical' && deviation.points.length > 0);
 
@@ -127,9 +117,8 @@
 	);
 	const pending = $derived(pendingRows(data, monthKey));
 
-	// How you like the history ordered is a preference, not a per-visit choice, so it survives a
-	// refresh. Validated against the sort fields that actually exist, so a renamed field falls back
-	// to date order rather than leaving the list unsorted.
+	// Validated against the sort fields that actually exist, so a renamed field falls back to date
+	// order rather than leaving the list unsorted.
 	const sort = new Pref<TxnSort>('txn-sort', 'date', oneOf(TXN_SORTS.map((s) => s.key)));
 	const sortDir = new Pref<'asc' | 'desc'>('txn-sort-dir', 'desc', oneOf(['asc', 'desc'] as const));
 
@@ -137,8 +126,7 @@
 </script>
 
 <Board key="activity:month" layout={PANES}>
-	<!-- Written out one by one rather than looped over the table: the donut is a figure too, but it
-	     belongs BELOW the pending list, and a loop over the figures would pull it up here. -->
+	<!-- Written out one by one, not looped: the donut is a figure too but belongs below the pending list. -->
 	<FigurePane id="income" {data} spec={PANES.income.figure} />
 	<FigurePane id="spent" {data} spec={PANES.spent.figure} />
 	<FigurePane id="saved" {data} spec={PANES.saved.figure} />
@@ -152,10 +140,8 @@
 		onadd={() => modals.add()}
 	/>
 
-	<!-- The donut's legend moves beside or under the ring as this pane's shape changes (the chart owns
-	     that reflow), and THAT is why its minimum can't be a declared pair of numbers: dropping the
-	     keys underneath needs MORE height, not less, and where it turns over depends on how many
-	     categories there are. The resize probes the DOM instead. -->
+	<!-- The chart reflows its legend beside or under the ring, so this pane's minimum can't be declared:
+	     dropping the keys underneath needs MORE height, not less. The resize probes the DOM instead. -->
 	<FigurePane id="donut" {data} spec={PANES.donut.figure} />
 
 	<Pane

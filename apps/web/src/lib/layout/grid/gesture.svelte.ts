@@ -1,21 +1,10 @@
-// One pane's gesture, as a state object: what the press captured, what the pointer has done to it
-// since, and whether the content will stand for it.
+// One pane's gesture as a state object: what the press captured, what the pointer has done since,
+// and whether the content will stand for it. Runes, but no DOM — whether the content spilled and
+// when a candidate size has been laid out both arrive as functions, so a gesture can be driven from
+// a test with scripted answers instead of a browser.
 //
-// Runes, but no DOM. Both things it cannot work out for itself — whether the content spilled, and
-// when the candidate size has actually been laid out — arrive as functions, so the whole of a
-// gesture's behaviour can be driven from a test with a scripted answer instead of a browser.
-//
-// ── The minimum size ─────────────────────────────────────────────────────────
-// Never predicted. During a resize the pane is already laid out at the candidate size, so the DOM
-// is asked whether the content spilled (see `spill.ts`). If it did, the preview is held at the
-// last size that fitted — so the edge sticks the way a native min-size does — and the pane wears
-// its rejected state while the pointer pushes past that limit. On release the last fitting size
-// stands: the gesture is never thrown away.
-//
-// That costs a synchronous layout read on every pointer move, and is meant to: one pane is being
-// dragged at a time, and there is no board in this app where that read is measurable. It is the
-// resizing pane's own content that bounds it — a table with thousands of rows in a fitted pane would
-// be the first thing to notice.
+// A resize whose content spills is held at the last size that fitted (see `spill.ts`), so the edge
+// sticks the way a native min-size does and the gesture is never thrown away on release.
 
 import { EDGES, moveRect, resizeRect, type Edge } from './resize';
 import { UNIT } from './units';
@@ -23,8 +12,7 @@ import type { AuthoredPane, HeightMode, PlacedPane, Rect } from './types';
 
 /**
  * What a gesture needs from the arrangement it is editing. Declared structurally rather than by
- * importing `Arrangement`, so a test can hand in a fake and so the class on the other side of the
- * seam stays free to change shape without reaching in here.
+ * importing `Arrangement`, so a test can hand in a fake.
  */
 export interface GestureTarget {
 	authored(id: string): AuthoredPane;
@@ -40,10 +28,9 @@ export interface GestureTarget {
 
 export interface GestureProbes {
 	/** Has the content outgrown the box the candidate size gave it? Injected, so the gesture never
-	    looks at the DOM: the pane is the one that knows which elements to ask (see `spill.ts`). */
+	    looks at the DOM: the pane knows which elements to ask (see `spill.ts`). */
 	spills: () => boolean;
-	/** Wait for the candidate size to have been laid out, so there is something to check. The pane
-	    passes Svelte's `tick`. */
+	/** Wait for the candidate size to have been laid out. The pane passes Svelte's `tick`. */
 	settle: () => Promise<void>;
 }
 
@@ -68,8 +55,7 @@ export class PaneGesture {
 	#attempt = 0;
 
 	/** `pane` is read on each use rather than taken once: which pane a component shows is a live prop,
-	    and a gesture that captured it at construction would go on arranging whichever pane was there
-	    first. */
+	    and a gesture that captured it at construction would go on arranging the first one. */
 	constructor(pane: () => string, arrangement: GestureTarget, probes: GestureProbes) {
 		this.#pane = pane;
 		this.#arrangement = arrangement;
@@ -101,9 +87,6 @@ export class PaneGesture {
 		const placed = this.#arrangement.placed(this.#id);
 		this.#base = { ...placed };
 		this.#carried = placed.offset;
-		// The pane the user picked up wins ties on authored top, which is what makes "drop it onto its
-		// neighbour and the NEIGHBOUR goes below" hold — and hold after a reload, because the priority
-		// order is stored alongside the rectangles rather than remembered for the gesture.
 		this.#arrangement.promote(this.#id);
 	}
 
@@ -156,9 +139,8 @@ export class PaneGesture {
 	}
 
 	/**
-	 * One keypress worth of gesture — pressed, travelled a single unit and released at once. The
-	 * resize goes to whichever edge the arrow points at, and does nothing at all if this height mode
-	 * does not put that edge in the user's hands.
+	 * One keypress worth of gesture — pressed, travelled a single unit and released at once. Does
+	 * nothing if this height mode does not put the edge the arrow points at in the user's hands.
 	 */
 	step(dx: number, dy: number, resize: boolean): void {
 		if (resize) {

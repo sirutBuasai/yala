@@ -1,6 +1,5 @@
 <script lang="ts">
-	// Prev/next stepper scaffold for the period navs: a ‹ button, the caller's selects, and a ›
-	// button. Shared by MonthNav and YearNav so the arrows, layout, and aria live in one place.
+	// Prev/next stepper scaffold shared by MonthNav and YearNav.
 	import type { Snippet } from 'svelte';
 	import Chevron from '$lib/icons/Chevron.svelte';
 
@@ -26,8 +25,8 @@
 </div>
 
 <style>
-	/* Wraps and shrinks rather than pushing the header past the page: the arrows keep their size
-	   (they're the tap targets) and the picker between them gives up the width. */
+	/* Wraps rather than pushing the header past the page; the arrows keep their size as tap targets,
+	   so the picker between them gives up the width. */
 	.rangenav {
 		display: flex;
 		flex-wrap: wrap;

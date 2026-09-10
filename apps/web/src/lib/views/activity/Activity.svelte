@@ -1,13 +1,12 @@
 <script lang="ts">
-	// Activity — spending and income at three ranges, replacing the old Overview / Yearly / Monthly
-	// trio. Range is a control on this page rather than three tabs, because those tabs were the same
-	// data at three zoom levels; each range is still its own BOARD — with its own stored arrangement —
-	// since a month wants raw records and a decade wants trends. Editing lives only in Month (entries are logged at day/month level)
-	// and on the Home hub.
+	// Activity — spending and income at three ranges. Range is a control here rather than three tabs,
+	// but each range is still its own BOARD with its own stored arrangement. Only Month can edit, since
+	// entries are logged at day/month level.
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
 	import { latestMonthKey, latestYear } from '$lib/data/scope';
 	import { matching, number, oneOf, Pref } from '$lib/utils/persist.svelte';
+	import { yearSpan } from '$lib/utils/format';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import Segmented from '$lib/nav/Segmented.svelte';
 	import MonthNav from '$lib/nav/MonthNav.svelte';
@@ -30,15 +29,12 @@
 		{ id: 'year', label: 'Year' },
 		{ id: 'all', label: 'All time' }
 	];
-	// All three remembered under this view's OWN keys. The zoom level you review at is a habit, not a
-	// per-visit decision; and the period is Activity's alone — Home is a logging hub on whatever
-	// month you're entering, which is rarely the month you're reviewing.
+	// All three under this view's OWN keys: the period you review at is rarely the one you log into.
 	const range = new Pref<Range>('activity-range', 'month', oneOf(RANGES.map((r) => r.id)));
 	const month = new Pref('activity-month', '', matching(/^\d{4}-\d{2}$/));
 	const yearPref = new Pref('activity-year', 0, number(0, 9999));
 
-	// Seeded from the data the first time this view is ever used, then left alone: the steppers are
-	// deliberately allowed to walk into empty periods.
+	// Seeded once, then left alone: the steppers may deliberately walk into empty periods.
 	$effect(() => {
 		if (!month.value) month.value = latestMonthKey(data);
 		if (!yearPref.value) yearPref.value = latestYear(data);
@@ -46,19 +42,15 @@
 	const monthKey = $derived(month.value);
 	const year = $derived(yearPref.value);
 
-	// Year picker options: the tracked years, one past the latest, and wherever we've navigated —
-	// so stepping to a not-yet-populated year still shows a valid selection reading as zero.
+	// The tracked years, one past the latest, and wherever we've navigated — so stepping into an
+	// unpopulated year still shows a valid selection.
 	const years = $derived.by(() => {
 		const ys = data.meta.years;
 		const latest = ys[ys.length - 1] ?? year;
 		return [...new Set([...ys, latest + 1, year])].sort((a, b) => b - a);
 	});
 
-	const span = $derived(
-		data.meta.years.length
-			? `${data.meta.years[0]}–${data.meta.years[data.meta.years.length - 1]}`
-			: ''
-	);
+	const span = $derived(yearSpan(data.meta.years));
 </script>
 
 <ViewHeader title="Activity">

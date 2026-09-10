@@ -1,11 +1,6 @@
 <script lang="ts" generics="T extends string">
-	// Pill segmented control — the app's ONE "pick one of a few views" affordance. The top-level
-	// dashboard tabs, the Activity range switch and the Net Worth range switch are all this
-	// component; they used to be two near-identical implementations that had already drifted apart
-	// on padding and elevation.
-	//
-	// ARIA tablist with a roving tabindex: the group is one tab stop, arrows move between options,
-	// Home/End jump to the ends.
+	// Pill segmented control — the app's ONE "pick one of a few views" affordance. An ARIA tablist
+	// with a roving tabindex, so the group is one tab stop.
 	import { tablistKeydown } from '$lib/utils/tablist';
 
 	interface Option {
@@ -16,13 +11,12 @@
 		options: Option[];
 		value: T;
 		onchange: (id: T) => void;
-		/** Accessible name for the group. */
 		ariaLabel: string;
 		/** id of the panel these tabs control, when they drive a real tabpanel. */
 		controls?: string;
 		/** Prefix for each tab's own id, so a tabpanel can name its tab via aria-labelledby. */
 		idPrefix?: string;
-		/** Lift the control off the page — for a switch that floats in the page header. */
+		/** Lift the control off the page, for a switch that floats in the page header. */
 		elevated?: boolean;
 	}
 	let {
@@ -71,10 +65,8 @@
 		border: 1px solid var(--border);
 		border-radius: var(--radius-pill);
 		padding: var(--space-2);
-		/* Options wrap onto a second row inside the pill rather than forcing the header wider than
-		   the page: four labelled tabs need ~315px, which a 380px phone doesn't have once the page
-		   gutters are taken out. A two-row pill still reads as one control; a horizontally scrolling
-		   page does not. */
+		/* Options wrap onto a second row inside the pill rather than forcing the header wider than the
+		   page: a two-row pill still reads as one control, a horizontally scrolling page does not. */
 		flex-wrap: wrap;
 		justify-content: center;
 		min-width: 0;

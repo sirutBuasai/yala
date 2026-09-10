@@ -1,6 +1,6 @@
 <script lang="ts" generics="K extends string">
-	// Reusable sort control for any list: a clickable "Sorted by X" label that opens the field
-	// menu, plus an order-direction arrow. Owns no data — binds sortKey/sortDir for the caller.
+	// Reusable sort control: a clickable "Sorted by X" label opening the field menu, plus a
+	// direction arrow. Owns no data — binds sortKey/sortDir for the caller.
 	import Arrow from '$lib/icons/Arrow.svelte';
 	import Select from '$lib/forms/fields/Select.svelte';
 

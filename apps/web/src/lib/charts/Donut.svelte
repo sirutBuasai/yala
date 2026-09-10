@@ -30,14 +30,12 @@
 </script>
 
 {#if slices.length}
-	<!-- `.sizebox` (app.css): fills the pane and becomes the size container the layout below queries,
-	     so the keys move beside or under the ring on the PANE's shape rather than the viewport's. It
-	     used to be the caller's job, which meant every pane holding a donut had to know the donut had
-	     two layouts — and only one of them ever did. -->
+	<!-- `.sizebox` (app.css) is the size container the layout below queries, so the keys move beside or
+	     under the ring on the PANE's shape rather than the viewport's. -->
 	<div class="sizebox">
 		<div class="donut">
-			<!-- aria-hidden, deliberately: the legend below is the same data as text (name, amount,
-		     share), which is strictly more useful to a screen reader than a labelled image. -->
+			<!-- aria-hidden deliberately: the legend below is the same data as text, which is more use to
+		     a screen reader than a labelled image. -->
 			<svg class="chart" viewBox="0 0 {R * 2} {R * 2}" aria-hidden="true">
 				<g transform="translate({R},{R})">
 					{#each arcs as a (a.data.name)}
@@ -83,9 +81,8 @@
 {/if}
 
 <style>
-	/* Side-by-side by default, ring left and keys right, both flexible: the ring grows into spare
-	   width up to a legible ceiling, and the legend takes what's left. Below the ring's floor the
-	   two wrap onto separate rows rather than crushing each other. */
+	/* Side-by-side by default, both flexible: the ring grows into spare width up to a legible ceiling
+	   and the legend takes what's left, wrapping onto its own row rather than crushing the ring. */
 	.donut {
 		display: flex;
 		gap: var(--space-11);
@@ -98,10 +95,8 @@
 		min-width: 8.5rem;
 		max-width: 15rem;
 	}
-	/* The KEY to "fill the empty space": a column WIDTH, not a column count. The browser fits as
-	   many ~13rem columns as the legend's actual box allows — one in a narrow rail, four under a
-	   wide stacked ring — so the keys reflow continuously instead of stepping at two hardcoded
-	   breakpoints that were only ever right for one pane. */
+	/* A column WIDTH, not a column count: the browser fits as many columns as the legend's actual box
+	   allows, so the keys reflow continuously instead of stepping at hardcoded breakpoints. */
 	.legend-list {
 		list-style: none;
 		margin: 0;
@@ -112,9 +107,8 @@
 		column-gap: var(--space-11);
 	}
 	/* Once the pane is tall, stack: the keys drop below the ring and the ring grows into the height.
-	   THIS is the reflow that makes the donut's minimum a frontier rather than a pair of numbers —
-	   dropping the keys underneath needs more height, not less, and how much more depends on how many
-	   categories there are. Nothing predicts it; the resize measures it. */
+	   This reflow is why the donut has no single minimum size — stacking needs more height, and how
+	   much more depends on how many keys there are, so it can only be measured. */
 	@container (min-height: 300px) {
 		.donut {
 			flex-direction: column;
@@ -138,7 +132,7 @@
 		gap: var(--gap-row);
 		padding: var(--space-2) 0;
 		font-size: var(--text-caption);
-		/* keep a row intact when the legend flows into multiple columns (stacked layout) */
+		/* keep a row intact when the legend flows into multiple columns */
 		break-inside: avoid;
 	}
 	.legend-list .sw {
@@ -147,8 +141,8 @@
 		border-radius: var(--radius-xs);
 		flex: 0 0 auto;
 	}
-	/* The name gives way, the figure never does: a long category truncates (with its full text on
-	   hover) rather than pushing the amount out of the column or wrapping the row to two lines. */
+	/* The name gives way, the figure never does: a long name truncates (full text on hover) rather
+	   than pushing the amount out of the column. */
 	.legend-list .nm {
 		flex: 1 1 auto;
 		min-width: 0;

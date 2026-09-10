@@ -5,18 +5,18 @@ import PaycheckForm from '$lib/entries/paycheck/PaycheckForm.svelte';
 import { makeAccounts } from '$lib/data/__fixtures__/dashboard';
 
 const accounts = makeAccounts({
-	funding_accounts: ['Assets:Cash:Bank1'],
-	employers: ['Employer1'],
+	funding_accounts: ['Assets:Cash:BankA'],
+	employers: ['EmployerA'],
 	payroll_options: [
 		{ kind: 'deduction', label: 'Tax', employer: null, account: 'Expenses:Deductions:Tax' },
 		{
 			kind: 'contribution',
 			label: 'Roth401k',
-			employer: 'Employer1',
-			account: 'Assets:Investments:TaxAdvantaged:Employer401k'
+			employer: 'EmployerA',
+			account: 'Assets:Investments:TaxAdvantaged:PlanA'
 		}
 	],
-	cash_accounts: ['Assets:Cash:Bank1']
+	cash_accounts: ['Assets:Cash:BankA']
 });
 
 function okFetch() {

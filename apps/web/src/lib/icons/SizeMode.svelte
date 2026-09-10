@@ -1,11 +1,6 @@
 <script lang="ts">
-	// The three ways a list pane can own its height, as one glyph each. All three are the same two
-	// marks — rules for the edges that bound the pane, and an arrow for where the content pushes —
-	// so they read as a set rather than as three unrelated pictures:
-	//
-	//   fixed  two rules, arrows pointing IN     the pane sets the height; the list fits inside it
-	//   cap    two rules, one arrow pointing DOWN the list grows down onto a ceiling you set
-	//   fit    one rule, one arrow pointing DOWN  the list grows down without limit
+	// One glyph per height mode, built from the same two marks — rules for the edges that bound the
+	// pane, and an arrow for where the content pushes — so they read as a set.
 	import type { HeightMode } from '$lib/layout/grid/types';
 
 	interface Props {

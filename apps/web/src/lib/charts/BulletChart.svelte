@@ -1,11 +1,7 @@
 <script lang="ts">
 	// Bullet graphs (Few): a value bar, the threshold it's judged against as a marker, and optional
-	// qualitative bands shaded behind. Carries value + target + context in the space a dial would
-	// waste on chrome, and reads precisely rather than approximately.
-	//
-	// Every row is scaled to its own maximum, so rows measured differently (months beside a
-	// percentage) sit in one set without one crushing another. Nothing here knows what it's
-	// plotting: the label, unit, target and bands all arrive as props.
+	// qualitative bands shaded behind. Every row is scaled to its own maximum, so rows measured
+	// differently sit in one set without one crushing another.
 	import { formatUnit, type Unit } from '$lib/data/primitives';
 
 	interface Row {
@@ -21,9 +17,9 @@
 	}
 	let { rows }: Props = $props();
 
-	/** Fraction of a row's scale a figure sits at. The scale runs to whatever is furthest out —
-	    the value, the target, or the last band — with headroom so a bar at the max still reads as
-	    a bar rather than a filled track. */
+	/** Fraction of a row's scale a figure sits at. The scale runs to whatever is furthest out — value,
+	    target, or last band — with headroom, so a bar at the max still reads as a bar and not a
+	    filled track. */
 	function scaled(row: Row) {
 		const max = Math.max(row.value ?? 0, row.target, ...(row.bands ?? [0])) * 1.05 || 1;
 		const pct = (n: number) => `${Math.min(100, Math.max(0, (n / max) * 100))}%`;
@@ -117,8 +113,8 @@
 		left: 0;
 		background: var(--ink-2);
 	}
-	/* Inset vertically so the bands stay visible either side of the bar — the bar is the measure,
-	   the bands are context, and Few's design keeps that hierarchy legible. */
+	/* Inset vertically so the bands stay visible either side of the bar: the bar is the measure, the
+	   bands are context. */
 	.value {
 		position: absolute;
 		top: 4px;

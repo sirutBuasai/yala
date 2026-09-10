@@ -9,8 +9,8 @@
 
 <script lang="ts">
 	// The keys above (or below) a chart. Every chart that names its series renders this, so swatch
-	// size, order and the dashed variant can't drift between them; the styles are the shared
-	// `.legend > .k > .sw` rules in app.css.
+	// size, order and the dashed variant can't drift between them. Styles are the shared `.legend`
+	// rules in app.css.
 	interface Props {
 		keys: Key[];
 		/** Key underneath the plot instead of above it. */

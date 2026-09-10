@@ -24,39 +24,35 @@
 	] as const;
 	type Tab = (typeof TABS)[number]['id'];
 
-	// The view you were last on. The PERIOD each view was looking at is that view's own business —
-	// each tab keeps its own key — so this page no longer owns any scope state.
+	// The view you were last on. Each tab keeps its OWN period key, so this page owns no scope state.
 	const tabPref = new Pref<Tab>('tab', 'home', oneOf(TABS.map((t) => t.id)));
 
-	// The pane grid's environment: how wide the content column actually is, and whether the user is
-	// arranging. Owned here because both are page-wide, and provided by context so the header's toggle
-	// and the board itself can't disagree about them.
+	// Page-wide grid environment, provided by context so the header's toggle and the boards can't
+	// disagree about it.
 	const env = new GridEnv();
 	setGridEnv(env);
 
-	/** Dismissed for this visit. The banner is a standing fact, so it comes back on a reload. */
+	/** Dismissed for this visit only: the banner is a standing fact, so it returns on a reload. */
 	let bannerClosed = $state(false);
 
 	onMount(loadData);
 
 	// --- scroll offset per tab ---
 	//
-	// Returning to a tab (or reloading) puts you back where you were reading rather than at the top
-	// of a long transaction list. Offsets are held in plain state and flushed to storage only when
-	// they can actually be read again — a write per scroll event would be hundreds of writes for a
-	// value nothing looks at until a tab switch or a reload.
+	// Held in plain state and flushed to storage only when it could actually be read again; a write per
+	// scroll event would be hundreds of writes nothing looks at until a tab switch or a reload.
 	/** Events that mean the user has taken the scroll position back off us. */
 	const GESTURES = ['wheel', 'touchstart', 'keydown'] as const;
 
 	const scrollPref = new Pref<Record<string, number>>('scroll', {}, record(number(0)));
 	let offsets: Record<string, number> = { ...scrollPref.value };
 	let restored = $state(false);
-	/** True while `restore` is driving the scroll position; see why `remember` has to ignore it. */
+	/** True while `restore` is driving the scroll position; `remember` must ignore those scrolls. */
 	let restoring = false;
 
 	function remember() {
-		// Ignore scrolls we caused ourselves. Mid-restore the browser reports clamped intermediate
-		// offsets, and recording those would store a position the user never chose.
+		// Mid-restore the browser reports clamped intermediate offsets; recording those would store a
+		// position the user never chose.
 		if (restoring) return;
 		offsets[tabPref.value] = Math.round(window.scrollY);
 	}
@@ -66,17 +62,11 @@
 	}
 
 	/**
-	 * Floor under the panel, in px, held across a tab swap. This is the crux of making scroll
-	 * restoration work at all, and it is not obvious:
-	 *
-	 * Swapping the panel makes the page SHORTER for a moment, so the browser clamps the scroll offset
-	 * to the new maximum. Asynchronous panes (Manage's settings, the balance checklist) then make it
-	 * taller again — and Chrome, having clamped, restores its own remembered pre-clamp offset, which
-	 * is the offset of the tab we just LEFT. It does this hundreds of milliseconds later, so it beats
-	 * any scrollTo we issue and then gets recorded as if the user had chosen it.
-	 *
-	 * Holding the outgoing height means the page never shrinks, so there is no clamp and nothing for
-	 * the browser to restore. Released once the incoming content has settled.
+	 * Floor under the panel, held across a tab swap — the crux of making scroll restoration work.
+	 * Swapping the panel briefly shortens the page, so the browser clamps the scroll offset; once async
+	 * panes make it tall again Chrome restores its own pre-clamp offset (the tab we just LEFT), late
+	 * enough to beat any scrollTo and then be recorded as the user's choice. Holding the outgoing height
+	 * means the page never shrinks, so there is no clamp. Released once the incoming content settles.
 	 */
 	let hold = $state<number | null>(null);
 	let panelEl = $state<HTMLElement>();
@@ -107,15 +97,13 @@
 	function switchTab(next: Tab) {
 		flush(); // the tab being left, while `tabPref` still names it
 		hold = panelEl?.offsetHeight ?? null;
-		// Arranging deliberately SURVIVES the switch: laying the app out is one job across several
-		// boards, and having to re-enter it per tab made that job four jobs. Nothing is lost by leaving
-		// — each board commits on every gesture, so the one you were on is already saved.
+		// Arranging deliberately SURVIVES the switch, since laying the app out is one job across boards.
+		// Nothing is lost: each board commits on every gesture, so the one being left is already saved.
 		tabPref.value = next;
 		restore(next);
 	}
 
-	// The first restore has to wait for the data, since until then the panel is empty and the page
-	// has no height to scroll into.
+	// The first restore must wait for the data: until then the page has no height to scroll into.
 	$effect(() => {
 		if (restored || !$data || $loadState.status !== 'ready') return;
 		restored = true;
@@ -127,14 +115,14 @@
 	}
 </script>
 
-<!-- `pagehide` rather than `beforeunload`: it also fires when a tab is backgrounded on mobile, which
-     is where a page is most likely to be discarded without ever unloading. -->
+<!-- `pagehide`, not `beforeunload`: it also fires when a tab is backgrounded on mobile, where a page
+     is most likely to be discarded without ever unloading. -->
 <svelte:window onscroll={remember} onpagehide={flush} />
 
 <a class="skip" href="#view-panel">Skip to content</a>
 
 <!-- The grid measures itself from this element: its content box IS the board's width, so the two
-     can't disagree about whether the full 48 columns fit. -->
+     can't disagree about how many columns fit. -->
 <div class="wrap" bind:clientWidth={env.width}>
 	<header class="top">
 		<div class="left">
@@ -178,9 +166,8 @@
 		{/if}
 	</div>
 
-	<!-- A standing notice, not a transient one: the local API is either there or it isn't, and every
-	     edit affordance on the page stays visible either way. The banner explains why a save will be
-	     refused, and the single write guard in `load.ts` is what actually refuses it. -->
+	<!-- A standing notice: the banner only EXPLAINS why a save will be refused; the write guard in
+	     `load.ts` is what actually refuses it. -->
 	{#if $loadState.status === 'ready' && !$live && !bannerClosed}
 		<Banner
 			role="status"
@@ -262,9 +249,8 @@
 		align-items: center;
 		flex-wrap: wrap;
 	}
-	/* The tabpanel is focusable (APG) so keyboard users — and the skip link — can page into the
-	   content. The shared :focus-visible ring covers the keyboard case; suppress the plain :focus
-	   outline so a mouse click on a card never rings the whole panel. */
+	/* The tabpanel is focusable (APG) for the skip link, but the plain :focus outline is suppressed so
+	   a mouse click on a card never rings the whole panel; :focus-visible still covers the keyboard. */
 	#view-panel:focus {
 		outline: none;
 	}

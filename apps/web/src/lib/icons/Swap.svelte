@@ -1,6 +1,5 @@
 <script lang="ts">
-	// Two vertical arrows pointing opposite ways (↑↓) — a value moving between two places, e.g. a
-	// bill pay / transfer between accounts. Stroke on currentColor so it inherits its context's accent.
+	// Two opposed vertical arrows — a value moving between two accounts (a bill pay or transfer).
 	interface Props {
 		size?: number;
 	}

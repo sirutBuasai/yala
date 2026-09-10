@@ -10,9 +10,9 @@
 		name: string;
 		values: (number | null)[];
 		color: string;
-		/** Draw a gradient area under this series (single-series area charts). */
+		/** Draw a gradient area under this series. */
 		area?: boolean;
-		/** Render as a dotted line — a secondary reading, or a projection, against a primary one. */
+		/** Render as a dotted line — a secondary reading against a primary one. */
 		dashed?: boolean;
 	}
 	interface Props {
@@ -22,27 +22,27 @@
 		percent?: boolean;
 		/** Log-scale the value axis — for series spanning orders of magnitude. */
 		log?: boolean;
-		/** Label each line at its right end instead of using a legend (many-series charts). */
+		/** Label each line at its right end instead of using a legend. */
 		endLabels?: boolean;
 	}
 	let { labels, series, percent = false, log = false, endLabels = false }: Props = $props();
 
 	const showLegend = $derived(!endLabels && series.length > 1);
 
-	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also
-	// bounds how tall the chart may grow inside a stretched pane.
+	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also bounds
+	// how tall the chart may grow inside a stretched pane.
 	let boxW = $state(0);
 	let boxH = $state(0);
 	const W = $derived(boxW || 1100);
 	const H = $derived(boxH || 300);
-	// End labels need room on the right for "Subscription $0.7k"-sized text. That room is a share of
-	// the box rather than a constant, so a half-width card doesn't hand most of its plot to labels.
+	// The end-label gutter is a share of the box, not a constant, so a narrow card doesn't hand most
+	// of its plot to labels.
 	const m = $derived({ t: 16, r: endLabels ? clamp(W * 0.2, 96, 170) : 16, b: 28, l: 60 });
 	const plot = $derived(plotSize(W, H, m));
 	const iw = $derived(plot.iw);
 	const ih = $derived(plot.ih);
 	const n = $derived(labels.length);
-	// Unique gradient id per instance so multiple area charts don't collide.
+	// Unique per instance, so two area charts on one page can't share a gradient.
 	const gid = 'lg-' + Math.random().toString(36).slice(2, 9);
 
 	const flat = $derived(series.flatMap((s) => s.values).filter((v): v is number => v != null));
@@ -74,9 +74,9 @@
 	const shown = $derived(new Set(labelIndices(n, iw, labels)));
 
 	/**
-	 * Right-edge labels for many-series charts, nudged apart so ten lines stay readable without a
-	 * legend: push each down to clear its predecessor, then if the stack overruns the plot, pin the
-	 * last and push back up — so every label lands on canvas whatever the data does.
+	 * Right-edge labels, nudged apart so many lines stay readable without a legend: push each down to
+	 * clear its predecessor, then if the stack overruns the plot, pin the last and push back up — so
+	 * every label lands on canvas whatever the data does.
 	 */
 	const GAP = 14;
 	const ends = $derived.by(() => {
@@ -100,8 +100,7 @@
 		return list;
 	});
 
-	// A name for the chart, since an unlabelled role="img" announces only "image". Says what is
-	// plotted and over what — the values themselves stay reachable as text via the legend / table.
+	// An unlabelled role="img" announces only "image".
 	const label = $derived(
 		`Line chart: ${series.map((sr) => sr.name).join(', ')}` +
 			(labels.length ? ` from ${labels[0]} to ${labels[labels.length - 1]}` : '')
@@ -116,7 +115,7 @@
 		hover = i;
 		const lines = series
 			.filter((s) => s.values[i] != null)
-			// Busiest-first so a ten-line tooltip reads top-down by magnitude.
+			// Largest first, so a many-line tooltip reads top-down by magnitude.
 			.sort((a, b) => (b.values[i] as number) - (a.values[i] as number))
 			.map((s) => `${esc(s.name)}: ${fmt(s.values[i] as number)}`)
 			.join('<br>');
@@ -129,7 +128,7 @@
 </script>
 
 {#if showLegend}
-	<!-- Dashed series are keyed too: a dashed line is a real second reading, so leaving it out left
+	<!-- Dashed series are keyed too: a dashed line is a real second reading, and omitting it left
 	     neither line identifiable. -->
 	<Legend keys={series} />
 {/if}

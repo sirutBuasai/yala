@@ -1,6 +1,6 @@
 <script lang="ts">
-	// Shared footer for the entry forms (transaction / paycheck / bill pay): a running summary on
-	// the left, and on the right either an Add button (add mode) or Save + Delete (edit mode).
+	// Shared footer for the entry forms: a running summary left, and right either an Add button
+	// (add mode) or Save + Delete (edit mode).
 	import type { Snippet } from 'svelte';
 	import DeleteConfirm from '$lib/ui/DeleteConfirm.svelte';
 
@@ -28,8 +28,8 @@
 		summary
 	}: Props = $props();
 
-	// Backing out of a delete should also drop the error a failed delete left behind, so the footer
-	// returns to its resting layout instead of staying widened by the message.
+	// Backing out of a delete also drops the error a failed delete left behind, so the footer
+	// returns to its resting layout.
 	function clearMessage() {
 		msg = '';
 		err = false;
@@ -41,9 +41,8 @@
 		>{#if summary}{@render summary()}{/if}</span
 	>
 	<div class="right">
-		<!-- Same roles SaveFeedback uses, so a validation failure is announced immediately and a
-		     success politely — this message was previously silent to a screen reader, which meant a
-		     rejected submit looked to them like a button that simply did nothing. -->
+		<!-- Same roles SaveFeedback uses: while this message was silent, a rejected submit looked to a
+		     screen-reader user like a button that did nothing. -->
 		{#if msg}<span class="edit-msg" class:err role={err ? 'alert' : 'status'}>{msg}</span>{/if}
 		{#if editing}
 			<div class="actions">
@@ -62,8 +61,7 @@
 </div>
 
 <style>
-	/* Wraps rather than squeezing: in a narrow overlay the summary drops above the buttons instead
-	   of the two fighting over one line. */
+	/* Wraps rather than squeezing: in a narrow overlay the summary drops above the buttons. */
 	.foot {
 		display: flex;
 		flex-wrap: wrap;

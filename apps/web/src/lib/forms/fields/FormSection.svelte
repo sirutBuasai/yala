@@ -1,6 +1,5 @@
 <script lang="ts">
-	// A labeled group inside an add/edit form: an uppercase section label over its fields, with a
-	// divider between sections. Shared by the transaction / paycheck / bill-pay forms.
+	// A labeled group inside an add/edit form, with a divider between sections.
 	import type { Snippet } from 'svelte';
 	interface Props {
 		label: string;

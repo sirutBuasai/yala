@@ -1,8 +1,6 @@
 /**
- * The busy / error / confirmation state around one async write: clear the last outcome, mark busy,
- * await a call that resolves to an error message (or null), unmark busy, then show the error or a
- * confirmation. Hand-rolled per control this drifted, so the sequence lives here and each caller
- * supplies only the call and its messages.
+ * The busy / error / confirmation state around one async write. Callers supply only the call and
+ * its messages; the sequence lives here so no two controls can drift.
  */
 export class SaveState {
 	busy = $state(false);
@@ -11,10 +9,7 @@ export class SaveState {
 	/** Confirmation from the last successful attempt. */
 	note = $state('');
 
-	/**
-	 * Run `action`, recording its outcome. Returns whether it succeeded, so a caller can go on to
-	 * clear its input only when the write actually landed.
-	 */
+	/** Run `action`, recording its outcome. Returns whether it succeeded. */
 	async run(action: () => Promise<string | null>, note = ''): Promise<boolean> {
 		this.busy = true;
 		this.error = '';
@@ -41,7 +36,7 @@ export class SaveState {
 		return false;
 	}
 
-	/** Drop any error/confirmation, e.g. when the user starts editing again. */
+	/** Drop any error/confirmation. */
 	reset(): void {
 		this.error = '';
 		this.note = '';

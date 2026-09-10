@@ -11,22 +11,10 @@
 </script>
 
 <script lang="ts">
-	// One pane on the board: the grid item, the arrange affordances, and the two measurements the
-	// pure layer can't make for itself.
-	//
-	// It COMPOSES `Card` rather than being one, so the card stays grid-agnostic and the folded layout
-	// reuses it untouched.
-	//
-	// ── Measuring a fitted pane ───────────────────────────────────────────────────
-	// Anchored on the CARD, not the cell, and the card is `flex: 0 0 auto` while fitted. Both matter:
-	// `scrollHeight` never reports LESS than the box already is, and neutralising `height` alone
-	// doesn't collapse a flex item — the flex algorithm outranks it — so a card left to stretch to its
-	// cell feeds its own imposed height back into the next measurement, and the pane ratchets in one
-	// direction and never comes back.
-	//
-	// The gesture itself is not here: `PaneGesture` holds it, and is handed the two things only a
-	// component can supply — a way to wait for the candidate size to be laid out, and a way to ask
-	// whether the content fitted it.
+	// One pane on the board: the grid item, the arrange affordances, and the two measurements the pure
+	// layer can't make for itself. It COMPOSES `Card` rather than being one, so the card stays
+	// grid-agnostic and the folded layout reuses it untouched. The gesture itself lives in
+	// `PaneGesture`, which is handed the two things only a component can supply.
 	import { tick, type Snippet } from 'svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import Grip from '$lib/icons/Grip.svelte';
@@ -65,8 +53,8 @@
 	let cardEl = $state<HTMLElement>();
 	let bodyEl = $state<HTMLElement>();
 
-	// Fitted panes report their card's height so the pure layer can turn it into rows. Only while
-	// unfolded: a folded pane hugs its content by construction and reserves nothing.
+	// Fitted panes report their CARD's height — never the cell's — so the pure layer can turn it into
+	// rows. Only while unfolded: a folded pane hugs its content and reserves nothing.
 	$effect(() => {
 		const el = cardEl;
 		if (!hug || !el) return;
@@ -78,18 +66,14 @@
 		return () => observer.disconnect();
 	});
 
-	// The card is inert while arranging: its own buttons and menus must not compete with the gesture
-	// that covers them, and they have no business in the tab order either. An attribute rather than
-	// `pointer-events: none`, because it takes the whole subtree out of focus as well.
+	// The card is inert while arranging: its own buttons must not compete with the gesture that covers
+	// them. An attribute rather than `pointer-events: none`, which would leave them in the tab order.
 	$effect(() => {
 		cardEl?.toggleAttribute('inert', arranging);
 	});
 
-	// --- gestures ---
-
-	// The gesture owns the whole state machine; this only supplies the DOM. The spill check is asked for
-	// the card and its body BY REFERENCE (see `spill.ts`), and `tick` is what makes the candidate size
-	// real before it is measured.
+	// The spill check is asked for the card and its body BY REFERENCE (see `spill.ts`), and `tick` is
+	// what makes a candidate size real before it is measured.
 	const gesture = new PaneGesture(() => id, arrangement, {
 		spills: () => !!cardEl && spills(cardEl, bodyEl),
 		settle: tick
@@ -146,8 +130,8 @@
 				oncancel: () => gesture.abandon()
 			}}
 		>
-			<!-- data-no-drag: the press must not start a drag of the pane underneath (see drag.ts —
-			     stopping propagation here cannot work, because Svelte delegates the event). -->
+			<!-- data-no-drag: stopping propagation here cannot work, because Svelte delegates the event
+			     (see drag.ts). -->
 			<div class="tools" role="toolbar" aria-label={`Arrange ${name}`} tabindex="-1" data-no-drag>
 				<button
 					class="grip"
@@ -176,8 +160,8 @@
 			</div>
 		</div>
 
-		<!-- Resize strips straddling the card's edges. Not focusable and not announced: the grip is
-		     the keyboard route in, and eight tab stops per pane would bury everything else. -->
+		<!-- Resize strips straddling the card's edges. Not focusable and not announced: the grip is the
+		     keyboard route in, and eight tab stops per pane would bury everything else. -->
 		{#each EDGES[mode] as edge (edge)}
 			<div
 				class="handle {edge}"
@@ -193,8 +177,8 @@
 </div>
 
 <style>
-	/* Each pane insets itself by half a gap — the grid itself has none. Two neighbours therefore read
-	   as one full gap apart, and the unit stays exactly `content / 48`. */
+	/* Each pane insets itself by half a gap — the grid itself has none, which is what keeps one unit at
+	   a whole number of pixels. */
 	.cell {
 		--pane-inset: calc(var(--gap-grid) / 2);
 		position: relative;
@@ -207,9 +191,10 @@
 		flex: 1 1 auto;
 		min-height: 0;
 	}
-	/* A fitted card owns its height. `flex: 0 0 auto` is the load-bearing half: with `1 1 auto` the
-	   flex algorithm stretches it to the cell, and the next measurement reads back the height the
-	   cell imposed rather than the height the content needs. */
+	/* A fitted card owns its height, and `flex: 0 0 auto` is the load-bearing half: with `1 1 auto` the
+	   flex algorithm stretches it to the cell, so the next measurement reads back the height the cell
+	   imposed rather than the height the content needs, and the pane ratchets one way and never comes
+	   back. */
 	.cell.hug > :global(.card) {
 		flex: 0 0 auto;
 	}
@@ -222,31 +207,24 @@
 		max-height: none;
 	}
 
-	/* --- charts inside a pane ---------------------------------------------------
-	   The figure box's own min/max height exist to stop one tall figure dragging the panes beside it
-	   out of alignment on a flow layout. On the grid the pane's height IS the answer to that, so the
-	   ceiling and the comfortable minimum are both lifted and a measured chart scales to whatever it
-	   was given — down to `--figure-h-floor`, which is NOT lifted.
-	   That floor is doing two jobs (see app.css). The one that is easy to lose: a chart with a
-	   DETACHED legend keeps the legend beside the plot in this same flex column, so with no floor the
-	   plot shrinks to nothing, the legend always fits, and the pane has no data-dependent minimum at
-	   all. With the floor, the pane's minimum is `floor + the legend's height` — which rises with the
-	   number of keys and with how many rows they wrap onto. */
+	/* The figure box's own min/max height stop one tall figure dragging its neighbours out of alignment
+	   on a flow layout; on the grid the pane's height already answers that, so both are lifted — except
+	   `--figure-h-floor` (see app.css). Without that floor a figure with a DETACHED legend has no
+	   data-dependent minimum at all: the plot shrinks to nothing and the legend always fits. With it,
+	   the pane's minimum is the floor plus however many rows the legend wraps onto. */
 	.cell:not(.folded) :global(.figurebox),
 	.cell:not(.folded) :global(.sizebox) {
 		min-height: var(--figure-h-floor);
 		max-height: none;
 	}
-	/* Folded, the card hugs its content — so a size container inside it has no height to take, and
-	   size containment would collapse it to zero and spill the figure out of the card. The figure
-	   sizes itself here instead; its `@container` rules simply stop matching, which is the layout a
-	   single-column card wants anyway. */
+	/* Folded, the card hugs its content, so a size container inside it has no height to take and size
+	   containment would collapse it to zero and spill the figure out of the card. The figure sizes
+	   itself here instead. */
 	.cell.folded :global(.sizebox) {
 		container-type: normal;
 	}
-	/* A FIXED-viewBox chart (sankey, heatmap) takes its height from its WIDTH, so widening a pane
-	   made it taller and it spilled out of the card. Given the full height it letterboxes inside the
-	   pane through its own preserveAspectRatio instead. */
+	/* A FIXED-viewBox chart (sankey, heatmap) takes its height from its WIDTH, so widening a pane made
+	   it taller and it spilled out of the card. Given the full height it letterboxes instead. */
 	.cell:not(.folded) :global(.body > svg.chart) {
 		height: 100%;
 	}
@@ -255,7 +233,6 @@
 	.cell.arranging > :global(.card) {
 		user-select: none;
 	}
-	/* The pane's own controls read as out of play while the board is being rearranged. */
 	.cell.arranging :global(.card .actions) {
 		opacity: 0.4;
 	}
@@ -273,8 +250,7 @@
 	.grab:active {
 		cursor: grabbing;
 	}
-	/* The ceiling a capped pane holds open — dashed, and only while arranging, so nothing gets placed
-	   in the room the list will grow into. */
+	/* The ceiling a capped pane holds open, so nothing gets placed in the room the list will grow into. */
 	.cell.capped .grab {
 		outline-style: dashed;
 		outline-width: 1.5px;
@@ -328,9 +304,9 @@
 		border-left: 1px solid var(--border);
 	}
 
-	/* Each strip is centred on the card's boundary, so the grab zone reaches a few pixels either
-	   side of the visible edge. Corners come first in the box model (they are placed at the ends of
-	   the edges), so the edges inset by a whole reach to leave them clear. */
+	/* Each strip is centred on the card's boundary, so the grab zone reaches either side of the visible
+	   edge. Corners are placed at the ends of the edges, so the edges inset by a whole reach to clear
+	   them. */
 	.handle {
 		--reach: 12px;
 		--edge: calc(var(--pane-inset) - var(--reach) / 2);
