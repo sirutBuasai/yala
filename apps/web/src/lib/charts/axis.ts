@@ -1,13 +1,21 @@
 import { scaleLinear, scaleLog, type ScaleLinear, type ScaleLogarithmic } from 'd3-scale';
 
 /**
- * A value→pixel mapping plus the ticks to label it with. Generic in the scale so each builder keeps
- * its full d3 surface while callers that only plot can accept either.
+ * A value→pixel mapping plus the ticks to label it with. Generic in the scale so each builder keeps its
+ * full d3 surface while callers that only plot can accept either.
  */
 export interface ValueScale<S extends (v: number) => number = (v: number) => number> {
 	y: S;
 	ticks: number[];
 }
+
+/**
+ * What to draw at before the box has been measured. Off the normal path — a chart mounts with its box
+ * already measured and the charts are never server-rendered — so this only keeps a container that
+ * measures zero from producing a degenerate viewBox. One value, because three charts guessing
+ * differently at the same box read as though the number mattered.
+ */
+export const UNMEASURED = { w: 900, h: 300 };
 
 /** A chart's margins: top, right, bottom, left. */
 export interface Margins {
@@ -18,20 +26,19 @@ export interface Margins {
 }
 
 /**
- * The plot area inside a measured box, floored at zero on both axes.
+ * The plot area inside a measured box, floored at zero on both axes. The box is the shared
+ * `.figurebox` at its measured pixel size (see app.css), which also bounds how tall a chart may grow
+ * inside a stretched pane.
  *
- * The floor is the point: a pane can be made shorter than a chart's own margins, and a negative
- * height makes the browser reject the `<rect>` outright and inverts every d3 scale built on that
- * range, so the chart draws upside down. Every measured chart routes through here.
+ * The floor is the point: a pane can be made shorter than a chart's own margins, and a negative height
+ * makes the browser reject the `<rect>` outright and inverts every d3 scale built on that range, so the
+ * chart draws upside down.
  */
 export function plotSize(w: number, h: number, m: Margins): { iw: number; ih: number } {
 	return { iw: Math.max(0, w - m.l - m.r), ih: Math.max(0, h - m.t - m.b) };
 }
 
-/**
- * Zero-anchored linear value→pixel Y scale, plus its tick values. `ih` is the inner (plot) height in
- * pixels; the scale maps the max value to y=0 (top).
- */
+/** Zero-anchored linear value→pixel Y scale, plus its ticks. `ih` is the inner plot height in px. */
 export function moneyYScale(values: number[], ih: number): ValueScale<ScaleLinear<number, number>> {
 	const y = scaleLinear()
 		.domain([Math.min(0, ...values), Math.max(0, ...values)])
@@ -75,10 +82,8 @@ export function logYScale(
  */
 const GLYPH_RATIO = 0.55;
 
-/**
- * The font size at which the longest of `labels` fits inside `gutter` pixels, clamped to a readable
- * range — so charts with a label gutter shrink rather than truncate, but never past legibility.
- */
+/** The font size at which the longest of `labels` fits inside `gutter` px, clamped to stay legible: a
+    label gutter shrinks its type rather than truncating. */
 export function fitFontSize(gutter: number, labels: string[], min = 8, max = 12): number {
 	const longest = Math.max(1, ...labels.map((l) => l.length));
 	return Math.max(min, Math.min(max, gutter / (GLYPH_RATIO * longest)));

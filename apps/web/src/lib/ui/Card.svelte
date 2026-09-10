@@ -46,16 +46,12 @@
 	{#if title || caption || actions}
 		<header class="head" class:has-cap={!!caption}>
 			<div class="titles">
+				<!-- One level whatever the density: every card is a peer on its board, and picking the
+				     heading level by how the card LOOKS puts two neighbours at different depths. -->
 				{#if title}
-					{#if density === 'panel'}
-						<h3>
-							{title}{#if count !== undefined}&nbsp;<span class="count">{count}</span>{/if}
-						</h3>
-					{:else}
-						<h2 class="serif">
-							{title}{#if count !== undefined}&nbsp;<span class="count">{count}</span>{/if}
-						</h2>
-					{/if}
+					<h2 class:serif={density !== 'panel'}>
+						{title}{#if count !== undefined}&nbsp;<span class="count">{count}</span>{/if}
+					</h2>
 				{/if}
 				{#if caption}<p class="cap">{caption}</p>{/if}
 			</div>
@@ -116,7 +112,7 @@
 	.panel > .body {
 		gap: var(--gap-row);
 	}
-	.panel h3 {
+	.panel h2 {
 		margin: 0;
 		font-size: var(--text-control);
 		font-weight: var(--fw-semibold);

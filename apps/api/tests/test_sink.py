@@ -404,7 +404,7 @@ def test_update_paycheck_to_unopened_account_rejected(ledger_dir: Path):
             income_account=_EMPLOYER,
             deduction_legs=[],
             contribution_legs=[],
-            deposit_account="Assets:Cash:Nope",  # unopened
+            deposit_account="Assets:Cash:Unopened",
         )
     assert target.read_bytes() == before
     _loads_clean(ledger_dir)
@@ -789,7 +789,7 @@ def test_failed_reload_leaves_file_byte_identical(ledger_dir: Path):
             payee="restore me",
             amount=Decimal("12.00"),
             category="Takeouts",
-            funding_account="Assets:Cash:Nope",  # unopened -> strict reload fails
+            funding_account="Assets:Cash:Unopened",
         )
     assert target.read_bytes() == before
 
@@ -882,7 +882,7 @@ def test_update_across_year_with_bad_account_leaves_old_file_intact(ledger_dir: 
             payee="stays put",
             amount=Decimal("22.00"),
             category="Takeouts",
-            funding_account="Assets:Cash:Nope",  # unopened -> reload fails
+            funding_account="Assets:Cash:Unopened",
             date=dt.date(2027, 1, 1),  # would cross the year boundary
         )
 

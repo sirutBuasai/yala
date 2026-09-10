@@ -25,7 +25,7 @@ describe('accountInfo', () => {
 	});
 
 	it('returns undefined for an unknown or nullish account', () => {
-		expect(accountInfo('Assets:Cash:Nope')).toBeUndefined();
+		expect(accountInfo('Assets:Cash:Unlisted')).toBeUndefined();
 		expect(accountInfo(null)).toBeUndefined();
 		expect(accountInfo(undefined)).toBeUndefined();
 	});

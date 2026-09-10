@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { fitFontSize } from '$lib/charts/axis';
+	import { fitFontSize, UNMEASURED } from '$lib/charts/axis';
 	import { money, moneyK, esc } from '$lib/utils/format';
 	import { clamp } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
@@ -25,7 +25,7 @@
 	// narrow card.
 	let boxW = $state(0);
 	let boxH = $state(0);
-	const W = $derived(boxW || 520);
+	const W = $derived(boxW || UNMEASURED.w);
 	/** Rows share the pane's height so a tall pane has no empty band under the last bar, down to a
 	    floor where a row stops being a readable bar with a label beside it. */
 	const rowH = $derived(boxH ? Math.max(24, (boxH - 4) / Math.max(1, rows.length)) : 29);

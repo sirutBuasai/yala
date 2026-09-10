@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { line, area } from 'd3-shape';
-	import { moneyYScale, logYScale, labelIndices, plotSize } from '$lib/charts/axis';
+	import { moneyYScale, logYScale, labelIndices, plotSize, UNMEASURED } from '$lib/charts/axis';
 	import { money, esc } from '$lib/utils/format';
 	import { clamp } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
@@ -29,12 +29,10 @@
 
 	const showLegend = $derived(!endLabels && series.length > 1);
 
-	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also bounds
-	// how tall the chart may grow inside a stretched pane.
 	let boxW = $state(0);
 	let boxH = $state(0);
-	const W = $derived(boxW || 1100);
-	const H = $derived(boxH || 300);
+	const W = $derived(boxW || UNMEASURED.w);
+	const H = $derived(boxH || UNMEASURED.h);
 	// The end-label gutter is a share of the box, not a constant, so a narrow card doesn't hand most
 	// of its plot to labels.
 	const m = $derived({ t: 16, r: endLabels ? clamp(W * 0.2, 96, 170) : 16, b: 28, l: 60 });

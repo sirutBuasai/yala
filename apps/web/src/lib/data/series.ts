@@ -5,7 +5,7 @@ import type { DashboardData } from '$lib/data/types';
 import type { Axis, MultiSeries, Series, SeriesPoint, Unit } from './primitives';
 import { MONEY, PERCENT } from './primitives';
 import { MONTHS, monthName } from '$lib/utils/format';
-import { addMonths } from '$lib/utils/period';
+import { addMonths, monthKey } from '$lib/utils/period';
 import { measureLabel, measureValue, type Field, type Measure } from './metric';
 
 /** Build a Series from parallel labels/values; a null value becomes 0. */
@@ -30,7 +30,7 @@ export function series(
 function monthAxis(data: DashboardData, year?: number): { keys: string[]; labels: string[] } {
 	if (year == null) return { keys: data.meta.month_keys, labels: data.meta.month_keys };
 	return {
-		keys: MONTHS.map((_, m) => `${year}-${String(m + 1).padStart(2, '0')}`),
+		keys: MONTHS.map((_, m) => monthKey(year, m + 1)),
 		labels: MONTHS
 	};
 }
@@ -52,11 +52,9 @@ export function measureByMonth(data: DashboardData, m: Measure, year?: number): 
 
 /**
  * Only the months of a year the measure actually moved in — the first through the last, so a quiet
- * month in the middle still plots but a run of empty ones at either end does not.
- *
- * This is the window a running total wants. Padded out to December, an accumulation reaches its total
- * partway across and then draws a flat line to the edge, which in a chart the width of a card is a
- * solid block over half of it that says nothing and does not change as the card is resized.
+ * month in the middle still plots but a run of empty ones at either end does not. This is the window a
+ * running total wants: padded out to the year's end, an accumulation flatlines to the edge and spends
+ * half the card saying nothing.
  */
 export function measureActive(data: DashboardData, m: Measure, year: number): Series {
 	const { keys } = monthAxis(data, year);

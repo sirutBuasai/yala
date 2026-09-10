@@ -1,5 +1,10 @@
 // Month-key arithmetic; a month key is "YYYY-MM". Display formatting of them lives in format.ts.
 
+/** A month key from a year and a 1-based month. */
+export function monthKey(year: number, month: number): string {
+	return `${year}-${String(month).padStart(2, '0')}`;
+}
+
 /** The year of a month key or an ISO date. */
 export function yearOf(key: string): number {
 	return +key.slice(0, 4);
@@ -19,7 +24,7 @@ export function isoDate(monthKey: string, day: number): string {
 export function addMonths(key: string, delta: number): string {
 	const [y = 0, m = 1] = key.split('-').map(Number);
 	const d = new Date(y, m - 1 + delta, 1);
-	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+	return monthKey(d.getFullYear(), d.getMonth() + 1);
 }
 
 /**

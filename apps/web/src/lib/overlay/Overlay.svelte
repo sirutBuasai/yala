@@ -96,7 +96,7 @@
 		display: flex;
 		align-items: flex-start;
 		justify-content: center;
-		padding: 6vh 24px 24px;
+		padding: 6vh var(--space-11) var(--space-11);
 	}
 	.panel {
 		background: var(--surface);
@@ -109,7 +109,7 @@
 	/* Shrinks to fit narrow screens; content shrinks with it, so it never needs a horizontal scroll. */
 	.modal {
 		border-radius: var(--radius-xl);
-		box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.6);
+		box-shadow: var(--shadow-modal);
 		width: min(760px, 100%);
 		max-height: 88vh;
 	}
@@ -120,7 +120,7 @@
 		height: 100%;
 		width: min(680px, 100%);
 		border-left: 1px solid var(--border);
-		box-shadow: -18px 0 40px -20px rgba(0, 0, 0, 0.7);
+		box-shadow: var(--shadow-drawer);
 	}
 	.head {
 		flex-shrink: 0;

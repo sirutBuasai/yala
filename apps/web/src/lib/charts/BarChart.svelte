@@ -2,7 +2,7 @@
 	// One bar chart for 1..n series: a single series renders as plain columns with value labels, two
 	// or more as grouped bars with a legend. Callers pick "Bar", never "column" vs "grouped bars".
 	import { scaleBand } from 'd3-scale';
-	import { moneyYScale, plotSize } from '$lib/charts/axis';
+	import { moneyYScale, plotSize, UNMEASURED } from '$lib/charts/axis';
 	import { money, moneyK, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Legend from '$lib/charts/Legend.svelte';
@@ -20,12 +20,10 @@
 
 	const single = $derived(series.length <= 1);
 
-	// Rendered at the measured pixel size of the shared `.figurebox` (see app.css), which also bounds
-	// how tall the chart may grow inside a stretched pane.
 	let boxW = $state(0);
 	let boxH = $state(0);
-	const W = $derived(boxW || 1100);
-	const H = $derived(boxH || 300);
+	const W = $derived(boxW || UNMEASURED.w);
+	const H = $derived(boxH || UNMEASURED.h);
 	const m = { t: 22, r: 14, b: 30, l: 56 };
 	const plot = $derived(plotSize(W, H, m));
 	const iw = $derived(plot.iw);
