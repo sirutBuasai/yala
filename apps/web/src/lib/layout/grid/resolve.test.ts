@@ -10,10 +10,16 @@ import {
 	sharesColumns
 } from '$lib/layout/grid/resolve';
 import { COLS, MIN_H, MIN_W } from '$lib/layout/grid/units';
-import type { Sized } from '$lib/layout/grid/types';
+import type { SizedPane } from '$lib/layout/grid/types';
 
 /** Terse pane literal: id at (x,y) spanning w×h. */
-const p = (id: string, x: number, y: number, w: number, h: number): Sized => ({ id, x, y, w, h });
+const p = (id: string, x: number, y: number, w: number, h: number): SizedPane => ({
+	id,
+	x,
+	y,
+	w,
+	h
+});
 
 const at = (placed: { id: string; y: number }[], id: string) => placed.find((q) => q.id === id)!.y;
 

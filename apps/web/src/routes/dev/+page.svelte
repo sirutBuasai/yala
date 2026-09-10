@@ -7,7 +7,7 @@
 	// column title) still get their own named token so intent stays explicit.
 	import '../../app.css';
 	import NavMenu from '$lib/nav/NavMenu.svelte';
-	import Pane from '$lib/ui/Pane.svelte';
+	import Card from '$lib/ui/Card.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
 	import { makeData } from '$lib/data/__fixtures__/dashboard';
 	import { build } from '$lib/data/catalog';
@@ -438,30 +438,30 @@
 	<div class="board">
 		{#each stats as s (s.def)}
 			<div class="cell span2">
-				<Pane title={s.primitive.kind === 'scalar' ? s.primitive.label : s.def} cap="Lifetime">
+				<Card title={s.primitive.kind === 'scalar' ? s.primitive.label : s.def} caption="Lifetime">
 					<Figure primitive={s.primitive} />
-				</Pane>
+				</Card>
 			</div>
 		{/each}
 		<div class="cell span3">
-			<Pane title="Where it went" cap="Lifetime · donut">
+			<Card title="Where it went" caption="Lifetime · donut">
 				<Figure primitive={donut} chart="donut" />
-			</Pane>
+			</Card>
 		</div>
 		<div class="cell span3">
-			<Pane title="Income vs Spending vs Savings" cap="Lifetime · bars">
+			<Card title="Income vs Spending vs Savings" caption="Lifetime · bars">
 				<Figure primitive={bars} chart="bar" />
-			</Pane>
+			</Card>
 		</div>
 		<div class="cell span3">
-			<Pane title="Cumulative savings" cap="Lifetime · area line">
+			<Card title="Cumulative savings" caption="Lifetime · area line">
 				<Figure primitive={cumulative} chart="line" area />
-			</Pane>
+			</Card>
 		</div>
 		<div class="cell span3">
-			<Pane title="Paychecks" cap="Lifetime · table">
+			<Card title="Paychecks" caption="Lifetime · table">
 				<Figure primitive={table} chart="table" />
-			</Pane>
+			</Card>
 		</div>
 	</div>
 

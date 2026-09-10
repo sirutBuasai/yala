@@ -29,7 +29,7 @@
 		type Group,
 		type Row
 	} from '$lib/balance/checklist';
-	import Cell from '$lib/layout/grid/Cell.svelte';
+	import Pane from '$lib/layout/grid/Pane.svelte';
 	import AmountInput from '$lib/ui/AmountInput.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 
@@ -167,7 +167,7 @@
 	}
 </script>
 
-<Cell {id} title="Log balances" cap="A month's snapshot is its first-of-month assertion">
+<Pane {id} title="Log balances" caption="A month's snapshot is its first-of-month assertion">
 	{#snippet actions()}
 		{#if rows.length}
 			<span class="progress">{filled.length}/{rows.length}</span>
@@ -293,7 +293,7 @@
 			</div>
 		</div>
 	{/if}
-</Cell>
+</Pane>
 
 <style>
 	/* No width cap here any more: a name and its figures ending up too far apart to read as one row

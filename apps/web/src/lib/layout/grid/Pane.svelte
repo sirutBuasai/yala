@@ -1,17 +1,5 @@
 <script module lang="ts">
-	import type { Edge } from './layout.svelte';
 	import type { HeightMode } from './types';
-
-	/**
-	 * Which edges may be dragged, per height mode. A fitted pane's height is not the user's to set
-	 * directly, so the handles that would change it are absent rather than present and inert — the
-	 * handles you can see are exactly the ones that do something.
-	 */
-	const EDGES: Record<HeightMode, Edge[]> = {
-		fixed: ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'],
-		cap: ['s', 'e', 'w', 'se', 'sw'],
-		fit: ['e', 'w']
-	};
 
 	const MODE_ORDER: HeightMode[] = ['fixed', 'fit', 'cap'];
 
@@ -26,7 +14,7 @@
 	// One pane on the board: the grid item, the arrange affordances, and the two measurements the
 	// pure layer can't make for itself.
 	//
-	// It COMPOSES `Pane` rather than being one, so the card stays grid-agnostic and the folded layout
+	// It COMPOSES `Card` rather than being one, so the card stays grid-agnostic and the folded layout
 	// reuses it untouched.
 	//
 	// ── Measuring a fitted pane ───────────────────────────────────────────────────
@@ -36,50 +24,46 @@
 	// cell feeds its own imposed height back into the next measurement, and the pane ratchets in one
 	// direction and never comes back.
 	//
-	// ── The minimum size ─────────────────────────────────────────────────────────
-	// Never predicted. During a resize the pane is already laid out at the candidate size, so the DOM
-	// is asked whether the content spilled (see `probe.ts`). If it did, the preview is held at the
-	// last size that fitted — so the edge sticks the way a native min-size does — and the pane wears
-	// its rejected state while the pointer pushes past that limit. On release the last fitting size
-	// stands: the gesture is never thrown away.
+	// The gesture itself is not here: `PaneGesture` holds it, and is handed the two things only a
+	// component can supply — a way to wait for the candidate size to be laid out, and a way to ask
+	// whether the content fitted it.
 	import { tick, type Snippet } from 'svelte';
-	import Pane from '$lib/ui/Pane.svelte';
+	import Card from '$lib/ui/Card.svelte';
 	import Grip from '$lib/icons/Grip.svelte';
 	import SizeMode from '$lib/icons/SizeMode.svelte';
-	import { getBoard, getGridEnv } from './context';
-	import { drag } from './gesture';
-	import { spills } from './probe';
+	import { getArrangement, getGridEnv } from './context';
+	import { drag } from './drag';
+	import { spills } from './spill';
 	import { foldSpan } from './fold';
-	import { UNIT } from './units';
-	import type { Intent, Rect } from './types';
+	import { EDGES } from './resize';
+	import { PaneGesture } from './gesture.svelte';
 
 	interface Props {
 		/** Pane id — a key of the board's layout. */
 		id: string;
 		title?: string;
 		count?: number;
-		cap?: string;
+		caption?: string;
 		actions?: Snippet;
 		tone?: 'default' | 'attention';
 		density?: 'figure' | 'panel';
 		children: Snippet;
 	}
-	let { id, title, count, cap, actions, tone, density, children }: Props = $props();
+	let { id, title, count, caption, actions, tone, density, children }: Props = $props();
 
 	const env = getGridEnv();
-	const board = getBoard();
+	const arrangement = getArrangement();
 
-	const placed = $derived(board.placed(id));
-	const mode = $derived(board.mode(id));
-	const hug = $derived(board.hugs(id));
-	const arranging = $derived(env.active);
+	const placed = $derived(arrangement.placed(id));
+	const mode = $derived(arrangement.mode(id));
+	const hug = $derived(arrangement.hugs(id));
+	const arranging = $derived(env.arranging);
 	const capped = $derived(mode === 'cap');
 	const span = $derived(foldSpan(placed.w, env.columns));
 	const name = $derived(title ?? id);
 
 	let cardEl = $state<HTMLElement>();
-	/** True while the pointer is pushing past the size the content will fit in. */
-	let invalid = $state(false);
+	let bodyEl = $state<HTMLElement>();
 
 	// Fitted panes report their card's height so the pure layer can turn it into rows. Only while
 	// unfolded: a folded pane hugs its content by construction and reserves nothing.
@@ -87,7 +71,7 @@
 		const el = cardEl;
 		if (!hug || !el) return;
 
-		const report = () => board.setMeasured(id, el.offsetHeight);
+		const report = () => arrangement.setMeasured(id, el.offsetHeight);
 		report();
 		const observer = new ResizeObserver(report);
 		observer.observe(el);
@@ -103,106 +87,13 @@
 
 	// --- gestures ---
 
-	/** The whole board as it was at the press, so Escape puts it back — including the promotion. */
-	let before: Intent[] | null = null;
-	/** The rectangle the deltas apply to. Deltas are cumulative from the press, never incremental. */
-	let base: Rect | null = null;
-	/** Displacement the pane carried at the press — subtracted before a drop is stored. */
-	let carried = 0;
-	/** The most recent candidate whose content fitted; where a rejected resize is held. */
-	let fitting: Rect | null = null;
-	/** Serial, so a superseded probe cannot undo a newer candidate. */
-	let attempt = 0;
-
-	const units = (px: number) => Math.round(px / UNIT);
-
-	/** The rectangle a resize edits. On a capped pane the vertical extent IS the ceiling. */
-	function editable(): Rect {
-		const intent = board.intent(id);
-		return { x: intent.x, y: intent.y, w: intent.w, h: capped ? intent.cap : intent.h };
-	}
-
-	function abandon(): void {
-		if (before) board.restore(before);
-		before = null;
-		base = null;
-		invalid = false;
-		attempt++;
-	}
-
-	function beginMove(): void {
-		before = board.snapshot();
-		base = { ...placed };
-		carried = placed.offset;
-		// The pane the user picked up wins ties on authored top, which is what makes "drop it onto its
-		// neighbour and the NEIGHBOUR goes below" hold — and hold after a reload, because the priority
-		// order is stored alongside the rectangles rather than remembered for the session.
-		board.promote(id);
-	}
-
-	function moveTo(dx: number, dy: number): void {
-		if (!base) return;
-		board.drop(id, base.x + units(dx), base.y + units(dy), carried);
-	}
-
-	function endMove(dx: number, dy: number): void {
-		moveTo(dx, dy);
-		board.commit();
-		before = null;
-		base = null;
-	}
-
-	function beginResize(): void {
-		before = board.snapshot();
-		base = editable();
-		fitting = base;
-		invalid = false;
-		attempt++;
-	}
-
-	/** Apply one edge's cumulative delta to the press-time rectangle. */
-	function candidate(edge: Edge, dx: number, dy: number, from: Rect): Rect {
-		const [dux, duy] = [units(dx), units(dy)];
-		const rect = { ...from };
-		if (edge.includes('e')) rect.w = from.w + dux;
-		if (edge.includes('w')) {
-			rect.x = from.x + dux;
-			rect.w = from.w - dux;
-		}
-		if (edge.includes('s')) rect.h = from.h + duy;
-		if (edge.includes('n')) {
-			rect.y = from.y + duy;
-			rect.h = from.h - duy;
-		}
-		return rect;
-	}
-
-	async function previewResize(edge: Edge, dx: number, dy: number): Promise<void> {
-		if (!base) return;
-		const seq = ++attempt;
-		board.resizeTo(id, candidate(edge, dx, dy, base));
-		await tick();
-		// A newer pointer move has already replaced this candidate; its probe is the one that counts.
-		if (seq !== attempt || !cardEl) return;
-
-		if (spills(cardEl)) {
-			invalid = true;
-			if (fitting) board.resizeTo(id, fitting);
-		} else {
-			invalid = false;
-			fitting = editable();
-		}
-	}
-
-	async function endResize(edge: Edge, dx: number, dy: number): Promise<void> {
-		await previewResize(edge, dx, dy);
-		// Whatever the pointer ended on, the pane keeps the last size its content fitted in.
-		if (invalid && fitting) board.resizeTo(id, fitting);
-		invalid = false;
-		board.commit();
-		before = null;
-		base = null;
-	}
+	// The gesture owns the whole state machine; this only supplies the DOM. The spill check is asked for
+	// the card and its body BY REFERENCE (see `spill.ts`), and `tick` is what makes the candidate size
+	// real before it is measured.
+	const gesture = new PaneGesture(() => id, arrangement, {
+		spills: () => !!cardEl && spills(cardEl, bodyEl),
+		settle: tick
+	});
 
 	const STEPS: Record<string, [number, number]> = {
 		ArrowLeft: [-1, 0],
@@ -216,17 +107,7 @@
 		const delta = STEPS[e.key];
 		if (!delta) return;
 		e.preventDefault();
-		const [dx, dy] = delta;
-
-		if (e.shiftKey) {
-			const edge: Edge = dx ? 'e' : 's';
-			if (!EDGES[mode].includes(edge)) return;
-			beginResize();
-			void endResize(edge, dx * UNIT, dy * UNIT);
-			return;
-		}
-		beginMove();
-		endMove(dx * UNIT, dy * UNIT);
+		gesture.step(delta[0], delta[1], e.shiftKey);
 	}
 </script>
 
@@ -236,21 +117,22 @@
 	class:arranging
 	class:hug
 	class:capped
-	class:invalid
+	class:invalid={gesture.invalid}
 	style:grid-column={env.folded ? `span ${span}` : `${placed.x + 1} / span ${placed.w}`}
 	style:grid-row={env.folded ? null : `${placed.y + 1} / span ${placed.h}`}
-	style:order={env.folded ? board.order[id] : null}
-	style:--cap-h={capped ? `${board.capPx(id)}px` : null}
+	style:order={env.folded ? arrangement.order[id] : null}
+	style:--cap-h={capped ? `${arrangement.capPx(id)}px` : null}
 >
-	<Pane
+	<Card
 		bind:card={cardEl}
+		bind:body={bodyEl}
 		{title}
 		{count}
-		{cap}
+		{caption}
 		{actions}
 		{tone}
 		{density}
-		scroll={board.scrolls(id)}
+		scroll={arrangement.scrolls(id)}
 		{children}
 	/>
 
@@ -258,13 +140,13 @@
 		<div
 			class="grab"
 			use:drag={{
-				onstart: beginMove,
-				onmove: ({ dx, dy }) => moveTo(dx, dy),
-				onend: ({ dx, dy }) => endMove(dx, dy),
-				oncancel: abandon
+				onstart: () => gesture.beginMove(),
+				onmove: ({ dx, dy }) => gesture.moveTo(dx, dy),
+				onend: ({ dx, dy }) => gesture.endMove(dx, dy),
+				oncancel: () => gesture.abandon()
 			}}
 		>
-			<!-- data-no-drag: the press must not start a drag of the pane underneath (see gesture.ts —
+			<!-- data-no-drag: the press must not start a drag of the pane underneath (see drag.ts —
 			     stopping propagation here cannot work, because Svelte delegates the event). -->
 			<div class="tools" role="toolbar" aria-label={`Arrange ${name}`} tabindex="-1" data-no-drag>
 				<button
@@ -275,7 +157,7 @@
 				>
 					<Grip />
 				</button>
-				{#if board.editableMode(id)}
+				{#if arrangement.canSetHeight(id)}
 					<div class="modes" role="group" aria-label={`Height of ${name}`}>
 						{#each MODE_ORDER as m (m)}
 							<button
@@ -284,7 +166,7 @@
 								class:active={mode === m}
 								aria-pressed={mode === m}
 								title={MODE_LABELS[m]}
-								onclick={() => board.setMode(id, m)}
+								onclick={() => arrangement.setMode(id, m)}
 							>
 								<SizeMode mode={m} />
 							</button>
@@ -300,10 +182,10 @@
 			<div
 				class="handle {edge}"
 				use:drag={{
-					onstart: beginResize,
-					onmove: ({ dx, dy }) => void previewResize(edge, dx, dy),
-					onend: ({ dx, dy }) => void endResize(edge, dx, dy),
-					oncancel: abandon
+					onstart: () => gesture.beginResize(),
+					onmove: ({ dx, dy }) => void gesture.previewResize(edge, dx, dy),
+					onend: ({ dx, dy }) => void gesture.endResize(edge, dx, dy),
+					oncancel: () => gesture.abandon()
 				}}
 			></div>
 		{/each}
@@ -385,7 +267,7 @@
 		border-radius: var(--radius-xl);
 		cursor: grab;
 		touch-action: none;
-		outline: 1px solid color-mix(in srgb, var(--lav) 40%, transparent);
+		outline: 1px solid color-mix(in srgb, var(--arrange-line) 40%, transparent);
 		outline-offset: -1px;
 	}
 	.grab:active {
@@ -436,7 +318,7 @@
 		background: var(--inset);
 	}
 	.modebtn.active {
-		background: color-mix(in srgb, var(--lav) 24%, transparent);
+		background: color-mix(in srgb, var(--arrange-line) 24%, transparent);
 		color: var(--ink);
 	}
 	.modes {
@@ -458,7 +340,7 @@
 		border-radius: var(--radius-sm);
 	}
 	.handle:hover {
-		background: color-mix(in srgb, var(--lav) 35%, transparent);
+		background: color-mix(in srgb, var(--arrange-line) 35%, transparent);
 	}
 	.handle.n,
 	.handle.s {

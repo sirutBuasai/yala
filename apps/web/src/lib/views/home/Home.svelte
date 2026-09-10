@@ -8,7 +8,7 @@
 	// not where they are.
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
-	import type { Layout } from '$lib/layout/grid/types';
+	import type { BoardLayout } from '$lib/layout/grid/types';
 	import { pendingRows } from '$lib/data/pending';
 	import { latestMonthKey } from '$lib/data/scope';
 	import { money, MONTHS } from '$lib/utils/format';
@@ -30,20 +30,21 @@
 
 	// The calendar is a CHART, not a list: it reserves six week rows so a five-week month gets taller
 	// cells rather than a blank sixth week, which is what keeps the page still as you page months. So
-	// it scales to its pane, and its only minimum is a legibility floor — which is why 26 rows here is
+	// it scales to its pane, and its only minimum is a legibility floor — which is why 25 rows here is
 	// close to the smallest it will accept.
 	//
-	// The day's entries take a SET height, matched to the calendar beside them, so the row keeps a line
-	// and the pane holds still as you move between a quiet day and a busy one (it scrolls instead).
-	// Balances simply fit: the list is as long as your accounts are. Pending is capped — it earns its
-	// place on a clean month by hosting the add button, so it must not vanish, but nor should it
-	// reserve a screenful for three rows.
+	// The day's entries and pending share the column beside it, both at a SET height, so each pane
+	// holds still as you move between a quiet day and a busy one (they scroll instead) and pending
+	// keeps the room it needs to host the add button on a clean month. Pending's top overlaps the day
+	// above it by a row; the push rule settles that, which is why the two read as a stack. Balances
+	// then runs the full width below both columns: the list is as long as your accounts are, so it
+	// fits its content rather than reserving a height.
 	const LAYOUT = {
-		calendar: { x: 0, y: 0, w: 29, h: 26, content: 'scale' },
-		day: { x: 29, y: 0, w: 19, h: 26, content: 'flow', mode: 'fixed' },
-		balances: { x: 0, y: 26, w: 30, h: 18, content: 'flow', mode: 'fit' },
-		pending: { x: 30, y: 26, w: 18, h: 10, content: 'flow', mode: 'cap', cap: 10 }
-	} satisfies Layout;
+		calendar: { x: 0, y: 0, w: 31, h: 25, content: 'scale' },
+		day: { x: 31, y: 0, w: 17, h: 16, content: 'flow', mode: 'fixed' },
+		pending: { x: 31, y: 15, w: 17, h: 9, content: 'flow', mode: 'fixed' },
+		balances: { x: 0, y: 25, w: 48, h: 18, content: 'flow', mode: 'fit' }
+	} satisfies BoardLayout;
 
 	const pending = $derived(pendingRows(data));
 
@@ -109,7 +110,7 @@
 	<PendingPane
 		id="pending"
 		transactions={pending}
-		cap="Fronted, waiting to be paid back"
+		caption="Fronted, waiting to be paid back"
 		onedit={(l) => modals.editTransaction(l)}
 	/>
 	<BalanceChecklist id="balances" {data} {accounts} {onsaved} {monthKey} />

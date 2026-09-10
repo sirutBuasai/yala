@@ -3,17 +3,17 @@
 // drag makes through storage.
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { BoardLayout } from '$lib/layout/grid/layout.svelte';
+import { Arrangement } from '$lib/layout/grid/arrangement.svelte';
 import { GridEnv } from '$lib/layout/grid/env.svelte';
 import { CONTENT, GAP, UNIT, WRAP_PAD } from '$lib/layout/grid/units';
-import type { Layout } from '$lib/layout/grid/types';
+import type { BoardLayout } from '$lib/layout/grid/types';
 
 const LAYOUT = {
 	tall: { x: 0, y: 0, w: 24, h: 12, content: 'scale' },
 	top: { x: 24, y: 0, w: 24, h: 6, content: 'scale' },
 	bottom: { x: 24, y: 6, w: 24, h: 6, content: 'flow', mode: 'fit' },
 	wide: { x: 0, y: 12, w: 48, h: 8, content: 'flow', mode: 'cap', cap: 8 }
-} satisfies Layout;
+} satisfies BoardLayout;
 
 /** A full-width environment, so the board is not folded. */
 function wideEnv(): GridEnv {
@@ -27,41 +27,41 @@ const rows = (n: number) => n * UNIT - GAP;
 
 let seq = 0;
 /** A board on a key nothing else has used, so one test's storage can't reach another's. */
-function board(env = wideEnv()) {
-	return { board: new BoardLayout(`test-${seq++}`, LAYOUT, env), env };
+function arrangement(env = wideEnv()) {
+	return { arrangement: new Arrangement(`test-${seq++}`, LAYOUT, env), env };
 }
 
 beforeEach(() => localStorage.clear());
 
 describe('defaults', () => {
 	it('starts on the arrangement the view declared', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		expect(b.placed('tall')).toMatchObject({ x: 0, y: 0, w: 24, h: 12, offset: 0 });
 		expect(b.placed('wide')).toMatchObject({ x: 0, y: 12, w: 48, h: 8 });
 	});
 
 	it('forces a chart pane to a fixed height, whatever the view asked for', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		expect(b.mode('tall')).toBe('fixed');
-		expect(b.editableMode('tall')).toBe(false);
-		expect(b.editableMode('bottom')).toBe(true);
+		expect(b.canSetHeight('tall')).toBe(false);
+		expect(b.canSetHeight('bottom')).toBe(true);
 	});
 
 	it('throws for a pane the layout does not declare, naming it', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		expect(() => b.spec('nope')).toThrow(/pane "nope"/);
 	});
 });
 
 describe('fitted panes', () => {
 	it('reserves what the card measured', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		b.setMeasured('bottom', rows(10));
 		expect(b.placed('bottom').h).toBe(10);
 	});
 
 	it('pushes the panes below it down as it grows, and lets them back up as it shrinks', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 
 		b.setMeasured('bottom', rows(14)); // top(6) + bottom(14) = 20, past `wide`'s top at 12
 		expect(b.placed('wide').y).toBe(20);
@@ -71,7 +71,7 @@ describe('fitted panes', () => {
 	});
 
 	it('floors a rising pane on the neighbour that did not shrink', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		// `tall` is 12 and did not move. Even with the right-hand column collapsed, `wide` may not rise
 		// above `tall`'s bottom — that is the trap a remembered offset would fall into.
 		b.setMeasured('bottom', rows(1));
@@ -79,24 +79,24 @@ describe('fitted panes', () => {
 	});
 
 	it('holds a capped pane open to its whole ceiling while arranging, and not otherwise', () => {
-		const { board: b, env } = board();
+		const { arrangement: b, env } = arrangement();
 		b.setMeasured('wide', rows(3));
 
 		expect(b.placed('wide').h).toBe(3);
-		env.arranging = true;
+		env.arrangeRequested = true;
 		expect(b.placed('wide').h).toBe(8);
 	});
 });
 
 describe('drop', () => {
 	it('stores where the pane was dropped when it was carrying no displacement', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		b.drop('top', 24, 4, 0);
 		expect(b.placed('top').y).toBe(4);
 	});
 
 	it('subtracts the displacement, so a drop that moves nothing changes nothing', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		// Grow `bottom` so `wide` is pushed 8 rows below where it was authored.
 		b.setMeasured('bottom', rows(14));
 		const before = b.placed('wide');
@@ -106,11 +106,11 @@ describe('drop', () => {
 		b.drop('wide', before.x, before.y, before.offset);
 
 		expect(b.placed('wide').y).toBe(before.y);
-		expect(b.intent('wide').y).toBe(12); // the authored top is untouched
+		expect(b.authored('wide').y).toBe(12); // the authored top is untouched
 	});
 
 	it('applies a drag once, not once per render', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		b.setMeasured('bottom', rows(14));
 		const before = b.placed('wide'); // authored at 12, resting at 20 (offset 8)
 
@@ -118,7 +118,7 @@ describe('drop', () => {
 
 		// Stored top = 20 + 12 − 8 = 24, and 24 is where it renders. The push is not added a second
 		// time on top of the drag, which is the failure this whole subtraction exists to prevent.
-		expect(b.intent('wide').y).toBe(24);
+		expect(b.authored('wide').y).toBe(24);
 		expect(b.placed('wide').y).toBe(24);
 
 		// And it stays there across a re-derive.
@@ -132,30 +132,30 @@ describe('drop', () => {
 		// the pane: its floor has not changed, so neither has where it renders. The alternative — storing
 		// where it was dropped — would re-baseline the pane onto a push it never asked for, and the board
 		// would creep downward every time the data grew and the user then touched it.
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		b.setMeasured('bottom', rows(14));
 		const before = b.placed('wide');
 
 		b.drop('wide', before.x, before.y + 4, before.offset);
 
-		expect(b.intent('wide').y).toBe(16);
+		expect(b.authored('wide').y).toBe(16);
 		expect(b.placed('wide').y).toBe(20);
 	});
 
 	it('keeps a dropped pane inside the board', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		b.drop('top', 40, 0, 0); // a 24-wide pane cannot start at column 40
-		expect(b.intent('top').x).toBe(24);
+		expect(b.authored('top').x).toBe(24);
 		b.drop('top', -5, -5, 0);
-		// The stored intent is clamped to the origin. Where it RENDERS is another matter: `tall` already
+		// The stored pane is clamped to the origin. Where it RENDERS is another matter: `tall` already
 		// holds that corner, so the push rule sends this pane below it.
-		expect(b.intent('top')).toMatchObject({ x: 0, y: 0 });
+		expect(b.authored('top')).toMatchObject({ x: 0, y: 0 });
 		expect(b.placed('top').y).toBe(12);
 	});
 
 	it('lets the pane just dropped win its spot, pushing its neighbour below', () => {
-		const { board: b } = board();
-		b.promote('top'); // what `Cell` does at the start of a move
+		const { arrangement: b } = arrangement();
+		b.promote('top'); // what `Pane` does at the start of a move
 		b.drop('top', 0, 0, 0); // straight onto `tall`
 
 		expect(b.placed('top').y).toBe(0);
@@ -165,12 +165,12 @@ describe('drop', () => {
 	it('and still wins after a reload, because the priority order is stored too', () => {
 		const env = wideEnv();
 		const key = `test-reload-${seq++}`;
-		const first = new BoardLayout(key, LAYOUT, env);
+		const first = new Arrangement(key, LAYOUT, env);
 		first.promote('top');
 		first.drop('top', 0, 0, 0);
 		first.commit();
 
-		const reopened = new BoardLayout(key, LAYOUT, env);
+		const reopened = new Arrangement(key, LAYOUT, env);
 		expect(reopened.placed('top').y).toBe(0);
 		expect(reopened.placed('tall').y).toBe(6);
 	});
@@ -178,28 +178,28 @@ describe('drop', () => {
 
 describe('resize', () => {
 	it('sets the height on a fixed pane', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		b.resizeTo('tall', { x: 0, y: 0, w: 24, h: 20 });
 		expect(b.placed('tall').h).toBe(20);
 	});
 
 	it('sets the CEILING on a capped pane, and leaves its own height alone', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		b.setMeasured('wide', rows(4));
 
 		b.resizeTo('wide', { x: 0, y: 12, w: 48, h: 16 });
 
-		expect(b.intent('wide').cap).toBe(16);
+		expect(b.authored('wide').cap).toBe(16);
 		// Storing the ceiling AS the height would re-baseline the pane, and a capped list that has not
 		// reached its ceiling would read as having shrunk.
-		expect(b.intent('wide').h).toBe(8);
+		expect(b.authored('wide').h).toBe(8);
 		expect(b.placed('wide').h).toBe(4);
 	});
 });
 
 describe('height modes', () => {
 	it('freezes the height at what the content needs when leaving a fitted mode', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		b.setMeasured('bottom', rows(9));
 
 		b.setMode('bottom', 'fixed');
@@ -209,14 +209,14 @@ describe('height modes', () => {
 	});
 
 	it('seeds a new ceiling from the same figure, so the pane does not jump on the way in', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		b.setMeasured('bottom', rows(9));
 		b.setMode('bottom', 'cap');
-		expect(b.intent('bottom').cap).toBe(9);
+		expect(b.authored('bottom').cap).toBe(9);
 	});
 
 	it('decides on its own whether the body scrolls', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		expect(b.scrolls('bottom')).toBe(false); // fitted: extends rather than scrolls
 		b.setMode('bottom', 'fixed');
 		expect(b.scrolls('bottom')).toBe(true);
@@ -228,19 +228,19 @@ describe('persistence', () => {
 	it('writes only on commit, so a gesture is not one storage write per pointer move', () => {
 		const env = wideEnv();
 		const key = `test-commit-${seq++}`;
-		const b = new BoardLayout(key, LAYOUT, env);
+		const b = new Arrangement(key, LAYOUT, env);
 
 		b.drop('top', 24, 20, 0);
-		expect(new BoardLayout(key, LAYOUT, env).placed('top').y).toBe(0);
+		expect(new Arrangement(key, LAYOUT, env).placed('top').y).toBe(0);
 
 		b.commit();
-		expect(new BoardLayout(key, LAYOUT, env).placed('top').y).toBe(20);
+		expect(new Arrangement(key, LAYOUT, env).placed('top').y).toBe(20);
 	});
 
 	it('never stores displacement, so a saved board cannot drift as the data changes', () => {
 		const env = wideEnv();
 		const key = `test-drift-${seq++}`;
-		const b = new BoardLayout(key, LAYOUT, env);
+		const b = new Arrangement(key, LAYOUT, env);
 
 		b.setMeasured('bottom', rows(14)); // pushes `wide` from 12 to 20
 		expect(b.placed('wide').y).toBe(20);
@@ -248,7 +248,7 @@ describe('persistence', () => {
 
 		// A fresh mount with no measurements yet puts `wide` back at its authored top. Had the push been
 		// written, every reload would have kept it — and a double mount would have kept it twice.
-		expect(new BoardLayout(key, LAYOUT, env).intent('wide').y).toBe(12);
+		expect(new Arrangement(key, LAYOUT, env).authored('wide').y).toBe(12);
 	});
 
 	it('drops a stored pane the layout no longer declares', () => {
@@ -259,7 +259,7 @@ describe('persistence', () => {
 			JSON.stringify([{ id: 'retired', x: 0, y: 0, w: 24, h: 6, mode: 'fixed', cap: 6 }])
 		);
 
-		const b = new BoardLayout(key, LAYOUT, env);
+		const b = new Arrangement(key, LAYOUT, env);
 		expect(() => b.spec('retired')).toThrow();
 		expect(b.placed('tall').y).toBe(0);
 	});
@@ -272,26 +272,26 @@ describe('persistence', () => {
 			JSON.stringify([{ id: 'tall', x: 0, w: 24, h: 6, mode: 'fixed', cap: 6 }]) // no `y`
 		);
 
-		expect(new BoardLayout(key, LAYOUT, env).placed('tall')).toMatchObject({ y: 0, h: 12 });
+		expect(new Arrangement(key, LAYOUT, env).placed('tall')).toMatchObject({ y: 0, h: 12 });
 	});
 
 	it('reset puts the declared arrangement back and clears what was stored', () => {
 		const env = wideEnv();
 		const key = `test-reset-${seq++}`;
-		const b = new BoardLayout(key, LAYOUT, env);
+		const b = new Arrangement(key, LAYOUT, env);
 
 		b.drop('top', 24, 20, 0);
 		b.commit();
 		b.reset();
 
 		expect(b.placed('top').y).toBe(0);
-		expect(new BoardLayout(key, LAYOUT, env).placed('top').y).toBe(0);
+		expect(new Arrangement(key, LAYOUT, env).placed('top').y).toBe(0);
 	});
 });
 
 describe('folding', () => {
 	it('sequences the folded layout in the arrangement’s reading order', () => {
-		const { board: b } = board();
+		const { arrangement: b } = arrangement();
 		// tall (0,0) · top (24,0) · bottom (24,6) · wide (0,12)
 		expect(b.order).toEqual({ tall: 0, top: 1, bottom: 2, wide: 3 });
 	});
@@ -299,7 +299,7 @@ describe('folding', () => {
 	it('stops reserving height and stops scrolling once folded', () => {
 		const env = new GridEnv();
 		env.width = 700;
-		const { board: b } = board(env);
+		const { arrangement: b } = arrangement(env);
 
 		expect(env.folded).toBe(true);
 		expect(b.hugs('bottom')).toBe(false);
@@ -311,7 +311,7 @@ describe('folding', () => {
 		const env = new GridEnv();
 		env.width = CONTENT; // short of the padding, so the content column is 48px narrow
 		expect(env.canArrange).toBe(false);
-		env.arranging = true;
-		expect(env.active).toBe(false);
+		env.arrangeRequested = true;
+		expect(env.arranging).toBe(false);
 	});
 });

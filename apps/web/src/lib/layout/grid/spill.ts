@@ -1,4 +1,4 @@
-// The spill probe: does this pane's content fit the box it has been given?
+// The spill check: does this pane's content fit the box it has been given?
 //
 // This is how a pane gets a minimum size without anyone declaring one. A real minimum is not a pair
 // of numbers, it is a frontier `h ≥ f(w)`: a donut keeps its legend beside the ring while it is wide
@@ -47,14 +47,16 @@ function tooWide(card: HTMLElement): boolean {
 /**
  * True when the content no longer fits the card. Probes the card, its own children (so a wrapping
  * title counts) and the body's children (so a size-container's contents count).
+ *
+ * The body arrives as a PARAMETER rather than being found by its class. `.body` is the card
+ * component's own markup, and a probe that goes looking for it by name is a promise the card never
+ * made — rename the class and the deepest half of the measurement silently stops happening.
  */
-export function spills(card: HTMLElement): boolean {
+export function spills(card: HTMLElement, body?: HTMLElement): boolean {
 	if (tooWide(card) || tooTall(card)) return true;
-	for (const child of card.children) {
-		if (tooTall(child)) return true;
-		if (child.classList.contains('body')) {
-			for (const inner of child.children) if (tooTall(inner)) return true;
-		}
+	for (const child of card.children) if (tooTall(child)) return true;
+	if (body) {
+		for (const inner of body.children) if (tooTall(inner)) return true;
 	}
 	return false;
 }

@@ -17,7 +17,7 @@
 		/** Label override; the scalar titles itself otherwise. */
 		title?: string;
 		/** Footnote under the value; the scalar's own note otherwise. */
-		cap?: string;
+		caption?: string;
 	}
 	interface Props {
 		data: DashboardData;
@@ -32,7 +32,7 @@
 				key: c.id,
 				label: c.title ?? s.label,
 				value: s.value === null ? '—' : formatUnit(s.value, s.unit),
-				note: c.cap ?? s.note,
+				note: c.caption ?? s.note,
 				dir: s.dir
 			};
 		})

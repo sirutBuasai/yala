@@ -7,7 +7,7 @@
 	// form's height is a fact about the form, not a choice.
 	import type { DashboardData } from '$lib/data/types';
 	import { addAccount, addInvestment, closeAccount, type AccountsInfo } from '$lib/data/load';
-	import type { Layout } from '$lib/layout/grid/types';
+	import type { BoardLayout } from '$lib/layout/grid/types';
 	import { formatAccount } from '$lib/utils/format';
 	import { accountVar } from '$lib/utils/theme';
 	import { SaveState } from '$lib/forms/saveState.svelte';
@@ -15,7 +15,7 @@
 	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import Board from '$lib/layout/grid/Board.svelte';
-	import Cell from '$lib/layout/grid/Cell.svelte';
+	import Pane from '$lib/layout/grid/Pane.svelte';
 	import DeleteConfirm from '$lib/ui/DeleteConfirm.svelte';
 	import Select from '$lib/forms/fields/Select.svelte';
 	import AccountRow from '$lib/views/manage/AccountRow.svelte';
@@ -49,7 +49,7 @@
 		cards: { x: 24, y: 36, w: 24, h: 12, content: 'flow', mode: 'fit' },
 		addinvestment: { x: 0, y: 49, w: 24, h: 16, content: 'flow', mode: 'fit' },
 		investments: { x: 24, y: 48, w: 24, h: 15, content: 'flow', mode: 'fit' }
-	} satisfies Layout;
+	} satisfies BoardLayout;
 
 	const categories = $derived(accounts?.spending_categories ?? []);
 	const banks = $derived(accounts?.cash_accounts ?? []);
@@ -122,16 +122,16 @@
 </ViewHeader>
 
 <Board key="manage" layout={LAYOUT}>
-	<Cell
+	<Pane
 		id="settings"
 		title="Planning assumptions"
-		cap="The few figures the ledger can't work out on its own. Everything else on the dashboard is derived from your entries. Saved into the ledger itself, dated — so revising one leaves the old value behind as history."
+		caption="The few figures the ledger can't work out on its own. Everything else on the dashboard is derived from your entries. Saved into the ledger itself, dated — so revising one leaves the old value behind as history."
 		density="panel"
 	>
 		<SettingsPanel onsaved={() => onsaved?.()} />
-	</Cell>
+	</Pane>
 
-	<Cell id="addcategory" title="Add a spending category" density="panel">
+	<Pane id="addcategory" title="Add a spending category" density="panel">
 		<AddRow
 			bind:value={name}
 			ariaLabel="new category name"
@@ -140,9 +140,9 @@
 			onadd={add}
 		/>
 		<SaveFeedback save={cat} />
-	</Cell>
+	</Pane>
 
-	<Cell id="categories" title="Existing categories" count={categories.length} density="panel">
+	<Pane id="categories" title="Existing categories" count={categories.length} density="panel">
 		<ItemList any={categories.length > 0} empty="No spending categories yet.">
 			{#each categories as category (category)}
 				<li class="simple">
@@ -157,25 +157,25 @@
 				</li>
 			{/each}
 		</ItemList>
-	</Cell>
+	</Pane>
 
-	<Cell
+	<Pane
 		id="addbank"
 		title="Add a bank account"
-		cap="Named by institution alone — a second account at the same bank is when a product name starts to earn its place."
+		caption="Named by institution alone — a second account at the same bank is when a product name starts to earn its place."
 		density="panel"
 	>
 		<AddAccountPanel
 			withAccountName={false}
 			open={(naming) => addAccount('funding_cash', naming)}
 		/>
-	</Cell>
+	</Pane>
 
-	<Cell
+	<Pane
 		id="banks"
 		title="Your bank accounts"
 		count={banks.length}
-		cap="Set a passthrough's sweep destination, or retire an account (drain its balance to another account, then close it)."
+		caption="Set a passthrough's sweep destination, or retire an account (drain its balance to another account, then close it)."
 		density="panel"
 	>
 		<ItemList any={banks.length > 0} empty="No bank accounts yet.">
@@ -188,12 +188,12 @@
 				/>
 			{/each}
 		</ItemList>
-	</Cell>
+	</Pane>
 
-	<Cell
+	<Pane
 		id="addcard"
 		title="Add a credit card"
-		cap="Issuer plus the card's own name, both spelled out — the ledger keeps the full name and the short forms only stand in when a row can't fit it."
+		caption="Issuer plus the card's own name, both spelled out — the ledger keeps the full name and the short forms only stand in when a row can't fit it."
 		density="panel"
 	>
 		<AddAccountPanel
@@ -201,9 +201,9 @@
 			accountNameLabel="Card name"
 			open={(naming) => addAccount('funding_credit', naming)}
 		/>
-	</Cell>
+	</Pane>
 
-	<Cell id="cards" title="Your credit cards" count={cards.length} density="panel">
+	<Pane id="cards" title="Your credit cards" count={cards.length} density="panel">
 		<ItemList any={cards.length > 0} empty="No credit cards yet.">
 			{#each cards as account (account)}
 				<li class="row">
@@ -212,12 +212,12 @@
 				</li>
 			{/each}
 		</ItemList>
-	</Cell>
+	</Pane>
 
-	<Cell
+	<Pane
 		id="addinvestment"
 		title="Add an investment account"
-		cap="Share accounts open unconstrained + seeded; a USD-only plan is tickerless."
+		caption="Share accounts open unconstrained + seeded; a USD-only plan is tickerless."
 		density="panel"
 	>
 		<AddAccountPanel
@@ -263,13 +263,13 @@
 				{/if}
 			{/snippet}
 		</AddAccountPanel>
-	</Cell>
+	</Pane>
 
-	<Cell
+	<Pane
 		id="investments"
 		title="Your investments"
 		count={investments.length}
-		cap="Retire an account to value its holdings in USD and split that total across destinations."
+		caption="Retire an account to value its holdings in USD and split that total across destinations."
 		density="panel"
 	>
 		<ItemList any={investments.length > 0} empty="No investment accounts yet.">
@@ -277,7 +277,7 @@
 				<InvestmentRow {account} destinations={investDestinations} onchanged={() => onsaved?.()} />
 			{/each}
 		</ItemList>
-	</Cell>
+	</Pane>
 </Board>
 
 <style>

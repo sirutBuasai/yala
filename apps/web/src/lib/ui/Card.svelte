@@ -4,7 +4,7 @@
 	//
 	// Deliberately GRID-AGNOSTIC. It knows nothing about placement, arranging or units — which is
 	// exactly what lets the folded layout reuse it unchanged, and what lets an overlay or a rail use
-	// one outside a board. `Cell` composes it; the two are separate for that reason.
+	// one outside a board. `grid/Pane` composes it; the two are separate for that reason.
 	//
 	// `density="panel"` is the quieter variant that used to be a second component (`ui/Panel`): a
 	// smaller sans heading and a tighter box, for a column of forms rather than a dashboard figure.
@@ -15,8 +15,8 @@
 		title?: string;
 		/** A tally beside the title — "Existing categories 11". */
 		count?: number;
-		cap?: string;
-		/** Controls at the top-right of the header, level with the title/cap. */
+		caption?: string;
+		/** Controls at the top-right of the header, level with the title/caption. */
 		actions?: Snippet;
 		/** 'attention' tints the border in the warning accent — the pane holds something waiting on
 		    you. A prop rather than each caller reaching into `.card` with :global(). */
@@ -25,19 +25,24 @@
 		density?: 'figure' | 'panel';
 		/** Scroll the body once its content overruns the card. Set by whatever owns the height. */
 		scroll?: boolean;
-		/** The card element, for a caller that must measure it (see `Cell`). */
+		/** The card element, for a caller that must measure it (see `grid/Pane`). */
 		card?: HTMLElement;
+		/** The body element, likewise. Handed out rather than left to be found by its class: the
+		    measurement (see `grid/spill.ts`) reaches inside the body, and which class the card wraps its
+		    children in is the card's business alone. */
+		body?: HTMLElement;
 		children: Snippet;
 	}
 	let {
 		title,
 		count,
-		cap,
+		caption,
 		actions,
 		tone = 'default',
 		density = 'figure',
 		scroll = false,
 		card = $bindable(),
+		body = $bindable(),
 		children
 	}: Props = $props();
 </script>
@@ -49,8 +54,8 @@
 	class:attention={tone === 'attention'}
 	bind:this={card}
 >
-	{#if title || cap || actions}
-		<header class="head" class:has-cap={!!cap}>
+	{#if title || caption || actions}
+		<header class="head" class:has-cap={!!caption}>
 			<div class="titles">
 				{#if title}
 					{#if density === 'panel'}
@@ -63,12 +68,12 @@
 						</h2>
 					{/if}
 				{/if}
-				{#if cap}<p class="cap">{cap}</p>{/if}
+				{#if caption}<p class="cap">{caption}</p>{/if}
 			</div>
 			{#if actions}<div class="actions">{@render actions()}</div>{/if}
 		</header>
 	{/if}
-	<div class="body" class:scroller={scroll}>{@render children()}</div>
+	<div class="body" class:scroller={scroll} bind:this={body}>{@render children()}</div>
 </section>
 
 <style>

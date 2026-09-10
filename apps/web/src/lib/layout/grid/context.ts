@@ -1,12 +1,12 @@
 // Two contexts, one per scope. The page owns the environment (how wide, arranging or not); a board
-// owns its own panes. A cell needs both and neither is a prop it should have to be handed.
+// owns its own arrangement. A pane needs both and neither is a prop it should have to be handed.
 
 import { getContext, setContext } from 'svelte';
-import type { BoardLayout } from './layout.svelte';
+import type { Arrangement } from './arrangement.svelte';
 import type { GridEnv } from './env.svelte';
 
 const ENV = Symbol('grid-env');
-const BOARD = Symbol('grid-board');
+const ARRANGEMENT = Symbol('grid-arrangement');
 
 export function setGridEnv(env: GridEnv): void {
 	setContext(ENV, env);
@@ -18,12 +18,13 @@ export function getGridEnv(): GridEnv {
 	return env;
 }
 
-export function setBoard(board: BoardLayout): void {
-	setContext(BOARD, board);
+export function setArrangement(arrangement: Arrangement): void {
+	setContext(ARRANGEMENT, arrangement);
 }
 
-export function getBoard(): BoardLayout {
-	const board = getContext<BoardLayout | undefined>(BOARD);
-	if (!board) throw new Error('grid: no board in context — a Cell must be inside a Board');
-	return board;
+export function getArrangement(): Arrangement {
+	const arrangement = getContext<Arrangement | undefined>(ARRANGEMENT);
+	if (!arrangement)
+		throw new Error('grid: no arrangement in context — a Pane must be inside a Board');
+	return arrangement;
 }

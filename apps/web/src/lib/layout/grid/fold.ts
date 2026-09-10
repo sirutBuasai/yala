@@ -10,13 +10,13 @@
 // its tab order at full width) and one integer per pane does the whole job.
 
 import { COLS } from './units';
-import type { Placed } from './types';
+import type { PlacedPane } from './types';
 
 /**
  * Row-major reading order for a resolved board: top to bottom, then left to right. Returned as an
  * id → order index map, ready for the CSS `order` property.
  */
-export function readingOrder(placed: Placed[]): Record<string, number> {
+export function readingOrder(placed: PlacedPane[]): Record<string, number> {
 	const sorted = [...placed].sort((a, b) => a.y - b.y || a.x - b.x);
 	return Object.fromEntries(sorted.map((p, i) => [p.id, i]));
 }

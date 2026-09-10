@@ -4,8 +4,8 @@
 // to fill it. Lists have three, and they differ only in who owns the height and whether that
 // ownership has a ceiling.
 
-import { unitsFor } from './units';
-import type { HeightMode, Intent, PaneContent, PaneSpec, Sized } from './types';
+import { rowsForPx } from './units';
+import type { AuthoredPane, HeightMode, PaneContent, PaneSpec, SizedPane } from './types';
 
 /**
  * The height mode a pane actually runs in. A `scale` pane is always `fixed`: it has no content
@@ -16,7 +16,7 @@ export function effectiveMode(content: PaneContent, mode: HeightMode): HeightMod
 	return content === 'scale' ? 'fixed' : mode;
 }
 
-/** Does this pane's card hug its content rather than stretching to the cell? */
+/** Does this pane's card hug its content rather than stretching to its grid cell? */
 export function hugs(mode: HeightMode): boolean {
 	return mode === 'fit' || mode === 'cap';
 }
@@ -35,33 +35,33 @@ export function scrolls(content: PaneContent, mode: HeightMode): boolean {
  * shove it back out again.
  */
 export function reservedRows(
-	intent: Intent,
+	authored: AuthoredPane,
 	content: PaneContent,
 	measured: number | undefined,
 	arranging: boolean
 ): number {
-	const mode = effectiveMode(content, intent.mode);
-	if (mode === 'fixed') return intent.h;
+	const mode = effectiveMode(content, authored.mode);
+	if (mode === 'fixed') return authored.h;
 
 	// No measurement yet (first render, or a folded board that never measured): the authored height
 	// is the best available guess and stops the board collapsing for one frame.
-	const rows = measured === undefined ? intent.h : unitsFor(measured);
+	const rows = measured === undefined ? authored.h : rowsForPx(measured);
 	if (mode === 'fit') return rows;
-	return arranging ? intent.cap : Math.min(rows, intent.cap);
+	return arranging ? authored.cap : Math.min(rows, authored.cap);
 }
 
-/** Resolve a whole board's intents into the rectangles the collision pass reads. */
-export function sizeAll(
-	intents: Intent[],
+/** Resolve a whole board's authored panes into the rectangles the collision pass reads. */
+export function sizePanes(
+	authored: AuthoredPane[],
 	specs: Record<string, PaneSpec>,
 	measured: Record<string, number>,
 	arranging: boolean
-): Sized[] {
-	return intents.map((intent) => ({
-		id: intent.id,
-		x: intent.x,
-		y: intent.y,
-		w: intent.w,
-		h: reservedRows(intent, specs[intent.id]?.content ?? 'flow', measured[intent.id], arranging)
+): SizedPane[] {
+	return authored.map((pane) => ({
+		id: pane.id,
+		x: pane.x,
+		y: pane.y,
+		w: pane.w,
+		h: reservedRows(pane, specs[pane.id]?.content ?? 'flow', measured[pane.id], arranging)
 	}));
 }

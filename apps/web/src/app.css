@@ -25,6 +25,10 @@
 	/* Dark ink for text/icons sitting on a bright accent fill (primary button, donut labels).
 	   Shared across themes since the accent fills don't change between light and dark. */
 	--on-accent: #1a1522;
+	/* The arrange chrome's accent — the outline tracing each card while the board is being
+	   rearranged, and the affordances on it. The one accent that swaps with the theme, so arranging
+	   never reads as the same lavender the data itself uses (see the light block). */
+	--arrange-line: var(--lav);
 	/* Category palette. */
 	--cat-housing: #f7768e;
 	--cat-grocery: #f295c5;
@@ -248,7 +252,7 @@
 	   one tall figure can never drag the panes beside it out of alignment. An individual
 	   instance can widen its own ceiling by setting --figure-h-max inline.
 	   On the pane grid the pane's height is that answer instead, so min/max are lifted there
-	   (see grid/Cell) — all except the FLOOR below, which is load-bearing. */
+	   (see grid/Pane) — all except the FLOOR below, which is load-bearing. */
 	--figure-h-min: 240px;
 	--figure-h-max: 460px;
 	/* THE universal floor for a plot area, shared by every vector chart.
@@ -272,7 +276,8 @@
 	--col-amount: 6ch;
 }
 :root[data-theme='light'] {
-	/* Light mode overrides ONLY the neutral chrome (backgrounds, text, borders). */
+	/* Light mode overrides the neutral chrome (backgrounds, text, borders) and one accent:
+	   --arrange-line, below. */
 	color-scheme: light;
 	--bg: #f0ebdd;
 	--surface: #faf6ec;
@@ -287,6 +292,10 @@
 	--crit-text: #bb324a;
 	--gold-text: #806211;
 	--lav-text: #6a49bd;
+	/* Arranging reads gold on the warm paper rather than lavender. The deep text variant, not `--gold`
+	   itself: the bright gold is mixed down to 40% for the outline, which on this background leaves
+	   almost nothing to see. */
+	--arrange-line: var(--gold-text);
 	--teal-text: #1a6f88;
 	--salmon-text: #b33b54;
 	--grid: #e6ddca;
@@ -800,7 +809,7 @@ svg.chart {
    with a sharp edge: a size container computes its own box WITHOUT REGARD TO ITS CONTENTS, so given a
    parent with no height of its own it collapses to zero and the figure spills out of the card. That is
    fine on the pane grid, where the pane's height is the answer — and wrong in a folded layout, where
-   the card hugs its content. So the grid turns the containment off when it folds (see grid/Cell), and
+   the card hugs its content. So the grid turns the containment off when it folds (see grid/Pane), and
    nothing else may rely on it being on. */
 .sizebox {
 	container-type: size;

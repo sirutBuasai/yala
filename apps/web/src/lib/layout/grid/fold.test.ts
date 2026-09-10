@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { foldSpan, readingOrder } from '$lib/layout/grid/fold';
-import { boardWidth, foldColumns, COLS, CONTENT, ONE_COLUMN } from '$lib/layout/grid/units';
-import type { Placed } from '$lib/layout/grid/types';
+import { foldMode, foldColumns, COLS, CONTENT, ONE_COLUMN } from '$lib/layout/grid/units';
+import type { PlacedPane } from '$lib/layout/grid/types';
 
-const q = (id: string, x: number, y: number, w = 24, h = 6): Placed => ({
+const q = (id: string, x: number, y: number, w = 24, h = 6): PlacedPane => ({
 	id,
 	x,
 	y,
@@ -46,15 +46,15 @@ describe('foldSpan', () => {
 	});
 });
 
-describe('boardWidth', () => {
+describe('foldMode', () => {
 	it('is full only when the whole content column fits', () => {
-		expect(boardWidth(CONTENT)).toBe('full');
-		expect(boardWidth(CONTENT - 1)).toBe('two');
+		expect(foldMode(CONTENT)).toBe('full');
+		expect(foldMode(CONTENT - 1)).toBe('two');
 	});
 
 	it('folds to one column at 60rem and below', () => {
-		expect(boardWidth(ONE_COLUMN)).toBe('one');
-		expect(boardWidth(ONE_COLUMN + 1)).toBe('two');
+		expect(foldMode(ONE_COLUMN)).toBe('one');
+		expect(foldMode(ONE_COLUMN + 1)).toBe('two');
 	});
 
 	it('maps each mode to its column count', () => {

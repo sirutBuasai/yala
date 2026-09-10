@@ -25,7 +25,7 @@
 // stored alongside the rectangles, not a transient memory of who moved last.
 
 import { COLS, MIN_H, MIN_W } from './units';
-import type { Placed, Rect, Sized } from './types';
+import type { PlacedPane, Rect, SizedPane } from './types';
 
 /** Do two rectangles share any column? */
 export function sharesColumns(a: Rect, b: Rect): boolean {
@@ -43,13 +43,13 @@ export function overlaps(a: Rect, b: Rect): boolean {
  * `panes` is in priority order (first wins a tie on authored top). The returned list is in the
  * same order as the input, each pane carrying the rows it was displaced by.
  */
-export function resolve(panes: Sized[]): Placed[] {
+export function resolve(panes: SizedPane[]): PlacedPane[] {
 	// Stable sort by authored top: a pane authored higher can never be pushed by one authored
 	// lower, whatever the priority order says.
 	const order = panes.map((p, i) => ({ p, i })).sort((a, b) => a.p.y - b.p.y || a.i - b.i);
 
-	const settled: Placed[] = [];
-	const byId = new Map<string, Placed>();
+	const settled: PlacedPane[] = [];
+	const byId = new Map<string, PlacedPane>();
 
 	for (const { p } of order) {
 		// Fixed point rather than one pass: raising the top can bring the pane into contact with a
@@ -67,7 +67,7 @@ export function resolve(panes: Sized[]): Placed[] {
 			}
 		}
 
-		const placed: Placed = { id: p.id, x: p.x, y, w: p.w, h: p.h, offset: y - p.y };
+		const placed: PlacedPane = { id: p.id, x: p.x, y, w: p.w, h: p.h, offset: y - p.y };
 		settled.push(placed);
 		byId.set(p.id, placed);
 	}
@@ -95,7 +95,7 @@ export function clampRect(rect: Rect): Rect {
 }
 
 /** Rows the board occupies, so the container can reserve them. */
-export function boardRows(placed: Placed[]): number {
+export function boardRows(placed: PlacedPane[]): number {
 	return placed.reduce((rows, p) => Math.max(rows, p.y + p.h), 0);
 }
 
@@ -104,7 +104,7 @@ export function boardRows(placed: Placed[]): number {
  * regression in the push rule surfaces where it happened rather than as a visual artefact someone
  * notices three views later.
  */
-export function firstOverlap(placed: Placed[]): [Placed, Placed] | null {
+export function firstOverlap(placed: PlacedPane[]): [PlacedPane, PlacedPane] | null {
 	for (let i = 0; i < placed.length; i++) {
 		for (let j = i + 1; j < placed.length; j++) {
 			if (overlaps(placed[i]!, placed[j]!)) return [placed[i]!, placed[j]!];
@@ -113,7 +113,7 @@ export function firstOverlap(placed: Placed[]): [Placed, Placed] | null {
 	return null;
 }
 
-export function assertNoOverlap(placed: Placed[]): void {
+export function assertNoOverlap(placed: PlacedPane[]): void {
 	const clash = firstOverlap(placed);
 	if (clash) {
 		const [a, b] = clash;

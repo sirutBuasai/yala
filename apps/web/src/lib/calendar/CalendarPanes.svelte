@@ -18,7 +18,7 @@
 	} from '$lib/calendar/days';
 	import { money, MONTHS } from '$lib/utils/format';
 	import { matching, Pref } from '$lib/utils/persist.svelte';
-	import Cell from '$lib/layout/grid/Cell.svelte';
+	import Pane from '$lib/layout/grid/Pane.svelte';
 	import CalendarGrid from '$lib/calendar/CalendarGrid.svelte';
 	import DayEntries from '$lib/calendar/DayEntries.svelte';
 
@@ -76,7 +76,7 @@
 		selected ? `${MONTHS[month - 1]} ${selected.day}, ${year}` : 'No day selected'
 	);
 	/** The day's totals, as the pane's subtitle rather than a header of its own. */
-	const dayCap = $derived.by(() => {
+	const dayCaption = $derived.by(() => {
 		if (!selected) return '';
 		const plural = selected.txns.length === 1 ? '' : 's';
 		const income = selected.income ? ` · +${money(selected.income)} income` : '';
@@ -84,15 +84,15 @@
 	});
 </script>
 
-<Cell id="calendar" title="Log activity" cap={`${MONTHS[month - 1]} ${year} · pick a day`}>
+<Pane id="calendar" title="Log activity" caption={`${MONTHS[month - 1]} ${year} · pick a day`}>
 	<!-- A size-container, so the grid inside reacts to the PANE's width rather than the viewport's:
 	     this pane can be anything from a third of the board to all of it. -->
 	<div class="calpane">
 		<CalendarGrid {rows} {monthKey} {firstWeekday} {selectedDay} onpick={pickDay} />
 	</div>
-</Cell>
+</Pane>
 
-<Cell id="day" title={dayTitle} cap={dayCap}>
+<Pane id="day" title={dayTitle} caption={dayCaption}>
 	{#snippet actions()}
 		{#if selected}
 			<button class="btn-ghost" onclick={() => onadd(selected.iso)}>+ Add entry</button>
@@ -101,7 +101,7 @@
 	{#if selected}
 		<DayEntries day={selected} {oneditTransaction} {oneditPaycheck} {oneditTransfer} />
 	{/if}
-</Cell>
+</Pane>
 
 <style>
 	.calpane {

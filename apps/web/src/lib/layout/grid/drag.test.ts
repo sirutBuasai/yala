@@ -1,9 +1,9 @@
-// The gesture action. jsdom has no layout, so what is testable here is the event contract — which is
+// The drag action. jsdom has no layout, so what is testable here is the event contract — which is
 // exactly where the bugs were: cumulative deltas, and the opt-out that lets a drag surface carry its
 // own controls.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { drag, type DragDetail } from '$lib/layout/grid/gesture';
+import { drag, type DragDetail } from '$lib/layout/grid/drag';
 
 /**
  * Dispatch a pointer event. Built from `MouseEvent` because jsdom does not implement `PointerEvent`;

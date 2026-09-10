@@ -17,7 +17,7 @@
 	interface Row {
 		label: string;
 		/** Small print under the row label (what this time base actually covers). */
-		cap?: string;
+		caption?: string;
 		cells: Cell[];
 	}
 	interface Props {
@@ -55,7 +55,7 @@
 			<tr>
 				<th class="rl" scope="row">
 					{r.label}
-					{#if r.cap}<small>{r.cap}</small>{/if}
+					{#if r.caption}<small>{r.caption}</small>{/if}
 				</th>
 				{#each r.values as v (v.key)}
 					<td class={v.dir ?? ''}>{v.text}</td>

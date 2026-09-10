@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Turns the arrange affordances on for the board on screen. A page-level toggle, not a per-board
 	// one: you are either rearranging or reading, and the state is deliberately transient — see
-	// `GridEnv.arranging`.
+	// `GridEnv.arrangeRequested`.
 	//
 	// Absent, not disabled, when the full content column doesn't fit: a narrower viewport drops the
 	// coordinates entirely and folds, so there is no arrangement on screen to edit.
@@ -14,9 +14,9 @@
 {#if env.canArrange}
 	<button
 		class="pill arrange"
-		class:active={env.arranging}
-		aria-pressed={env.arranging}
-		onclick={() => (env.arranging = !env.arranging)}
+		class:active={env.arrangeRequested}
+		aria-pressed={env.arrangeRequested}
+		onclick={() => (env.arrangeRequested = !env.arrangeRequested)}
 	>
 		<Panes />
 		Arrange

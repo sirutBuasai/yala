@@ -1,5 +1,5 @@
 // One pointer-drag action, shared by moving and resizing. It knows about the DOM and nothing about
-// the board: it reports how far the pointer has travelled, and the cell decides what that means.
+// the board: it reports how far the pointer has travelled, and the pane decides what that means.
 //
 // Deltas are CUMULATIVE from the press, never incremental. An incremental delta accumulates every
 // clamp the board applies, so dragging a pane into a wall and back out again leaves it short by

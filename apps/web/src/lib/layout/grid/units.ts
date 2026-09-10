@@ -36,7 +36,7 @@ export const WRAP_WIDTH = CONTENT + 2 * WRAP_PAD;
 /**
  * Universal floor for a pane, in units. Charts that are pure vector never overflow — they only get
  * illegible — so a declared floor is the only limit they can have. Everything else is measured: the
- * spill probe raises the real minimum wherever the content has an intrinsic size.
+ * spill check raises the real minimum wherever the content has an intrinsic size.
  */
 export const MIN_W = 5;
 export const MIN_H = 3;
@@ -45,29 +45,29 @@ export const MIN_H = 3;
 export const ONE_COLUMN = 960;
 
 /** How the board is laid out at a given content width. */
-export type BoardWidth = 'full' | 'two' | 'one';
+export type FoldMode = 'full' | 'two' | 'one';
 
 /**
- * Which layout a measured content width gets. Arranging is only offered at `'full'`: the stored
+ * How a measured content width folds. Arranging is only offered at `'full'`: the stored
  * coordinates describe a 48-column board, and applying them to a narrower one would either scale
  * the unit (breaking the square lattice) or clip the right-hand panes.
  */
-export function boardWidth(content: number): BoardWidth {
+export function foldMode(content: number): FoldMode {
 	if (content >= CONTENT) return 'full';
 	return content <= ONE_COLUMN ? 'one' : 'two';
 }
 
 /** Columns the folded board renders with. */
-export function foldColumns(width: BoardWidth): number {
-	return width === 'full' ? COLS : width === 'two' ? 2 : 1;
+export function foldColumns(fold: FoldMode): number {
+	return fold === 'full' ? COLS : fold === 'two' ? 2 : 1;
 }
 
-/** Whole units a measured pixel height occupies, floored at one unit. */
-export function unitsFor(px: number): number {
+/** Whole rows a measured pixel height occupies, floored at one row. */
+export function rowsForPx(px: number): number {
 	return Math.max(1, Math.ceil((px + GAP) / UNIT));
 }
 
-/** Pixel height of `n` units of card — the inverse of `unitsFor`, for showing a set cap. */
-export function pxFor(units: number): number {
-	return units * UNIT - GAP;
+/** Pixel height of `n` rows of card — the inverse of `rowsForPx`, for showing a set cap. */
+export function pxForRows(rows: number): number {
+	return rows * UNIT - GAP;
 }

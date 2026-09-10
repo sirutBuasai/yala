@@ -5,7 +5,7 @@
 	// month) — which previously carried two near-identical copies of this markup that had already
 	// drifted on the tally and the add button. The caller supplies the already-scoped rows, so the
 	// scoping stays where the scope is known.
-	import Cell from '$lib/layout/grid/Cell.svelte';
+	import Pane from '$lib/layout/grid/Pane.svelte';
 	import TransactionList, { type TxnRow } from '$lib/lists/TransactionList.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
 	import { money } from '$lib/utils/format';
@@ -15,18 +15,18 @@
 		id: string;
 		transactions: TxnRow[];
 		onedit: (locator: string) => void;
-		cap?: string;
+		caption?: string;
 		/** Offered beside the tally where this pane is also the page's "log something" home. */
 		onadd?: () => void;
 	}
-	let { id, transactions, onedit, cap, onadd }: Props = $props();
+	let { id, transactions, onedit, caption, onadd }: Props = $props();
 
 	const total = $derived(transactions.reduce((s, t) => s + t.amount, 0));
 </script>
 
 <!-- It stays put on a clean month because it hosts the add button: the empty state then reads as
      reassurance rather than as absence. -->
-<Cell {id} title="Pending transactions" {cap} tone="attention">
+<Pane {id} title="Pending transactions" {caption} tone="attention">
 	{#snippet actions()}
 		<div class="pactions">
 			{#if transactions.length}
@@ -42,7 +42,7 @@
 	{:else}
 		<Empty>Nothing pending — you're all reconciled.</Empty>
 	{/if}
-</Cell>
+</Pane>
 
 <style>
 	.pactions {
