@@ -2,13 +2,13 @@
 // and the CSS tracks cannot drift apart.
 //
 // The GAP is deliberately NOT a grid gap. The CSS grid runs at zero gap and each pane insets itself
-// by half a gap instead, which keeps one unit at exactly `content / COLS` — a whole number of
-// pixels — so a track boundary lands on every multiple of the unit and the dot underlay can be one
-// repeating gradient. Put the gap on the grid and each track becomes `(content - 47*gap)/48`, which
-// no repeating background can follow.
+// by half a gap instead, which keeps one unit at exactly `content / COLS` — a whole number of pixels,
+// so a track boundary lands on every multiple of the unit and the dot underlay can be one repeating
+// gradient. Put the gap on the grid and a track no longer divides evenly, and no repeating background
+// can follow it.
 
-/** Columns in the content width. 48 divides by 2, 3, 4, 6, 8, 12 and 16, so halves, thirds and
-    quarters are all whole column counts. */
+/** Columns in the content width. Highly divisible, so halves, thirds and quarters are all whole
+    column counts. */
 export const COLS = 48;
 
 /** One grid unit, in px. Rows use the same value, so the lattice is square and vertical snapping

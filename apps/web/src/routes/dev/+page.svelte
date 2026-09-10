@@ -38,6 +38,13 @@
 					font: 'serif'
 				},
 				{
+					name: 'text-figure',
+					px: 22,
+					primitive: 'fs-800',
+					role: 'Secondary stat (a matrix cell)',
+					font: 'serif'
+				},
+				{
 					name: 'text-brand',
 					px: 26,
 					primitive: 'fs-900',

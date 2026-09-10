@@ -14,7 +14,7 @@
 	import Board from '$lib/layout/grid/Board.svelte';
 	import { KpiBoard } from '$lib/kpi/board.svelte';
 	import { setKpiBoard } from '$lib/kpi/context';
-	import KpiPane from '$lib/kpi/KpiPane.svelte';
+	import KpiCards from '$lib/kpi/KpiCards.svelte';
 	import MonthNav from '$lib/nav/MonthNav.svelte';
 	import BalanceChecklist from '$lib/balance/BalanceChecklist.svelte';
 	import PendingPane from '$lib/lists/PendingPane.svelte';
@@ -90,9 +90,7 @@
 </ViewHeader>
 
 <Board key="home" layout={LAYOUT} onreset={() => kpis.reset()}>
-	{#each kpis.groups as g (g.ids[0])}
-		<KpiPane id={g.ids[0]!} {data} />
-	{/each}
+	<KpiCards {data} />
 
 	<CalendarPanes
 		{data}

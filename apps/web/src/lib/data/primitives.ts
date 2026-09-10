@@ -43,6 +43,11 @@ export function formatDelta(value: number, unit: Unit): string {
 	return (value > 0 ? '+' : '') + formatUnit(value, unit);
 }
 
+/** A delta as it reads on a card: the signed figure, then what it is measured against. */
+export function deltaLabel(delta: NonNullable<Scalar['delta']>): string {
+	return formatDelta(delta.value, delta.unit) + (delta.note ? ` ${delta.note}` : '');
+}
+
 // --- primitive kinds ---
 
 export type PrimitiveKind =

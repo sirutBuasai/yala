@@ -8,7 +8,7 @@
 	import FigurePane from '$lib/layout/grid/FigurePane.svelte';
 	import { KpiBoard } from '$lib/kpi/board.svelte';
 	import { setKpiBoard } from '$lib/kpi/context';
-	import KpiPane from '$lib/kpi/KpiPane.svelte';
+	import KpiCards from '$lib/kpi/KpiCards.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -153,9 +153,7 @@
 </script>
 
 <Board key="networth:all" layout={PANES} onreset={() => kpis.reset()}>
-	{#each kpis.groups as g (g.ids[0])}
-		<KpiPane id={g.ids[0]!} {data} />
-	{/each}
+	<KpiCards {data} />
 
 	{#each figurePanes(PANES) as [id, figure] (id)}
 		<FigurePane {id} {data} spec={figure} />

@@ -9,7 +9,7 @@
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
 	import { build } from '$lib/data/catalog';
-	import { formatDelta, formatUnit, type Scalar } from '$lib/data/primitives';
+	import { deltaLabel, formatUnit, type Scalar } from '$lib/data/primitives';
 	import Badge, { badgeTone } from '$lib/ui/Badge.svelte';
 
 	interface Cell {
@@ -42,12 +42,7 @@
 					// The figure's OWN caption, per cell: the divisor behind a run-rate differs by measure,
 					// so no one row caption can state it.
 					note: s.note,
-					badge: d
-						? {
-								text: formatDelta(d.value, d.unit) + (d.note ? ` ${d.note}` : ''),
-								tone: badgeTone(d.tone)
-							}
-						: null
+					badge: d ? { text: deltaLabel(d), tone: badgeTone(d.tone) } : null
 				};
 			})
 		}))
@@ -128,7 +123,7 @@
 		white-space: nowrap;
 		gap: 0 var(--gap-row);
 		font-family: var(--font-display);
-		font-size: var(--text-title);
+		font-size: var(--text-figure);
 		font-weight: var(--fw-semibold);
 		font-variant-numeric: tabular-nums;
 		letter-spacing: var(--ls-tighter);

@@ -3,19 +3,17 @@
 // Deltas are CUMULATIVE from the press, so the board's clamping is re-derived from a fixed origin
 // rather than accumulated — dragging a pane into a wall and back out again is exact.
 //
-// A press is not yet a drag. The gesture stays PENDING until the pointer has travelled `THRESHOLD`,
-// and only then is `preventDefault` called and `onstart` fired. That is what lets a control sit on a
-// drag surface and still be clickable: Svelte DELEGATES pointer events to the document root, so a
-// component's click handler runs strictly after this action's direct listener — and a `preventDefault`
-// on the press swallows the click with it. Waiting for movement means a press that never moves stays
-// a click, and the same spot still drags.
+// A press is not yet a drag: the gesture stays pending until the pointer has travelled `THRESHOLD`,
+// and only then claims the event. That is what lets a control sit on a drag surface and stay
+// clickable — Svelte delegates pointer events to the document root, so a component's click handler
+// runs after this action's direct listener, and calling `preventDefault` on the press swallows the
+// click with it.
 //
-// `[data-no-drag]` remains for a control that must never begin a gesture at all, whatever the pointer
-// does afterwards.
+// `[data-no-drag]` remains for a control that must never begin a gesture at all.
 
 const OPT_OUT = '[data-no-drag]';
 
-/** Pixels of travel before a press becomes a drag. Enough to absorb the wobble in a click. */
+/** Pixels of travel before a press becomes a drag, absorbing the wobble in a click. */
 const THRESHOLD = 4;
 
 export interface DragDetail {

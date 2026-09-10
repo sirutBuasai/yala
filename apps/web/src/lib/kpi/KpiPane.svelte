@@ -1,7 +1,6 @@
 <script lang="ts">
-	// One KPI card on the board: a pane holding this group's sections, and the arrange-mode controls
-	// that change the grouping. The card takes no title of its own — each section carries its own — so
-	// a card of one and a merged card are the same markup with a different number of sections.
+	// One KPI card on the board: a pane of sections, plus the arrange-mode controls that change the
+	// grouping. The card takes no title of its own; each section carries one.
 	import type { DashboardData } from '$lib/data/types';
 	import type { PlacedPane, Rect } from '$lib/layout/grid/types';
 	import Pane from '$lib/layout/grid/Pane.svelte';
@@ -25,13 +24,12 @@
 	const group = $derived(kpis.group(id));
 	const dividers = $derived(kpis.dividers(id));
 
-	// Two coordinates, deliberately. Whether two cards LOOK adjacent is a question about where they are
-	// ON SCREEN, so it is asked of the placed rectangle. What a merge or a split then STORES is an
-	// AUTHORED one — a placed top carries the rows the push rule displaced the pane by, and storing that
-	// would record the push as if the user had asked for it, so the next resolve applies it twice.
+	// Two coordinates, deliberately: whether two cards LOOK adjacent is about where they are on screen,
+	// but what a merge or split STORES must be authored. A placed top carries the rows the push rule
+	// displaced the pane by, and storing that records the push as if it had been asked for.
 	const placed = $derived(arrangement.placed(id));
 
-	/** Just the rectangle: a placed or authored pane also carries its id, and its offset or mode. */
+	/** Just the rectangle: a placed or authored pane carries more than that. */
 	function rectOf({ x, y, w, h }: Rect): Rect {
 		return { x, y, w, h };
 	}
@@ -40,24 +38,19 @@
 		return rectOf(arrangement.authored(pane));
 	}
 
-	/**
-	 * Grid tracks, not flex weights: `fr` shares are EXACT, so a divider sits at the same fraction of
-	 * the axis that the split control is drawn at. Flex bases plus padding would not line up.
-	 */
+	/** Grid tracks, not flex: `fr` shares are exact, so a divider lands on the fraction its split
+	    control is drawn at. */
 	const tracks = $derived(group.weights.map((w) => `minmax(0, ${w}fr)`).join(' '));
 	const stacked = $derived(group.axis === 'column' || env.folded);
 
-	/** A group already merged the other way cannot gain a section without becoming a grid. */
+	/** A group merged the other way cannot gain a section without becoming a grid. */
 	function flat(leader: string, axis: MergeAxis): boolean {
 		const g = kpis.group(leader);
 		return g.ids.length === 1 || g.axis === axis;
 	}
 
-	/**
-	 * The card this one may merge with on an axis: the KPI card immediately to its right, or immediately
-	 * below, that MATCHES it on the shared edge. When nothing matches there is no control, and that
-	 * absence is the only signal needed.
-	 */
+	/** The KPI card this one may merge with on an axis. Nothing matching means no control, which is the
+	    only signal the absence needs. */
 	function neighbour(axis: MergeAxis): PlacedPane | null {
 		if (!flat(id, axis)) return null;
 		return (

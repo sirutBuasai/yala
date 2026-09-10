@@ -1,10 +1,8 @@
 <script lang="ts">
-	// The faint chart behind a KPI's number: bars, a line, or a filled area. One component for all
-	// three, because they differ only in the mark drawn over one shared scale.
+	// The faint chart behind a KPI's number. One component for all three shapes, which differ only in
+	// the mark drawn over one shared scale.
 	//
-	// Deliberately axis-less, tick-less and tooltip-less: this says SHAPE, and the number in front of
-	// it says the value. It is also mixed heavily towards transparent, so the stat and the badge stay
-	// legible over it in both themes — the badge is the smallest type on the card and sets that limit.
+	// Axis-less and tooltip-less by intent: this says shape, the number in front says the value.
 	import type { Series } from '$lib/data/primitives';
 
 	interface Props {
@@ -14,8 +12,8 @@
 	}
 	let { series, shape, color }: Props = $props();
 
-	// A fixed viewBox with `preserveAspectRatio: none`: the mark is decorative, so stretching it is
-	// fine and costs nothing to measure.
+	// Stretched rather than measured: the mark is decorative, so it costs nothing to draw at a fixed
+	// viewBox and let the box scale it.
 	const W = 100;
 	const H = 32;
 

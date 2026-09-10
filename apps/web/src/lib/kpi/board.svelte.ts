@@ -1,9 +1,7 @@
-// One board's KPI grouping: which cards the user has merged, and the pane table that follows from
-// it. Runes only, no DOM.
+// One board's KPI grouping: which cards are merged, and the pane table that follows.
 //
-// The merges are persisted separately from the arrangement because they are a different kind of
-// decision — WHICH panes the board has, rather than where those panes sit. The arrangement stores
-// the rectangles; this stores the sections inside them.
+// Persisted separately from the arrangement because it is a different decision: which panes the board
+// HAS, rather than where they sit.
 
 import { listOf, oneOf, Pref, type Revive } from '$lib/utils/persist.svelte';
 import type { BoardLayout, PaneSpec, Rect } from '$lib/layout/grid/types';
@@ -21,8 +19,8 @@ import type { KpiBoardDefs, KpiSpec } from './spec';
 
 const axisOf = oneOf<MergeAxis>(['row', 'column']);
 
-/** Reviver for stored groups. A group whose ids or weights are half-read is dropped: the rest of the
-    board is still valid, and a mangled group would render sections against the wrong figures. */
+/** A group whose ids or weights are half-read is dropped — a mangled one would render sections
+    against the wrong figures. */
 function storedGroups(): Revive<KpiGroup[]> {
 	return listOf((raw) => {
 		if (typeof raw !== 'object' || raw === null) return undefined;
@@ -41,8 +39,7 @@ function storedGroups(): Revive<KpiGroup[]> {
 }
 
 export class KpiBoard {
-	/** A getter, not a value: a KPI's SCOPE follows the period the view is showing, so the defs are
-	    live. Only their rectangles are static, which is why the pane table can be derived from them. */
+	/** A getter: a KPI's scope follows the period the view is showing, so the defs are live. */
 	readonly #defs: () => KpiBoardDefs;
 	readonly #pref: Pref<KpiGroup[]>;
 
@@ -51,8 +48,8 @@ export class KpiBoard {
 		this.#pref = new Pref<KpiGroup[]>(`kpi-${key}`, [], storedGroups());
 	}
 
-	// `$derived.by` throughout: a field initialiser runs BEFORE the constructor body, so reading a
-	// private field directly here would read it before it is assigned.
+	// `$derived.by` throughout: a field initialiser runs before the constructor body, so reading a
+	// private field directly would read it unassigned.
 	readonly #rects = $derived.by<Record<string, Rect>>(() =>
 		Object.fromEntries(Object.entries(this.#defs()).map(([id, d]) => [id, d.rect]))
 	);
@@ -70,12 +67,11 @@ export class KpiBoard {
 	);
 
 	/**
-	 * This board's whole pane table: the KPI cards first, so they lead the priority order, then the
-	 * view's own panes. Refuses an id used twice — a collision merely SHADOWS one of the two entries,
-	 * so the pane it belonged to vanishes from the board with nothing to say it went.
+	 * The whole pane table: KPI cards first so they lead the priority order, then the view's own. Refuses
+	 * a duplicate id, which would merely shadow one entry and drop that pane silently.
 	 *
-	 * MUST be called inside a `$derived`: merging changes which panes this returns, and a table
-	 * computed once leaves the board reserving rows for a pane nothing renders any more.
+	 * MUST be called inside a `$derived`: merging changes which panes this returns, and a table computed
+	 * once leaves the board reserving rows for a pane nothing renders.
 	 */
 	board<T extends BoardLayout>(panes: T): T & BoardLayout {
 		const defs = this.#defs();

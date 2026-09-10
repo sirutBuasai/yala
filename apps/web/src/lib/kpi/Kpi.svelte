@@ -1,23 +1,15 @@
 <script module lang="ts">
-	/**
-	 * Width one point of a chart needs before its neighbours stop being tellable apart. Sets the chart's
-	 * share of the card's horizontal floor — a twelve-month bar chart asks for little, a chart over every
-	 * tracked month asks for a lot.
-	 */
+	/** Width one point of a chart needs before its neighbours stop being tellable apart. */
 	const CHART_PX_PER_POINT = 3;
 </script>
 
 <script lang="ts">
-	// ONE KPI. A card of its own and a section of a merged card are the same thing — a single card is a
-	// group of one — so this is the only component that renders a figure, and being in a group changes
-	// nothing about how it is formatted.
-	//
-	// Reading order top to bottom: title, caption, then the stat pinned to the bottom. Bottom-pinning is
-	// what puts every stat in a row on one baseline whatever its caption does.
+	// One KPI. A card of its own and a section of a merged card are the same thing, so this is the only
+	// component that renders a figure.
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scalar, Series } from '$lib/data/primitives';
 	import { build } from '$lib/data/catalog';
-	import { formatDelta, formatUnit } from '$lib/data/primitives';
+	import { deltaLabel, formatDelta, formatUnit } from '$lib/data/primitives';
 	import { seriesColor } from '$lib/charts/registry';
 	import Badge, { badgeTone } from '$lib/ui/Badge.svelte';
 	import Spark from './Spark.svelte';
@@ -33,7 +25,7 @@
 	const scalar = $derived(build(data, spec.figure, spec.scope) as Scalar);
 	const title = $derived(spec.title ?? scalar.label);
 	const caption = $derived(spec.caption ?? scalar.note ?? '');
-	// A toned figure is one whose sign is its meaning (see `Scalar.tone`), so it shows that sign.
+	// A tone means the sign carries the meaning (see `Scalar.tone`), so the sign is shown.
 	const value = $derived(
 		scalar.value === null
 			? '—'
@@ -47,21 +39,16 @@
 			: null
 	);
 
-	// By NAME, from the chart registry — the one place colour is assigned, so a mark carries the same
-	// hue its measure carries in a full chart. The chart is named by the SERIES it draws, which is not
-	// always the figure in front of it; the ring IS the figure, so it takes the figure's name.
+	// A chart is named by the series it draws, which is not always the figure in front of it; a ring IS
+	// the figure. Colour is assigned in the registry so a measure keeps one hue everywhere.
 	const markColor = $derived(seriesColor(behind ? behind.series.name : scalar.label));
 
 	const delta = $derived(scalar.delta);
-	const deltaText = $derived(
-		delta ? formatDelta(delta.value, delta.unit) + (delta.note ? ` ${delta.note}` : '') : ''
-	);
 </script>
 
 <div class="kpi">
 	<h2 class="serif">{title}</h2>
-	<!-- Rendered even when empty: it reserves the line, so a captionless KPI still lines up with a
-	     captioned neighbour inside the same card. -->
+	<!-- Rendered even when empty, so a captionless KPI lines up with a captioned neighbour. -->
 	<p class="cap" aria-hidden={caption ? undefined : 'true'}>{caption}</p>
 
 	<div
@@ -69,12 +56,11 @@
 		style:--chart-min={behind ? `${behind.series.points.length * CHART_PX_PER_POINT}px` : null}
 	>
 		{#if behind}
-			<!-- Behind the figure, running to the bottom edge of its own section. -->
 			<div class="behind">
 				<Spark series={behind.series} shape={behind.shape} color={markColor} />
 			</div>
 		{/if}
-		<!-- Its own layer, so the number and the badge paint OVER the chart and are never tinted by it. -->
+		<!-- Its own layer, so the figure and badge paint over the chart untinted. -->
 		<div class="front">
 			{#if spec.chart === 'ring'}
 				<Ring percent={scalar.value} color={markColor} />
@@ -83,7 +69,7 @@
 				{value}
 			</span>
 			{#if delta}
-				<Badge tone={badgeTone(delta.tone)}>{deltaText}</Badge>
+				<Badge tone={badgeTone(delta.tone)}>{deltaLabel(delta)}</Badge>
 			{/if}
 		</div>
 	</div>
@@ -91,21 +77,12 @@
 
 <style>
 	/**
-	 * The figure is set at ONE size and never reflows to fit the card, so what this card demands is the
-	 * same whatever size it is. That is the property the resize probe needs: a demand that grew with the
-	 * pane would let the card be dragged smaller and then refuse to come back. Past either floor the
-	 * content OVERFLOWS, which the grid reads as "this pane cannot be this size", turns the pane red, and
-	 * holds the drag at the last size that fitted.
+	 * Nothing here reflows, so the card demands the same width whatever size it is — which is what lets
+	 * the pane's resize probe treat the demand as a floor rather than a moving target.
 	 *
-	 * The horizontal floor is DECLARED, not inferred from ink. `min-content` on a flex column is the
-	 * widest of its children's own minimums, so this resolves to
-	 *
-	 *     max(title, caption, stat + badge, chart)
-	 *
-	 * — every one of those being `nowrap`, or carrying `--chart-min`. That is a BOX the card cannot be
-	 * narrowed past, and a box overflows its parent reliably; text ink does not. Relying on ink was the
-	 * bug: a title 19px too wide for its card raised the card's own `scrollWidth` by nothing at all, so
-	 * the drag sailed past it and the title clipped in silence.
+	 * `min-content` resolves to the widest of the children: title, caption, stat row, chart. It has to be
+	 * a BOX, not text ink: ink that overflows a box the card doesn't scroll never reaches the card's own
+	 * scroll width, so the drag sailed past it and the title clipped in silence.
 	 */
 	.kpi {
 		display: flex;
@@ -120,9 +97,8 @@
 		min-height: calc(var(--text-secondary) * var(--lh-body));
 		white-space: nowrap;
 	}
-	/* Fills the rest of the section so the number pins to the bottom, and is the box the chart scales
-	   into. The chart is absolutely positioned and so demands no width of its own; `--chart-min` is how
-	   it reaches the floor above, and is unset on a KPI that has no chart. */
+	/* Pins the figure to the bottom, and is the box the chart scales into. The chart is positioned out of
+	   flow and demands no width of its own, so `--chart-min` is how it reaches the floor above. */
 	.stat {
 		position: relative;
 		flex: 1 1 auto;
@@ -133,18 +109,13 @@
 		min-width: var(--chart-min, 0);
 	}
 	/**
-	 * Scales with the card — the marks are drawn to a stretched viewBox, so each bar keeps its share of
-	 * whatever height is left, and grows or shrinks with the pane.
+	 * Floored at the figure's own height, NOT at `--figure-h-floor`: that is sized for a plot area with
+	 * axes, and it exceeds a KPI's whole stat row, which stopped a card with a chart resizing at all. This
+	 * floor also sits below the text's, so a card scales the same with or without a chart.
 	 *
-	 * The height floor is about the height of the figure itself, deliberately not `--figure-h-floor`: that
-	 * is the floor for a plot area with axes and ticks, and at 5rem it is taller than a KPI card's whole
-	 * stat row, so it stopped a card with a chart from being resized at all. A bar shorter than the number in front of it
-	 * is the point where one bar stops being tellable from the next, and it is also low enough that the
-	 * TEXT is what stops the drag — so a card scales the same whether it carries a chart or not.
-	 *
-	 * Floored from the TOP so the excess overflows DOWNWARD. Scrollable overflow is measured from a box's
-	 * top-left, so a chart that grew upward out of its box would be invisible to the resize probe and
-	 * would silently paint over the title instead of stopping the drag.
+	 * Floored from the TOP so the excess overflows downward. Scrollable overflow is measured from a box's
+	 * top-left, so a chart growing upward would be invisible to the resize probe and would paint over the
+	 * title instead of stopping the drag.
 	 */
 	.behind {
 		position: absolute;
@@ -166,21 +137,14 @@
 		font-weight: var(--fw-semibold);
 		font-variant-numeric: tabular-nums;
 		letter-spacing: var(--ls-tighter);
-		/**
-		 * `normal`, not `--lh-tight`: a line-height TIGHTER than the font's own ascent-plus-descent leaves
-		 * the glyph box taller than the line box, and the browser counts that difference as scrollable
-		 * overflow even though every element's border box ends exactly on its parent's. The pane's resize
-		 * probe reads that as content which no longer fits, so every KPI card was pinned at whatever size
-		 * it had — and by how much depends on which serif actually loaded, so it reproduced on some
-		 * machines and not others. `normal` derives the line box FROM the font, so the overshoot is zero
-		 * whatever font wins. Visually it lands within a pixel of the token for the display face.
-		 */
+		/* `normal`, not `--lh-tight`: a line-height tighter than the font's own ascent-plus-descent leaves
+		   the glyphs overflowing the line box, which the resize probe reads as content that no longer fits
+		   and which pinned every card. Deriving the box from the font makes the overshoot zero for any
+		   font, so this must not go back to a fixed ratio. */
 		line-height: normal;
-		/* Never wrapped: folding onto a second line would let the card go on narrowing while the figure
-		   quietly reflowed. Overflowing is what stops the drag. */
+		/* Wrapping would let the card narrow while the figure quietly reflowed. */
 		white-space: nowrap;
 	}
-	/* Colour belongs to a figure whose SIGN is its meaning. A plain level stays in normal ink. */
 	.num.good {
 		color: var(--good-text);
 	}
