@@ -55,7 +55,6 @@
 	--role-income: var(--lav); /* what came in */
 	--role-deduction: var(--orange); /* taken out before you saw it */
 	--role-market: var(--gold); /* movement you never logged */
-	--role-rate: var(--lav); /* a ratio rather than an amount */
 	/* Allocation buckets are slices of one whole, so they share a blue→green family. */
 	--role-liquid: var(--teal);
 	--role-taxable: var(--blue);
@@ -125,7 +124,7 @@
 
 	/* ── Font-size semantic aliases (by data importance) ──────────────────────
 	   HERO / TITLES — the loudest type. */
-	--text-display: var(--fs-1000); /* hero stat number (StatTile value) */
+	--text-display: var(--fs-1000); /* hero stat number (a KPI's value) */
 	--text-brand: var(--fs-900); /* app wordmark "Yala" */
 	--text-title: var(--fs-800); /* per-view / section title (ViewHeader) */
 	--text-dialog: var(--fs-700); /* modal, sidebar & overlay titles */

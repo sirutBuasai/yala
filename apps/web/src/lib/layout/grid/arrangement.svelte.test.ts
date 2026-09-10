@@ -286,6 +286,47 @@ describe('persistence', () => {
 	});
 });
 
+describe('seed', () => {
+	// What the KPI merge gesture needs: rectangles written before the board is rebuilt around a
+	// different set of panes.
+	it('overwrites the rectangle of a pane the board already has', () => {
+		const { arrangement: b } = arrangement();
+		b.seed({ top: { x: 24, y: 0, w: 24, h: 12 } });
+		expect(b.placed('top')).toMatchObject({ x: 24, y: 0, w: 24, h: 12 });
+	});
+
+	it('persists at once, so a rebuild reads the seeded rectangle back', () => {
+		const env = wideEnv();
+		const key = `test-seed-${seq++}`;
+		new Arrangement(key, LAYOUT, env).seed({ top: { x: 0, y: 30, w: 12, h: 5 } });
+		expect(new Arrangement(key, LAYOUT, env).placed('top')).toMatchObject({ x: 0, y: 30, w: 12 });
+	});
+
+	it('adds a pane this board’s storage predates', () => {
+		const env = wideEnv();
+		const key = `test-seed-new-${seq++}`;
+		const partial = { tall: LAYOUT.tall } satisfies BoardLayout;
+		new Arrangement(key, partial, env).seed({ top: { x: 24, y: 0, w: 24, h: 6 } });
+
+		// `top` was not in the board that seeded it; the board that HAS it reads the rectangle.
+		expect(new Arrangement(key, LAYOUT, env).placed('top')).toMatchObject({ x: 24, y: 0, w: 24 });
+	});
+
+	it('gives an added pane priority, so it holds the top it was given', () => {
+		const env = wideEnv();
+		const key = `test-seed-priority-${seq++}`;
+		// Storage that predates `top`, which is then seeded onto the same top as `tall`.
+		const partial = { tall: LAYOUT.tall } satisfies BoardLayout;
+		const first = new Arrangement(key, partial, env);
+		first.commit();
+		first.seed({ top: { x: 0, y: 0, w: 24, h: 6 } });
+
+		const b = new Arrangement(key, LAYOUT, env);
+		expect(b.placed('top').y).toBe(0);
+		expect(b.placed('tall').y).toBe(6);
+	});
+});
+
 describe('folding', () => {
 	it('sequences the folded layout in the arrangement’s reading order', () => {
 		const { arrangement: b } = arrangement();

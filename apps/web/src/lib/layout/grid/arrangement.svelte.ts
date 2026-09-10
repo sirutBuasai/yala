@@ -15,6 +15,14 @@ import type { AuthoredPane, BoardLayout, HeightMode, PaneSpec, PlacedPane, Rect 
 
 const MODES: HeightMode[] = ['fixed', 'fit', 'cap'];
 
+/**
+ * Bumped whenever a board's DEFAULT set of panes changes. Stored ids that no longer exist are
+ * dropped and brand-new ones land at the back of the priority order, so an arrangement saved against
+ * the old set places the new panes below whatever was already there. Starting the boards over is the
+ * only honest answer.
+ */
+const LAYOUT_VERSION = 2;
+
 function whole(v: unknown, min: number): number | undefined {
 	return typeof v === 'number' && Number.isFinite(v) && v >= min ? Math.round(v) : undefined;
 }
@@ -66,7 +74,7 @@ export class Arrangement {
 		this.#specs = specs;
 		this.#ids = Object.keys(specs);
 		this.#env = env;
-		this.#pref = new Pref<AuthoredPane[]>(`board-${key}`, [], storedPanes());
+		this.#pref = new Pref<AuthoredPane[]>(`board-${key}-${LAYOUT_VERSION}`, [], storedPanes());
 		this.#panes = this.#merge(this.#pref.value);
 	}
 
@@ -110,6 +118,11 @@ export class Arrangement {
 		if (p) return p;
 		const a = this.authored(id);
 		return { id, x: a.x, y: a.y, w: a.w, h: a.h, offset: 0 };
+	}
+
+	/** Every pane as placed — for an affordance that is about a pane's NEIGHBOURS. */
+	get all(): PlacedPane[] {
+		return this.#placed;
 	}
 
 	mode(id: string): HeightMode {
@@ -177,6 +190,33 @@ export class Arrangement {
 		}
 		const clamped = clampRect(rect);
 		this.#update(id, (p) => ({ ...p, ...clamped }));
+	}
+
+	/**
+	 * Force rectangles onto panes, adding any this board's storage predates. The KPI merge gesture
+	 * changes which panes a board HAS, and both halves of a split need a rectangle written before the
+	 * board is rebuilt around the new set — otherwise the half that is new to storage falls back to its
+	 * declared default and lands on top of the half that kept the merged card's rectangle.
+	 */
+	seed(rects: Record<string, Rect>): void {
+		const pending = new Map(Object.entries(rects));
+		const kept = this.#panes.map((p) => {
+			const rect = pending.get(p.id);
+			if (!rect) return p;
+			pending.delete(p.id);
+			return { ...p, ...clampRect(rect) };
+		});
+		// Ahead of the rest: these rectangles are exact and adjacent, so they win any tie on authored
+		// top rather than being pushed below a neighbour they are meant to sit beside.
+		const added = [...pending].map(([id, rect]) => ({
+			id,
+			mode: 'fixed' as HeightMode,
+			cap: rect.h,
+			...clampRect(rect)
+		}));
+
+		this.#panes = [...added, ...kept];
+		this.commit();
 	}
 
 	/**

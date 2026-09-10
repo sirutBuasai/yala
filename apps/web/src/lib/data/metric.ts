@@ -4,7 +4,7 @@
 // recompute the same sums.
 
 import type { DashboardData, MonthPage, PaycheckOut, Txn } from '$lib/data/types';
-import type { Scalar } from './primitives';
+import type { Scalar, Tone } from './primitives';
 import { MONEY, PERCENT, COUNT } from './primitives';
 import { money } from '$lib/utils/format';
 import { sumValues } from '$lib/utils/num';
@@ -27,17 +27,44 @@ export type Measure = Field | Component;
 
 const FIELD_LABEL: Record<Field, string> = {
 	income: 'Income',
-	spending: 'Spending',
+	spending: 'Spent',
 	saved: 'Saved',
 	gross: 'Gross',
 	deductions: 'Deductions',
 	contributions: 'Contributions',
-	net: 'Net',
+	net: 'Net income',
 	takehome: 'Take-home'
 };
 
-function measureLabel(m: Measure): string {
+/** A measure's display name. Exported so a series built from a measure is named the same thing. */
+export function measureLabel(m: Measure): string {
 	return typeof m === 'string' ? FIELD_LABEL[m] : m.key;
+}
+
+/** Does a bigger number read as good news? Only spending and deductions go the other way. */
+const GOOD_UP: Record<Field, boolean> = {
+	income: true,
+	spending: false,
+	saved: true,
+	gross: true,
+	deductions: false,
+	contributions: true,
+	net: true,
+	takehome: true
+};
+
+function goodUp(m: Measure): boolean {
+	return typeof m === 'string' ? GOOD_UP[m] : m.group === 'contributions';
+}
+
+/**
+ * The tone a movement of `delta` in `m` earns — good or bad NEWS, never merely positive. Standing
+ * still is neither: a figure that did not move has no verdict to report, and painting 0% red because
+ * the measure happens to be spending says something that isn't true.
+ */
+export function toneOf(m: Measure, delta: number): Tone | undefined {
+	if (delta === 0) return undefined;
+	return delta > 0 === goodUp(m) ? 'good' : 'bad';
 }
 
 // --- per-document, per-scope memoization ---
@@ -191,11 +218,13 @@ export function componentKeys(
 interface Opts {
 	label?: string;
 	note?: string;
-	dir?: 'up' | 'down';
 }
 
+/** Tone a figure whose SIGN is its meaning: a balance that went negative is bad news, and one that
+    came out at exactly zero is neither. */
 export function signed(s: Scalar): Scalar {
-	return { ...s, dir: (s.value ?? 0) >= 0 ? 'up' : 'down' };
+	const v = s.value ?? 0;
+	return { ...s, tone: v === 0 ? undefined : v > 0 ? 'good' : 'bad' };
 }
 
 // --- builders ---
@@ -207,7 +236,6 @@ export function amount(data: DashboardData, scope: Scope, m: Measure, opts: Opts
 		unit: MONEY(data.currency),
 		label: opts.label ?? measureLabel(m),
 		value: measureValue(data, scope, m),
-		dir: opts.dir,
 		note: opts.note
 	};
 }
@@ -234,7 +262,6 @@ export function average(
 			unit,
 			label: opts.label ?? `Avg ${name} / year`,
 			value: measureValue(data, { level: 'all' }, m) / years,
-			dir: opts.dir,
 			note: opts.note ?? `${years} tracked years`
 		};
 	}
@@ -248,7 +275,6 @@ export function average(
 		unit,
 		label: opts.label ?? `Avg ${name} / month`,
 		value: measureValue(data, { level: 'year', year: y }, m) / divisor,
-		dir: opts.dir,
 		note: opts.note ?? `${divisor} active months`
 	};
 }
@@ -268,7 +294,6 @@ export function ratio(
 		unit: PERCENT,
 		label: opts.label ?? `${measureLabel(num)} / ${measureLabel(den)}`,
 		value: d ? (n / d) * 100 : null,
-		dir: opts.dir,
 		note: opts.note
 	};
 }
@@ -284,7 +309,6 @@ export function categoryAmount(
 		unit: MONEY(data.currency),
 		label: opts.label ?? category,
 		value: categorySpend(data, scope, category),
-		dir: opts.dir,
 		note: opts.note
 	};
 }
@@ -303,7 +327,6 @@ export function categoryShare(
 		unit: PERCENT,
 		label: opts.label ?? `${category} share`,
 		value: whole ? (categorySpend(data, scope, category) / whole) * 100 : null,
-		dir: opts.dir,
 		note: opts.note ?? `of ${of}`
 	};
 }
@@ -343,7 +366,6 @@ export function count(data: DashboardData, scope: Scope, of: Countable, opts: Op
 		unit: COUNT,
 		label: opts.label ?? COUNT_LABEL[of],
 		value: countValue(data, scope, of),
-		dir: opts.dir,
 		note: opts.note
 	};
 }
@@ -398,7 +420,6 @@ export function extremum(
 		unit: MONEY(data.currency),
 		label: opts.label ?? `${verb} ${of}`,
 		value,
-		dir: opts.dir,
 		note: opts.note ?? name
 	};
 }
@@ -408,14 +429,14 @@ export function extremum(
  * prior `window` months that have data. A trailing average rather than the previous month, which one
  * noisy month makes meaningless. `null` when there's no history to form a norm from.
  *
- * Direction is spending-shaped by default (over the norm reads as bad); pass `higherIsBetter` for
- * measures like income where exceeding the norm is good.
+ * The figure IS a deviation, so its sign is its meaning and it carries a tone — which way is good
+ * comes from the measure, so spending over the norm reads bad and income over it reads good.
  */
 export function vsTypical(
 	data: DashboardData,
 	monthKey: string,
 	m: Measure,
-	opts: Opts & { window?: number; higherIsBetter?: boolean } = {}
+	opts: Opts & { window?: number } = {}
 ): Scalar {
 	const window = opts.window ?? 12;
 	const prior = data.meta.month_keys.filter((k) => k < monthKey && data.months[k]).slice(-window);
@@ -428,14 +449,13 @@ export function vsTypical(
 		prior.reduce((a, k) => a + measureValue(data, { level: 'month', monthKey: k }, m), 0) /
 		prior.length;
 	const delta = measureValue(data, { level: 'month', monthKey }, m) - avg;
-	const better = opts.higherIsBetter ? delta >= 0 : delta <= 0;
 
 	return {
 		kind: 'scalar',
 		unit: MONEY(data.currency),
 		label,
 		value: delta,
-		dir: better ? 'up' : 'down',
+		tone: toneOf(m, delta),
 		note: opts.note ?? `vs your ${money(avg)} / mo average`
 	};
 }
@@ -443,7 +463,8 @@ export function vsTypical(
 /**
  * A measure with its period-over-period change as a `delta`: against the prior year (`at` = a year,
  * default latest) or the prior month (`at` = a "YYYY-MM" key). The delta is a percentage, omitted
- * when the prior period is 0.
+ * when the prior period is 0. The VALUE is a plain level and carries no tone; the delta carries
+ * whether the move was good news.
  */
 export function change(
 	data: DashboardData,
@@ -467,7 +488,9 @@ export function change(
 
 	const now = measureValue(data, cur, m);
 	const before = measureValue(data, prev, m);
-	const pct = before ? ((now - before) / before) * 100 : null;
+	// Divided by the MAGNITUDE of the base: `saved` can be negative, and dividing by a negative base
+	// flips the percentage's sign away from the direction the figure actually moved.
+	const pct = before ? ((now - before) / Math.abs(before)) * 100 : null;
 
 	return {
 		kind: 'scalar',
@@ -480,7 +503,7 @@ export function change(
 				: {
 						value: pct,
 						unit: PERCENT,
-						dir: now >= before ? 'up' : 'down',
+						tone: toneOf(m, now - before),
 						note: opts.note ?? (period === 'year' ? 'YoY' : 'MoM')
 					}
 	};

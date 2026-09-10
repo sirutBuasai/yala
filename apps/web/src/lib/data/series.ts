@@ -4,8 +4,9 @@
 import type { DashboardData } from '$lib/data/types';
 import type { Axis, MultiSeries, Series, SeriesPoint, Unit } from './primitives';
 import { MONEY, PERCENT } from './primitives';
-import { MONTHS } from '$lib/utils/format';
-import { sumValues } from '$lib/utils/num';
+import { MONTHS, monthName } from '$lib/utils/format';
+import { addMonths } from '$lib/utils/period';
+import { measureLabel, measureValue, type Field, type Measure } from './metric';
 
 /** Build a Series from parallel labels/values; a null value becomes 0. */
 export function series(
@@ -19,63 +20,83 @@ export function series(
 	return { kind: 'series', unit, axis, name, points };
 }
 
-/** Total spent per calendar month, indexed 0..11, for a year. */
-function yearMonthlySpent(data: DashboardData, year: number): number[] {
-	const yd = data.years[String(year)];
-	return yd ? yd.matrix.map((row) => sumValues(row.spent)) : new Array(12).fill(0);
+// --- one measure over time ---
+//
+// Every monthly and yearly money series comes from these three, which read the SAME aggregates the
+// scalar metrics do (`measureValue`). A per-measure builder would be a second definition of the
+// measure, free to disagree with the figure beside it.
+
+/** The month keys a monthly series spans, with the labels to plot them under. */
+function monthAxis(data: DashboardData, year?: number): { keys: string[]; labels: string[] } {
+	if (year == null) return { keys: data.meta.month_keys, labels: data.meta.month_keys };
+	return {
+		keys: MONTHS.map((_, m) => `${year}-${String(m + 1).padStart(2, '0')}`),
+		labels: MONTHS
+	};
 }
 
-// --- spending ---
-
-export function spendingByMonth(data: DashboardData, year?: number): Series {
-	const currency = data.currency;
-
-	if (year == null) {
-		return series(
-			'Spending',
-			data.meta.month_keys,
-			data.meta.month_keys.map((k) => data.months[k]?.total_spent ?? 0),
-			MONEY(currency)
-		);
-	}
-
-	return series('Spending', MONTHS, yearMonthlySpent(data, year), MONEY(currency));
-}
-
-export function spendingByYear(data: DashboardData): Series {
+function overMonths(data: DashboardData, m: Measure, keys: string[], labels: string[]): Series {
 	return series(
-		'Spending',
-		data.overview.by_year.map((y) => String(y.year)),
-		data.overview.by_year.map((y) => y.spent),
+		measureLabel(m),
+		labels,
+		keys.map((k) => measureValue(data, { level: 'month', monthKey: k }, m)),
 		MONEY(data.currency)
 	);
 }
 
-// --- income ---
-
-export function incomeByMonth(data: DashboardData, year?: number): Series {
-	const currency = data.currency;
-
-	if (year == null) {
-		return series(
-			'Income',
-			data.meta.month_keys,
-			data.meta.month_keys.map((k) => data.months[k]?.total_income ?? 0),
-			MONEY(currency)
-		);
-	}
-
-	const byMonth = data.income.by_month[String(year)] ?? new Array(12).fill(0);
-	return series('Income', MONTHS, byMonth, MONEY(currency));
+/** One point per month: a year's twelve, or every tracked month when `year` is omitted. */
+export function measureByMonth(data: DashboardData, m: Measure, year?: number): Series {
+	const { keys, labels } = monthAxis(data, year);
+	return overMonths(data, m, keys, labels);
 }
 
-export function incomeByYear(data: DashboardData): Series {
+/**
+ * Only the months of a year the measure actually moved in — the first through the last, so a quiet
+ * month in the middle still plots but a run of empty ones at either end does not.
+ *
+ * This is the window a running total wants. Padded out to December, an accumulation reaches its total
+ * partway across and then draws a flat line to the edge, which in a chart the width of a card is a
+ * solid block over half of it that says nothing and does not change as the card is resized.
+ */
+export function measureActive(data: DashboardData, m: Measure, year: number): Series {
+	const { keys } = monthAxis(data, year);
+	const moved = keys.map((k) => measureValue(data, { level: 'month', monthKey: k }, m) !== 0);
+	const first = moved.indexOf(true);
+	const last = moved.lastIndexOf(true);
+	const span = first === -1 ? [] : keys.slice(first, last + 1);
+	return overMonths(data, m, span, span.map(monthName));
+}
+
+/** The trailing `count` months up to and including `monthKey` — a KPI's recent shape. */
+export function measureTrailing(
+	data: DashboardData,
+	m: Measure,
+	monthKey: string,
+	count = 12
+): Series {
+	const keys = Array.from({ length: count }, (_, i) => addMonths(monthKey, i - count + 1));
+	return overMonths(data, m, keys, keys.map(monthName));
+}
+
+/** One point per tracked year. */
+export function measureByYear(data: DashboardData, m: Measure): Series {
+	const years = data.meta.years;
 	return series(
-		'Income',
-		data.income.by_year.map((y) => String(y.year)),
-		data.income.by_year.map((y) => y.gross),
-		MONEY(data.currency)
+		measureLabel(m),
+		years.map(String),
+		years.map((y) => measureValue(data, { level: 'year', year: y }, m)),
+		MONEY(data.currency),
+		'ordinal'
 	);
+}
+
+/**
+ * A series' running total. A transform over any of the above rather than a builder of its own, so
+ * which months an accumulation spans is the caller's choice and not baked in here.
+ */
+export function accumulate(s: Series): Series {
+	let run = 0;
+	return { ...s, points: s.points.map((p) => ({ ...p, value: (run += p.value ?? 0) })) };
 }
 
 // --- composite ---
@@ -85,57 +106,18 @@ export function incomeByYear(data: DashboardData): Series {
  * specific `year` plots its twelve months.
  */
 export function incomeSpentSaved(data: DashboardData, year?: number): MultiSeries {
-	const unit = MONEY(data.currency);
-
-	if (year == null) {
-		const by = data.overview.by_year;
-		const labels = by.map((r) => String(r.year));
-		return {
-			kind: 'multiseries',
-			unit,
-			axis: 'ordinal',
-			labels,
-			series: [
-				series(
-					'Income',
-					labels,
-					by.map((r) => r.income),
-					unit,
-					'ordinal'
-				),
-				series(
-					'Spent',
-					labels,
-					by.map((r) => r.spent),
-					unit,
-					'ordinal'
-				),
-				series(
-					'Saved',
-					labels,
-					by.map((r) => r.saved),
-					unit,
-					'ordinal'
-				)
-			]
-		};
-	}
-
-	const yd = data.years[String(year)];
-	const income = MONTHS.map((_, m) => yd?.matrix[m]?.income ?? 0);
-	const spent = MONTHS.map((_, m) => sumValues(yd?.matrix[m]?.spent ?? {}));
-	const saved = income.map((v, i) => v - spent[i]!);
+	const parts: Field[] = ['income', 'spending', 'saved'];
+	const list = parts.map((f) =>
+		year == null ? measureByYear(data, f) : measureByMonth(data, f, year)
+	);
 
 	return {
 		kind: 'multiseries',
-		unit,
+		unit: MONEY(data.currency),
 		axis: 'ordinal',
-		labels: MONTHS,
-		series: [
-			series('Income', MONTHS, income, unit, 'ordinal'),
-			series('Spent', MONTHS, spent, unit, 'ordinal'),
-			series('Saved', MONTHS, saved, unit, 'ordinal')
-		]
+		labels: list[0]?.points.map((p) => p.label) ?? [],
+		// Built as time series above; overlaid on one categorical axis here.
+		series: list.map((s) => ({ ...s, axis: 'ordinal' as const }))
 	};
 }
 
@@ -169,24 +151,21 @@ export function categorySpendByYear(data: DashboardData): MultiSeries {
 	};
 }
 
-export function cumulativeSaved(data: DashboardData): Series {
-	let run = 0;
-	const by = data.overview.by_year;
-	return series(
-		'Cumulative saved',
-		by.map((r) => String(r.year)),
-		by.map((r) => (run += r.saved)),
-		MONEY(data.currency)
-	);
-}
-
-/** Savings-to-income ratio per year, as a percentage. */
+/**
+ * Savings-to-income ratio per year, as a percentage. Divided out of the two measures rather than
+ * from the yearly rows directly, so the line and the savings-rate figure beside it are the same
+ * definition of the ratio.
+ */
 export function savingsRate(data: DashboardData): Series {
-	const by = data.overview.by_year;
-	return series(
-		'Savings rate',
-		by.map((r) => String(r.year)),
-		by.map((r) => (r.income ? (r.saved / r.income) * 100 : 0)),
-		PERCENT
-	);
+	const saved = measureByYear(data, 'saved');
+	const income = measureByYear(data, 'income');
+	return {
+		...saved,
+		name: 'Savings rate',
+		unit: PERCENT,
+		points: saved.points.map((p, i) => {
+			const base = income.points[i]?.value ?? 0;
+			return { ...p, value: base ? ((p.value ?? 0) / base) * 100 : 0 };
+		})
+	};
 }

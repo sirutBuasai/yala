@@ -7,14 +7,14 @@ import type { Primitive, PrimitiveKind } from './primitives';
 import { MONEY } from './primitives';
 import { categorical, categoryDeviation, whereItWent } from './categorical';
 import {
+	accumulate,
 	categorySpendByYear,
-	cumulativeSaved,
-	incomeByMonth,
-	incomeByYear,
 	incomeSpentSaved,
-	savingsRate,
-	spendingByMonth,
-	spendingByYear
+	measureActive,
+	measureByMonth,
+	measureByYear,
+	measureTrailing,
+	savingsRate
 } from '$lib/data/series';
 import { moneyFlow } from './flow';
 import { categoryByMonth } from './matrix';
@@ -41,7 +41,7 @@ import {
 	topAccountShare,
 	yearsOfFreedom
 } from './networth';
-import { type Scope, type ScopeLevel, scopeYear } from './scope';
+import { type Scope, type ScopeLevel, latestMonthKey, scopeYear } from './scope';
 import {
 	amount,
 	average,
@@ -51,11 +51,13 @@ import {
 	componentKeys,
 	count,
 	extremum,
+	measureLabel,
 	ratio,
 	signed,
 	vsTypical,
 	type Countable,
 	type ExtremumOf,
+	type Field,
 	type Measure
 } from './metric';
 
@@ -116,21 +118,6 @@ const CHART_DEFS: DataDef[] = [
 		}
 	},
 	{
-		id: 'spending.by_month',
-		label: 'Spending by month',
-		kind: 'series',
-		scopes: ['all', 'year'],
-		build: (data, scope) =>
-			scope.level === 'all' ? spendingByMonth(data) : spendingByMonth(data, scopeYear(data, scope))
-	},
-	{
-		id: 'spending.by_year',
-		label: 'Spending by year',
-		kind: 'series',
-		scopes: ['all'],
-		build: (data) => spendingByYear(data)
-	},
-	{
 		id: 'spending.category_by_month',
 		label: 'Category by month',
 		kind: 'matrix',
@@ -155,21 +142,6 @@ const CHART_DEFS: DataDef[] = [
 				: { kind: 'categorical', unit: MONEY(data.currency), points: [] }
 	},
 	{
-		id: 'income.by_month',
-		label: 'Income by month',
-		kind: 'series',
-		scopes: ['all', 'year'],
-		build: (data, scope) =>
-			scope.level === 'all' ? incomeByMonth(data) : incomeByMonth(data, scopeYear(data, scope))
-	},
-	{
-		id: 'income.by_year',
-		label: 'Income by year',
-		kind: 'series',
-		scopes: ['all'],
-		build: (data) => incomeByYear(data)
-	},
-	{
 		id: 'income.paychecks',
 		label: 'Paychecks',
 		kind: 'table',
@@ -189,13 +161,6 @@ const CHART_DEFS: DataDef[] = [
 			scope.level === 'year'
 				? incomeSpentSaved(data, scopeYear(data, scope))
 				: incomeSpentSaved(data)
-	},
-	{
-		id: 'overview.cumulative_saved',
-		label: 'Cumulative savings',
-		kind: 'series',
-		scopes: ['all'],
-		build: (data) => cumulativeSaved(data)
 	},
 	{
 		id: 'overview.savings_rate',
@@ -278,6 +243,54 @@ const CHART_DEFS: DataDef[] = [
 		scopes: ['all'],
 		build: (data) => netWorthYearTable(data)
 	}
+];
+
+// --- one measure over time ---
+//
+// Generated from two small tables over the SAME measures the scalars use, so a KPI's chart and its
+// number can never be built from different definitions of the figure.
+
+/** Measures with a period-by-period trend. Month scope reads as the trailing twelve. */
+const TRENDS: Field[] = ['income', 'spending', 'saved'];
+
+/** Measures with a running total — the shape of an accumulation, not a level. */
+const RUNNING: Field[] = ['gross', 'deductions', 'contributions', 'net', 'saved'];
+
+// A running total comes in two windows, because the two answer different questions. `running.*` spans
+// the months the measure MOVED in, so a year-to-date accumulation fills its chart instead of reaching
+// its total in July and drawing a flat line to December. `revolving.*` spans the last twelve months
+// whatever the calendar says, which is the one that keeps its meaning across a year boundary.
+const SERIES_DEFS: DataDef[] = [
+	...TRENDS.map((f): DataDef => ({
+		id: `trend.${f}`,
+		label: `${measureLabel(f)} over time`,
+		kind: 'series',
+		scopes: ['all', 'year', 'month'],
+		build: (data, scope) =>
+			scope.level === 'month'
+				? measureTrailing(data, f, scope.monthKey || latestMonthKey(data))
+				: measureByMonth(data, f, scope.level === 'year' ? scopeYear(data, scope) : undefined)
+	})),
+	...RUNNING.map((f): DataDef => ({
+		id: `running.${f}`,
+		label: `${measureLabel(f)}, running total`,
+		kind: 'series',
+		scopes: ['all', 'year'],
+		build: (data, scope) =>
+			accumulate(
+				scope.level === 'year'
+					? measureActive(data, f, scopeYear(data, scope))
+					: measureByYear(data, f)
+			)
+	})),
+	...RUNNING.map((f): DataDef => ({
+		id: `revolving.${f}`,
+		label: `${measureLabel(f)}, running total over 12 months`,
+		kind: 'series',
+		scopes: ['all', 'year', 'month'],
+		build: (data, scope) =>
+			accumulate(measureTrailing(data, f, scope.monthKey || latestMonthKey(data)))
+	}))
 ];
 
 const NETWORTH_STATS: DataDef[] = [
@@ -381,32 +394,62 @@ function scalarDef(
 	return { id, label, kind: 'scalar', scopes, build };
 }
 
-const AMOUNTS: { id: string; label: string; field: Measure; signed?: boolean }[] = [
-	{ id: 'income.total', label: 'Income', field: 'income' },
-	{ id: 'spending.total', label: 'Spending', field: 'spending' },
+// `note` is the figure's CAPTION. It lives here because a caption is part of what a figure means; a
+// view that wrote its own would be a second, drift-prone answer to "what is this number".
+const AMOUNTS: { id: string; label: string; field: Measure; signed?: boolean; note?: string }[] = [
+	{ id: 'income.total', label: 'Income', field: 'income', note: 'take-home + saved' },
+	{ id: 'spending.total', label: 'Spent', field: 'spending' },
 	{ id: 'saved.total', label: 'Saved', field: 'saved', signed: true },
-	{ id: 'income.gross', label: 'Gross', field: 'gross' },
-	{ id: 'income.deductions', label: 'Deductions', field: 'deductions' },
-	{ id: 'income.contributions', label: 'Contributions', field: 'contributions' },
-	{ id: 'income.net', label: 'Net', field: 'net' },
-	{ id: 'income.takehome', label: 'Take-home', field: 'takehome' }
+	{ id: 'income.gross', label: 'Gross', field: 'gross', note: 'before tax & deductions' },
+	{ id: 'income.deductions', label: 'Deductions', field: 'deductions', note: 'tax + benefits' },
+	{
+		id: 'income.contributions',
+		label: 'Contributions',
+		field: 'contributions',
+		note: 'HSA + 401k'
+	},
+	{ id: 'income.net', label: 'Net income', field: 'net', note: 'take-home + saved' },
+	{
+		id: 'income.takehome',
+		label: 'Take-home',
+		field: 'takehome',
+		note: 'what reached your account'
+	}
 ];
 
-const RATIOS: { id: string; label: string; num: Measure; den: Measure }[] = [
-	{ id: 'ratio.savings_rate', label: 'Savings rate', num: 'saved', den: 'income' },
-	{ id: 'ratio.percent_used', label: '% of income used', num: 'spending', den: 'income' },
-	{ id: 'ratio.deduction_rate', label: 'Deduction rate', num: 'deductions', den: 'gross' }
+const RATIOS: { id: string; label: string; num: Measure; den: Measure; note: string }[] = [
+	{
+		id: 'ratio.savings_rate',
+		label: 'Savings rate',
+		num: 'saved',
+		den: 'income',
+		note: 'of income kept'
+	},
+	{
+		id: 'ratio.spending_rate',
+		label: 'Spending rate',
+		num: 'spending',
+		den: 'income',
+		note: 'of income spent'
+	},
+	{
+		id: 'ratio.deduction_rate',
+		label: 'Deduction rate',
+		num: 'deductions',
+		den: 'gross',
+		note: 'of gross withheld'
+	}
 ];
 
 const PER_MONTH: { id: string; label: string; field: Measure; signed?: boolean }[] = [
 	{ id: 'avg.income_per_month', label: 'Avg income / month', field: 'income' },
-	{ id: 'avg.spending_per_month', label: 'Avg spending / month', field: 'spending' },
+	{ id: 'avg.spending_per_month', label: 'Avg spent / month', field: 'spending' },
 	{ id: 'avg.saved_per_month', label: 'Avg saved / month', field: 'saved', signed: true }
 ];
 
 const PER_YEAR: { id: string; label: string; field: Measure; signed?: boolean }[] = [
 	{ id: 'avg.income_per_year', label: 'Avg income / year', field: 'income' },
-	{ id: 'avg.spending_per_year', label: 'Avg spending / year', field: 'spending' },
+	{ id: 'avg.spending_per_year', label: 'Avg spent / year', field: 'spending' },
 	{ id: 'avg.saved_per_year', label: 'Avg saved / year', field: 'saved', signed: true }
 ];
 
@@ -423,41 +466,15 @@ const EXTREMA: { id: string; label: string; of: ExtremumOf; scopes: ScopeLevel[]
 	{ id: 'max.month', label: 'Biggest month', of: 'month', scopes: ['all', 'year'] }
 ];
 
-const CHANGES: {
-	id: string;
-	label: string;
-	field: Measure;
-	period: 'year' | 'month';
-	scopes: ScopeLevel[];
-}[] = [
-	{
-		id: 'change.income_yoy',
-		label: 'Income (YoY)',
-		field: 'income',
-		period: 'year',
-		scopes: ['year']
-	},
-	{
-		id: 'change.spending_yoy',
-		label: 'Spending (YoY)',
-		field: 'spending',
-		period: 'year',
-		scopes: ['year']
-	},
-	{
-		id: 'change.income_mom',
-		label: 'Income (MoM)',
-		field: 'income',
-		period: 'month',
-		scopes: ['month']
-	},
-	{
-		id: 'change.spending_mom',
-		label: 'Spending (MoM)',
-		field: 'spending',
-		period: 'month',
-		scopes: ['month']
-	}
+// A level plus its period-over-period badge. Labelled by the measure alone — the badge's own note
+// says which period it compares against, so the title doesn't have to.
+const CHANGES: { field: Field; period: 'year' | 'month' }[] = [
+	{ field: 'income', period: 'year' },
+	{ field: 'spending', period: 'year' },
+	{ field: 'saved', period: 'year' },
+	{ field: 'income', period: 'month' },
+	{ field: 'spending', period: 'month' },
+	{ field: 'saved', period: 'month' }
 ];
 
 const VS_TYPICAL: DataDef[] = [
@@ -476,13 +493,13 @@ const VS_TYPICAL: DataDef[] = [
 const STAT_DEFS: DataDef[] = [
 	...AMOUNTS.map((a) =>
 		scalarDef(a.id, a.label, ALL_SCOPES, (data, scope) => {
-			const s = amount(data, scope, a.field, { label: a.label });
+			const s = amount(data, scope, a.field, { label: a.label, note: a.note });
 			return a.signed ? signed(s) : s;
 		})
 	),
 	...RATIOS.map((r) =>
 		scalarDef(r.id, r.label, ALL_SCOPES, (data, scope) =>
-			ratio(data, scope, r.num, r.den, { label: r.label })
+			ratio(data, scope, r.num, r.den, { label: r.label, note: r.note })
 		)
 	),
 	...PER_MONTH.map((m) =>
@@ -506,15 +523,23 @@ const STAT_DEFS: DataDef[] = [
 		)
 	),
 	...CHANGES.map((c) =>
-		scalarDef(c.id, c.label, c.scopes, (data, scope) =>
-			change(data, c.field, c.period, c.period === 'year' ? scope.year : scope.monthKey, {
-				label: c.label
-			})
+		scalarDef(
+			`change.${c.field}_${c.period === 'year' ? 'yoy' : 'mom'}`,
+			measureLabel(c.field),
+			[c.period],
+			(data, scope) =>
+				change(data, c.field, c.period, c.period === 'year' ? scope.year : scope.monthKey)
 		)
 	)
 ];
 
-export const CATALOG: DataDef[] = [...CHART_DEFS, ...STAT_DEFS, ...VS_TYPICAL, ...NETWORTH_STATS];
+export const CATALOG: DataDef[] = [
+	...CHART_DEFS,
+	...SERIES_DEFS,
+	...STAT_DEFS,
+	...VS_TYPICAL,
+	...NETWORTH_STATS
+];
 
 export const CATALOG_BY_ID: Record<string, DataDef> = Object.fromEntries(
 	CATALOG.map((d) => [d.id, d])

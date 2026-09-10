@@ -5,6 +5,8 @@
 	import NavMenu from '$lib/nav/NavMenu.svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
+	import Kpi from '$lib/kpi/Kpi.svelte';
+	import type { KpiSpec } from '$lib/kpi/spec';
 	import { makeData } from '$lib/data/__fixtures__/dashboard';
 	import { build } from '$lib/data/catalog';
 
@@ -32,7 +34,7 @@
 					name: 'text-display',
 					px: 28,
 					primitive: 'fs-1000',
-					role: 'Hero stat number (StatTile value)',
+					role: 'Hero stat number (a KPI value)',
 					font: 'serif'
 				},
 				{
@@ -249,15 +251,17 @@
 		{ name: 'radius-pill', px: 999, role: 'Pills, round nav, dots' }
 	];
 
-	const stats = ['income.total', 'spending.total', 'saved.total', 'ratio.savings_rate'].map(
-		(id) => ({
-			def: id,
-			primitive: build(data, id, all)
-		})
-	);
+	// The four KPI formats on one row: a plain level, a level with a running-total chart behind it, a
+	// signed figure that colours itself, and a rate drawn as a ring.
+	const kpis: KpiSpec[] = [
+		{ figure: 'income.total', scope: all },
+		{ figure: 'spending.total', scope: all, chart: 'area', series: 'running.gross' },
+		{ figure: 'saved.total', scope: all },
+		{ figure: 'ratio.savings_rate', scope: all, chart: 'ring' }
+	];
 	const donut = build(data, 'spending.where_it_went', all);
 	const bars = build(data, 'overview.income_spent_saved', all);
-	const cumulative = build(data, 'overview.cumulative_saved', all);
+	const cumulative = build(data, 'running.saved', all);
 	const table = build(data, 'income.paychecks', all);
 </script>
 
@@ -426,11 +430,9 @@
 	<h2 class="sec">In context</h2>
 
 	<div class="board">
-		{#each stats as s (s.def)}
+		{#each kpis as spec (spec.figure)}
 			<div class="cell span2">
-				<Card title={s.primitive.kind === 'scalar' ? s.primitive.label : s.def} caption="Lifetime">
-					<Figure primitive={s.primitive} />
-				</Card>
+				<Card><Kpi {data} {spec} /></Card>
 			</div>
 		{/each}
 		<div class="cell span3">

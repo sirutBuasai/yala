@@ -10,7 +10,6 @@ import type {
 	MultiSeries,
 	Primitive,
 	PrimitiveKind,
-	Scalar,
 	Series,
 	Table
 } from '$lib/data/primitives';
@@ -26,7 +25,6 @@ import StackedArea from '$lib/charts/StackedArea.svelte';
 import BulletChart from '$lib/charts/BulletChart.svelte';
 import Heatmap from './Heatmap.svelte';
 import DataTable from './Table.svelte';
-import StatTile from './StatTile.svelte';
 
 /** Extra rendering options for `adapt`. */
 interface AdaptOpts {
@@ -88,8 +86,16 @@ const SERIES_ROLE: Record<string, string> = {
 	Spent: 'var(--role-spending)',
 	Spending: 'var(--role-spending)',
 	Saved: 'var(--role-saving)',
-	'Cumulative saved': 'var(--role-saving)',
-	'Savings rate': 'var(--role-rate)',
+	// Green with the rest of saving, not the rate hue: the figure people read here is how much they
+	// KEPT, and it reads beside `Saved` on the same boards.
+	'Savings rate': 'var(--role-saving)',
+	'Spending rate': 'var(--role-spending)',
+	// The gross → net chain.
+	Gross: 'var(--role-income)',
+	Deductions: 'var(--role-deduction)',
+	Contributions: 'var(--role-saving)',
+	'Net income': 'var(--role-income)',
+	'Take-home': 'var(--role-income)',
 	// Stocks.
 	'Net worth': 'var(--role-balance)',
 	Assets: 'var(--role-asset)',
@@ -116,7 +122,11 @@ const PALETTE = [
 	'var(--berry)'
 ];
 
-function seriesColor(name: string, index: number): string {
+/**
+ * A series' colour from its NAME, so one measure carries one hue wherever it is drawn. Exported
+ * because a KPI's sparkline and ring are marks too, and colour is assigned here or nowhere.
+ */
+export function seriesColor(name: string, index = 0): string {
 	return (
 		SERIES_ROLE[name] ??
 		(CATEGORY_TOKEN[name] ? categoryVar(name) : null) ??
@@ -316,15 +326,6 @@ export const CHARTS: ChartDef[] = [
 		component: DataTable,
 		adapt(p) {
 			return { table: p as Table };
-		}
-	}),
-	def({
-		id: 'stat',
-		label: 'Stat tile',
-		accepts: ['scalar'],
-		component: StatTile,
-		adapt(p) {
-			return { scalar: p as Scalar };
 		}
 	})
 ];

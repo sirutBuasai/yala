@@ -3,12 +3,20 @@
 // Deltas are CUMULATIVE from the press, so the board's clamping is re-derived from a fixed origin
 // rather than accumulated — dragging a pane into a wall and back out again is exact.
 //
-// `[data-no-drag]` opts a subtree out, and it is checked HERE rather than by a `stopPropagation` in
-// the control's own handler: Svelte DELEGATES pointer events to the document root, so a component's
-// handler runs strictly after this action's direct listener has already called `preventDefault()` on
-// the press — which swallows the click too. Every button inside a drag surface was dead until this.
+// A press is not yet a drag. The gesture stays PENDING until the pointer has travelled `THRESHOLD`,
+// and only then is `preventDefault` called and `onstart` fired. That is what lets a control sit on a
+// drag surface and still be clickable: Svelte DELEGATES pointer events to the document root, so a
+// component's click handler runs strictly after this action's direct listener — and a `preventDefault`
+// on the press swallows the click with it. Waiting for movement means a press that never moves stays
+// a click, and the same spot still drags.
+//
+// `[data-no-drag]` remains for a control that must never begin a gesture at all, whatever the pointer
+// does afterwards.
 
 const OPT_OUT = '[data-no-drag]';
+
+/** Pixels of travel before a press becomes a drag. Enough to absorb the wobble in a click. */
+const THRESHOLD = 4;
 
 export interface DragDetail {
 	/** Pixels travelled since the press, on each axis. */
@@ -29,6 +37,8 @@ export interface DragParams {
 export function drag(node: HTMLElement, params: DragParams) {
 	let current = params;
 	let origin: { x: number; y: number } | null = null;
+	/** True once the travel passed the threshold and the gesture actually began. */
+	let dragging = false;
 	let pointer = -1;
 
 	const detail = (e: PointerEvent): DragDetail => ({
@@ -50,9 +60,14 @@ export function drag(node: HTMLElement, params: DragParams) {
 
 	function finish(ended: boolean, last?: DragDetail): void {
 		if (!origin) return;
+		const began = dragging;
 		origin = null;
+		dragging = false;
 		capture(false);
 		removeEventListener('keydown', onkeydown, true);
+		// A press that never passed the threshold was a click, not an abandoned gesture: nothing began,
+		// so there is nothing to end or to put back.
+		if (!began) return;
 		if (ended && last) current.onend(last);
 		else current.oncancel?.();
 	}
@@ -68,18 +83,28 @@ export function drag(node: HTMLElement, params: DragParams) {
 		// Primary button only: a right-click or a two-finger scroll is not a drag.
 		if (current.disabled || origin || e.button !== 0) return;
 		if ((e.target as Element | null)?.closest(OPT_OUT)) return;
-		e.preventDefault();
-		e.stopPropagation();
+		// Deliberately no `preventDefault` yet — see the threshold note at the top of this file. Capture
+		// IS taken now, though: the listeners are on this node, so without it the moves stop arriving the
+		// moment the pointer leaves it, and a control small enough to click is left in a few pixels.
 		origin = { x: e.clientX, y: e.clientY };
 		pointer = e.pointerId;
 		capture(true);
-		addEventListener('keydown', onkeydown, true);
-		current.onstart?.();
 	}
 
 	function onpointermove(e: PointerEvent): void {
 		if (!origin) return;
-		current.onmove(detail(e));
+		const travel = detail(e);
+
+		if (!dragging) {
+			if (Math.abs(travel.dx) < THRESHOLD && Math.abs(travel.dy) < THRESHOLD) return;
+			dragging = true;
+			e.preventDefault();
+			e.stopPropagation();
+			addEventListener('keydown', onkeydown, true);
+			current.onstart?.();
+		}
+
+		current.onmove(travel);
 	}
 
 	function onpointerup(e: PointerEvent): void {

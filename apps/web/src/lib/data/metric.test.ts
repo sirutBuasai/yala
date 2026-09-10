@@ -121,7 +121,7 @@ describe('change', () => {
 		const d = makeData();
 		const c = change(d, 'spending', 'year', 2025);
 		expect(c.value).toBe(45.5);
-		expect(c.delta?.dir).toBe('down');
+		expect(c.delta?.tone).toBe('good');
 		expect(c.delta?.value).toBeCloseTo(((45.5 - 120) / 120) * 100, 6);
 		expect(c.delta?.note).toBe('YoY');
 	});
@@ -130,5 +130,31 @@ describe('change', () => {
 		const d = makeData();
 		// The fixture's first year has no prior year to compare against.
 		expect(change(d, 'income', 'year', 2024).delta).toBeUndefined();
+	});
+
+	// The point of the tone: the SAME movement is good news for one measure and bad for another.
+	it('tones a rise by whether it is good news, not by its sign', () => {
+		const spent = makeData();
+		spent.overview.by_year[1]!.spent = 500;
+		expect(change(spent, 'spending', 'year', 2025).delta?.tone).toBe('bad');
+
+		const earned = makeData();
+		earned.overview.by_year[1]!.income = 9000;
+		expect(change(earned, 'income', 'year', 2025).delta?.tone).toBe('good');
+	});
+
+	it('leaves the level itself untoned — the badge carries the verdict', () => {
+		expect(change(makeData(), 'spending', 'year', 2025).tone).toBeUndefined();
+	});
+
+	// Bug: dividing by a negative base flipped the percentage's sign away from the direction the
+	// figure had actually moved, so a loss that shrank read as a fall.
+	it('signs the percentage by the movement even when the base is negative', () => {
+		const d = makeData();
+		d.overview.by_year[0]!.saved = -100;
+		d.overview.by_year[1]!.saved = -50;
+		const c = change(d, 'saved', 'year', 2025);
+		expect(c.delta?.value).toBeCloseTo(50, 6);
+		expect(c.delta?.tone).toBe('good');
 	});
 });

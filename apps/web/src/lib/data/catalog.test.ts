@@ -3,6 +3,7 @@ import {
 	build,
 	categoryMetricDefs,
 	componentMetricDefs,
+	CATALOG,
 	CATALOG_BY_ID,
 	dataOfKind
 } from '$lib/data/catalog';
@@ -48,7 +49,7 @@ describe('spending.by_category', () => {
 
 describe('scope year fallback', () => {
 	it('year scope without an explicit year uses the latest year', () => {
-		const p = build(makeData(), 'spending.by_month', { level: 'year' });
+		const p = build(makeData(), 'trend.spending', { level: 'year' });
 		if (p.kind !== 'series') throw new Error('expected series');
 		expect(p.points[0]).toEqual({ label: 'Jan', value: 45.5 });
 	});
@@ -57,7 +58,7 @@ describe('scope year fallback', () => {
 		const d = makeData();
 		d.meta.years = [];
 		d.years = {};
-		const p = build(d, 'spending.by_month', { level: 'year' });
+		const p = build(d, 'trend.spending', { level: 'year' });
 		if (p.kind !== 'series') throw new Error('expected series');
 		expect(p.points).toHaveLength(12);
 		expect(p.points.every((pt) => pt.value === 0)).toBe(true);
@@ -123,11 +124,11 @@ describe('scalar metrics', () => {
 		expect(p.value).toBeCloseTo((4434.5 / 4600) * 100, 6);
 	});
 
-	it('signs the Saved tile by value', () => {
+	it('tones the Saved figure by its sign', () => {
 		const p = build(makeData(), 'saved.total', { level: 'all' });
 		if (p.kind !== 'scalar') throw new Error('expected scalar');
 		expect(p.value).toBe(4434.5);
-		expect(p.dir).toBe('up');
+		expect(p.tone).toBe('good');
 	});
 });
 
@@ -154,6 +155,13 @@ describe('data-dependent metric defs', () => {
 });
 
 describe('catalog integrity', () => {
+	// Ids are GENERATED from small tables, so one repeated row would shadow a def in `CATALOG_BY_ID`
+	// and make a figure vanish with nothing to say it went.
+	it('has no duplicate ids', () => {
+		const ids = CATALOG.map((d) => d.id);
+		expect([...new Set(ids)]).toHaveLength(ids.length);
+	});
+
 	it('every entry builds without throwing at its declared scopes', () => {
 		const d = makeData();
 		for (const def of Object.values(CATALOG_BY_ID)) {
