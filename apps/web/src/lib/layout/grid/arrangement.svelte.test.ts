@@ -77,8 +77,8 @@ describe('fitted panes', () => {
 
 	it('floors a rising pane on the neighbour that did not shrink', () => {
 		const { arrangement: b } = arrangement();
-		// `tall` is 12 and did not move. Even with the right-hand column collapsed, `wide` may not rise
-		// above `tall`'s bottom — that is the trap a remembered offset would fall into.
+		// `tall` did not move, so however far the right-hand column collapses, `wide` may not rise above
+		// `tall`'s bottom — the trap a remembered offset would fall into.
 		b.setMeasured('bottom', rows(1));
 		expect(b.placed('wide').y).toBe(12);
 	});
@@ -102,7 +102,7 @@ describe('dragging', () => {
 
 	it('subtracts the displacement, so a drop that moves nothing changes nothing', () => {
 		const { arrangement: b } = arrangement();
-		// Grow `bottom` so `wide` is pushed 8 rows below where it was authored.
+		// Grow `bottom` so `wide` is pushed below where it was authored.
 		b.setMeasured('bottom', rows(14));
 		const before = b.placed('wide');
 		expect(before.offset).toBe(8);
@@ -117,7 +117,7 @@ describe('dragging', () => {
 	it('applies a drag once, not once per render', () => {
 		const { arrangement: b } = arrangement();
 		b.setMeasured('bottom', rows(14));
-		const before = b.placed('wide'); // authored at 12, resting at 20 (offset 8)
+		const before = b.placed('wide'); // resting below where it was authored
 
 		dragTo(b, 'wide', before.x, before.y + 12);
 
@@ -173,16 +173,16 @@ describe('dragging', () => {
 	});
 
 	it('changes places by the height a pane RESERVES, not the one it declared', () => {
-		// The gesture is handed the resolved board, so a fitted pane's measured height is the distance a
-		// drag has to clear. Declared, `bottom` is 6 rows and thirteen would have been plenty.
+		// The gesture is handed the resolved board, so a fitted pane's MEASURED height is the distance a
+		// drag has to clear — a good deal further here than the height it declares.
 		const { arrangement: b } = arrangement();
-		b.setMeasured('bottom', rows(14)); // reaching from 6 to 20
+		b.setMeasured('bottom', rows(14));
 
-		dragTo(b, 'wide', 0, 7); // thirteen rows up, one short
+		dragTo(b, 'wide', 0, 7); // one row short of clearing it
 		expect(b.placed('wide').y).toBe(20);
 		expect(b.placed('bottom').y).toBe(6);
 
-		dragTo(b, 'wide', 0, 6); // the fourteenth takes it over
+		dragTo(b, 'wide', 0, 6); // one row further takes it over
 		expect(b.placed('wide').y).toBe(12);
 		expect(b.placed('bottom').y).toBe(20);
 	});
@@ -254,7 +254,7 @@ describe('persistence', () => {
 		const key = `test-drift-${seq++}`;
 		const b = new Arrangement(key, LAYOUT, env);
 
-		b.setMeasured('bottom', rows(14)); // pushes `wide` from 12 to 20
+		b.setMeasured('bottom', rows(14)); // pushes `wide` down
 		expect(b.placed('wide').y).toBe(20);
 		b.commit();
 

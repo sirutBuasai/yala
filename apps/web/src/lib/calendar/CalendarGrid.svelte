@@ -3,6 +3,7 @@
 	// above does, so the day panel and the grid always agree.
 	import { dayForKey, type WeekRow } from '$lib/calendar/days';
 	import { money, moneyCompact, MONTHS } from '$lib/utils/format';
+	import { monthOf, yearOf } from '$lib/utils/period';
 	import DayCellButton from '$lib/calendar/DayCellButton.svelte';
 	import WeekTotal from '$lib/calendar/WeekTotal.svelte';
 
@@ -18,8 +19,8 @@
 
 	const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-	const year = $derived(+monthKey.slice(0, 4));
-	const month = $derived(+monthKey.slice(5, 7));
+	const year = $derived(yearOf(monthKey));
+	const month = $derived(monthOf(monthKey));
 	// Weeks are scaled against the busiest one, so the gutter reads as a chart of the month.
 	const peak = $derived(Math.max(...rows.map((r) => r.total), 1));
 

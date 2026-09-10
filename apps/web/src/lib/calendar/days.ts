@@ -1,6 +1,7 @@
 // The calendar's arithmetic as pure functions, so the month-boundary cases stay testable.
 
 import type { DashboardData } from '$lib/data/types';
+import { isoDate } from '$lib/utils/period';
 
 /** Day-of-month from an ISO "YYYY-MM-DD". */
 export const dayOf = (date: string): number => +date.slice(8, 10);
@@ -46,7 +47,7 @@ export function dayCells(data: DashboardData, monthKey: string): DayCell[] {
 	const out: DayCell[] = [];
 
 	for (let d = 1; d <= daysInMonthOf(monthKey); d++) {
-		const iso = `${monthKey}-${String(d).padStart(2, '0')}`;
+		const iso = isoDate(monthKey, d);
 		const txns = (md?.transactions ?? []).filter((t) => dayOf(t.date) === d);
 		const pays = (md?.paychecks ?? []).filter((p) => dayOf(p.date) === d);
 		const xfers = (md?.transfers ?? []).filter((t) => dayOf(t.date) === d);

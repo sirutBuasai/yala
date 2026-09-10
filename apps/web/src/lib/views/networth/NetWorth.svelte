@@ -5,6 +5,7 @@
 	import type { AccountsInfo } from '$lib/data/load';
 	import { number, oneOf, Pref } from '$lib/utils/persist.svelte';
 	import { yearSpan } from '$lib/utils/format';
+	import { snapshotYears } from '$lib/data/networth';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import Segmented from '$lib/nav/Segmented.svelte';
 	import YearNav from '$lib/nav/YearNav.svelte';
@@ -31,9 +32,7 @@
 
 	const hasData = $derived(!!data.meta.domains.networth);
 
-	const years = $derived([
-		...new Set((data.networth?.series ?? []).map((p) => Number(p.date.slice(0, 4))))
-	]);
+	const years = $derived(snapshotYears(data));
 	// Fall back to the latest snapshot year when the remembered one has no snapshots in this ledger.
 	$effect(() => {
 		if (years.length && !years.includes(year.value)) year.value = years[years.length - 1]!;

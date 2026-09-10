@@ -18,12 +18,18 @@ import { series } from './series';
 import { measureValue } from './metric';
 import { type Scope, scopeYear } from './scope';
 import { money } from '$lib/utils/format';
+import { yearOf } from '$lib/utils/period';
 
 /** Allocation buckets in display order (mirrors the backend `BUCKETS`). */
 const BUCKETS = ['Liquid', 'Taxable', 'Tax-advantaged'];
 
 function snapshots(data: DashboardData): NetWorthSnapshot[] {
 	return data.networth?.series ?? [];
+}
+
+/** Every year a snapshot falls in, ascending. */
+export function snapshotYears(data: DashboardData): number[] {
+	return [...new Set(snapshots(data).map((p) => yearOf(p.date)))];
 }
 
 function forYear(data: DashboardData, year: number): NetWorthSnapshot[] {
@@ -276,7 +282,7 @@ export function netWorthOther(data: DashboardData, scope: Scope): Scalar {
 /** Saved vs everything-else per year — which force did the work. */
 export function savedVsOther(data: DashboardData): MultiSeries {
 	const unit = MONEY(data.currency);
-	const years = [...new Set(snapshots(data).map((p) => Number(p.date.slice(0, 4))))];
+	const years = snapshotYears(data);
 	const labels = years.map(String);
 
 	const saved: number[] = [];
@@ -303,7 +309,7 @@ export function savedVsOther(data: DashboardData): MultiSeries {
 /** Every year's change, split into what you saved and what you didn't. */
 export function netWorthYearTable(data: DashboardData): Table {
 	const unit = MONEY(data.currency);
-	const years = [...new Set(snapshots(data).map((p) => Number(p.date.slice(0, 4))))].reverse();
+	const years = snapshotYears(data).reverse();
 
 	const rows = years.map((year) => {
 		const scope: Scope = { level: 'year', year };

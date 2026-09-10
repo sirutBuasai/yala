@@ -15,6 +15,7 @@
 		weekRows
 	} from '$lib/calendar/days';
 	import { money, MONTHS } from '$lib/utils/format';
+	import { isoDate, monthOf, yearOf } from '$lib/utils/period';
 	import { matching, Pref } from '$lib/utils/persist.svelte';
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import CalendarGrid from '$lib/calendar/CalendarGrid.svelte';
@@ -32,8 +33,8 @@
 	let { data, monthKey, onadd, oneditTransaction, oneditPaycheck, oneditTransfer }: Props =
 		$props();
 
-	const year = $derived(+monthKey.slice(0, 4));
-	const month = $derived(+monthKey.slice(5, 7));
+	const year = $derived(yearOf(monthKey));
+	const month = $derived(monthOf(monthKey));
 	const firstWeekday = $derived(firstWeekdayOf(monthKey));
 	const cells = $derived(monthKey ? dayCells(data, monthKey) : []);
 	const rows = $derived(weekRows(cells, firstWeekday));
@@ -62,7 +63,7 @@
 	function pickDay(day: number) {
 		selectedDay = day;
 		pickedFor = monthKey;
-		chosen.value = `${monthKey}-${String(day).padStart(2, '0')}`;
+		chosen.value = isoDate(monthKey, day);
 	}
 
 	const selected = $derived(selectedDay ? cells[selectedDay - 1] : undefined);

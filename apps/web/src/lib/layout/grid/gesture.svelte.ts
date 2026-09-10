@@ -1,10 +1,7 @@
-// One pane's gesture as a state object: what the press captured, what the pointer has done since,
-// and whether the content will stand for it. Runes, but no DOM — whether the content spilled and
-// when a candidate size has been laid out both arrive as functions, so a gesture can be driven from
-// a test with scripted answers instead of a browser.
-//
-// A resize whose content spills is held at the last size that fitted (see `spill.ts`), so the edge
-// sticks the way a native min-size does and the gesture is never thrown away on release.
+// One pane's gesture as a state object: what the press captured, what the pointer has done since, and
+// whether the content will stand for it. No DOM — whether the content spilled and when a candidate size
+// has been laid out both arrive as functions, so a test can drive a gesture with scripted answers
+// instead of a browser.
 
 import { EDGES, moveRect, resizeRect, type Edge } from './resize';
 import { UNIT } from './units';
@@ -49,7 +46,8 @@ export class PaneGesture {
 	#base: Rect | null = null;
 	/** The board a move re-derives from, so a swap made mid-drag can be undone by dragging back. */
 	#origin: DragOrigin | null = null;
-	/** The most recent candidate whose content fitted; where a rejected resize is held. */
+	/** The most recent candidate whose content fitted. A rejected resize is held here, so the edge
+	    sticks the way a native min-size does and the gesture is never thrown away on release. */
 	#fitting: Rect | null = null;
 	/** Serial, so a superseded spill check cannot undo a newer candidate. */
 	#attempt = 0;

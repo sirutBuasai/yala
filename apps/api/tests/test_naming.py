@@ -31,10 +31,10 @@ class TestRender:
             ("ABBankChecking", "AB Bank Checking"),
             ("BrokerHSA", "Broker HSA"),
             ("RothIRA", "Roth IRA"),
-            # Interior particles lowercase; a case change alone would give "Bank Of A".
+            # Interior particles lowercase; splitting on case alone would capitalize them.
             ("BankOfA", "Bank of A"),
             ("BankOfACashRewards", "Bank of A Cash Rewards"),
-            # Letter->digit needs its own split: there is no case change in "r401k".
+            # Letter->digit needs its own split: there is no case change at that boundary.
             ("Employer401k", "Employer 401k"),
             ("BrokerEmployer401k", "Broker Employer 401k"),
             ("AfterTax401k", "After Tax 401k"),
@@ -86,7 +86,7 @@ class TestAccountName:
         }
         name = account_name("Liabilities:CC:BankOfABusinessPlatinum", meta)
 
-        # "BkA Business Platinum" is one over the cap, so the account half shortens too.
+        # Shortening the bank half alone still overruns the cap, so the account half shortens too.
         assert name == "BkA Biz Plat"
         assert len(name) <= NAME_CAP
 

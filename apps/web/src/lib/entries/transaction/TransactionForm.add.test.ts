@@ -170,7 +170,7 @@ describe('TransactionForm (add)', () => {
 		vi.stubGlobal('fetch', okFetch());
 		const { unmount } = render(TransactionForm, { props: { accounts, onsaved: vi.fn() } });
 
-		// pick a non-default category (default is the first, 'Grocery'), then submit
+		// pick a category other than the default (the first one offered), then submit
 		await fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'x' } });
 		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '5' } });
 		await fireEvent.click(screen.getByLabelText('Category')); // open the listbox

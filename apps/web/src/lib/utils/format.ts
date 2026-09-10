@@ -1,6 +1,7 @@
 // Small pure formatting helpers shared across components and charts.
 
 import { accountInfo } from '$lib/data/directory.svelte';
+import { monthOf } from '$lib/utils/period';
 
 export const MONTHS = [
 	'Jan',
@@ -86,7 +87,7 @@ export function monthLabel(key: string): string {
 
 /** Short month name for a "YYYY-MM" (or longer) key. */
 export function monthName(key: string): string {
-	return MONTHS[+key.slice(5, 7) - 1] ?? key;
+	return MONTHS[monthOf(key) - 1] ?? key;
 }
 
 /** An inclusive year range, or `empty` when there are no years. */

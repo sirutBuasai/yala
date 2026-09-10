@@ -10,7 +10,6 @@ export type Unit =
 	| { kind: 'money'; currency: string }
 	| { kind: 'percent' }
 	| { kind: 'count' }
-	/** A span of time — how long something lasts. */
 	| { kind: 'duration'; period: 'month' | 'year' };
 
 export const MONEY = (currency = 'USD'): Unit => ({ kind: 'money', currency });
@@ -153,7 +152,6 @@ export interface TableColumn {
 	unit?: Unit;
 }
 
-/** Tabular rows. */
 export interface Table {
 	kind: 'table';
 	columns: TableColumn[];
@@ -177,7 +175,6 @@ export interface BulletRow {
 	note?: string;
 }
 
-/** Several value-against-threshold rows. */
 export interface Bullet {
 	kind: 'bullet';
 	rows: BulletRow[];

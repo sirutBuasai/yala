@@ -42,7 +42,7 @@ describe('resolve', () => {
 	});
 
 	it('pushes a pane down by the overlap when the one above grows', () => {
-		// `a` was authored 4 tall and is now 6: `b` moves by 2, not to a compacted 6.
+		// The pane above outgrew what it was authored at: the one below moves by the overlap only.
 		const placed = resolve([p('a', 0, 0, 48, 6), p('b', 0, 4, 48, 4)]);
 		expect(at(placed, 'b')).toBe(6);
 		expect(placed.find((q) => q.id === 'b')!.offset).toBe(2);
@@ -71,8 +71,8 @@ describe('resolve', () => {
 	});
 
 	it('floors a rising pane on the neighbour that did NOT shrink', () => {
-		// `l` shrank from 6 to 3; `r` stayed 6. `below` may only rise to `r`'s bottom, or it would
-		// slide underneath it.
+		// One half of the row shrank and the other did not, so `below` may only rise to the taller
+		// one's bottom — any further and it slides underneath it.
 		const placed = resolve([p('l', 0, 0, 24, 3), p('r', 24, 0, 24, 6), p('below', 0, 4, 48, 4)]);
 		expect(at(placed, 'below')).toBe(6);
 	});
@@ -152,8 +152,8 @@ describe('authoredY — the drag round-trip', () => {
 	});
 
 	it('applies a downward drag once, not once per render', () => {
-		// `b` is authored at 4 and resting on `a`'s bottom at 6. Dragging it down four rows stores 8,
-		// and 8 is where it renders — the push is not added again on top of the drag.
+		// `b` is resting below where it was authored, pushed there by `a`. Dragging it down stores the
+		// travel and renders at the same place — the push is not added again on top of the drag.
 		const pushed = resolve([p('a', 0, 0, 48, 6), p('b', 0, 4, 48, 4)]);
 		const b = pushed.find((q) => q.id === 'b')!;
 		const stored = authoredY(b.y + 4, b.offset);
@@ -162,8 +162,8 @@ describe('authoredY — the drag round-trip', () => {
 	});
 
 	it('absorbs a downward drag that only takes up the slack it was already pushed by', () => {
-		// The accepted consequence of subtracting the offset: `b` is authored at 4 but resting at 6, so the
-		// first two rows of a downward drag close that gap in the STORED position without moving the pane.
+		// The accepted consequence of subtracting the offset: `b` is authored above where it rests, so a
+		// downward drag first closes that gap in the STORED position, without moving the pane.
 		const pushed = resolve([p('a', 0, 0, 48, 6), p('b', 0, 4, 48, 4)]);
 		const b = pushed.find((q) => q.id === 'b')!;
 		const stored = authoredY(b.y + 2, b.offset);

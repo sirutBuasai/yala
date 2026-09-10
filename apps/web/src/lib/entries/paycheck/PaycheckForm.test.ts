@@ -33,7 +33,7 @@ describe('PaycheckForm (add) — same-label rows sum', () => {
 
 		await fireEvent.input(screen.getByLabelText('Gross'), { target: { value: '1000' } });
 
-		// Deductions is the first "+ row"; each added row defaults to the sole option ("Tax").
+		// Deductions is the first "+ row"; each added row defaults to the only option on offer.
 		const addDeduction = screen.getAllByText('+ row')[0]!;
 		await fireEvent.click(addDeduction);
 		await fireEvent.click(addDeduction);

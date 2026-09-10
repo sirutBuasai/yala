@@ -257,6 +257,20 @@ class FileLedgerSink(LedgerSink):
 
     # --- spending ---
 
+    def _assert_spending_active(
+        self,
+        date: dt.date,
+        category: str,
+        funding_account: str,
+        credits: list[Credit] | None,
+    ) -> list[tuple[str, Decimal]]:
+        """Check every account a spending entry will touch, and hand back its credit legs."""
+        legs = [(a, Decimal(amt)) for a, amt in (credits or [])]
+        self._assert_accounts_active(
+            date, [f"{EXPENSES}{category}", funding_account, *(a for a, _ in legs)]
+        )
+        return legs
+
     def _spending_entry(
         self,
         *,
@@ -309,11 +323,7 @@ class FileLedgerSink(LedgerSink):
         pending: bool = False,
         credits: list[Credit] | None = None,
     ) -> str:
-        credit_legs = [(a, Decimal(amt)) for a, amt in (credits or [])]
-
-        self._assert_accounts_active(
-            date, [f"{EXPENSES}{category}", funding_account, *(a for a, _ in credit_legs)]
-        )
+        credit_legs = self._assert_spending_active(date, category, funding_account, credits)
 
         entry_id = str(uuid.uuid4())
         entry = self._spending_entry(
@@ -343,13 +353,11 @@ class FileLedgerSink(LedgerSink):
         credits: list[Credit] | None = None,
     ) -> str:
         entry, entry_id, carried, resolved_date = self._locate_for_update(locator, date)
-        credit_legs = [(a, Decimal(amt)) for a, amt in (credits or [])]
+        credit_legs = self._assert_spending_active(
+            resolved_date, category, funding_account, credits
+        )
 
         narration = entry.narration if entry.narration and entry.narration != payee else None
-
-        self._assert_accounts_active(
-            resolved_date, [f"{EXPENSES}{category}", funding_account, *(a for a, _ in credit_legs)]
-        )
         new_entry = self._spending_entry(
             date=resolved_date,
             flag="!" if pending else "*",

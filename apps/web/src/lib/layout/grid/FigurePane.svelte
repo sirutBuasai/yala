@@ -18,17 +18,10 @@
 
 	const primitive = $derived(build(data, spec.figure, spec.scope));
 
-	/** Everything the registry's `adapt` might want, and nothing the pane owns. */
-	const options = $derived({
-		chart: spec.chart,
-		area: spec.area,
-		color: spec.color,
-		colorBy: spec.colorBy,
-		total: spec.total,
-		log: spec.log,
-		endLabels: spec.endLabels,
-		dashed: spec.dashed,
-		normalize: spec.normalize
+	/** Everything the registry's `adapt` might want: whatever is left once the pane takes its own. */
+	const options = $derived.by(() => {
+		const { figure, scope, title, caption, ...rest } = spec;
+		return rest;
 	});
 </script>
 

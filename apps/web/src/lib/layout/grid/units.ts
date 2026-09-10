@@ -1,11 +1,5 @@
 // The board's ruler: every grid number derives from these, so the dot lattice, the snap distance
 // and the CSS tracks cannot drift apart.
-//
-// The GAP is deliberately NOT a grid gap. The CSS grid runs at zero gap and each pane insets itself
-// by half a gap instead, which keeps one unit at exactly `content / COLS` — a whole number of pixels,
-// so a track boundary lands on every multiple of the unit and the dot underlay can be one repeating
-// gradient. Put the gap on the grid and a track no longer divides evenly, and no repeating background
-// can follow it.
 
 /** Columns in the content width. Highly divisible, so halves, thirds and quarters are all whole
     column counts. */
@@ -17,6 +11,12 @@ export const UNIT = 28;
 
 export const CONTENT = COLS * UNIT;
 
+/**
+ * Deliberately NOT a grid gap. The CSS grid runs at zero gap and each pane insets itself by half of
+ * this instead, which keeps one unit at exactly `CONTENT / COLS` — a whole number of pixels, so a track
+ * boundary lands on every multiple of the unit and the dot underlay can be one repeating gradient. Put
+ * the gap on the grid and a track no longer divides evenly, and no repeating background can follow it.
+ */
 export const GAP = 14;
 
 export const INSET = GAP / 2;

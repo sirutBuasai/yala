@@ -12,9 +12,8 @@
 
 <script lang="ts">
 	// One pane on the board: the grid item, the arrange affordances, and the two measurements the pure
-	// layer can't make for itself. It COMPOSES `Card` rather than being one, so the card stays
-	// grid-agnostic and the folded layout reuses it untouched. The gesture itself lives in
-	// `PaneGesture`, which is handed the two things only a component can supply.
+	// layer cannot make for itself. It COMPOSES `Card` rather than being one, so the card stays
+	// grid-agnostic and the folded layout reuses it untouched.
 	import { tick, type Snippet } from 'svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import Grip from '$lib/icons/Grip.svelte';
@@ -187,8 +186,7 @@
 </div>
 
 <style>
-	/* Each pane insets itself by half a gap — the grid itself has none, which is what keeps one unit at
-	   a whole number of pixels. */
+	/* Each pane insets itself by half a gap; the grid itself has none (see `units.ts`). */
 	.cell {
 		--pane-inset: calc(var(--gap-grid) / 2);
 		position: relative;

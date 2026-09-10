@@ -38,7 +38,7 @@ function drag(authored: AuthoredPane[], id: string, x: number, y: number) {
 }
 
 describe('pushing the stack up', () => {
-	// Three rows of slack over `a`, and `b` resting on it.
+	// Slack over `a`, and `b` resting on it.
 	const stack = () => [p('a', 0, 3, 48, 6), p('b', 0, 9, 48, 6)];
 
 	it('takes the pane above up into the space over it', () => {
@@ -52,12 +52,12 @@ describe('pushing the stack up', () => {
 	});
 
 	it('stops when the stack is against the top of the board', () => {
-		// Six rows of travel onto three rows of slack: the rest is refused, not borrowed from `a`'s spot.
+		// More travel than there is slack: the remainder is refused, not borrowed from `a`'s own spot.
 		expect(drag(stack(), 'b', 0, 3).placed).toMatchObject({ a: 0, b: 6 });
 	});
 
 	it('closes the slack directly above it before it pushes anything', () => {
-		// Two rows of its own to rise through, so `a` does not move until they are gone.
+		// `b` has slack of its own to rise through, so `a` does not move until that is gone.
 		const board = [p('a', 0, 3, 48, 6), p('b', 0, 11, 48, 6)];
 		expect(drag(board, 'b', 0, 10).placed).toMatchObject({ a: 3, b: 10 });
 		expect(drag(board, 'b', 0, 8).placed).toMatchObject({ a: 2, b: 8 });
@@ -69,14 +69,14 @@ describe('pushing the stack up', () => {
 	});
 
 	it('refuses a group with any one pane against the top, rather than leaving it behind', () => {
-		// `l` reaches the top, so the group is full even though `r` has two rows over it. Raising `r`
+		// `l` reaches the top, so the group is full even though `r` still has slack over it. Raising `r`
 		// alone would slide `wide` under `l`.
 		const board = [p('l', 0, 0, 24, 8), p('r', 24, 2, 24, 6), p('wide', 0, 8, 48, 6)];
 		expect(drag(board, 'wide', 0, 7).placed).toMatchObject({ l: 0, r: 2, wide: 8 });
 	});
 
 	it('pushes whatever is above the columns the pointer has taken it to', () => {
-		// Dragged up and to the right at once: three rows of slack in the left column, none in the right.
+		// Dragged up and to the right at once: there is slack in the left column, none in the right.
 		const board = [p('l', 0, 3, 24, 6), p('r', 24, 0, 24, 12), p('pane', 0, 12, 24, 6)];
 		const { authored } = drag(board, 'pane', 24, 9);
 		expect(authored.pane).toBe(12);
@@ -101,9 +101,9 @@ describe('pushing the stack up', () => {
 	});
 
 	it('follows a pane that came up as a PUSH, not as a move of its own', () => {
-		// `b` is authored at 15 and pushed to 21 by `a`. When `a` rises, `b` comes back to 15 without its
-		// authored top changing at all — so `c` has to follow the six rows `b` actually moved on screen,
-		// or it is left sitting over a hole where the push used to be.
+		// `b` is authored above where it rests, pushed down by `a`. When `a` rises, `b` comes back up
+		// without its authored top changing at all — so `c` has to follow the rows `b` actually moved on
+		// screen, or it is left sitting over a hole where the push used to be.
 		const board = [p('a', 0, 12, 48, 9), p('b', 0, 15, 28, 14), p('c', 0, 39, 24, 10)];
 		const { authored, placed } = drag(board, 'a', 0, 6);
 
@@ -144,8 +144,8 @@ describe('pushing the panes below down', () => {
 	});
 
 	it('leaves a pushed pane the displacement it was carrying', () => {
-		// `b` is authored at 6 and resting at 12. Pushed down three rows it must store 9, not 15: storing
-		// where it came to rest would write in a push it never asked for.
+		// `b` is authored above where it rests. Pushed down, it must store its own top plus the travel,
+		// not where it came to rest — that would write in a push it never asked for.
 		const board = [p('a', 0, 2, 48, 10), p('b', 0, 6, 48, 4)];
 		const { authored, placed } = drag(board, 'a', 0, 5);
 
@@ -195,7 +195,7 @@ describe('changing places', () => {
 		const board = [p('a', 0, 0, 48, 10), p('b', 0, 10, 48, 10), p('c', 0, 20, 48, 6)];
 		const { authored, placed } = drag(board, 'b', 0, 0);
 
-		// `b` rose ten rows, so `c` follows by ten — and lands back where it was, since `a` now fills
+		// `c` follows `b` up by however far it rose, and lands back where it was, since `a` now fills
 		// the rows `b` left.
 		expect(authored).toMatchObject({ b: 0, c: 10 });
 		expect(placed).toMatchObject({ b: 0, a: 10, c: 20 });

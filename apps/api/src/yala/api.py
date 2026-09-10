@@ -107,32 +107,28 @@ MAX_DATE = dt.date(2100, 12, 31)
 # --- request field types ---
 
 
-def _clean_text(value: str) -> str:
-    """Normalize a free-text field (payee/note) to a single trimmed line, rejecting an all-blank
-    value. The ledger is line-based, so a control char in a payee would corrupt a file or smuggle
-    content into the stored string."""
+def _normalize(value: str) -> str:
+    """Collapse a free-text field to a single trimmed line. The ledger is line-based, so a control
+    char in a payee would corrupt a file or smuggle content into the stored string."""
     text = " ".join(_CTRL_RE.sub(" ", value).split())
-    if not text:
-        raise ValueError("must not be blank")
     if len(text) > MAX_TEXT:
         raise ValueError(f"must be at most {MAX_TEXT} characters")
+    return text
+
+
+def _clean_text(value: str) -> str:
+    text = _normalize(value)
+    if not text:
+        raise ValueError("must not be blank")
     return text
 
 
 def _clean_optional_text(value: object) -> str | None:
-    """Same normalization as :func:`_clean_text`, but blank means "not given" — a form binds an
-    empty string to an untouched input, and leaving an optional box alone must not fail the
-    request."""
+    """Blank means "not given": a form binds an empty string to an untouched input, and leaving an
+    optional box alone must not fail the request."""
     if value is None:
         return None
-
-    text = " ".join(_CTRL_RE.sub(" ", str(value)).split())
-    if not text:
-        return None
-    if len(text) > MAX_TEXT:
-        raise ValueError(f"must be at most {MAX_TEXT} characters")
-
-    return text
+    return _normalize(str(value)) or None
 
 
 # A transaction/transfer amount must be positive; a credit or payroll line item may be zero
@@ -464,27 +460,22 @@ def _resolve_paycheck(
             status_code=422, detail=f"unknown or inactive employer: {body.employer!r}"
         )
 
-    income_account = f"{payroll.SALARY}{body.employer}"
-    deduction_legs: list[tuple[str, Decimal]] = []
-    contribution_legs: list[tuple[str, str | None, Decimal]] = []
+    def legs(kind: str, items: dict[str, float]) -> list[tuple[payroll.PayrollOption, Decimal]]:
+        out = []
+        for label, amount in items.items():
+            option = payroll.resolve(ledger, kind, label, body.employer)
+            if option is None:
+                raise HTTPException(
+                    status_code=422, detail=f"no {kind} {label!r} for {body.employer}"
+                )
+            out.append((option, _dec(amount)))
+        return out
 
-    for label, amount in body.deductions.items():
-        option = payroll.resolve(ledger, "deduction", label, body.employer)
-        if option is None:
-            raise HTTPException(
-                status_code=422, detail=f"no deduction {label!r} for {body.employer}"
-            )
-        deduction_legs.append((option.account, _dec(amount)))
-
-    for label, amount in body.contributions.items():
-        option = payroll.resolve(ledger, "contribution", label, body.employer)
-        if option is None:
-            raise HTTPException(
-                status_code=422, detail=f"no contribution {label!r} for {body.employer}"
-            )
-        contribution_legs.append((option.account, option.label, _dec(amount)))
-
-    return income_account, deduction_legs, contribution_legs
+    return (
+        f"{payroll.SALARY}{body.employer}",
+        [(o.account, amount) for o, amount in legs("deduction", body.deductions)],
+        [(o.account, o.label, amount) for o, amount in legs("contribution", body.contributions)],
+    )
 
 
 @app.get("/api/paycheck")

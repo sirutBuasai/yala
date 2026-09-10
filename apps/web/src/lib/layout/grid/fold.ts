@@ -1,7 +1,6 @@
 // Folding: what the board becomes when the content column no longer fits. Coordinates are dropped
-// rather than rescaled, and what survives is the arrangement's row-major reading order — expressed
-// as a CSS `order` per pane, so the DOM keeps the views' declaration order, which is also its tab
-// order at full width.
+// rather than rescaled, and the arrangement's reading order survives as a CSS `order` per pane — so the
+// DOM keeps the view's declaration order, which is also its tab order at full width.
 
 import { COLS } from './units';
 import type { PlacedPane } from './types';

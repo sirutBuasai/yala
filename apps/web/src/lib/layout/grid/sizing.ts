@@ -1,6 +1,6 @@
-// How many rows a pane reserves — the one place the pane sizings differ. A chart's height is
-// whatever it was given and the chart scales to fill it; a list's three sizings differ only in who
-// owns the height and whether that ownership has a ceiling.
+// How many rows a pane reserves — the one place the sizings differ. A chart takes the height it was
+// given and scales to fill it; a list's three modes differ only in who owns the height and whether
+// that ownership has a ceiling.
 
 import { rowsForPx } from './units';
 import type { AuthoredPane, HeightMode, PaneContent, PaneSpec, SizedPane } from './types';
@@ -42,7 +42,7 @@ export function reservedRows(
 	return arranging ? authored.cap : Math.min(rows, authored.cap);
 }
 
-/** Resolve a whole board's authored panes into the rectangles the collision pass reads. */
+/** A whole board's authored panes as the rectangles the collision pass reads. */
 export function sizePanes(
 	authored: AuthoredPane[],
 	specs: Record<string, PaneSpec>,
