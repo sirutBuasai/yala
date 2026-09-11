@@ -173,7 +173,7 @@
 	{#if !rows.length}
 		<p class="cap">No loggable accounts yet. Open one under Manage.</p>
 	{:else}
-		<dl class="agg">
+		<dl class="agg bleed-x">
 			<div>
 				<dt>Assets</dt>
 				<dd>{money(assets)}</dd>
@@ -182,7 +182,7 @@
 				<dt>Liabilities</dt>
 				<dd>−{money(liabilities)}</dd>
 			</div>
-			<div>
+			<div class="sum">
 				<dt>Net worth</dt>
 				<dd>{money(assets - liabilities)}</dd>
 			</div>
@@ -399,21 +399,27 @@
 		flex-direction: column;
 		gap: var(--gap-row);
 	}
-	/* Bug: `1fr` can't go below its content's min-width, so the figures overflowed the card when
-	   narrow; auto-fit reflows them onto more rows instead. */
+	/* The sheet's own header, not a box above it: the figures sit on one bled row that ends on the
+	   same hairline the group rows use, so the tally joins the table's rhythm instead of starting a
+	   second one. Boxed cells read as a spreadsheet header, which is the one thing this pane must not
+	   look like. Flex, not a track grid — a `1fr` track can't go below its content's min-width, so the
+	   figures overflowed the card when narrow, and wrapping reflows them instead.
+	   `margin-block`, not the `margin` shorthand: the inline halves belong to `.bleed-x`, and the
+	   shorthand outranks it from inside a component and would undo the bleed. */
 	.agg {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
-		gap: 1px;
-		background: var(--border);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-md);
-		overflow: hidden;
-		margin: var(--space-6) 0 var(--gap-field);
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--gap-field) var(--space-11);
+		margin-block: 0 var(--space-8);
+		padding: var(--space-4) var(--pad-card-x) var(--gap-row);
+		border-bottom: 1px solid var(--border);
 	}
+	/* Label beside figure rather than above it — stacked, the row costs two lines and stops being a
+	   header. */
 	.agg > div {
-		background: var(--surface-2);
-		padding: var(--space-5) var(--space-7);
+		display: flex;
+		align-items: baseline;
+		gap: var(--gap-row);
 	}
 	.agg dt {
 		font-size: var(--text-label);
@@ -423,11 +429,26 @@
 		font-weight: var(--fw-semibold);
 	}
 	.agg dd {
-		margin: var(--space-1) 0 0;
+		margin: 0;
 		font-family: var(--font-display);
 		font-size: var(--text-amount);
 		font-weight: var(--fw-semibold);
 		font-variant-numeric: tabular-nums;
+		letter-spacing: var(--ls-tighter);
+		/* `normal`, not a ratio: a tighter line box leaves the glyphs overflowing it, which the pane's
+		   resize probe reads as content that no longer fits. */
+		line-height: normal;
+		color: var(--ink-2);
+	}
+	/* The figure the other two exist to produce: pushed to the far edge and the only one at full
+	   weight. `margin-inline-start: auto` rather than `space-between`, which floated Liabilities out
+	   into the empty middle of the account column. */
+	.agg .sum {
+		margin-inline-start: auto;
+	}
+	.agg .sum dd {
+		font-size: var(--text-figure);
+		color: var(--ink);
 	}
 	.actions {
 		display: flex;
