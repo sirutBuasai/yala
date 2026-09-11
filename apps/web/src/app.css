@@ -661,6 +661,16 @@ input[type='checkbox']:checked {
 	color: var(--ink);
 	border-color: var(--lav);
 }
+/* One slot of a period stepper (the month or the year picker between the prev/next arrows).
+   Widths are fixed, not content-derived, so stepping the value can't shift the arrows. Shared by
+   MonthNav and YearNav so a month+year pair and a lone year keep one rhythm. */
+.periodsel {
+	width: 75px;
+	flex: none;
+}
+.periodsel.year {
+	width: 110px;
+}
 /* rounded pill toggle (theme / edit-mode switches in the header) */
 .pill {
 	border: 1px solid var(--border);

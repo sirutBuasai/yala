@@ -18,7 +18,7 @@
 	onprev={() => onchange(value - 1)}
 	onnext={() => onchange(value + 1)}
 >
-	<div class="yearsel">
+	<div class="periodsel year">
 		<Select
 			ariaLabel="Year"
 			value={String(value)}
@@ -27,9 +27,3 @@
 		/>
 	</div>
 </RangeNav>
-
-<style>
-	.yearsel {
-		width: 110px;
-	}
-</style>

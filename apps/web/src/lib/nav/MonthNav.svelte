@@ -27,10 +27,10 @@
 	onnext={() => onchange(addMonths(value, 1))}
 >
 	<div class="selectors">
-		<div class="monthsel">
+		<div class="periodsel">
 			<Select ariaLabel="Month" {value} options={monthsInYear} optionLabel={monthName} {onchange} />
 		</div>
-		<div class="yearsel">
+		<div class="periodsel year">
 			<Select
 				ariaLabel="Year"
 				value={selYear}
@@ -42,23 +42,12 @@
 </RangeNav>
 
 <style>
-	/* Bug: fixed widths overflowed a narrow screen once the arrows and gaps were counted, so the two
-	   pickers share whatever width the header has left, between a floor and a ceiling. */
+	/* Bug: wide fixed slots overflowed a narrow screen once the arrows and gaps were counted, so the
+	   pair wraps onto a second line rather than pushing the header past the page. */
 	.selectors {
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--gap-row);
 		min-width: 0;
-	}
-	.monthsel,
-	.yearsel {
-		flex: 1 1 auto;
-		min-width: 0;
-	}
-	.monthsel {
-		max-width: 6.5rem;
-	}
-	.yearsel {
-		max-width: 7rem;
 	}
 </style>
