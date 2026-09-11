@@ -128,27 +128,6 @@ describe('TransactionForm (add)', () => {
 		expect(sent.credits).toEqual([{ account: 'Assets:Cash:Wallet', amount: 20 }]);
 	});
 
-	it('add-new category posts /api/account with kind "category"', async () => {
-		const fetchSpy = vi.fn().mockResolvedValue({
-			ok: true,
-			status: 200,
-			json: async () => ({ ok: true, account: 'Expenses:Gifts' })
-		});
-		vi.stubGlobal('fetch', fetchSpy);
-		render(TransactionForm, { props: { accounts, onsaved: vi.fn() } });
-
-		// The Category field's "＋ new" reveals an inline input.
-		await fireEvent.click(screen.getByTitle('Add a new category'));
-		await fireEvent.input(screen.getByLabelText('new category name'), {
-			target: { value: 'Gifts' }
-		});
-		await fireEvent.click(screen.getByText('Add'));
-
-		const accountCall = fetchSpy.mock.calls.find((c) => c[0] === '/api/account');
-		expect(accountCall).toBeTruthy();
-		expect(JSON.parse(accountCall![1].body)).toEqual({ kind: 'category', leaf: 'Gifts' });
-	});
-
 	it('remembers the chosen funding account for the next add this session', async () => {
 		vi.stubGlobal('fetch', okFetch());
 		const { unmount } = render(TransactionForm, { props: { accounts, onsaved: vi.fn() } });

@@ -4,20 +4,15 @@
 	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data/load';
 	import { deleteTransaction, getJson, postJson } from '$lib/data/load';
-	import { accountLeaf, formatAccount, money } from '$lib/utils/format';
+	import { formatAccount, money } from '$lib/utils/format';
 	import { lastCategory, lastEntryDate, lastFundingAccount, seed } from '$lib/utils/editPrefs';
-	import AccountField from '$lib/forms/fields/AccountField.svelte';
 	import { problems, TEXT_MAX, validateRows } from '$lib/forms/validate';
 	import Credits, { type Credit } from '$lib/entries/transaction/Credits.svelte';
 	import DatePicker from '$lib/forms/fields/DatePicker.svelte';
 	import EntryFooter from '$lib/entries/EntryFooter.svelte';
 	import FormSection from '$lib/forms/fields/FormSection.svelte';
+	import Select from '$lib/forms/fields/Select.svelte';
 	import AmountInput from '$lib/ui/AmountInput.svelte';
-
-	const FUNDING_KINDS = [
-		{ value: 'funding_credit', label: 'Credit card' },
-		{ value: 'funding_cash', label: 'Cash / bank' }
-	] as const;
 
 	interface Props {
 		accounts: AccountsInfo;
@@ -160,22 +155,25 @@
 
 <FormSection label="Categorize">
 	<div class="field-grid">
-		<AccountField
-			id="tx-cat"
-			label="Category"
-			bind:value={category}
-			options={accounts.spending_categories}
-			kinds={[{ value: 'category', label: 'Category' }]}
-			deriveValue={accountLeaf}
-		/>
-		<AccountField
-			id="tx-fund"
-			label="Account"
-			bind:value={funding_account}
-			options={accounts.funding_accounts}
-			optionLabel={formatAccount}
-			kinds={[...FUNDING_KINDS]}
-		/>
+		<div class="field">
+			<label for="tx-cat">Category</label>
+			<Select
+				id="tx-cat"
+				ariaLabel="Category"
+				bind:value={category}
+				options={accounts.spending_categories}
+			/>
+		</div>
+		<div class="field">
+			<label for="tx-fund">Account</label>
+			<Select
+				id="tx-fund"
+				ariaLabel="Account"
+				bind:value={funding_account}
+				options={accounts.funding_accounts}
+				optionLabel={formatAccount}
+			/>
+		</div>
 		<label class="chk"><input type="checkbox" bind:checked={pending} /> Pending</label>
 	</div>
 </FormSection>

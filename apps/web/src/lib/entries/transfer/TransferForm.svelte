@@ -6,11 +6,11 @@
 	import { deleteTransaction, getJson, postJson } from '$lib/data/load';
 	import { formatAccount, money } from '$lib/utils/format';
 	import { lastEntryDate, lastTransferFrom, lastTransferTo, seed } from '$lib/utils/editPrefs';
-	import AccountField from '$lib/forms/fields/AccountField.svelte';
 	import { problems, TEXT_MAX } from '$lib/forms/validate';
 	import DatePicker from '$lib/forms/fields/DatePicker.svelte';
 	import EntryFooter from '$lib/entries/EntryFooter.svelte';
 	import FormSection from '$lib/forms/fields/FormSection.svelte';
+	import Select from '$lib/forms/fields/Select.svelte';
 	import AmountInput from '$lib/ui/AmountInput.svelte';
 
 	interface Props {
@@ -128,25 +128,26 @@
 
 <FormSection label="Accounts">
 	<div class="field-grid">
-		<AccountField
-			id="tf-from"
-			label="Pay from"
-			bind:value={from_account}
-			options={accounts.cash_accounts}
-			optionLabel={formatAccount}
-			kinds={[{ value: 'funding_cash', label: 'Cash / bank' }]}
-		/>
-		<AccountField
-			id="tf-to"
-			label="Pay toward"
-			bind:value={to_account}
-			options={toAccounts}
-			optionLabel={formatAccount}
-			kinds={[
-				{ value: 'funding_cash', label: 'Cash / bank' },
-				{ value: 'funding_credit', label: 'Credit card' }
-			]}
-		/>
+		<div class="field">
+			<label for="tf-from">Pay from</label>
+			<Select
+				id="tf-from"
+				ariaLabel="Pay from"
+				bind:value={from_account}
+				options={accounts.cash_accounts}
+				optionLabel={formatAccount}
+			/>
+		</div>
+		<div class="field">
+			<label for="tf-to">Pay toward</label>
+			<Select
+				id="tf-to"
+				ariaLabel="Pay toward"
+				bind:value={to_account}
+				options={toAccounts}
+				optionLabel={formatAccount}
+			/>
+		</div>
 	</div>
 </FormSection>
 
