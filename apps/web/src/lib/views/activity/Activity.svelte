@@ -71,10 +71,6 @@
 	{:else}
 		<span class="cap">Lifetime · {span}</span>
 	{/if}
-	{#if range.value !== 'month'}
-		<!-- Says why there's no add button here, so its absence reads as intent, not omission. -->
-		<span class="cap quiet push-end">read-only — entries are logged by day and month</span>
-	{/if}
 </ViewHeader>
 
 {#if range.value === 'month'}

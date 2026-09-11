@@ -37,10 +37,7 @@
 
 {#if env.arranging}
 	<!-- Beside the board rather than in the page header, because it acts on THIS board. -->
-	<div class="hint">
-		<span
-			>Drag a pane to move it, its edges to resize. A list's buttons set who owns its height.</span
-		>
+	<div class="actions">
 		<button type="button" class="btn-mini" onclick={reset}>Reset this board</button>
 	</div>
 {/if}
@@ -56,16 +53,11 @@
 </div>
 
 <style>
-	.hint {
+	.actions {
 		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: var(--gap-field);
-		flex-wrap: wrap;
+		justify-content: flex-end;
 		margin-bottom: var(--gap-row);
 		padding: var(--space-3) calc(var(--gap-grid) / 2);
-		color: var(--ink-3);
-		font-size: var(--text-secondary);
 	}
 	.board {
 		display: grid;

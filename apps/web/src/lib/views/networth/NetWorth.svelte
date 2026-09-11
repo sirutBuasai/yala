@@ -59,11 +59,6 @@
 	{/if}
 	{#if range.value === 'year'}
 		<button class="btn-accent pill" onclick={() => modals.add('balance')}>+ Log balance</button>
-	{:else if hasData}
-		<!-- Says why there's no add button here, so its absence reads as intent, not omission. -->
-		<span class="cap quiet push-end"
-			>read-only — a balance belongs to the month it was taken in</span
-		>
 	{/if}
 </ViewHeader>
 

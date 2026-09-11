@@ -377,18 +377,11 @@ a {
 	border-color: color-mix(in srgb, var(--gold) 32%, var(--border));
 }
 /* The app's single caption voice: supporting text that explains rather than states. One class and
-   one token, so callers can't drift between near-identical size tokens. `.quiet` is the italic
-   variant for absence-explaining notes. */
+   one token, so callers can't drift between near-identical size tokens. */
 .cap {
 	color: var(--ink-3);
 	font-size: var(--text-secondary);
 	margin: 0;
-}
-.cap.quiet {
-	font-style: italic;
-}
-.push-end {
-	margin-inline-start: auto;
 }
 
 /* Text for screen readers only. Bug: with no positioned ancestor this box lays out against the
