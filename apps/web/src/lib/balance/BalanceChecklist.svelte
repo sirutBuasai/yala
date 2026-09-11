@@ -116,8 +116,8 @@
 		const gap = check(row) ?? 0;
 
 		return whyBlocked(row) === 'negative'
-			? "can't hold a negative balance — enter what it is worth, not what it moved."
-			: `is off by ${moneyExact(Math.abs(gap))} — log the missing ${missingEntryKind(gap)} first.`;
+			? "can't hold a negative balance — please enter a valid balance."
+			: `is off by ${moneyExact(Math.abs(gap))} — please log the missing ${missingEntryKind(gap)} first.`;
 	}
 
 	const filled = $derived(rows.filter((r) => parsed(r) != null));
