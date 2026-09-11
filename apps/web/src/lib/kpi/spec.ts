@@ -3,6 +3,7 @@
 
 import type { Rect } from '$lib/layout/grid/types';
 import type { Scope } from '$lib/data/scope';
+import type { MergeAxis } from './merge';
 
 /** The marks a KPI may carry. A ring sits inline before the number; the rest sit behind it. */
 export type KpiChart = 'bar' | 'line' | 'area' | 'ring';
@@ -32,3 +33,10 @@ export interface KpiDef {
 
 /** A board's KPIs in declaration order — also the order merging offers them in. */
 export type KpiBoardDefs = Record<string, KpiDef>;
+
+/** Cards a board opens merged into one, in section order. Section spans come from the rects above, so
+    the declared rectangles stay the single statement of size. */
+export interface KpiMerge {
+	ids: string[];
+	axis: MergeAxis;
+}

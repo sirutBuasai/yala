@@ -23,6 +23,9 @@ import { yearOf } from '$lib/utils/period';
 /** Allocation buckets in display order (mirrors the backend `BUCKETS`). */
 const BUCKETS = ['Liquid', 'Taxable', 'Tax-advantaged'];
 
+/** Years a KPI's yearly underlay looks back over. */
+const WINDOW_YEARS = 10;
+
 function snapshots(data: DashboardData): NetWorthSnapshot[] {
 	return data.networth?.series ?? [];
 }
@@ -120,6 +123,25 @@ export function netWorthVsAssets(data: DashboardData): MultiSeries {
 			)
 		]
 	};
+}
+
+/**
+ * A snapshot field at the close of each logged year, most recent `WINDOW_YEARS` only. A KPI's underlay is
+ * read as a shape rather than a scale, and past a decade of bars the recent years are too thin to tell
+ * apart; a shorter history plots whatever it has.
+ */
+export function netWorthByYear(
+	data: DashboardData,
+	field: 'net_worth' | 'assets' | 'liabilities',
+	name: string
+): Series {
+	const years = snapshotYears(data).slice(-WINDOW_YEARS);
+	return series(
+		name,
+		years.map(String),
+		years.map((year) => bounds(data, { level: 'year', year }).close?.[field] ?? null),
+		MONEY(data.currency)
+	);
 }
 
 /** Liabilities over time on their own — illegible as a third line against a net-worth axis. */

@@ -36,6 +36,7 @@ import {
 	netWorthScalar,
 	netWorthThresholds,
 	netWorthVsAssets,
+	netWorthByYear,
 	netWorthYearTable,
 	savedVsOther,
 	topAccountShare,
@@ -242,6 +243,29 @@ const CHART_DEFS: DataDef[] = [
 		kind: 'table',
 		scopes: ['all'],
 		build: (data) => netWorthYearTable(data)
+	},
+	// Year-end levels, for the underlay behind the position KPIs. One per field rather than one
+	// parameterized entry, because a KPI names its series by id.
+	{
+		id: 'networth.by_year',
+		label: 'Net worth',
+		kind: 'series',
+		scopes: ['all'],
+		build: (data) => netWorthByYear(data, 'net_worth', 'Net worth')
+	},
+	{
+		id: 'networth.assets_by_year',
+		label: 'Assets',
+		kind: 'series',
+		scopes: ['all'],
+		build: (data) => netWorthByYear(data, 'assets', 'Assets')
+	},
+	{
+		id: 'networth.liabilities_by_year',
+		label: 'Liabilities',
+		kind: 'series',
+		scopes: ['all'],
+		build: (data) => netWorthByYear(data, 'liabilities', 'Liabilities')
 	}
 ];
 

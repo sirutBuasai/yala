@@ -22,12 +22,12 @@
 	const PANES = $derived({
 		// A block of figures, not a list: it scales like the KPI cards above it rather than owning its
 		// own height, so it can be given room or taken down to where its rows would clip.
-		cashflow: { x: 0, y: 0, w: 48, h: 10, content: 'scale' },
+		cashflow: { x: 0, y: 0, w: 48, h: 9, content: 'scale' },
 		// The full-width charts here are taller than the tops below them leave room for. The push rule
 		// closes each overlap downwards, so the heights are authored and the tops are only floors.
 		flow: {
 			x: 0,
-			y: 10,
+			y: 9,
 			w: 48,
 			h: 25,
 			content: 'scale',
@@ -42,9 +42,9 @@
 		// Levels beside rate: how big, versus how efficient, which the bars alone can't say.
 		levels: {
 			x: 0,
-			y: 29,
+			y: 34,
 			w: 24,
-			h: 15,
+			h: 13,
 			content: 'scale',
 			figure: {
 				figure: 'overview.income_spent_saved',
@@ -56,9 +56,9 @@
 		},
 		rate: {
 			x: 24,
-			y: 29,
+			y: 34,
 			w: 24,
-			h: 15,
+			h: 13,
 			content: 'scale',
 			figure: {
 				figure: 'overview.savings_rate',
@@ -72,7 +72,7 @@
 		// labels replace a legend with one swatch per category.
 		categories: {
 			x: 0,
-			y: 44,
+			y: 47,
 			w: 48,
 			h: 25,
 			content: 'scale',

@@ -3,14 +3,14 @@
 
 import { getContext, setContext } from 'svelte';
 import { KpiBoard } from './board.svelte';
-import type { KpiBoardDefs } from './spec';
+import type { KpiBoardDefs, KpiMerge } from './spec';
 
 const KEY = Symbol('kpi-board');
 
 /** A view's own KPI board, in context. One call, so a board can never be built without being set —
     every KPI card on it would then throw for a context that isn't there. */
-export function useKpiBoard(key: string, defs: () => KpiBoardDefs): KpiBoard {
-	const board = new KpiBoard(key, defs);
+export function useKpiBoard(key: string, defs: () => KpiBoardDefs, merged?: KpiMerge[]): KpiBoard {
+	const board = new KpiBoard(key, defs, merged);
 	setContext(KEY, board);
 	return board;
 }

@@ -10,12 +10,13 @@ import {
 	dividerFractions,
 	groupsFor,
 	mergeGroups,
+	spanOf,
 	splitGroup,
 	splitRects,
 	type KpiGroup,
 	type MergeAxis
 } from './merge';
-import type { KpiBoardDefs, KpiSpec } from './spec';
+import type { KpiBoardDefs, KpiMerge, KpiSpec } from './spec';
 
 const axisOf = oneOf<MergeAxis>(['row', 'column']);
 
@@ -42,10 +43,24 @@ export class KpiBoard {
 	/** A getter: a KPI's scope follows the period the view is showing, so the defs are live. */
 	readonly #defs: () => KpiBoardDefs;
 	readonly #pref: Pref<KpiGroup[]>;
+	/** The grouping the board opens with, and the one `reset` goes back to. Section spans come from the
+	    declared rects, so those stay the only statement of size. */
+	readonly #opening: KpiGroup[];
 
-	constructor(key: string, defs: () => KpiBoardDefs) {
+	/**
+	 * `merged` is where the board STARTS, not what it must be: as the pref's fallback it applies where
+	 * nothing is stored, and a stored value — empty included, which is a board taken apart on purpose —
+	 * wins over it.
+	 */
+	constructor(key: string, defs: () => KpiBoardDefs, merged: KpiMerge[] = []) {
 		this.#defs = defs;
-		this.#pref = new Pref<KpiGroup[]>(`kpi-${key}`, [], storedGroups());
+		const rects = defs();
+		this.#opening = merged.map(({ ids, axis }) => ({
+			ids,
+			axis,
+			weights: ids.map((id) => spanOf(rects[id]!.rect, axis))
+		}));
+		this.#pref = new Pref<KpiGroup[]>(`kpi-${key}`, this.#opening, storedGroups());
 	}
 
 	// `$derived.by` throughout: a field initialiser runs before the constructor body, so reading a
@@ -123,7 +138,9 @@ export class KpiBoard {
 		return { ids: [leader, group.ids[index]!], rects };
 	}
 
+	/** Back to the grouping the view declared, not to no grouping at all: reset means the board as shipped,
+	    which for every board that opens merged is a merge. */
 	reset(): void {
-		this.#pref.value = [];
+		this.#pref.value = this.#opening;
 	}
 }

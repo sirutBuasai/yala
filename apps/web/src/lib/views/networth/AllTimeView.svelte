@@ -16,34 +16,55 @@
 
 	const all: Scope = { level: 'all' };
 
-	// The position, what it is made of, and how long it would last. All four read today's live totals,
-	// so they cannot disagree about which snapshot they are describing. No charts: the trend below is
-	// the same figures over time, and repeating it small would say nothing new.
+	// The position, what it is made of, and how long it would last. All four read today's live totals, so
+	// they cannot disagree about which snapshot they are describing. The three levels carry a bar per
+	// logged year behind them; freedom is a duration, which has no yearly level to plot.
 	const KPIS: KpiBoardDefs = {
 		networth: {
-			rect: { x: 0, y: 0, w: 12, h: 7 },
-			spec: { figure: 'networth.current', scope: all }
+			rect: { x: 0, y: 0, w: 10, h: 6 },
+			spec: {
+				figure: 'networth.current',
+				scope: all,
+				chart: 'bar',
+				series: 'networth.by_year'
+			}
 		},
-		assets: { rect: { x: 12, y: 0, w: 12, h: 7 }, spec: { figure: 'networth.assets', scope: all } },
+		assets: {
+			rect: { x: 0, y: 6, w: 10, h: 6 },
+			spec: {
+				figure: 'networth.assets',
+				scope: all,
+				chart: 'bar',
+				series: 'networth.assets_by_year'
+			}
+		},
 		liabilities: {
-			rect: { x: 24, y: 0, w: 12, h: 7 },
-			spec: { figure: 'networth.liabilities', scope: all }
+			rect: { x: 0, y: 12, w: 10, h: 6 },
+			spec: {
+				figure: 'networth.liabilities',
+				scope: all,
+				chart: 'bar',
+				series: 'networth.liabilities_by_year'
+			}
 		},
 		freedom: {
-			rect: { x: 36, y: 0, w: 12, h: 7 },
+			rect: { x: 0, y: 18, w: 10, h: 5 },
 			spec: { figure: 'networth.years_of_freedom', scope: all }
 		}
 	};
 
-	const kpis = useKpiBoard('networth:all', () => KPIS);
+	// One column down the side: the position, its parts, then how long it lasts, read top to bottom.
+	const kpis = useKpiBoard('networth:all', () => KPIS, [
+		{ ids: ['networth', 'assets', 'liabilities', 'freedom'], axis: 'column' }
+	]);
 
 	const PANES = $derived(
 		kpis.board({
 			// Assets dashed so net worth stays the primary reading.
 			trend: {
-				x: 0,
-				y: 7,
-				w: 32,
+				x: 10,
+				y: 0,
+				w: 38,
 				h: 15,
 				content: 'scale',
 				figure: {
@@ -58,9 +79,9 @@
 			},
 			thresholds: {
 				x: 32,
-				y: 7,
+				y: 23,
 				w: 16,
-				h: 15,
+				h: 13,
 				content: 'scale',
 				figure: {
 					figure: 'networth.thresholds',
@@ -71,10 +92,10 @@
 				}
 			},
 			liabilitiesTrend: {
-				x: 0,
-				y: 22,
-				w: 16,
-				h: 13,
+				x: 10,
+				y: 15,
+				w: 38,
+				h: 8,
 				content: 'scale',
 				figure: {
 					figure: 'networth.liabilities_trend',
@@ -86,8 +107,8 @@
 				}
 			},
 			forces: {
-				x: 16,
-				y: 22,
+				x: 0,
+				y: 23,
 				w: 32,
 				h: 13,
 				content: 'scale',
@@ -102,7 +123,7 @@
 			// Stacked rather than overlaid: a band's thickness answers "what's the mix" directly.
 			mix: {
 				x: 0,
-				y: 35,
+				y: 36,
 				w: 24,
 				h: 15,
 				content: 'scale',
@@ -116,7 +137,7 @@
 			},
 			accounts: {
 				x: 24,
-				y: 35,
+				y: 36,
 				w: 24,
 				h: 15,
 				content: 'scale',
@@ -133,7 +154,7 @@
 			},
 			table: {
 				x: 0,
-				y: 50,
+				y: 51,
 				w: 48,
 				h: 16,
 				content: 'flow',

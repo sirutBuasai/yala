@@ -40,17 +40,19 @@
 	const mo = $derived<Scope>({ level: 'month', monthKey });
 
 	// The month's three figures, each with how it moved against last month. No charts: this is the
-	// logging hub, and the shape of the month is Activity's job.
+	// logging hub, and the shape of the month is Activity's job. They open as one strip over the calendar.
 	const KPIS = $derived<KpiBoardDefs>({
-		income: { rect: { x: 0, y: 0, w: 16, h: 6 }, spec: { figure: 'change.income_mom', scope: mo } },
+		income: { rect: { x: 0, y: 0, w: 10, h: 5 }, spec: { figure: 'change.income_mom', scope: mo } },
 		spent: {
-			rect: { x: 16, y: 0, w: 16, h: 6 },
+			rect: { x: 10, y: 0, w: 10, h: 5 },
 			spec: { figure: 'change.spending_mom', scope: mo }
 		},
-		saved: { rect: { x: 32, y: 0, w: 16, h: 6 }, spec: { figure: 'change.saved_mom', scope: mo } }
+		saved: { rect: { x: 20, y: 0, w: 11, h: 5 }, spec: { figure: 'change.saved_mom', scope: mo } }
 	});
 
-	const kpis = useKpiBoard('home', () => KPIS);
+	const kpis = useKpiBoard('home', () => KPIS, [
+		{ ids: ['income', 'spent', 'saved'], axis: 'row' }
+	]);
 
 	// The calendar is a CHART, not a list: it reserves its week rows, so it scales to its pane's height and
 	// its only minimum is legibility. The day's entries and pending sit beside it at a SET height, so each
@@ -58,10 +60,10 @@
 	// as long as your accounts are.
 	const LAYOUT = $derived(
 		kpis.board({
-			calendar: { x: 0, y: 6, w: 31, h: 26, content: 'scale' },
-			day: { x: 31, y: 6, w: 17, h: 16, content: 'flow', mode: 'fixed' },
-			pending: { x: 31, y: 21, w: 17, h: 9, content: 'flow', mode: 'fixed' },
-			balances: { x: 0, y: 32, w: 48, h: 18, content: 'flow', mode: 'fit' }
+			calendar: { x: 0, y: 5, w: 31, h: 26, content: 'scale' },
+			day: { x: 31, y: 10, w: 17, h: 21, content: 'flow', mode: 'fixed' },
+			pending: { x: 31, y: 0, w: 17, h: 10, content: 'flow', mode: 'fixed' },
+			balances: { x: 0, y: 31, w: 48, h: 18, content: 'flow', mode: 'fit' }
 		})
 	);
 

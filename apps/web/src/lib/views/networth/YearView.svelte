@@ -22,24 +22,26 @@
 	// carries it.
 	const KPIS = $derived<KpiBoardDefs>({
 		networth: {
-			rect: { x: 0, y: 0, w: 12, h: 7 },
+			rect: { x: 0, y: 0, w: 12, h: 5 },
 			spec: { figure: 'networth.change', scope: yr, caption: `end of ${year}` }
 		},
-		saved: { rect: { x: 12, y: 0, w: 12, h: 7 }, spec: { figure: 'networth.saved', scope: yr } },
-		other: { rect: { x: 24, y: 0, w: 12, h: 7 }, spec: { figure: 'networth.other', scope: yr } },
+		saved: { rect: { x: 12, y: 0, w: 12, h: 5 }, spec: { figure: 'networth.saved', scope: yr } },
+		other: { rect: { x: 24, y: 0, w: 12, h: 5 }, spec: { figure: 'networth.other', scope: yr } },
 		rate: {
-			rect: { x: 36, y: 0, w: 12, h: 7 },
+			rect: { x: 36, y: 0, w: 12, h: 5 },
 			spec: { figure: 'ratio.savings_rate', scope: yr, chart: 'ring' }
 		}
 	});
 
-	const kpis = useKpiBoard('networth:year', () => KPIS);
+	// The two forces open as one card: they are the halves of the same move, and reading them together is
+	// the point. The position and the rate stand alone.
+	const kpis = useKpiBoard('networth:year', () => KPIS, [{ ids: ['saved', 'other'], axis: 'row' }]);
 
 	const PANES = $derived(
 		kpis.board({
 			trend: {
 				x: 0,
-				y: 7,
+				y: 5,
 				w: 24,
 				h: 15,
 				content: 'scale',
@@ -54,7 +56,7 @@
 			},
 			mix: {
 				x: 24,
-				y: 7,
+				y: 5,
 				w: 24,
 				h: 15,
 				content: 'scale',
@@ -68,7 +70,7 @@
 			},
 			table: {
 				x: 0,
-				y: 22,
+				y: 20,
 				w: 48,
 				h: 16,
 				content: 'flow',

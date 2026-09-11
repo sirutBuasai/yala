@@ -297,3 +297,32 @@ describe('net worth against assets', () => {
 		expect(assets!.points[2]!.value! - nw!.points[2]!.value!).toBe(500);
 	});
 });
+
+describe('year-end levels behind a KPI', () => {
+	it('plots one bar per logged year, at the value each year closed on', () => {
+		const p = build(makeNetWorthData(), 'networth.by_year', { level: 'all' });
+		if (p.kind !== 'series') throw new Error('expected series');
+
+		expect(p.points.map((pt) => pt.label)).toEqual(['2024', '2025']);
+		// December's snapshot closes 2024, not January's.
+		expect(p.points.map((pt) => pt.value)).toEqual([3000, 6000]);
+	});
+
+	it('looks back ten years and no further', () => {
+		const data = makeNetWorthData();
+		data.networth!.series = Array.from({ length: 14 }, (_, i) => ({
+			date: `${2012 + i}-12-01`,
+			assets: 100 * (i + 1),
+			liabilities: 0,
+			net_worth: 100 * (i + 1),
+			breakdown: { Liquid: 100 * (i + 1), Taxable: 0, 'Tax-advantaged': 0 }
+		}));
+
+		const p = build(data, 'networth.by_year', { level: 'all' });
+		if (p.kind !== 'series') throw new Error('expected series');
+
+		expect(p.points).toHaveLength(10);
+		expect(p.points[0]!.label).toBe('2016');
+		expect(p.points.at(-1)!.label).toBe('2025');
+	});
+});

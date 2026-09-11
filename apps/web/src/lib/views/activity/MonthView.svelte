@@ -40,44 +40,47 @@
 	// income; "vs average" is already a signed deviation, so a chart would only restate it.
 	const KPIS = $derived<KpiBoardDefs>({
 		income: {
-			rect: { x: 0, y: 0, w: 16, h: 7 },
+			rect: { x: 0, y: 0, w: 8, h: 5 },
 			spec: { figure: 'change.income_mom', scope: mo, chart: 'bar', series: 'trend.income' }
 		},
 		spent: {
-			rect: { x: 16, y: 0, w: 16, h: 7 },
+			rect: { x: 0, y: 5, w: 8, h: 5 },
 			spec: { figure: 'change.spending_mom', scope: mo, chart: 'bar', series: 'trend.spending' }
 		},
 		saved: {
-			rect: { x: 32, y: 0, w: 16, h: 7 },
+			rect: { x: 0, y: 10, w: 8, h: 6 },
 			spec: { figure: 'change.saved_mom', scope: mo, chart: 'bar', series: 'trend.saved' }
 		},
+		typical: {
+			rect: { x: 8, y: 0, w: 8, h: 5 },
+			spec: { figure: 'spending.vs_typical', scope: mo }
+		},
 		spendingRate: {
-			rect: { x: 0, y: 7, w: 16, h: 7 },
+			rect: { x: 8, y: 5, w: 8, h: 5 },
 			spec: { figure: 'ratio.spending_rate', scope: mo, chart: 'ring' }
 		},
 		savingsRate: {
-			rect: { x: 16, y: 7, w: 16, h: 7 },
+			rect: { x: 8, y: 10, w: 8, h: 6 },
 			spec: { figure: 'ratio.savings_rate', scope: mo, chart: 'ring' }
-		},
-		typical: {
-			rect: { x: 32, y: 7, w: 16, h: 7 },
-			spec: { figure: 'spending.vs_typical', scope: mo }
 		}
 	});
 
-	const kpis = useKpiBoard('activity:month', () => KPIS);
+	// Two stacks beside the month's shape: the three levels, then the three rates that judge them.
+	const kpis = useKpiBoard('activity:month', () => KPIS, [
+		{ ids: ['income', 'spent', 'saved'], axis: 'column' },
+		{ ids: ['typical', 'spendingRate', 'savingsRate'], axis: 'column' }
+	]);
 
 	// The KPIs, then the month's shape, then its records. A list sitting beside a neighbour takes a SET
 	// height, so the row keeps its line and scrolls once the month is busy; the history below has
 	// nothing to line up with, so it fits its content.
 	const PANES = $derived(
 		kpis.board({
-			pending: { x: 0, y: 14, w: 48, h: 9, content: 'flow', mode: 'fixed' },
 			donut: {
-				x: 0,
-				y: 23,
-				w: 28,
-				h: 14,
+				x: 16,
+				y: 0,
+				w: 22,
+				h: 16,
 				content: 'scale',
 				figure: {
 					figure: 'spending.where_it_went',
@@ -87,10 +90,11 @@
 					caption: `${label} · income against where it went`
 				}
 			},
-			unusual: { x: 28, y: 23, w: 20, h: 14, content: 'scale' },
-			paychecks: { x: 0, y: 37, w: 24, h: 10, content: 'flow', mode: 'fixed' },
-			transfers: { x: 24, y: 37, w: 24, h: 10, content: 'flow', mode: 'fixed' },
-			history: { x: 0, y: 47, w: 48, h: 20, content: 'flow', mode: 'fit' }
+			unusual: { x: 38, y: 0, w: 10, h: 16, content: 'scale' },
+			pending: { x: 0, y: 16, w: 48, h: 9, content: 'flow', mode: 'fixed' },
+			paychecks: { x: 0, y: 25, w: 24, h: 10, content: 'flow', mode: 'fixed' },
+			transfers: { x: 24, y: 25, w: 24, h: 10, content: 'flow', mode: 'fixed' },
+			history: { x: 0, y: 35, w: 48, h: 20, content: 'flow', mode: 'fit' }
 		})
 	);
 

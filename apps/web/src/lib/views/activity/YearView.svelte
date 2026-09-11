@@ -24,11 +24,11 @@
 	// from each other, and a change against last year belongs to the cash-flow matrix below.
 	const KPIS = $derived<KpiBoardDefs>({
 		gross: {
-			rect: { x: 0, y: 0, w: 12, h: 7 },
+			rect: { x: 0, y: 0, w: 10, h: 6 },
 			spec: { figure: 'income.gross', scope: yr, chart: 'area', series: 'running.gross' }
 		},
 		contributions: {
-			rect: { x: 12, y: 0, w: 12, h: 7 },
+			rect: { x: 0, y: 6, w: 10, h: 6 },
 			spec: {
 				figure: 'income.contributions',
 				scope: yr,
@@ -37,16 +37,19 @@
 			}
 		},
 		deductions: {
-			rect: { x: 24, y: 0, w: 12, h: 7 },
+			rect: { x: 0, y: 12, w: 10, h: 6 },
 			spec: { figure: 'income.deductions', scope: yr, chart: 'area', series: 'running.deductions' }
 		},
 		net: {
-			rect: { x: 36, y: 0, w: 12, h: 7 },
+			rect: { x: 0, y: 18, w: 10, h: 5 },
 			spec: { figure: 'income.net', scope: yr, chart: 'area', series: 'running.net' }
 		}
 	});
 
-	const kpis = useKpiBoard('activity:year', () => KPIS);
+	// One column of the whole chain, beside the figures it explains.
+	const kpis = useKpiBoard('activity:year', () => KPIS, [
+		{ ids: ['gross', 'contributions', 'deductions', 'net'], axis: 'column' }
+	]);
 
 	// The cash-flow pane fits its content, being a block of figures whose height follows its rows.
 	// Everything below it is a chart, so it scales to whatever height the user gives it.
@@ -54,12 +57,12 @@
 		kpis.board({
 			// A block of figures, not a list: it scales like the KPI cards above it rather than owning its
 			// own height, so it can be given room or taken down to where its rows would clip.
-			cashflow: { x: 0, y: 7, w: 48, h: 10, content: 'scale' },
+			cashflow: { x: 10, y: 0, w: 38, h: 9, content: 'scale' },
 			trend: {
-				x: 0,
-				y: 17,
-				w: 48,
-				h: 15,
+				x: 10,
+				y: 9,
+				w: 38,
+				h: 14,
 				content: 'scale',
 				figure: {
 					figure: 'overview.income_spent_saved',
@@ -69,12 +72,9 @@
 					caption: `${year} · per month`
 				}
 			},
-			// The sankey is taller than the heatmap's authored top leaves room for; the push rule moves the
-			// heatmap down rather than shortening the sankey. Stated this way round so the sankey keeps its
-			// height if the heatmap is ever moved or removed.
 			flow: {
 				x: 0,
-				y: 32,
+				y: 41,
 				w: 48,
 				h: 26,
 				content: 'scale',
@@ -90,9 +90,9 @@
 			// where a column per month plus the category gutter have room.
 			heatmap: {
 				x: 0,
-				y: 51,
+				y: 23,
 				w: 48,
-				h: 17,
+				h: 18,
 				content: 'scale',
 				figure: {
 					figure: 'spending.category_by_month',
