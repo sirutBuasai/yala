@@ -107,17 +107,21 @@
 	const whyBlocked = (row: Row) => blockReason(row, parsed(row), expected(row.account));
 	const blockedRow = (row: Row) => isBlocked(row, parsed(row), expected(row.account));
 
-	/** Why a row can't be saved, said on the row itself — a pane-wide notice repeats the name of a
-	    row the reader is already looking at. */
-	function blockedReason(row: Row): string {
+	/**
+	 * Why a row can't be saved, phrased to FOLLOW the account name: the footer note puts the name in
+	 * bold ahead of it, the row's own badge repeats the name inline. One source for the wording, so the
+	 * two can't drift apart.
+	 */
+	function blockedPredicate(row: Row): string {
 		const gap = check(row) ?? 0;
 
 		return whyBlocked(row) === 'negative'
-			? "A balance can't be negative — enter what the account is worth, not what it moved."
-			: `Off by ${moneyExact(Math.abs(gap))} — log the missing ${missingEntryKind(gap)} first.`;
+			? "can't hold a negative balance — enter what it is worth, not what it moved."
+			: `is off by ${moneyExact(Math.abs(gap))} — log the missing ${missingEntryKind(gap)} first.`;
 	}
 
 	const filled = $derived(rows.filter((r) => parsed(r) != null));
+	const blocked = $derived(rows.filter(blockedRow));
 	const savable = $derived(filled.filter((r) => !blockedRow(r)));
 
 	const effective = (row: Row) =>
@@ -251,7 +255,11 @@
 										{:else if matches(row)}
 											<Badge tone="good" filled title="Matches the ledger">✓</Badge>
 										{:else if blockedRow(row)}
-											<Badge tone="crit" filled title={blockedReason(row)}>✕</Badge>
+											<Badge
+												tone="crit"
+												filled
+												title={`${formatAccount(row.account)} ${blockedPredicate(row)}`}>✕</Badge
+											>
 										{:else}
 											<Badge tone="warn" filled title="Adjustment this month would post"
 												>{moneyExact(chk)}</Badge
@@ -267,6 +275,19 @@
 		</div>
 
 		<div class="foot">
+			<!-- Also on each row's badge, but a `title` is hover-only: this is the copy a keyboard or touch
+			     user gets, and the live region that announces a row going from savable to blocked. -->
+			{#if blocked.length}
+				<p class="blockmsg" role="status">
+					{#each blocked as row (row.account)}
+						<span class="bl">
+							<b>{formatAccount(row.account)}</b>
+							{blockedPredicate(row)}
+						</span>
+					{/each}
+				</p>
+			{/if}
+
 			{#if err}<p class="err" role="alert">{err}</p>{/if}
 			{#if note}<p class="note" role="status">{note}</p>{/if}
 
@@ -446,6 +467,17 @@
 		color: var(--ink-3);
 		font-size: var(--text-secondary);
 		font-variant-numeric: tabular-nums;
+	}
+	.blockmsg {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		margin: 0;
+		font-size: var(--text-secondary);
+		color: var(--ink-2);
+	}
+	.bl b {
+		color: var(--ink);
 	}
 	.cap,
 	.note {
