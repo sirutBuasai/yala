@@ -216,8 +216,10 @@
 								{@const chk = check(row)}
 								<tr class:done={value != null && !blockedRow(row)} class:bad={blockedRow(row)}>
 									<td class="nm">
-										<i class="dot" style:background={accountVar(row.account)}></i>
-										<span class="label">{formatAccount(row.account)}</span>
+										<span class="who">
+											<i class="dot" style:background={accountVar(row.account)}></i>
+											<span class="label">{formatAccount(row.account)}</span>
+										</span>
 									</td>
 									<td class="num muted">{prev == null ? '—' : moneyExact(prev)}</td>
 									<td class="num muted">{exp == null ? '—' : moneyExact(exp)}</td>
@@ -357,12 +359,20 @@
 	.pos {
 		color: var(--good-text);
 	}
+	/* Bug: `display: flex` on the CELL takes it out of the table's row-height alignment, so its
+	   background hugged the name while the taller entry cell beside it filled the row and the hover
+	   highlight stepped mid-row. The cell stays a table-cell; the wrapper does the laying out. */
 	.nm {
+		font-size: var(--text-control);
+	}
+	/* `min-width: 0` is what lets the label ellipsis: it drops the wrapper's min-content width to
+	   zero, which is the cell's contribution to the column and so the only thing the table would
+	   otherwise refuse to shrink past. */
+	.who {
 		display: flex;
 		align-items: center;
 		gap: var(--gap-row);
 		min-width: 0;
-		font-size: var(--text-control);
 	}
 	.dot {
 		width: 8px;
