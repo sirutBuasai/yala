@@ -6,6 +6,7 @@
 	import Board from '$lib/layout/grid/Board.svelte';
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import { figurePanes } from '$lib/layout/grid/figure';
+	import { live, words } from '$lib/ui/label';
 	import FigurePane from '$lib/layout/grid/FigurePane.svelte';
 	import StatMatrix from '$lib/charts/StatMatrix.svelte';
 	import { yearSpan } from '$lib/utils/format';
@@ -35,8 +36,8 @@
 				figure: 'money.flow',
 				scope: all,
 				chart: 'sankey',
-				title: 'Where it all went',
-				caption: 'Lifetime · gross → deductions → spending categories → saved'
+				title: words('Where it all went'),
+				caption: { context: 'Lifetime', text: 'from gross income to spending category split' }
 			}
 		},
 		// Levels beside rate: how big, versus how efficient, which the bars alone can't say.
@@ -50,8 +51,8 @@
 				figure: 'overview.income_spent_saved',
 				scope: all,
 				chart: 'bar',
-				title: 'Income vs spending vs saved',
-				caption: 'Absolute levels per year'
+				title: words('Income vs spending vs saved'),
+				caption: words('per year')
 			}
 		},
 		rate: {
@@ -64,8 +65,8 @@
 				figure: 'overview.savings_rate',
 				scope: all,
 				chart: 'line',
-				title: 'Savings rate by year',
-				caption: 'Saved ÷ income — habit quality, independent of earnings'
+				title: words('Savings rate by year'),
+				caption: words('calculated as rate of net income')
 			}
 		},
 		// Log scale, because a linear axis crushes the small categories under the biggest ones. End
@@ -82,8 +83,8 @@
 				chart: 'line',
 				log: true,
 				endLabels: true,
-				title: 'Spending by category, by year',
-				caption: 'One line per category · log scale, so every category has readable room'
+				title: words('Spending by category, by year'),
+				caption: words('yearly trend of categorical spending')
 			}
 		}
 	} satisfies BoardLayout);
@@ -91,8 +92,8 @@
 	const columns = ['Income', 'Spent', 'Saved'];
 	const rows = $derived([
 		{
-			label: 'Lifetime total',
-			caption: span,
+			label: words('Lifetime total'),
+			caption: live(span),
 			cells: [
 				{ id: 'income.total', scope: all },
 				{ id: 'spending.total', scope: all },
@@ -101,7 +102,7 @@
 		},
 		{
 			// No caption: how many years divide into it is each average's own footnote.
-			label: 'Avg / year',
+			label: words('Avg / year'),
 			cells: [
 				{ id: 'avg.income_per_year', scope: all },
 				{ id: 'avg.spending_per_year', scope: all },
@@ -114,8 +115,8 @@
 <Board key="activity:all" layout={PANES}>
 	<Pane
 		id="cashflow"
-		title="Lifetime cash flow"
-		caption={`${span} · totals and their yearly run-rate`}
+		title={words('Lifetime cash flow')}
+		caption={{ context: span, text: 'totals and their yearly run-rate' }}
 	>
 		<StatMatrix {data} {columns} {rows} />
 	</Pane>

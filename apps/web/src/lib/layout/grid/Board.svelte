@@ -12,15 +12,17 @@
 		    figures. */
 		key: string;
 		layout: BoardLayout;
+		/** Renameable ids beyond the panes — every KPI id on this board. See `BoardGrid`. */
+		names?: string[];
 		/** Also clear whatever else the view stores about this board — its KPI merges, say. */
 		onreset?: () => void;
 		children: Snippet;
 	}
-	let { key, layout, onreset, children }: Props = $props();
+	let { key, layout, names, onreset, children }: Props = $props();
 
 	const panes = $derived(Object.keys(layout).join(' '));
 </script>
 
 {#key panes}
-	<BoardGrid {key} {layout} {onreset}>{@render children()}</BoardGrid>
+	<BoardGrid {key} {layout} {names} {onreset}>{@render children()}</BoardGrid>
 {/key}

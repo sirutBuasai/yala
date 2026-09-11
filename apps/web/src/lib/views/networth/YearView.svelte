@@ -8,6 +8,7 @@
 	import FigurePane from '$lib/layout/grid/FigurePane.svelte';
 	import { useKpiBoard } from '$lib/kpi/context';
 	import KpiCards from '$lib/kpi/KpiCards.svelte';
+	import { live, words } from '$lib/ui/label';
 
 	interface Props {
 		data: DashboardData;
@@ -23,7 +24,7 @@
 	const KPIS = $derived<KpiBoardDefs>({
 		networth: {
 			rect: { x: 0, y: 0, w: 12, h: 5 },
-			spec: { figure: 'networth.change', scope: yr, caption: `end of ${year}` }
+			spec: { figure: 'networth.change', scope: yr, caption: live(`end of ${year}`) }
 		},
 		saved: { rect: { x: 12, y: 0, w: 12, h: 5 }, spec: { figure: 'networth.saved', scope: yr } },
 		other: { rect: { x: 24, y: 0, w: 12, h: 5 }, spec: { figure: 'networth.other', scope: yr } },
@@ -50,8 +51,8 @@
 					scope: yr,
 					chart: 'line',
 					area: true,
-					title: 'Net worth by month',
-					caption: `${year} · one point per logged snapshot`
+					title: words('Net worth by month'),
+					caption: { context: String(year), text: 'total net worth MoM' }
 				}
 			},
 			mix: {
@@ -64,8 +65,8 @@
 					figure: 'networth.allocation_share',
 					scope: yr,
 					chart: 'stacked-area',
-					title: 'Allocation mix',
-					caption: 'Share of assets · liquid · taxable · tax-advantaged'
+					title: words('Allocation mix'),
+					caption: words('shares of asset types')
 				}
 			},
 			table: {
@@ -79,15 +80,15 @@
 					figure: 'networth.monthly_table',
 					scope: yr,
 					chart: 'table',
-					title: 'Monthly snapshots',
-					caption: 'Month-over-month change'
+					title: words('Monthly snapshots'),
+					caption: words('changes to net worth, assets, and liabilities MoM')
 				}
 			}
 		})
 	);
 </script>
 
-<Board key="networth:year" layout={PANES} onreset={() => kpis.reset()}>
+<Board key="networth:year" layout={PANES} names={Object.keys(KPIS)} onreset={() => kpis.reset()}>
 	<KpiCards {data} />
 
 	{#each figurePanes(PANES) as [id, figure] (id)}

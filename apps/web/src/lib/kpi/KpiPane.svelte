@@ -139,7 +139,9 @@
 	     its neighbour (see `grid/spill.ts`). -->
 	<div class="sections" class:stacked style:--tracks={tracks} bind:this={sectionsEl}>
 		{#each group.ids as member (member)}
-			<div class="section" data-measure><Kpi {data} spec={kpis.spec(member)} /></div>
+			<div class="section" data-measure>
+				<Kpi id={member} {data} spec={kpis.spec(member)} editing={env.arranging} />
+			</div>
 		{/each}
 	</div>
 

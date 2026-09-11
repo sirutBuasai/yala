@@ -22,6 +22,7 @@
 	import SortMenu from '$lib/lists/SortMenu.svelte';
 	import { build } from '$lib/data/catalog';
 	import EditModals from '$lib/entries/EditModals.svelte';
+	import { live, words } from '$lib/ui/label';
 
 	interface Props {
 		data: DashboardData;
@@ -86,8 +87,8 @@
 					figure: 'spending.where_it_went',
 					scope: mo,
 					chart: 'donut',
-					title: 'Where your income went',
-					caption: `${label} · income against where it went`
+					title: words('Where your income went'),
+					caption: { context: label, text: 'income and spending split' }
 				}
 			},
 			unusual: { x: 38, y: 0, w: 10, h: 16, content: 'scale' },
@@ -115,13 +116,13 @@
 	let modals: ReturnType<typeof EditModals>;
 </script>
 
-<Board key="activity:month" layout={PANES} onreset={() => kpis.reset()}>
+<Board key="activity:month" layout={PANES} names={Object.keys(KPIS)} onreset={() => kpis.reset()}>
 	<KpiCards {data} />
 
 	<PendingPane
 		id="pending"
 		transactions={pending}
-		caption={`${label} · fronted, waiting to be paid back`}
+		caption={{ context: label, text: 'waiting for posting, refunds, or credits' }}
 		onedit={(l) => modals.editTransaction(l)}
 		onadd={() => modals.add()}
 	/>
@@ -132,8 +133,8 @@
 
 	<Pane
 		id="unusual"
-		title="Unusual this month"
-		caption="Deviation from your recent monthly average"
+		title={words('Unusual this month')}
+		caption={words('deviation from monthly averages')}
 	>
 		{#if hasDeviation}
 			<Figure primitive={deviation} chart="diverging-bars" />
@@ -142,7 +143,11 @@
 		{/if}
 	</Pane>
 
-	<Pane id="paychecks" title="Paychecks" caption={`${md?.paychecks.length ?? 0} in ${label}`}>
+	<Pane
+		id="paychecks"
+		title={words('Paychecks')}
+		caption={live(`${md?.paychecks.length ?? 0} in ${label}`)}
+	>
 		{#snippet actions()}
 			<button class="btn-ghost" onclick={() => modals.add('paycheck')}>+ Add</button>
 		{/snippet}
@@ -159,8 +164,8 @@
 
 	<Pane
 		id="transfers"
-		title="Bill pay &amp; transfers"
-		caption={`${md?.transfers?.length ?? 0} in ${label}`}
+		title={words('Bill pay & transfers')}
+		caption={live(`${md?.transfers?.length ?? 0} in ${label}`)}
 	>
 		{#snippet actions()}
 			<button class="btn-ghost" onclick={() => modals.add('transfer')}>+ Add</button>
@@ -174,8 +179,8 @@
 
 	<Pane
 		id="history"
-		title="Transaction history"
-		caption={`${md?.transactions.length ?? 0} · ${label}`}
+		title={words('Transaction history')}
+		caption={live(`${md?.transactions.length ?? 0} in ${label}`)}
 	>
 		{#snippet actions()}
 			<div class="pactions">

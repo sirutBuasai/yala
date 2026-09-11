@@ -1,7 +1,8 @@
 <script lang="ts">
-	// Turns the arrange affordances on for the board on screen. Page-level, not per-board, and
-	// deliberately transient — see `GridEnv.arrangeRequested`. Absent rather than disabled when the
-	// full content column doesn't fit: a folded board has no arrangement on screen to edit.
+	// Turns edit mode on for the board on screen — where panes move and resize, and cards are renamed.
+	// Page-level, not per-board, and deliberately transient — see `GridEnv.arrangeRequested`. Absent
+	// rather than disabled when the full content column doesn't fit: a folded board has no arrangement
+	// on screen to edit.
 	import Panes from '$lib/icons/Panes.svelte';
 	import { getGridEnv } from './context';
 
@@ -16,7 +17,7 @@
 		onclick={() => (env.arrangeRequested = !env.arrangeRequested)}
 	>
 		<Panes />
-		Arrange
+		Edit
 	</button>
 {/if}
 

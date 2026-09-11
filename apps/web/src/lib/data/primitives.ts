@@ -3,6 +3,7 @@
 // `unit` names the measurement scale, which is what lets one formatter render every figure.
 
 import { money } from '$lib/utils/format';
+import type { Label } from '$lib/ui/label';
 
 // --- units ---
 
@@ -64,15 +65,18 @@ export type Tone = 'good' | 'bad';
 export interface Scalar {
 	kind: 'scalar';
 	unit: Unit;
-	label: string;
+	/** What a card titles itself with. A `Label`, not a string, because a KPI's title and caption are
+	    renameable: anything interpolated must arrive as the derived half or a rename would freeze it. */
+	label: Label;
 	value: number | null;
 	/** Colour for the value. Set only where the SIGN is the figure's meaning — a balance that can go
 	    negative, a deviation from an average. A plain level is never toned. */
 	tone?: Tone;
-	/** A secondary figure — a change or a rate — shown beside the value. */
+	/** A secondary figure — a change or a rate — shown beside the value. Its note rides with the badge
+	    rather than the card header, so it is never renamed and stays a plain string. */
 	delta?: { value: number; unit: Unit; tone?: Tone; note?: string };
-	/** Free-text footnote (already localized). */
-	note?: string;
+	/** What a card captions itself with (already localized). */
+	note?: Label;
 }
 
 export interface CategoricalPoint {
@@ -171,8 +175,9 @@ export interface BulletRow {
 	target: number;
 	/** Ascending cut-points along the scale, shaded from weakest to strongest. */
 	bands?: number[];
-	/** Free-text footnote (already localized). */
-	note?: string;
+	/** Footnote under the row (already localized). Takes a scalar's note as it comes, so it carries the
+	    same type. */
+	note?: Label;
 }
 
 export interface Bullet {

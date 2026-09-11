@@ -4,9 +4,11 @@
 import { getContext, setContext } from 'svelte';
 import type { Arrangement } from './arrangement.svelte';
 import type { GridEnv } from './env.svelte';
+import type { BoardLabels } from './labels';
 
 const ENV = Symbol('grid-env');
 const ARRANGEMENT = Symbol('grid-arrangement');
+const LABELS = Symbol('grid-labels');
 
 export function setGridEnv(env: GridEnv): void {
 	setContext(ENV, env);
@@ -27,4 +29,20 @@ export function getArrangement(): Arrangement {
 	if (!arrangement)
 		throw new Error('grid: no arrangement in context — a Pane must be inside a Board');
 	return arrangement;
+}
+
+export function setLabels(labels: BoardLabels): void {
+	setContext(LABELS, labels);
+}
+
+export function getLabels(): BoardLabels {
+	const labels = getContext<BoardLabels | undefined>(LABELS);
+	if (!labels) throw new Error('grid: no labels in context — a Pane must be inside a Board');
+	return labels;
+}
+
+/** For a card that renders on a board OR on its own — a KPI in the component gallery, say. Renaming is
+    board state, so off a board there is nothing to rename into. */
+export function tryLabels(): BoardLabels | undefined {
+	return getContext<BoardLabels | undefined>(LABELS);
 }

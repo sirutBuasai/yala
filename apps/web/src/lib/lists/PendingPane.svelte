@@ -3,17 +3,19 @@
 	// every place it appears; the caller supplies already-scoped rows, so scoping stays where the
 	// scope is known.
 	import Pane from '$lib/layout/grid/Pane.svelte';
+	import type { Label } from '$lib/ui/label';
 	import TransactionList, { type TxnRow } from '$lib/lists/TransactionList.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
 	import { money } from '$lib/utils/format';
 	import { sumBy } from '$lib/utils/num';
+	import { words } from '$lib/ui/label';
 
 	interface Props {
 		/** Pane id in the board's layout. */
 		id: string;
 		transactions: TxnRow[];
 		onedit: (locator: string) => void;
-		caption?: string;
+		caption?: Label;
 		/** Offered beside the tally where this pane is also the page's "log something" home. */
 		onadd?: () => void;
 	}
@@ -23,7 +25,7 @@
 </script>
 
 <!-- Stays put on a clean month because it hosts the add button. -->
-<Pane {id} title="Pending transactions" {caption} tone="attention">
+<Pane {id} title={words('Pending transactions')} {caption} tone="attention">
 	{#snippet actions()}
 		<div class="pactions">
 			{#if transactions.length}

@@ -3,6 +3,7 @@
 
 import type { Rect } from '$lib/layout/grid/types';
 import type { Scope } from '$lib/data/scope';
+import type { Label } from '$lib/ui/label';
 import type { MergeAxis } from './merge';
 
 /** The marks a KPI may carry. A ring sits inline before the number; the rest sit behind it. */
@@ -13,9 +14,9 @@ export interface KpiSpec {
 	figure: string;
 	scope: Scope;
 	/** Title override. The scalar titles itself otherwise. */
-	title?: string;
+	title?: Label;
 	/** Caption override. The scalar's own note otherwise. */
-	caption?: string;
+	caption?: Label;
 	/**
 	 * The chart under (or before) the stat. `ring` reads the scalar's own percentage; every other
 	 * shape needs `series` — a catalog series id at the same scope.

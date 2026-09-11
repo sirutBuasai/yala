@@ -19,6 +19,7 @@
 	import PendingPane from '$lib/lists/PendingPane.svelte';
 	import CalendarPanes from '$lib/calendar/CalendarPanes.svelte';
 	import EditModals from '$lib/entries/EditModals.svelte';
+	import { words } from '$lib/ui/label';
 
 	interface Props {
 		data: DashboardData;
@@ -86,7 +87,7 @@
 	<MonthNav value={monthKey} monthKeys={data.meta.month_keys} onchange={(k) => (month.value = k)} />
 </ViewHeader>
 
-<Board key="home" layout={LAYOUT} onreset={() => kpis.reset()}>
+<Board key="home" layout={LAYOUT} names={Object.keys(KPIS)} onreset={() => kpis.reset()}>
 	<KpiCards {data} />
 
 	<CalendarPanes
@@ -100,7 +101,7 @@
 	<PendingPane
 		id="pending"
 		transactions={pending}
-		caption="Fronted, waiting to be paid back"
+		caption={words('waiting for posting, refunds, or credits')}
 		onedit={(l) => modals.editTransaction(l)}
 	/>
 	<BalanceChecklist id="balances" {data} {accounts} {onsaved} {monthKey} />

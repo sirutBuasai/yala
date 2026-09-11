@@ -81,8 +81,12 @@ describe('growth decomposition', () => {
 	});
 
 	it('reports each term’s share of the change in its note', () => {
-		expect(scalar('networth.saved', { level: 'year', year: 2025 }).note).toBe('75% of the change');
-		expect(scalar('networth.other', { level: 'year', year: 2025 }).note).toBe('25% of the change');
+		expect(scalar('networth.saved', { level: 'year', year: 2025 }).note).toEqual({
+			context: '75% of the change'
+		});
+		expect(scalar('networth.other', { level: 'year', year: 2025 }).note).toEqual({
+			context: '25% of the change'
+		});
 	});
 
 	it('net worth carries the period’s change as a delta', () => {
@@ -114,7 +118,7 @@ describe('targets', () => {
 	it('sizes the FI number from trailing spending at the stated rate', () => {
 		const s = scalar('networth.fi_number');
 		expect(s.value).toBeCloseTo(993 / 0.04, 5);
-		expect(s.note).toContain('at 4%');
+		expect(s.note?.context).toContain('at 4%');
 	});
 
 	it('honours a changed withdrawal rate', () => {
@@ -166,7 +170,7 @@ describe('targets', () => {
 	it('hides Coast FI until a birth year is set, and says why', () => {
 		const without = scalar('networth.coast_fi');
 		expect(without.value).toBeNull();
-		expect(without.note).toContain('birth year');
+		expect(without.note?.text).toContain('birth year');
 
 		const data = makeNetWorthData();
 		data.settings!.birth_year = 1990;
@@ -181,8 +185,8 @@ describe('targets', () => {
 describe('rates and risk', () => {
 	it('labels compound growth as a balance figure, not a return', () => {
 		const s = scalar('networth.balance_growth');
-		expect(s.label).toBe('Balance growth');
-		expect(s.note).toContain('not a return');
+		expect(s.label).toEqual({ text: 'Balance growth' });
+		expect(s.note?.text).toContain('not a return');
 		expect(s.value!).toBeGreaterThan(100);
 	});
 
@@ -190,7 +194,7 @@ describe('rates and risk', () => {
 		const s = scalar('networth.top_account');
 		// The liability is excluded from the denominator.
 		expect(s.value).toBeCloseTo((3000 / 6500) * 100, 5);
-		expect(s.note).toContain('BrokerageA');
+		expect(s.note?.context).toContain('BrokerageA');
 	});
 });
 

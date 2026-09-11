@@ -8,6 +8,7 @@
 	import FigurePane from '$lib/layout/grid/FigurePane.svelte';
 	import { useKpiBoard } from '$lib/kpi/context';
 	import KpiCards from '$lib/kpi/KpiCards.svelte';
+	import { words } from '$lib/ui/label';
 
 	interface Props {
 		data: DashboardData;
@@ -73,8 +74,8 @@
 					chart: 'line',
 					area: true,
 					dashed: ['Assets'],
-					title: 'Net worth & assets over time',
-					caption: 'Every logged snapshot — the gap between them is what you owe'
+					title: words('Net worth & assets over time'),
+					caption: words('total lifetime net worth')
 				}
 			},
 			thresholds: {
@@ -87,8 +88,8 @@
 					figure: 'networth.thresholds',
 					scope: all,
 					chart: 'bullet',
-					title: 'Progress to thresholds',
-					caption: 'Value, its target, and the bands either side'
+					title: words('Progress to thresholds'),
+					caption: words('key metrics for financial independence')
 				}
 			},
 			liabilitiesTrend: {
@@ -102,8 +103,8 @@
 					scope: all,
 					chart: 'line',
 					// No `color` override: the registry's role map already colours this series by its name.
-					title: 'Liabilities',
-					caption: 'What you owe, on a scale you can read'
+					title: words('Liabilities'),
+					caption: words('lifetime liabilities snapshot')
 				}
 			},
 			forces: {
@@ -116,8 +117,8 @@
 					figure: 'networth.saved_vs_other',
 					scope: all,
 					chart: 'bar',
-					title: 'You vs the market, by year',
-					caption: 'What you saved against everything else that moved the balance'
+					title: words('You vs the market, by year'),
+					caption: words('direct savings vs market gains + other income')
 				}
 			},
 			// Stacked rather than overlaid: a band's thickness answers "what's the mix" directly.
@@ -131,8 +132,8 @@
 					figure: 'networth.allocation_share',
 					scope: all,
 					chart: 'stacked-area',
-					title: 'Allocation mix over time',
-					caption: 'Share of assets — the level is already in the trend above'
+					title: words('Allocation mix over time'),
+					caption: words('share of assets trends over time')
 				}
 			},
 			accounts: {
@@ -148,8 +149,8 @@
 					// Keyed by ACCOUNT, so each bar takes its institution's hue rather than the category
 					// fallback, which gave every bar the same colour.
 					colorBy: 'account',
-					title: 'Where the money sits',
-					caption: 'Every asset account, largest first — concentration at a glance'
+					title: words('Where the money sits'),
+					caption: words('asset allocation as account balances')
 				}
 			},
 			table: {
@@ -163,15 +164,15 @@
 					figure: 'networth.year_table',
 					scope: all,
 					chart: 'table',
-					title: 'Year by year',
-					caption: 'The audit trail behind every chart above'
+					title: words('Year by year'),
+					caption: words('changes to net worth, assets, and liabilities YoY')
 				}
 			}
 		})
 	);
 </script>
 
-<Board key="networth:all" layout={PANES} onreset={() => kpis.reset()}>
+<Board key="networth:all" layout={PANES} names={Object.keys(KPIS)} onreset={() => kpis.reset()}>
 	<KpiCards {data} />
 
 	{#each figurePanes(PANES) as [id, figure] (id)}

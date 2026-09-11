@@ -8,18 +8,22 @@
 	// and a fresh instance re-reads the stored panes under the same key.
 	import type { Snippet } from 'svelte';
 	import { Arrangement } from './arrangement.svelte';
-	import { getGridEnv, setArrangement } from './context';
+	import { BoardLabels } from './labels';
+	import { getGridEnv, setArrangement, setLabels } from './context';
 	import { UNIT } from './units';
 	import type { BoardLayout } from './types';
 
 	interface Props {
 		key: string;
 		layout: BoardLayout;
+		/** Renameable ids beyond the panes themselves — a KPI card's sections each carry their own. Omit
+		    only for a board with no KPI cards, or their names are read as belonging to nothing and dropped. */
+		names?: string[];
 		/** Also clear whatever else the view stores about this board — its KPI merges, say. */
 		onreset?: () => void;
 		children: Snippet;
 	}
-	let { key, layout, onreset, children }: Props = $props();
+	let { key, layout, names, onreset, children }: Props = $props();
 
 	const env = getGridEnv();
 	// Constructed once: the key and the layout are IDENTITY, not state. A view may hand this a
@@ -29,8 +33,15 @@
 	const arrangement = new Arrangement(key, layout, env);
 	setArrangement(arrangement);
 
+	// Keyed like the arrangement but stored apart, so the names a user gave this board survive a change
+	// to its pane set the way its geometry does.
+	// svelte-ignore state_referenced_locally
+	const labels = new BoardLabels(key, [...Object.keys(layout), ...(names ?? [])]);
+	setLabels(labels);
+
 	function reset() {
 		arrangement.reset();
+		labels.reset();
 		onreset?.();
 	}
 </script>

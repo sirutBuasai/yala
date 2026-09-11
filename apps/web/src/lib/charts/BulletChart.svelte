@@ -3,6 +3,7 @@
 	// qualitative bands shaded behind. Every row is scaled to its own maximum, so rows measured
 	// differently sit in one set without one crushing another.
 	import { formatUnit, type Unit } from '$lib/data/primitives';
+	import { labelText, type Label } from '$lib/ui/label';
 
 	interface Row {
 		label: string;
@@ -10,7 +11,8 @@
 		value: number | null;
 		target: number;
 		bands?: number[];
-		note?: string;
+		/** Comes straight off the scalar behind the row, so it arrives as a label and is read for text. */
+		note?: Label;
 	}
 	interface Props {
 		rows: Row[];
@@ -62,7 +64,7 @@
 				<span class="target" style:left={s.pct(row.target)}></span>
 			</div>
 
-			{#if row.note}<p class="note">{row.note}</p>{/if}
+			{#if row.note}<p class="note">{labelText(row.note)}</p>{/if}
 		</div>
 	{/each}
 </div>

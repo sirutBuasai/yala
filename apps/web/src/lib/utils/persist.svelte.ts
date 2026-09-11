@@ -69,6 +69,11 @@ export function matching(pattern: RegExp): Revive<string> {
 	return (v) => (typeof v === 'string' && pattern.test(v) ? v : undefined);
 }
 
+/** Free text up to `max` characters. */
+export function text(max: number): Revive<string> {
+	return (v) => (typeof v === 'string' && v.length <= max ? v : undefined);
+}
+
 export function number(min = -Infinity, max = Infinity): Revive<number> {
 	return (v) =>
 		typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? v : undefined;

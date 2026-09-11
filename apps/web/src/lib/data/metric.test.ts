@@ -42,7 +42,7 @@ describe('amount', () => {
 			{ group: 'deductions', key: 'Tax' }
 		);
 		expect(tax.value).toBe(600);
-		expect(tax.label).toBe('Tax');
+		expect(tax.label).toEqual({ text: 'Tax' });
 	});
 });
 
@@ -51,7 +51,7 @@ describe('average', () => {
 		const d = makeData();
 		const avg = average(d, 'income', 'year');
 		expect(avg.value).toBe(2300);
-		expect(avg.note).toBe('2 tracked years');
+		expect(avg.note).toEqual({ context: '2 tracked years' });
 	});
 
 	it('per month divides a year by ACTIVE months, not a flat 12', () => {
@@ -59,7 +59,7 @@ describe('average', () => {
 		// 2024 has a single active month, so its spending is not divided by twelve.
 		const avg = average(d, 'spending', 'month', 2024);
 		expect(avg.value).toBe(120);
-		expect(avg.note).toBe('1 active months');
+		expect(avg.note).toEqual({ context: '1 active months' });
 	});
 });
 
@@ -89,7 +89,7 @@ describe('categoryAmount / categoryShare', () => {
 		const d = makeData();
 		const s = categoryShare(d, { level: 'all' }, 'Grocery', 'spending');
 		expect(s.value).toBeCloseTo((100 / 165.5) * 100, 6);
-		expect(s.note).toBe('of spending');
+		expect(s.note).toEqual({ text: 'of spending' });
 	});
 });
 
@@ -109,10 +109,10 @@ describe('extremum', () => {
 		const d = makeData();
 		const max = extremum(d, { level: 'all' }, 'category', 'max');
 		expect(max.value).toBe(100);
-		expect(max.note).toBe('Grocery');
+		expect(max.note).toEqual({ context: 'Grocery' });
 		const min = extremum(d, { level: 'all' }, 'category', 'min');
 		expect(min.value).toBe(65.5);
-		expect(min.note).toBe('Takeouts');
+		expect(min.note).toEqual({ context: 'Takeouts' });
 	});
 });
 

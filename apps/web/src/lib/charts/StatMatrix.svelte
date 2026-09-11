@@ -11,15 +11,16 @@
 	import { build } from '$lib/data/catalog';
 	import { deltaLabel, formatUnit, type Scalar } from '$lib/data/primitives';
 	import Badge, { badgeTone } from '$lib/ui/Badge.svelte';
+	import { DOT, labelText, type Label } from '$lib/ui/label';
 
 	interface Cell {
 		id: string;
 		scope: Scope;
 	}
 	interface Row {
-		label: string;
+		label: Label;
 		/** Small print under the row label. */
-		caption?: string;
+		caption?: Label;
 		cells: Cell[];
 	}
 	interface Props {
@@ -38,7 +39,9 @@
 				return {
 					key: c.id,
 					text: s.value === null ? '—' : formatUnit(s.value, s.unit),
-					note: s.note,
+					// Read to text here: a row's cells are compared for agreement below, and two notes that say
+					// the same thing arrive as two objects.
+					note: labelText(s.note),
 					badge: d ? { text: deltaLabel(d), tone: badgeTone(d.tone) } : null
 				};
 			});
@@ -50,7 +53,9 @@
 			const shared = everyCell && new Set(notes).size === 1;
 			return {
 				...r,
-				caption: [r.caption, shared ? notes[0] : null].filter(Boolean).join(' · ') || undefined,
+				label: labelText(r.label),
+				caption:
+					[labelText(r.caption), shared ? notes[0] : null].filter(Boolean).join(DOT) || undefined,
 				values: everyCell && !shared ? values : values.map((v) => ({ ...v, note: undefined }))
 			};
 		})

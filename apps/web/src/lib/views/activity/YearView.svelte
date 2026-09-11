@@ -6,6 +6,7 @@
 	import Board from '$lib/layout/grid/Board.svelte';
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import { figurePanes } from '$lib/layout/grid/figure';
+	import { live, words } from '$lib/ui/label';
 	import FigurePane from '$lib/layout/grid/FigurePane.svelte';
 	import { useKpiBoard } from '$lib/kpi/context';
 	import KpiCards from '$lib/kpi/KpiCards.svelte';
@@ -68,8 +69,8 @@
 					figure: 'overview.income_spent_saved',
 					scope: yr,
 					chart: 'bar',
-					title: 'Income vs spending vs saved',
-					caption: `${year} · per month`
+					title: words('Income vs spending vs saved'),
+					caption: { context: String(year), text: 'per month' }
 				}
 			},
 			flow: {
@@ -82,8 +83,11 @@
 					figure: 'money.flow',
 					scope: yr,
 					chart: 'sankey',
-					title: 'Money flow',
-					caption: `${year} · gross → deductions → spending → saved`
+					title: words('Where it all went'),
+					caption: {
+						context: String(year),
+						text: 'from gross income to spending category split'
+					}
 				}
 			},
 			// Rows arrive ordered biggest-first, so the ranking is implicit; it defaults to the full width,
@@ -98,9 +102,8 @@
 					figure: 'spending.category_by_month',
 					scope: yr,
 					chart: 'heatmap',
-					title: 'Category by month',
-					caption:
-						'Biggest category first · each row scaled to its own max, so a quiet category stays readable'
+					title: words('Category by month'),
+					caption: words('category spending split per month')
 				}
 			}
 		})
@@ -112,8 +115,8 @@
 	const columns = ['Income', 'Spent', 'Saved'];
 	const cashflow = $derived([
 		{
-			label: `Total ${year}`,
-			caption: 'across the year, against last',
+			label: live(`Total ${year}`),
+			caption: words('across the year, against last'),
 			cells: [
 				{ id: 'change.income_yoy', scope: yr },
 				{ id: 'change.spending_yoy', scope: yr },
@@ -123,7 +126,7 @@
 		{
 			// No caption: the divisor is each measure's OWN active months, so the figures state it per
 			// cell rather than one line claiming a count only some of them used.
-			label: 'Avg / month',
+			label: words('Avg / month'),
 			cells: [
 				{ id: 'avg.income_per_month', scope: yr },
 				{ id: 'avg.spending_per_month', scope: yr },
@@ -133,10 +136,14 @@
 	]);
 </script>
 
-<Board key="activity:year" layout={PANES} onreset={() => kpis.reset()}>
+<Board key="activity:year" layout={PANES} names={Object.keys(KPIS)} onreset={() => kpis.reset()}>
 	<KpiCards {data} />
 
-	<Pane id="cashflow" title={`${year} cash flow`} caption="Totals against last year, then run-rate">
+	<Pane
+		id="cashflow"
+		title={{ context: String(year), text: 'cash flow' }}
+		caption={words('comparison against previous year and run-rate')}
+	>
 		<StatMatrix {data} {columns} rows={cashflow} />
 	</Pane>
 

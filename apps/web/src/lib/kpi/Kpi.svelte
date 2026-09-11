@@ -12,19 +12,44 @@
 	import { deltaLabel, formatDelta, formatUnit } from '$lib/data/primitives';
 	import { seriesColor } from '$lib/charts/registry';
 	import Badge, { badgeTone } from '$lib/ui/Badge.svelte';
+	import LabelLine from '$lib/ui/LabelLine.svelte';
+	import { DOT, labelText, type Slot } from '$lib/ui/label';
+	import { tryLabels } from '$lib/layout/grid/context';
+	import { kpiLabels } from './labels';
 	import Spark from './Spark.svelte';
 	import Ring from './Ring.svelte';
 	import type { KpiSpec } from './spec';
 
 	interface Props {
+		/** Catalog-board id of this KPI, which is what a rename is stored against. Omitted off a board — in
+		    the component gallery — where there is nothing to rename into. */
+		id?: string;
 		data: DashboardData;
 		spec: KpiSpec;
+		/** The board is being edited, so this KPI offers its pencils. */
+		editing?: boolean;
 	}
-	let { data, spec }: Props = $props();
+	let { id, data, spec, editing = false }: Props = $props();
+
+	const labels = tryLabels();
+	const naming = $derived(editing && !!id && !!labels);
+
+	function rename(slot: Slot, text: string): void {
+		if (id && labels) labels.set(id, slot, text);
+	}
 
 	const scalar = $derived(build(data, spec.figure, spec.scope) as Scalar);
-	const title = $derived(spec.title ?? scalar.label);
-	const caption = $derived(spec.caption ?? scalar.note ?? '');
+	const declared = $derived(kpiLabels(data, spec));
+	const named = $derived(
+		id && labels
+			? {
+					title: labels.label(id, 'title', declared.title)!,
+					caption: labels.label(id, 'caption', declared.caption)!
+				}
+			: declared
+	);
+	const title = $derived(labelText(named.title));
+	const caption = $derived(labelText(named.caption, DOT));
 	// A tone means the sign carries the meaning (see `Scalar.tone`), so the sign is shown.
 	const value = $derived(
 		scalar.value === null
@@ -41,15 +66,34 @@
 
 	// A chart is named by the series it draws, which is not always the figure in front of it; a ring IS
 	// the figure. Colour is assigned in the registry so a measure keeps one hue everywhere.
-	const markColor = $derived(seriesColor(behind ? behind.series.name : scalar.label));
+	const markColor = $derived(seriesColor(behind ? behind.series.name : labelText(scalar.label)));
 
 	const delta = $derived(scalar.delta);
 </script>
 
 <div class="kpi">
-	<h2 class="serif">{title}</h2>
-	<!-- Rendered even when empty, so a captionless KPI lines up with a captioned neighbour. -->
-	<p class="cap" aria-hidden={caption ? undefined : 'true'}>{caption}</p>
+	<!-- A title emptied on purpose takes no room, but while editing the line stays so its pencil does. -->
+	{#if title || naming}
+		<h2 class="serif">
+			<LabelLine
+				label={named.title}
+				what="title"
+				shipped={declared.title}
+				onrename={naming ? (t) => rename('title', t) : undefined}
+			/>
+		</h2>
+	{/if}
+	<!-- Rendered even when empty, so a captionless KPI lines up with a captioned neighbour — which is also
+	     where its pencil goes, since a caption has to be addable before there is one to click. -->
+	<p class="cap" aria-hidden={caption || naming ? undefined : 'true'}>
+		<LabelLine
+			label={named.caption}
+			what="caption"
+			join={DOT}
+			shipped={declared.caption}
+			onrename={naming ? (t) => rename('caption', t) : undefined}
+		/>
+	</p>
 
 	<div
 		class="stat"

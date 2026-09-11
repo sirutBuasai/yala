@@ -10,6 +10,7 @@ import { money } from '$lib/utils/format';
 import { sumValues } from '$lib/utils/num';
 import { addMonths } from '$lib/utils/period';
 import { type Scope, latestYear, scopeYear, scopeKey } from './scope';
+import { labelText, live, words, type Label } from '$lib/ui/label';
 
 // --- measures ---
 
@@ -213,8 +214,8 @@ export function componentKeys(
 }
 
 interface Opts {
-	label?: string;
-	note?: string;
+	label?: Label;
+	note?: Label;
 }
 
 /** Tone a figure whose SIGN is its meaning: a balance that went negative is bad news, and one that
@@ -231,7 +232,7 @@ export function amount(data: DashboardData, scope: Scope, m: Measure, opts: Opts
 	return {
 		kind: 'scalar',
 		unit: MONEY(data.currency),
-		label: opts.label ?? measureLabel(m),
+		label: opts.label ?? words(measureLabel(m)),
 		value: measureValue(data, scope, m),
 		note: opts.note
 	};
@@ -257,9 +258,9 @@ export function average(
 		return {
 			kind: 'scalar',
 			unit,
-			label: opts.label ?? `Avg ${name} / year`,
+			label: opts.label ?? words(`Avg ${name} / year`),
 			value: measureValue(data, { level: 'all' }, m) / years,
-			note: opts.note ?? `${years} tracked years`
+			note: opts.note ?? live(`${years} tracked years`)
 		};
 	}
 
@@ -270,9 +271,9 @@ export function average(
 	return {
 		kind: 'scalar',
 		unit,
-		label: opts.label ?? `Avg ${name} / month`,
+		label: opts.label ?? words(`Avg ${name} / month`),
 		value: measureValue(data, { level: 'year', year: y }, m) / divisor,
-		note: opts.note ?? `${divisor} active months`
+		note: opts.note ?? live(`${divisor} active months`)
 	};
 }
 
@@ -289,7 +290,7 @@ export function ratio(
 	return {
 		kind: 'scalar',
 		unit: PERCENT,
-		label: opts.label ?? `${measureLabel(num)} / ${measureLabel(den)}`,
+		label: opts.label ?? words(`${measureLabel(num)} / ${measureLabel(den)}`),
 		value: d ? (n / d) * 100 : null,
 		note: opts.note
 	};
@@ -304,7 +305,7 @@ export function categoryAmount(
 	return {
 		kind: 'scalar',
 		unit: MONEY(data.currency),
-		label: opts.label ?? category,
+		label: opts.label ?? words(category),
 		value: categorySpend(data, scope, category),
 		note: opts.note
 	};
@@ -322,9 +323,9 @@ export function categoryShare(
 	return {
 		kind: 'scalar',
 		unit: PERCENT,
-		label: opts.label ?? `${category} share`,
+		label: opts.label ?? words(`${category} share`),
 		value: whole ? (categorySpend(data, scope, category) / whole) * 100 : null,
-		note: opts.note ?? `of ${of}`
+		note: opts.note ?? words(`of ${of}`)
 	};
 }
 
@@ -361,7 +362,7 @@ export function count(data: DashboardData, scope: Scope, of: Countable, opts: Op
 	return {
 		kind: 'scalar',
 		unit: COUNT,
-		label: opts.label ?? COUNT_LABEL[of],
+		label: opts.label ?? words(COUNT_LABEL[of]),
 		value: countValue(data, scope, of),
 		note: opts.note
 	};
@@ -415,9 +416,10 @@ export function extremum(
 	return {
 		kind: 'scalar',
 		unit: MONEY(data.currency),
-		label: opts.label ?? `${verb} ${of}`,
+		label: opts.label ?? words(`${verb} ${of}`),
 		value,
-		note: opts.note ?? name
+		// The winner's own name, read off the data — a rename must not be able to bake yesterday's in.
+		note: opts.note ?? live(name)
 	};
 }
 
@@ -435,7 +437,7 @@ export function vsTypical(
 ): Scalar {
 	const window = opts.window ?? 12;
 	const prior = data.meta.month_keys.filter((k) => k < monthKey && data.months[k]).slice(-window);
-	const label = opts.label ?? measureLabel(m);
+	const label = opts.label ?? words(measureLabel(m));
 	if (!prior.length) {
 		return { kind: 'scalar', unit: MONEY(data.currency), label, value: null, note: opts.note };
 	}
@@ -451,7 +453,7 @@ export function vsTypical(
 		label,
 		value: delta,
 		tone: toneOf(m, delta),
-		note: opts.note ?? `vs your ${money(avg)} / mo average`
+		note: opts.note ?? live(`vs your ${money(avg)} / mo average`)
 	};
 }
 
@@ -489,7 +491,7 @@ export function change(
 	return {
 		kind: 'scalar',
 		unit: MONEY(data.currency),
-		label: opts.label ?? measureLabel(m),
+		label: opts.label ?? words(measureLabel(m)),
 		value: now,
 		delta:
 			pct === null
@@ -498,7 +500,8 @@ export function change(
 						value: pct,
 						unit: PERCENT,
 						tone: toneOf(m, now - before),
-						note: opts.note ?? (period === 'year' ? 'YoY' : 'MoM')
+						// Flattened: a delta's note rides with the badge, which is never renamed.
+						note: opts.note ? labelText(opts.note) : period === 'year' ? 'YoY' : 'MoM'
 					}
 	};
 }

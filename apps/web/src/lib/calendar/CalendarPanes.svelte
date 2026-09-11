@@ -17,6 +17,7 @@
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import CalendarGrid from '$lib/calendar/CalendarGrid.svelte';
 	import DayEntries from '$lib/calendar/DayEntries.svelte';
+	import { live, words } from '$lib/ui/label';
 
 	interface Props {
 		data: DashboardData;
@@ -75,14 +76,14 @@
 	});
 </script>
 
-<Pane id="calendar" title="Log activity" caption={`${MONTHS[month - 1]} ${year} · pick a day`}>
+<Pane id="calendar" title={words('Log activity')} caption={live(`${MONTHS[month - 1]} ${year}`)}>
 	<!-- A size-container, so the grid inside reacts to the PANE's width rather than the viewport's. -->
 	<div class="calpane">
 		<CalendarGrid {rows} {monthKey} {firstWeekday} {selectedDay} onpick={pickDay} />
 	</div>
 </Pane>
 
-<Pane id="day" title={dayTitle} caption={dayCaption}>
+<Pane id="day" title={live(dayTitle)} caption={live(dayCaption)}>
 	{#snippet actions()}
 		{#if selected}
 			<button class="btn-ghost" onclick={() => onadd(selected.iso)}>+ Add entry</button>

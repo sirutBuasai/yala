@@ -94,6 +94,7 @@ describe('vsTypical', () => {
 	});
 
 	it('names the average it compared against', () => {
-		expect(vsTypical(makeData(), '2025-01', 'spending').note).toContain('average');
+		// Derived, so the average lands in the half a rename cannot swallow.
+		expect(vsTypical(makeData(), '2025-01', 'spending').note?.context).toContain('average');
 	});
 });

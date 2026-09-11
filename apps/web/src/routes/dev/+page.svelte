@@ -9,6 +9,7 @@
 	import type { KpiSpec } from '$lib/kpi/spec';
 	import { makeData } from '$lib/data/__fixtures__/dashboard';
 	import { build } from '$lib/data/catalog';
+	import { words } from '$lib/ui/label';
 
 	const data = makeData();
 	const all = { level: 'all' } as const;
@@ -443,22 +444,22 @@
 			</div>
 		{/each}
 		<div class="cell span3">
-			<Card title="Where it went" caption="Lifetime · donut">
+			<Card title={words('Where it went')} caption={words('Lifetime · donut')}>
 				<Figure primitive={donut} chart="donut" />
 			</Card>
 		</div>
 		<div class="cell span3">
-			<Card title="Income vs Spending vs Savings" caption="Lifetime · bars">
+			<Card title={words('Income vs Spending vs Savings')} caption={words('Lifetime · bars')}>
 				<Figure primitive={bars} chart="bar" />
 			</Card>
 		</div>
 		<div class="cell span3">
-			<Card title="Cumulative savings" caption="Lifetime · area line">
+			<Card title={words('Cumulative savings')} caption={words('Lifetime · area line')}>
 				<Figure primitive={cumulative} chart="line" area />
 			</Card>
 		</div>
 		<div class="cell span3">
-			<Card title="Paychecks" caption="Lifetime · table">
+			<Card title={words('Paychecks')} caption={words('Lifetime · table')}>
 				<Figure primitive={table} chart="table" />
 			</Card>
 		</div>

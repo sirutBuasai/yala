@@ -3,6 +3,7 @@
 
 import type { ColorBy } from '$lib/charts/registry';
 import type { Scope } from '$lib/data/scope';
+import type { Label } from '$lib/ui/label';
 
 /** One figure on the board: which catalog id to build, at which scope, and how to draw it. */
 export interface FigureSpec {
@@ -11,9 +12,9 @@ export interface FigureSpec {
 	/** Chart id; defaults to the first chart for the primitive's kind (stat for scalars). */
 	chart?: string;
 	/** Title override; a scalar otherwise titles itself with its label. */
-	title?: string;
+	title?: Label;
 	/** Subtitle override; a scalar otherwise uses its note. */
-	caption?: string;
+	caption?: Label;
 	area?: boolean;
 	color?: string;
 	/** What a categorical's keys name (categories, accounts, roles) — drives their colours. */

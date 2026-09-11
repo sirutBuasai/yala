@@ -20,6 +20,7 @@
 	import SettingsPanel from '$lib/views/manage/SettingsPanel.svelte';
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import ItemList from '$lib/ui/ItemList.svelte';
+	import { words } from '$lib/ui/label';
 
 	/** Ledger prefix for credit cards, to pick them out of the mixed payback-source list. */
 	const LIABILITY = 'Liabilities:';
@@ -115,14 +116,16 @@
 <Board key="manage" layout={LAYOUT}>
 	<Pane
 		id="settings"
-		title="Planning assumptions"
-		caption="The few figures the ledger can't work out on its own. Everything else on the dashboard is derived from your entries. Saved into the ledger itself, dated — so revising one leaves the old value behind as history."
+		title={words('Planning assumptions')}
+		caption={words(
+			"The few figures the ledger can't work out on its own. Everything else on the dashboard is derived from your entries. Saved into the ledger itself, dated — so revising one leaves the old value behind as history."
+		)}
 		density="panel"
 	>
 		<SettingsPanel onsaved={() => onsaved?.()} />
 	</Pane>
 
-	<Pane id="addcategory" title="Add a spending category" density="panel">
+	<Pane id="addcategory" title={words('Add a spending category')} density="panel">
 		<AddRow
 			bind:value={name}
 			ariaLabel="new category name"
@@ -133,7 +136,12 @@
 		<SaveFeedback save={cat} />
 	</Pane>
 
-	<Pane id="categories" title="Existing categories" count={categories.length} density="panel">
+	<Pane
+		id="categories"
+		title={words('Existing categories')}
+		count={categories.length}
+		density="panel"
+	>
 		<ItemList any={categories.length > 0} empty="No spending categories yet.">
 			{#each categories as category (category)}
 				<li class="simple">
@@ -152,8 +160,10 @@
 
 	<Pane
 		id="addbank"
-		title="Add a bank account"
-		caption="Named by institution alone — a second account at the same bank is when a product name starts to earn its place."
+		title={words('Add a bank account')}
+		caption={words(
+			'Named by institution alone — a second account at the same bank is when a product name starts to earn its place.'
+		)}
 		density="panel"
 	>
 		<AddAccountPanel
@@ -164,9 +174,11 @@
 
 	<Pane
 		id="banks"
-		title="Your bank accounts"
+		title={words('Your bank accounts')}
 		count={banks.length}
-		caption="Set a passthrough's sweep destination, or retire an account (drain its balance to another account, then close it)."
+		caption={words(
+			"Set a passthrough's sweep destination, or retire an account (drain its balance to another account, then close it)."
+		)}
 		density="panel"
 	>
 		<ItemList any={banks.length > 0} empty="No bank accounts yet.">
@@ -183,8 +195,10 @@
 
 	<Pane
 		id="addcard"
-		title="Add a credit card"
-		caption="Issuer plus the card's own name, both spelled out — the ledger keeps the full name and the short forms only stand in when a row can't fit it."
+		title={words('Add a credit card')}
+		caption={words(
+			"Issuer plus the card's own name, both spelled out — the ledger keeps the full name and the short forms only stand in when a row can't fit it."
+		)}
 		density="panel"
 	>
 		<AddAccountPanel
@@ -194,7 +208,7 @@
 		/>
 	</Pane>
 
-	<Pane id="cards" title="Your credit cards" count={cards.length} density="panel">
+	<Pane id="cards" title={words('Your credit cards')} count={cards.length} density="panel">
 		<ItemList any={cards.length > 0} empty="No credit cards yet.">
 			{#each cards as account (account)}
 				<li class="row">
@@ -207,8 +221,8 @@
 
 	<Pane
 		id="addinvestment"
-		title="Add an investment account"
-		caption="Share accounts open unconstrained + seeded; a USD-only plan is tickerless."
+		title={words('Add an investment account')}
+		caption={words('Share accounts open unconstrained + seeded; a USD-only plan is tickerless.')}
 		density="panel"
 	>
 		<AddAccountPanel
@@ -257,9 +271,11 @@
 
 	<Pane
 		id="investments"
-		title="Your investments"
+		title={words('Your investments')}
 		count={investments.length}
-		caption="Retire an account to value its holdings in USD and split that total across destinations."
+		caption={words(
+			'Retire an account to value its holdings in USD and split that total across destinations.'
+		)}
 		density="panel"
 	>
 		<ItemList any={investments.length > 0} empty="No investment accounts yet.">

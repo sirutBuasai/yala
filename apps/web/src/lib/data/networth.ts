@@ -19,6 +19,7 @@ import { measureValue } from './metric';
 import { type Scope, scopeYear } from './scope';
 import { money } from '$lib/utils/format';
 import { yearOf } from '$lib/utils/period';
+import { live, words, type Label } from '$lib/ui/label';
 
 /** Allocation buckets in display order (mirrors the backend `BUCKETS`). */
 const BUCKETS = ['Liquid', 'Taxable', 'Tax-advantaged'];
@@ -69,7 +70,7 @@ function bySign(value: number): Tone {
 export function netWorthScalar(
 	data: DashboardData,
 	field: 'net_worth' | 'assets' | 'liabilities',
-	label: string
+	label: Label
 ): Scalar {
 	const unit = MONEY(data.currency);
 	const current = data.networth?.current ?? null;
@@ -240,9 +241,10 @@ function changeOver(data: DashboardData, scope: Scope): number {
 	return open && close ? close.net_worth - open.net_worth : 0;
 }
 
-/** A decomposition term's share of the period's change, as its note. */
-function shareNote(part: number, change: number, fallback: string): string {
-	return change ? `${Math.round((part / change) * 100)}% of the change` : fallback;
+/** A decomposition term's share of the period's change, as its note. The share is read off the data, so
+    it is the derived half; the fallback is prose and stays renameable. */
+function shareNote(part: number, change: number, fallback: string): Label {
+	return change ? live(`${Math.round((part / change) * 100)}% of the change`) : words(fallback);
 }
 
 /** Net worth at the end of a scope, with its change over that scope as a delta. The level itself is
@@ -251,7 +253,7 @@ export function netWorthChange(data: DashboardData, scope: Scope): Scalar {
 	const unit = MONEY(data.currency);
 	const { open, close } = bounds(data, scope);
 	const value = close?.net_worth ?? null;
-	const s: Scalar = { kind: 'scalar', unit, label: 'Net worth', value };
+	const s: Scalar = { kind: 'scalar', unit, label: words('Net worth'), value };
 
 	if (open && close && open !== close) {
 		const delta = close.net_worth - open.net_worth;
@@ -273,7 +275,7 @@ export function netWorthSaved(data: DashboardData, scope: Scope): Scalar {
 	return {
 		kind: 'scalar',
 		unit: MONEY(data.currency),
-		label: 'You saved',
+		label: words('You saved'),
 		value: saved,
 		tone: bySign(saved),
 		note: shareNote(saved, changeOver(data, scope), 'income − spending')
@@ -284,7 +286,12 @@ export function netWorthSaved(data: DashboardData, scope: Scope): Scalar {
 export function netWorthOther(data: DashboardData, scope: Scope): Scalar {
 	const { open, close } = bounds(data, scope);
 	if (!open || !close) {
-		return { kind: 'scalar', unit: MONEY(data.currency), label: 'Market & other', value: null };
+		return {
+			kind: 'scalar',
+			unit: MONEY(data.currency),
+			label: words('Market & other'),
+			value: null
+		};
 	}
 
 	const change = close.net_worth - open.net_worth;
@@ -293,7 +300,7 @@ export function netWorthOther(data: DashboardData, scope: Scope): Scalar {
 	return {
 		kind: 'scalar',
 		unit: MONEY(data.currency),
-		label: 'Market & other',
+		label: words('Market & other'),
 		value: other,
 		tone: bySign(other),
 		note: shareNote(other, change, 'growth + unlogged flow')
@@ -380,9 +387,9 @@ export function fiNumber(data: DashboardData): Scalar {
 	return {
 		kind: 'scalar',
 		unit: MONEY(data.currency),
-		label: 'FI number',
+		label: words('FI number'),
 		value: rate && annual ? annual / rate : null,
-		note: annual ? `${money(annual)}/yr at ${swrOf(data)}%` : 'no spending logged yet'
+		note: annual ? live(`${money(annual)}/yr at ${swrOf(data)}%`) : words('no spending logged yet')
 	};
 }
 
@@ -393,9 +400,9 @@ export function fiProgress(data: DashboardData): Scalar {
 	return {
 		kind: 'scalar',
 		unit: PERCENT,
-		label: 'FI progress',
+		label: words('FI progress'),
 		value: target && current !== null ? (current / target) * 100 : null,
-		note: target ? `of ${money(target)}` : undefined
+		note: target ? live(`of ${money(target)}`) : undefined
 	};
 }
 
@@ -407,9 +414,9 @@ export function yearsOfFreedom(data: DashboardData): Scalar {
 	return {
 		kind: 'scalar',
 		unit: YEARS,
-		label: 'Years of freedom',
+		label: words('Years of freedom'),
 		value: annual && current !== null ? current / annual : null,
-		note: annual ? `at ${money(annual)}/yr` : undefined
+		note: annual ? live(`at ${money(annual)}/yr`) : undefined
 	};
 }
 
@@ -421,9 +428,9 @@ export function liquidRunway(data: DashboardData): Scalar {
 	return {
 		kind: 'scalar',
 		unit: MONTHS,
-		label: 'Liquid runway',
+		label: words('Liquid runway'),
 		value: monthly && liquid !== null ? liquid / monthly : null,
-		note: monthly ? `at ${money(monthly)}/mo` : undefined
+		note: monthly ? live(`at ${money(monthly)}/mo`) : undefined
 	};
 }
 
@@ -441,9 +448,9 @@ export function coastFi(data: DashboardData): Scalar {
 		return {
 			kind: 'scalar',
 			unit,
-			label: 'Coast FI',
+			label: words('Coast FI'),
 			value: null,
-			note: birthYear === null ? 'set your birth year in Manage' : undefined
+			note: birthYear === null ? words('set your birth year in Manage') : undefined
 		};
 	}
 
@@ -455,9 +462,9 @@ export function coastFi(data: DashboardData): Scalar {
 	return {
 		kind: 'scalar',
 		unit,
-		label: 'Coast FI',
+		label: words('Coast FI'),
 		value: (current / needed) * 100,
-		note: `${money(needed)} needed ${years} yr out`
+		note: live(`${money(needed)} needed ${years} yr out`)
 	};
 }
 
@@ -482,9 +489,9 @@ export function balanceGrowth(data: DashboardData): Scalar {
 	return {
 		kind: 'scalar',
 		unit: PERCENT,
-		label: 'Balance growth',
+		label: words('Balance growth'),
 		value,
-		note: 'per year — contributions included, not a return'
+		note: words('per year — contributions included, not a return')
 	};
 }
 
@@ -500,9 +507,9 @@ export function topAccountShare(data: DashboardData): Scalar {
 	return {
 		kind: 'scalar',
 		unit: PERCENT,
-		label: 'Top account',
+		label: words('Top account'),
 		value: top && total ? (top.value / total) * 100 : null,
-		note: top ? `${top.label} of ${money(total)} assets` : undefined
+		note: top ? live(`${top.label} of ${money(total)} assets`) : undefined
 	};
 }
 

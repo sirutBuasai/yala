@@ -43,6 +43,7 @@ import {
 	yearsOfFreedom
 } from './networth';
 import { type Scope, type ScopeLevel, latestMonthKey, scopeYear } from './scope';
+import { words } from '$lib/ui/label';
 import {
 	amount,
 	average,
@@ -327,7 +328,7 @@ const NETWORTH_STATS: DataDef[] = [
 		label: s.label,
 		kind: 'scalar' as const,
 		scopes: ['all'] as ScopeLevel[],
-		build: (data: DashboardData) => netWorthScalar(data, s.field, s.label)
+		build: (data: DashboardData) => netWorthScalar(data, s.field, words(s.label))
 	})),
 	// Scope-aware, so a page passes its range rather than there being two sets of ids.
 	{
@@ -447,14 +448,14 @@ const RATIOS: { id: string; label: string; num: Measure; den: Measure; note: str
 		label: 'Savings rate',
 		num: 'saved',
 		den: 'income',
-		note: 'of income kept'
+		note: 'of net income'
 	},
 	{
 		id: 'ratio.spending_rate',
 		label: 'Spending rate',
 		num: 'spending',
 		den: 'income',
-		note: 'of income spent'
+		note: 'of net income'
 	},
 	{
 		id: 'ratio.deduction_rate',
@@ -504,11 +505,11 @@ const CHANGES: { field: Field; period: 'year' | 'month' }[] = [
 const VS_TYPICAL: DataDef[] = [
 	scalarDef('spending.vs_typical', 'vs your average', ['month'], (data, scope) =>
 		scope.monthKey
-			? vsTypical(data, scope.monthKey, 'spending', { label: 'vs your average' })
+			? vsTypical(data, scope.monthKey, 'spending', { label: words('vs your average') })
 			: {
 					kind: 'scalar',
 					unit: MONEY(data.currency),
-					label: 'vs your average',
+					label: words('vs your average'),
 					value: null
 				}
 	)
@@ -517,24 +518,27 @@ const VS_TYPICAL: DataDef[] = [
 const STAT_DEFS: DataDef[] = [
 	...AMOUNTS.map((a) =>
 		scalarDef(a.id, a.label, ALL_SCOPES, (data, scope) => {
-			const s = amount(data, scope, a.field, { label: a.label, note: a.note });
+			const s = amount(data, scope, a.field, {
+				label: words(a.label),
+				note: a.note ? words(a.note) : undefined
+			});
 			return a.signed ? signed(s) : s;
 		})
 	),
 	...RATIOS.map((r) =>
 		scalarDef(r.id, r.label, ALL_SCOPES, (data, scope) =>
-			ratio(data, scope, r.num, r.den, { label: r.label, note: r.note })
+			ratio(data, scope, r.num, r.den, { label: words(r.label), note: words(r.note) })
 		)
 	),
 	...PER_MONTH.map((m) =>
 		scalarDef(m.id, m.label, ['year'], (data, scope) => {
-			const s = average(data, m.field, 'month', scope.year, { label: m.label });
+			const s = average(data, m.field, 'month', scope.year, { label: words(m.label) });
 			return m.signed ? signed(s) : s;
 		})
 	),
 	...PER_YEAR.map((m) =>
 		scalarDef(m.id, m.label, ['all'], (data) => {
-			const s = average(data, m.field, 'year', undefined, { label: m.label });
+			const s = average(data, m.field, 'year', undefined, { label: words(m.label) });
 			return m.signed ? signed(s) : s;
 		})
 	),
@@ -543,7 +547,7 @@ const STAT_DEFS: DataDef[] = [
 	),
 	...EXTREMA.map((e) =>
 		scalarDef(e.id, e.label, e.scopes, (data, scope) =>
-			extremum(data, scope, e.of, 'max', { label: e.label })
+			extremum(data, scope, e.of, 'max', { label: words(e.label) })
 		)
 	),
 	...CHANGES.map((c) =>

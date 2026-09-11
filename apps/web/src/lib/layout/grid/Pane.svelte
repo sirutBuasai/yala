@@ -16,9 +16,10 @@
 	// grid-agnostic and the folded layout reuses it untouched.
 	import { tick, type Snippet } from 'svelte';
 	import Card from '$lib/ui/Card.svelte';
+	import { labelText, type Label } from '$lib/ui/label';
 	import Grip from '$lib/icons/Grip.svelte';
 	import SizeMode from '$lib/icons/SizeMode.svelte';
-	import { getArrangement, getGridEnv } from './context';
+	import { getArrangement, getGridEnv, getLabels } from './context';
 	import { drag, type DragParams } from './drag';
 	import { spills } from './spill';
 	import { foldSpan } from './fold';
@@ -28,9 +29,9 @@
 	interface Props {
 		/** Pane id — a key of the board's layout. */
 		id: string;
-		title?: string;
+		title?: Label;
 		count?: number;
-		caption?: string;
+		caption?: Label;
 		actions?: Snippet;
 		tone?: 'default' | 'attention';
 		density?: 'figure' | 'panel';
@@ -45,6 +46,7 @@
 
 	const env = getGridEnv();
 	const arrangement = getArrangement();
+	const labels = getLabels();
 
 	const placed = $derived(arrangement.placed(id));
 	const mode = $derived(arrangement.mode(id));
@@ -52,8 +54,14 @@
 	const arranging = $derived(env.arranging);
 	const capped = $derived(mode === 'cap');
 	const span = $derived(foldSpan(placed.w, env.columns));
-	const name = $derived(title ?? id);
-
+	// A declared TITLE is what makes a card one we name; its caption may then be ADDED where the view wrote
+	// none. A KPI card declares neither, and its pane id is also its leader section's id — look the store
+	// up regardless and a renamed section came back as a heading on the card around it, one it never had.
+	const shownTitle = $derived(title && labels.label(id, 'title', title));
+	const shownCaption = $derived(title ? labels.label(id, 'caption', caption) : caption);
+	// What the arrange controls announce: the card's rendered heading, so a pane the user renamed is
+	// named the same way in both places.
+	const name = $derived(labelText(shownTitle) || id);
 	let cardEl = $state<HTMLElement>();
 	let bodyEl = $state<HTMLElement>();
 
@@ -68,12 +76,6 @@
 		const observer = new ResizeObserver(report);
 		observer.observe(el);
 		return () => observer.disconnect();
-	});
-
-	// The card is inert while arranging: its own buttons must not compete with the gesture that covers
-	// them. An attribute rather than `pointer-events: none`, which would leave them in the tab order.
-	$effect(() => {
-		cardEl?.toggleAttribute('inert', arranging);
 	});
 
 	// The spill check is asked for the card and its body BY REFERENCE (see `spill.ts`), and `tick` is
@@ -124,9 +126,12 @@
 	<Card
 		bind:card={cardEl}
 		bind:body={bodyEl}
-		{title}
+		title={shownTitle}
 		{count}
-		{caption}
+		caption={shownCaption}
+		frozen={arranging}
+		rename={arranging && title ? (slot, text) => labels.set(id, slot, text) : undefined}
+		shipped={{ title, caption }}
 		{actions}
 		{tone}
 		{density}
@@ -146,7 +151,7 @@
 		>
 			<!-- data-no-drag: stopping propagation here cannot work, because Svelte delegates the event
 			     (see drag.ts). -->
-			<div class="tools" role="toolbar" aria-label={`Arrange ${name}`} tabindex="-1" data-no-drag>
+			<div class="tools" role="toolbar" aria-label={`Edit ${name}`} tabindex="-1" data-no-drag>
 				<button
 					class="grip"
 					type="button"

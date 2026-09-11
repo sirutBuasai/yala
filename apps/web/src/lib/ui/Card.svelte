@@ -3,12 +3,19 @@
 	// Deliberately grid-agnostic — it knows nothing about placement or units, so `grid/Pane`,
 	// overlays and rails can all compose it.
 	import type { Snippet } from 'svelte';
+	import LabelLine from './LabelLine.svelte';
+	import { DOT, labelText, type Label, type Slot } from './label';
 
 	interface Props {
-		title?: string;
+		title?: Label;
 		/** A tally rendered beside the title. */
 		count?: number;
-		caption?: string;
+		caption?: Label;
+		/** Hook from whoever stores renames; absent leaves these labels the app's to name. Given only while
+		    the board is being edited. */
+		rename?: (slot: Slot, text: string) => void;
+		/** These labels as the app declares them, for the editor to stand in where a rename emptied one. */
+		shipped?: Partial<Record<Slot, Label>>;
 		/** Controls at the top-right of the header, level with the title/caption. */
 		actions?: Snippet;
 		tone?: 'default' | 'attention';
@@ -16,6 +23,8 @@
 		density?: 'figure' | 'panel';
 		/** Scroll the body once its content overruns the card. Set by whatever owns the height. */
 		scroll?: boolean;
+		/** The board is being edited: the card's own controls go out of reach, its labels stay live. */
+		frozen?: boolean;
 		/** The card element, for a caller that must measure it (see `grid/Pane`). */
 		card?: HTMLElement;
 		/** The body element, likewise — `grid/spill.ts` measures inside it. */
@@ -26,14 +35,28 @@
 		title,
 		count,
 		caption,
+		rename,
+		shipped,
 		actions,
 		tone = 'default',
 		density = 'figure',
 		scroll = false,
+		frozen = false,
 		card = $bindable(),
 		body = $bindable(),
 		children
 	}: Props = $props();
+
+	const heading = $derived(labelText(title));
+	const sub = $derived(labelText(caption, DOT));
+	// A card being renamed offers BOTH lines whatever they currently say: an empty one is where a caption
+	// gets added, and a line the user emptied is how they get it back. Whoever supplies `rename` has
+	// already decided this card is one we name at all.
+	const naming = $derived(!!rename);
+	// A card with no heading of its OWN keeps its labels in its body — a KPI card is sections, each titled.
+	// Freezing that body took the pencils with it and the press fell through to the drag surface beneath,
+	// so the click moved the pane. Such a body holds figures, never controls, so there is nothing to freeze.
+	const freezeBody = $derived(frozen && !!heading);
 </script>
 
 <section
@@ -43,22 +66,44 @@
 	class:attention={tone === 'attention'}
 	bind:this={card}
 >
-	{#if title || caption || actions}
-		<header class="head" class:has-cap={!!caption}>
+	{#if heading || sub || actions || naming}
+		<header class="head" class:has-cap={!!sub || naming}>
 			<div class="titles">
 				<!-- One level whatever the density: every card is a peer on its board, and picking the
 				     heading level by how the card LOOKS puts two neighbours at different depths. -->
-				{#if title}
+				{#if heading || naming}
 					<h2 class:serif={density !== 'panel'}>
-						{title}{#if count !== undefined}&nbsp;<span class="count">{count}</span>{/if}
+						<LabelLine
+							label={title ?? {}}
+							what="title"
+							shipped={shipped?.title}
+							onrename={rename && ((t) => rename('title', t))}
+						>
+							{#snippet after()}{#if count !== undefined}&nbsp;<span class="count">{count}</span
+									>{/if}{/snippet}
+						</LabelLine>
 					</h2>
 				{/if}
-				{#if caption}<p class="cap">{caption}</p>{/if}
+				{#if sub || naming}
+					<p class="cap">
+						<LabelLine
+							label={caption ?? {}}
+							what="caption"
+							join={DOT}
+							shipped={shipped?.caption}
+							onrename={rename && ((t) => rename('caption', t))}
+						/>
+					</p>
+				{/if}
 			</div>
-			{#if actions}<div class="actions">{@render actions()}</div>{/if}
+			<!-- Inert, not hidden: while the board is edited a press anywhere on the card belongs to the drag,
+			     and these must not be tab stops either. -->
+			{#if actions}<div class="actions" inert={frozen || undefined}>{@render actions()}</div>{/if}
 		</header>
 	{/if}
-	<div class="body" class:scroller={scroll} bind:this={body}>{@render children()}</div>
+	<div class="body" class:scroller={scroll} inert={freezeBody || undefined} bind:this={body}>
+		{@render children()}
+	</div>
 </section>
 
 <style>

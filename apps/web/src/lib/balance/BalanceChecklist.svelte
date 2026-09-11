@@ -24,6 +24,7 @@
 	import AmountInput from '$lib/ui/AmountInput.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import { sumBy } from '$lib/utils/num';
+	import { words } from '$lib/ui/label';
 
 	interface Props {
 		id: string;
@@ -176,7 +177,11 @@
 	}
 </script>
 
-<Pane {id} title="Log balances" caption="A month's snapshot is its first-of-month assertion">
+<Pane
+	{id}
+	title={words('Log balances')}
+	caption={words("monthly snapshot of each account's balances")}
+>
 	{#snippet actions()}
 		{#if rows.length}
 			<span class="progress">{filled.length}/{rows.length}</span>
