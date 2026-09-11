@@ -107,8 +107,17 @@
 	const whyBlocked = (row: Row) => blockReason(row, parsed(row), expected(row.account));
 	const blockedRow = (row: Row) => isBlocked(row, parsed(row), expected(row.account));
 
+	/** Why a row can't be saved, said on the row itself — a pane-wide notice repeats the name of a
+	    row the reader is already looking at. */
+	function blockedReason(row: Row): string {
+		const gap = check(row) ?? 0;
+
+		return whyBlocked(row) === 'negative'
+			? "A balance can't be negative — enter what the account is worth, not what it moved."
+			: `Off by ${moneyExact(Math.abs(gap))} — log the missing ${missingEntryKind(gap)} first.`;
+	}
+
 	const filled = $derived(rows.filter((r) => parsed(r) != null));
-	const blocked = $derived(rows.filter(blockedRow));
 	const savable = $derived(filled.filter((r) => !blockedRow(r)));
 
 	const effective = (row: Row) =>
@@ -241,12 +250,8 @@
 											—
 										{:else if matches(row)}
 											<Badge tone="good" filled title="Matches the ledger">✓</Badge>
-										{:else if row.liability}
-											<Badge
-												tone="crit"
-												filled
-												title="Off by {moneyExact(chk)} — an entry is missing">✕</Badge
-											>
+										{:else if blockedRow(row)}
+											<Badge tone="crit" filled title={blockedReason(row)}>✕</Badge>
 										{:else}
 											<Badge tone="warn" filled title="Adjustment this month would post"
 												>{moneyExact(chk)}</Badge
@@ -262,23 +267,6 @@
 		</div>
 
 		<div class="foot">
-			{#if blocked.length}
-				<p class="blockmsg" role="status">
-					{#each blocked as row (row.account)}
-						{@const gap = check(row) ?? 0}
-						<span class="bl">
-							<b>{formatAccount(row.account)}</b>
-							{#if whyBlocked(row) === 'negative'}
-								can't hold a negative balance — enter what it is worth, not what it moved.
-							{:else}
-								is off by {moneyExact(Math.abs(gap))} — log the missing {missingEntryKind(gap)}
-								first.
-							{/if}
-						</span>
-					{/each}
-				</p>
-			{/if}
-
 			{#if err}<p class="err" role="alert">{err}</p>{/if}
 			{#if note}<p class="note" role="status">{note}</p>{/if}
 
@@ -458,17 +446,6 @@
 		color: var(--ink-3);
 		font-size: var(--text-secondary);
 		font-variant-numeric: tabular-nums;
-	}
-	.blockmsg {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
-		margin: 0;
-		font-size: var(--text-secondary);
-		color: var(--ink-2);
-	}
-	.bl b {
-		color: var(--ink);
 	}
 	.cap,
 	.note {
