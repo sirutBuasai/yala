@@ -4,6 +4,7 @@
 // instead of a browser.
 
 import { EDGES, moveRect, resizeRect, type Edge } from './resize';
+import { clampRect } from './resolve';
 import { UNIT } from './units';
 import type { DragOrigin } from './lift';
 import type { AuthoredPane, HeightMode, Rect } from './types';
@@ -39,6 +40,13 @@ export class PaneGesture {
 
 	/** True while the pointer is pushing past the size the content will fit in. */
 	invalid = $state(false);
+
+	/**
+	 * The grid rectangle the pointer is over during a move, for the board to draw a target on. Not where
+	 * the pane will land: a raise the push rule refuses leaves the card behind while this goes on, which
+	 * is the whole reason to show it — the swap only fires once it has covered the pane above.
+	 */
+	aim = $state<Rect | null>(null);
 
 	/** The whole board as it was at the press, so Escape puts it back — including the promotion. */
 	#before: AuthoredPane[] | null = null;
@@ -78,6 +86,7 @@ export class PaneGesture {
 		this.#base = null;
 		this.#origin = null;
 		this.invalid = false;
+		this.aim = null;
 		this.#attempt++;
 	}
 
@@ -91,6 +100,7 @@ export class PaneGesture {
 	moveTo(dx: number, dy: number): void {
 		if (!this.#base || !this.#origin) return;
 		const { x, y } = moveRect(this.#base, dx, dy);
+		this.aim = clampRect({ ...this.#base, x, y });
 		this.#arrangement.dragTo(this.#id, x, y, this.#origin);
 	}
 
@@ -100,6 +110,7 @@ export class PaneGesture {
 		this.#before = null;
 		this.#base = null;
 		this.#origin = null;
+		this.aim = null;
 	}
 
 	beginResize(): void {

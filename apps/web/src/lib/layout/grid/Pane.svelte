@@ -185,6 +185,17 @@
 	{/if}
 </div>
 
+{#if arranging && !env.folded && gesture.aim}
+	<!-- A sibling of the cell rather than a child: it takes its own place on the grid, which is the only
+	     way it can sit anywhere but where the pane already is. -->
+	<div
+		class="aim"
+		aria-hidden="true"
+		style:grid-column="{gesture.aim.x + 1} / span {gesture.aim.w}"
+		style:grid-row="{gesture.aim.y + 1} / span {gesture.aim.h}"
+	></div>
+{/if}
+
 <style>
 	/* Each pane insets itself by half a gap; the grid itself has none (see `units.ts`). */
 	.cell {
@@ -266,6 +277,17 @@
 	.cell.invalid .grab {
 		outline: 2px solid var(--crit);
 		background: color-mix(in srgb, var(--crit) 10%, transparent);
+	}
+	/* The pointer's target. Inset and rounded like a card so it reads as the pane's own footprint, and
+	   above the panes it crosses, since where it is going is what the user is looking at. */
+	.aim {
+		position: relative;
+		z-index: 3;
+		margin: calc(var(--gap-grid) / 2);
+		border-radius: var(--radius-xl);
+		border: 2px dashed var(--arrange-line);
+		background: color-mix(in srgb, var(--arrange-line) 18%, transparent);
+		pointer-events: none;
 	}
 	.tools {
 		position: absolute;

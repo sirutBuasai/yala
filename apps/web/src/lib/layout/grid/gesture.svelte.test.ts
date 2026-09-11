@@ -133,6 +133,35 @@ describe('moving', () => {
 		s.moveTo(px(4), 0);
 		expect(arrangement.drags).toEqual([]);
 	});
+
+	it('reports where the pointer is aiming, whether the board can give it or not', () => {
+		const arrangement = fake();
+		const { s } = gesture(arrangement);
+
+		// Nothing to show for a press that has not travelled, or once the pane is down.
+		s.beginMove();
+		expect(s.aim).toBeNull();
+
+		s.moveTo(px(2), px(-6));
+		// Two columns right and six rows up, from a pane authored at (4,4): the rows above the board are
+		// refused for the pane, and the target is clamped to the same place rather than running off it.
+		expect(s.aim).toEqual({ x: 6, y: 0, w: 12, h: 6 });
+
+		s.endMove(px(2), px(-6));
+		expect(s.aim).toBeNull();
+	});
+
+	it('drops the target when the gesture is abandoned', () => {
+		const arrangement = fake();
+		const { s } = gesture(arrangement);
+
+		s.beginMove();
+		s.moveTo(0, px(3));
+		expect(s.aim).not.toBeNull();
+
+		s.abandon();
+		expect(s.aim).toBeNull();
+	});
 });
 
 describe('abandoning', () => {
