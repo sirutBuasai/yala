@@ -218,9 +218,12 @@
 					{#each GROUP_ORDER as group (group)}
 						{@const members = rows.filter((r) => r.group === group)}
 						{#if members.length}
+							<!-- The subtotal takes the Previous column ALONE, not a colspan: spanning the figure
+							     columns left it aligned to the edge of the span rather than to a column of digits. -->
 							<tr class="glabel">
 								<th scope="rowgroup">{group}</th>
-								<td class="num" colspan="5">{money(subtotal(group))}</td>
+								<td class="num">{money(subtotal(group))}</td>
+								<td colspan="4"></td>
 							</tr>
 							{#each members as row (row.account)}
 								{@const value = parsed(row)}
@@ -337,6 +340,11 @@
 		letter-spacing: var(--ls-wide);
 		color: var(--ink-3);
 		font-weight: var(--fw-semibold);
+	}
+	/* A column title sits over its own figures, so only the text columns are left-aligned and `.num`
+	   governs the rest. Stated as `:not(.num)` because a bare `th` rule outranks `.num` and silently
+	   left-aligned every numeric header. */
+	.bal thead th:not(.num) {
 		text-align: left;
 	}
 	.bal tbody tr:not(.glabel):hover td {
@@ -352,6 +360,10 @@
 		letter-spacing: var(--ls-wider);
 		color: var(--ink-3);
 		font-weight: var(--fw-semibold);
+	}
+	/* Only the group's NAME is left-aligned; its subtotal is a figure and takes `.num`, which a rule
+	   naming both cells would have outranked. */
+	.glabel th {
 		text-align: left;
 	}
 	.glabel td {
