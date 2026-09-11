@@ -137,7 +137,7 @@
 			{#each series as s, si (s.name)}
 				{#if s.area}
 					<linearGradient id="{gid}-{si}" x1="0" y1="0" x2="0" y2="1">
-						<stop offset="0%" stop-color={s.color} stop-opacity="0.28" />
+						<stop offset="0%" stop-color={s.color} stop-opacity="var(--mark-area)" />
 						<stop offset="100%" stop-color={s.color} stop-opacity="0" />
 					</linearGradient>
 				{/if}

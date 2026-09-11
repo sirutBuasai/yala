@@ -84,12 +84,12 @@ const SERIES_ROLE: Record<string, string> = {
 	// KEPT, and it reads beside `Saved` on the same boards.
 	'Savings rate': 'var(--role-saving)',
 	'Spending rate': 'var(--role-spending)',
-	// The gross → net chain.
+	// The gross → net chain, one hue per term: no two sides of a subtraction share one.
 	Gross: 'var(--role-income)',
 	Deductions: 'var(--role-deduction)',
 	Contributions: 'var(--role-saving)',
-	'Net income': 'var(--role-income)',
-	'Take-home': 'var(--role-income)',
+	'Net income': 'var(--role-net)',
+	'Take-home': 'var(--role-takehome)',
 	// Stocks.
 	'Net worth': 'var(--role-balance)',
 	Assets: 'var(--role-asset)',
@@ -140,11 +140,13 @@ function keyColor(key: string, mode: ColorBy = 'category'): string {
 	return categoryVar(key);
 }
 
-const FLOW_ROLE_COLOR = {
-	gross: 'var(--role-income)',
-	takehome: 'var(--role-income)',
-	deduction: 'var(--role-deduction)',
-	saving: 'var(--role-saving)'
+/** A flow node's role names the term a series would, so its hue comes from the table above rather than
+    a second copy that could disagree with the card beside it. */
+const FLOW_ROLE_SERIES = {
+	gross: 'Gross',
+	takehome: 'Take-home',
+	deduction: 'Deductions',
+	saving: 'Contributions'
 } as const;
 
 // --- series collection ---
@@ -291,7 +293,7 @@ export const CHARTS: ChartDef[] = [
 			return {
 				nodes: f.nodes.map((n) => ({
 					...n,
-					color: n.role === 'category' ? keyColor(n.label) : FLOW_ROLE_COLOR[n.role]
+					color: n.role === 'category' ? keyColor(n.label) : seriesColor(FLOW_ROLE_SERIES[n.role])
 				})),
 				links: f.links
 			};

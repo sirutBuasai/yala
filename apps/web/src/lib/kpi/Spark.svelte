@@ -67,17 +67,14 @@
 		width: 100%;
 		height: 100%;
 	}
-	/* How faint is set by the BADGE, not the number: the badge is the smallest type on the card, and a
-	   red badge over a red fill is the tightest pair there is. Measured at 16% it fell under 4.5:1 in
-	   dark mode; 9% keeps every stat and badge clear of it in both themes. The stroke may carry more of
-	   the hue — it is a hairline crossing a glyph, not the background behind one — but not so much that
-	   a line-only KPI with a badge would be the exception. */
+	/* How faint is pitched at the BADGE, not the number: it is the smallest type on the card, and a red
+	   badge over a red fill is the tightest pair there is. Strength is per theme (see app.css). */
 	.fill {
-		fill: color-mix(in srgb, var(--mark) 9%, transparent);
+		fill: color-mix(in srgb, var(--mark) var(--mark-wash), transparent);
 	}
 	.stroke {
 		fill: none;
-		stroke: color-mix(in srgb, var(--mark) 32%, transparent);
+		stroke: color-mix(in srgb, var(--mark) var(--mark-line), transparent);
 		stroke-width: 1.5;
 		/* The viewBox is stretched, so an unscaled width keeps the line the same weight at any pane size. */
 		vector-effect: non-scaling-stroke;

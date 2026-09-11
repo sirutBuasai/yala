@@ -4,7 +4,8 @@
 	// compares. Cells are catalog ids, so a new row or column is data rather than markup.
 	//
 	// A cell's number is a plain level and never coloured; a period-over-period change rides along as a
-	// badge, which is where the colour goes.
+	// badge, which is where the colour goes. A caption the whole row shares is said under the row label
+	// rather than repeated in every cell.
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
 	import { build } from '$lib/data/catalog';
@@ -30,21 +31,29 @@
 	let { data, columns, rows }: Props = $props();
 
 	const body = $derived(
-		rows.map((r) => ({
-			...r,
-			values: r.cells.map((c) => {
+		rows.map((r) => {
+			const values = r.cells.map((c) => {
 				const s = build(data, c.id, c.scope) as Scalar;
 				const d = s.delta;
 				return {
 					key: c.id,
 					text: s.value === null ? '—' : formatUnit(s.value, s.unit),
-					// The figure's OWN caption, per cell: the divisor behind a run-rate differs by measure,
-					// so no one row caption can state it.
 					note: s.note,
 					badge: d ? { text: deltaLabel(d), tone: badgeTone(d.tone) } : null
 				};
-			})
-		}))
+			});
+			// A note must hold for the whole row: said once under the row label when every cell agrees, per
+			// cell when they differ, and dropped when only some carry one — under a single column it reads
+			// as an anomaly rather than as a fact about the row.
+			const notes = values.map((v) => v.note);
+			const everyCell = notes.every(Boolean);
+			const shared = everyCell && new Set(notes).size === 1;
+			return {
+				...r,
+				caption: [r.caption, shared ? notes[0] : null].filter(Boolean).join(' · ') || undefined,
+				values: everyCell && !shared ? values : values.map((v) => ({ ...v, note: undefined }))
+			};
+		})
 	);
 </script>
 

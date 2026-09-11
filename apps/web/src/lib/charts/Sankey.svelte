@@ -161,7 +161,7 @@
 			fill="none"
 			stroke={r.color}
 			stroke-width={r.w}
-			stroke-opacity="0.32"
+			stroke-opacity="var(--mark-flow)"
 			role="presentation"
 			onmousemove={(e) =>
 				showTip(`<b>${esc(r.l.source)} → ${esc(r.l.target)}</b><br>${money(r.l.value)}`, e)}

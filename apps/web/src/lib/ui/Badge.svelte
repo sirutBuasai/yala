@@ -32,13 +32,18 @@
 </span>
 
 <style>
+	/* Stated, never inherited: a badge sits beside a serif figure as often as beside body text, and
+	   inheriting left one delta reading in two faces. */
 	.badge {
 		display: inline-flex;
 		align-items: center;
 		gap: var(--space-1);
 		flex: none;
+		font-family: var(--font-body);
 		font-size: var(--text-badge);
 		font-weight: var(--fw-semibold);
+		font-variant-numeric: tabular-nums;
+		letter-spacing: normal;
 		white-space: nowrap;
 	}
 	.dot {
