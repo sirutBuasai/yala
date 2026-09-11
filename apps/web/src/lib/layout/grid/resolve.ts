@@ -51,15 +51,6 @@ export function resolve(panes: SizedPane[]): PlacedPane[] {
 	return panes.map((p) => byId.get(p.id)!);
 }
 
-/**
- * The authored top for a pane dropped at `placedY` while carrying `offset` rows of displacement.
- * Without the subtraction, storing where the pane was dropped would store the push as if the user
- * had asked for it, and the next render would apply it a second time.
- */
-export function authoredY(placedY: number, offset: number): number {
-	return Math.max(0, placedY - offset);
-}
-
 export function clampRect(rect: Rect): Rect {
 	const w = Math.min(COLS, Math.max(MIN_W, rect.w));
 	const h = Math.max(MIN_H, rect.h);

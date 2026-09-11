@@ -162,8 +162,8 @@ export class Arrangement {
 	 * The board a drag is about to edit. Handed back to every `dragTo` rather than read off the live
 	 * board, which the gesture is already halfway through changing.
 	 */
-	beginDrag(id: string): DragOrigin {
-		return { authored: this.snapshot(), placed: this.#placed, carried: this.placed(id).offset };
+	beginDrag(): DragOrigin {
+		return { authored: this.snapshot(), placed: this.#placed };
 	}
 
 	/** One pointer move of a drag, in PLACED coordinates — where the pane is on screen (see `lift`). */

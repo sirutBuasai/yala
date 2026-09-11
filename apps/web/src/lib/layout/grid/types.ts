@@ -57,6 +57,6 @@ export interface SizedPane extends Rect {
 
 export interface PlacedPane extends Rect {
 	id: string;
-	/** Rows this pane was pushed down by — what a drag must subtract before saving. */
+	/** Rows this pane was pushed down by: how far its row sits below the top it was authored at. */
 	offset: number;
 }

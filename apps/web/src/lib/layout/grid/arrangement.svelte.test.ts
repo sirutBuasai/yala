@@ -28,7 +28,7 @@ const rows = (n: number) => n * UNIT - GAP;
 /** One whole drag, the way a gesture drives it: the board captured at the press, then a position in
     PLACED coordinates. */
 const dragTo = (b: Arrangement, id: string, x: number, y: number) =>
-	b.dragTo(id, x, y, b.beginDrag(id));
+	b.dragTo(id, x, y, b.beginDrag());
 
 let seq = 0;
 /** A board on a key nothing else has used, so one test's storage can't reach another's. */
@@ -100,7 +100,7 @@ describe('dragging', () => {
 		expect(b.placed('top').y).toBe(4);
 	});
 
-	it('subtracts the displacement, so a drop that moves nothing changes nothing', () => {
+	it('stores a pushed pane where it sits, so it cannot spring back when the push goes', () => {
 		const { arrangement: b } = arrangement();
 		// Grow `bottom` so `wide` is pushed below where it was authored.
 		b.setMeasured('bottom', rows(14));
@@ -109,9 +109,12 @@ describe('dragging', () => {
 
 		// Pick it up and put it back down in the same place, as a gesture with zero delta does.
 		dragTo(b, 'wide', before.x, before.y);
+		expect(b.authored('wide').y).toBe(before.y);
 
+		// The push it was carrying is its own top now: shrink `bottom` back and the pane stays where the
+		// user last saw it, rather than rising into the space that opened.
+		b.setMeasured('bottom', rows(6));
 		expect(b.placed('wide').y).toBe(before.y);
-		expect(b.authored('wide').y).toBe(12); // the authored top is untouched
 	});
 
 	it('applies a drag once, not once per render', () => {
@@ -122,26 +125,25 @@ describe('dragging', () => {
 		dragTo(b, 'wide', before.x, before.y + 12);
 
 		// The push is not added a second time on top of the drag.
-		expect(b.authored('wide').y).toBe(24);
-		expect(b.placed('wide').y).toBe(24);
+		expect(b.authored('wide').y).toBe(32);
+		expect(b.placed('wide').y).toBe(32);
 
 		// And it stays there across a re-derive.
 		b.setMeasured('bottom', rows(14));
-		expect(b.placed('wide').y).toBe(24);
+		expect(b.placed('wide').y).toBe(32);
 	});
 
-	it('absorbs a downward drag that only takes up the slack the pane was pushed by', () => {
-		// The accepted consequence of subtracting the offset: a downward drag first closes the slack the
-		// pane was pushed by, in the STORED position, without moving it. Storing where it was dropped
-		// instead would re-baseline the pane onto a push it never asked for.
+	it('moves a pushed pane every row the pointer asked for, with no dead zone', () => {
+		// The stored top used to have the displacement subtracted from it, so the first rows of a
+		// downward drag closed that gap without moving the pane at all.
 		const { arrangement: b } = arrangement();
 		b.setMeasured('bottom', rows(14));
 		const before = b.placed('wide');
 
 		dragTo(b, 'wide', before.x, before.y + 4);
 
-		expect(b.authored('wide').y).toBe(16);
-		expect(b.placed('wide').y).toBe(20);
+		expect(b.authored('wide').y).toBe(24);
+		expect(b.placed('wide').y).toBe(24);
 	});
 
 	it('keeps a dropped pane inside the board', () => {
