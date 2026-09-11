@@ -15,22 +15,16 @@ import type { AuthoredPane, BoardLayout, HeightMode, PaneSpec, PlacedPane, Rect 
 
 const MODES: HeightMode[] = ['fixed', 'fit', 'cap'];
 
-/**
- * Bumped whenever a board's DEFAULT set of panes changes. Stored ids that no longer exist are
- * dropped and brand-new ones land at the back of the priority order, so an arrangement saved against
- * the old set places the new panes below whatever was already there. Starting the boards over is the
- * only honest answer.
- */
+/** Bumped whenever a board's DEFAULT set of panes changes: new ids land at the back of the priority
+    order, so an arrangement saved against the old set would bury them below everything else. */
 const LAYOUT_VERSION = 2;
 
 function whole(v: unknown, min: number): number | undefined {
 	return typeof v === 'number' && Number.isFinite(v) && v >= min ? Math.round(v) : undefined;
 }
 
-/**
- * Reviver for a stored board. Every field must survive or the entry is dropped: a half-read
- * rectangle would place a pane somewhere nobody chose.
- */
+/** Every field must survive or the entry is dropped: a half-read rectangle would place a pane somewhere
+    nobody chose. */
 function storedPanes(): Revive<AuthoredPane[]> {
 	return listOf((raw) => {
 		if (typeof raw !== 'object' || raw === null) return undefined;
@@ -78,10 +72,8 @@ export class Arrangement {
 		this.#panes = this.#merge(this.#pref.value);
 	}
 
-	/**
-	 * Stored panes first, in their stored (priority) order, then any pane the storage predates. Panes
-	 * that no longer exist are dropped rather than kept as ghosts reserving space nothing can fill.
-	 */
+	/** Stored panes first, in their stored (priority) order, then any pane the storage predates. Panes
+	    that no longer exist are dropped rather than left reserving space nothing can fill. */
 	#merge(stored: AuthoredPane[]): AuthoredPane[] {
 		const known = new Map(stored.filter((p) => p.id in this.#specs).map((p) => [p.id, p]));
 		return [
@@ -134,8 +126,7 @@ export class Arrangement {
 		return !this.#env.folded && hugs(this.mode(id));
 	}
 
-	/** The body scrolls once the content overruns. Never when folded — a folded pane hugs its
-	    content, so there is nothing to overrun. */
+	/** The body scrolls once the content overruns. Never when folded: a folded pane hugs its content. */
 	scrolls(id: string): boolean {
 		return !this.#env.folded && scrolls(this.spec(id).content, this.mode(id));
 	}
@@ -158,10 +149,8 @@ export class Arrangement {
 		this.#panes = this.#panes.map((p) => (p.id === id ? next(p) : p));
 	}
 
-	/**
-	 * The board a drag is about to edit. Handed back to every `dragTo` rather than read off the live
-	 * board, which the gesture is already halfway through changing.
-	 */
+	/** Handed back to every `dragTo` rather than read off the live board, which the gesture is already
+	    halfway through changing. */
 	beginDrag(): DragOrigin {
 		return { authored: this.snapshot(), placed: this.#placed };
 	}
@@ -189,10 +178,10 @@ export class Arrangement {
 	}
 
 	/**
-	 * Force rectangles onto panes, adding any this board's storage predates. The KPI merge gesture
-	 * changes which panes a board HAS, and both halves of a split need a rectangle written before the
-	 * board is rebuilt around the new set — otherwise the half that is new to storage falls back to its
-	 * declared default and lands on top of the half that kept the merged card's rectangle.
+	 * Force rectangles onto panes, adding any this board's storage predates. Merging changes which panes a
+	 * board HAS, so both halves of a split need a rectangle written before the board is rebuilt around the
+	 * new set — otherwise the half that is new to storage falls back to its declared default and lands on
+	 * top of the other.
 	 */
 	seed(rects: Record<string, Rect>): void {
 		const pending = new Map(Object.entries(rects));
@@ -202,8 +191,8 @@ export class Arrangement {
 			pending.delete(p.id);
 			return { ...p, ...clampRect(rect) };
 		});
-		// Ahead of the rest: these rectangles are exact and adjacent, so they win any tie on authored
-		// top rather than being pushed below a neighbour they are meant to sit beside.
+		// Ahead of the rest, so these exact rectangles win any tie on authored top rather than being pushed
+		// below a neighbour they are meant to sit beside.
 		const added = [...pending].map(([id, rect]) => ({
 			id,
 			mode: 'fixed' as HeightMode,
@@ -215,11 +204,8 @@ export class Arrangement {
 		this.commit();
 	}
 
-	/**
-	 * Switch a list's height mode. Leaving a fitted mode freezes the height at what the content
-	 * currently needs, and entering `cap` seeds the ceiling from the same figure, so the pane does not
-	 * jump either way.
-	 */
+	/** Leaving a fitted mode freezes the height at what the content currently needs, and entering `cap`
+	    seeds the ceiling from the same figure, so the pane does not jump either way. */
 	setMode(id: string, mode: HeightMode): void {
 		const fitted = this.#measured[id] === undefined ? undefined : rowsForPx(this.#measured[id]!);
 		this.#update(id, (p) => ({
@@ -231,8 +217,8 @@ export class Arrangement {
 		this.commit();
 	}
 
-	/** Copy of the whole authored board — rectangles AND priority order — so an abandoned gesture
-	    can be put back exactly, including the promotion it did on the way in. */
+	/** Rectangles AND priority order, so an abandoned gesture can be put back exactly — including the
+	    promotion it did on the way in. */
 	snapshot(): AuthoredPane[] {
 		return this.#panes.map((p) => ({ ...p }));
 	}
@@ -251,7 +237,7 @@ export class Arrangement {
 		this.#panes = this.#merge([]);
 	}
 
-	/** Columns the board runs at. `$derived.by` rather than `$derived`: a field initialiser runs BEFORE
-	    the constructor body, so reading `#env` directly here would read it before it is assigned. */
+	/** `$derived.by`, not `$derived`: a field initialiser runs BEFORE the constructor body, so reading
+	    `#env` directly here would read it unassigned. */
 	readonly columns = $derived.by(() => (this.#env.folded ? this.#env.columns : COLS));
 }

@@ -23,7 +23,7 @@ describe('groupOf', () => {
 
 	it('separates taxable from tax-advantaged investments', () => {
 		expect(groupOf('Assets:Investments:Taxable:BrokerAStocks')).toBe('Taxable');
-		expect(groupOf('Assets:Investments:TaxAdvantaged:Amazon401k')).toBe('Tax-advantaged');
+		expect(groupOf('Assets:Investments:TaxAdvantaged:EmployerA401k')).toBe('Tax-advantaged');
 	});
 
 	it('tests the tax-advantaged subtree BEFORE the investments subtree it sits inside', () => {

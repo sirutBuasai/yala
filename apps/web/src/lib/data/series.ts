@@ -51,10 +51,9 @@ export function measureByMonth(data: DashboardData, m: Measure, year?: number): 
 }
 
 /**
- * Only the months of a year the measure actually moved in — the first through the last, so a quiet
- * month in the middle still plots but a run of empty ones at either end does not. This is the window a
- * running total wants: padded out to the year's end, an accumulation flatlines to the edge and spends
- * half the card saying nothing.
+ * Only the months a measure actually moved in, first through last: a quiet month in the middle still
+ * plots, a run of empty ones at either end does not. The window a running total wants, which otherwise
+ * flatlines to the year's edge.
  */
 export function measureActive(data: DashboardData, m: Measure, year: number): Series {
 	const { keys } = monthAxis(data, year);

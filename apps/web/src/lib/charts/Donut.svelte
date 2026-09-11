@@ -3,6 +3,7 @@
 	import { money, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Empty from '$lib/ui/Empty.svelte';
+	import { sumBy } from '$lib/utils/num';
 
 	interface Slice {
 		name: string;
@@ -15,7 +16,7 @@
 	let { slices }: Props = $props();
 
 	const R = 120;
-	const total = $derived(slices.reduce((a, s) => a + s.value, 0));
+	const total = $derived(sumBy(slices, (s) => s.value));
 
 	const arcs = $derived(
 		pie<Slice>()

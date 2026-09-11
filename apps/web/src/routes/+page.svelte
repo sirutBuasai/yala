@@ -39,8 +39,8 @@
 
 	// --- scroll offset per tab ---
 	//
-	// Held in plain state and flushed to storage only when it could actually be read again; a write per
-	// scroll event would be hundreds of writes nothing looks at until a tab switch or a reload.
+	// Plain state, flushed to storage only when it could be read again: a write per scroll event is
+	// hundreds of writes nothing looks at until a tab switch or a reload.
 	/** Events that mean the user has taken the scroll position back off us. */
 	const GESTURES = ['wheel', 'touchstart', 'keydown'] as const;
 
@@ -62,11 +62,10 @@
 	}
 
 	/**
-	 * Floor under the panel, held across a tab swap — the crux of making scroll restoration work.
-	 * Swapping the panel briefly shortens the page, so the browser clamps the scroll offset; once async
-	 * panes make it tall again Chrome restores its own pre-clamp offset (the tab we just LEFT), late
-	 * enough to beat any scrollTo and then be recorded as the user's choice. Holding the outgoing height
-	 * means the page never shrinks, so there is no clamp. Released once the incoming content settles.
+	 * Floor under the panel, held across a tab swap, so the page never shrinks and the browser never clamps
+	 * the scroll offset. Without it the clamp happens, and once async panes make the page tall again the
+	 * browser restores its own pre-clamp offset late enough to beat any scrollTo. Released once the
+	 * incoming content settles.
 	 */
 	let hold = $state<number | null>(null);
 	let panelEl = $state<HTMLElement>();

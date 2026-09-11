@@ -6,6 +6,7 @@
 	import TransactionList, { type TxnRow } from '$lib/lists/TransactionList.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
 	import { money } from '$lib/utils/format';
+	import { sumBy } from '$lib/utils/num';
 
 	interface Props {
 		/** Pane id in the board's layout. */
@@ -18,7 +19,7 @@
 	}
 	let { id, transactions, onedit, caption, onadd }: Props = $props();
 
-	const total = $derived(transactions.reduce((s, t) => s + t.amount, 0));
+	const total = $derived(sumBy(transactions, (t) => t.amount));
 </script>
 
 <!-- Stays put on a clean month because it hosts the add button. -->

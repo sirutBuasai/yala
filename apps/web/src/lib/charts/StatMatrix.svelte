@@ -1,11 +1,10 @@
 <script lang="ts">
-	// A grid of figures where the rows and columns both carry meaning — the same measures across two
-	// time bases, say. As loose tiles they'd hide that structure and eat a row of height; as a matrix
-	// the layout says it, and a glance down a column compares. Cells are catalog ids, so a new row or
-	// column is data rather than markup.
+	// A grid of figures where rows and columns both carry meaning. As loose tiles that structure is
+	// invisible and costs a row of height; as a matrix the layout says it and a glance down a column
+	// compares. Cells are catalog ids, so a new row or column is data rather than markup.
 	//
-	// A cell's number is a plain level and is never coloured. Where a cell's figure carries a
-	// period-over-period change, that change rides along as a badge, which is where the colour goes.
+	// A cell's number is a plain level and never coloured; a period-over-period change rides along as a
+	// badge, which is where the colour goes.
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
 	import { build } from '$lib/data/catalog';

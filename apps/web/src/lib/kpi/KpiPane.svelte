@@ -1,12 +1,16 @@
 <script lang="ts">
 	// One KPI card on the board: a pane of sections, plus the arrange-mode controls that change the
 	// grouping. The card takes no title of its own; each section carries one.
+	import { tick } from 'svelte';
 	import type { DashboardData } from '$lib/data/types';
 	import type { PlacedPane, Rect } from '$lib/layout/grid/types';
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import { drag } from '$lib/layout/grid/drag';
+	import { overflows } from '$lib/layout/grid/spill';
+	import { COLS } from '$lib/layout/grid/units';
 	import { getArrangement, getGridEnv } from '$lib/layout/grid/context';
-	import { mergeAxis, unionRect, type MergeAxis } from './merge';
+	import { flowOf, mergeAxis, spanOf, unionRect, withSpan, type MergeAxis } from './merge';
+	import { splitFloors } from './measure';
 	import { getKpiBoard } from './context';
 	import Kpi from './Kpi.svelte';
 
@@ -24,12 +28,13 @@
 	const group = $derived(kpis.group(id));
 	const dividers = $derived(kpis.dividers(id));
 
-	// Two coordinates, deliberately: whether two cards LOOK adjacent is about where they are on screen,
-	// but what a merge or split STORES must be authored. A placed top carries the rows the push rule
-	// displaced the pane by, and storing that records the push as if it had been asked for.
+	/** The sections box, which both a split and the fit measure before they change the card. */
+	let sectionsEl = $state<HTMLElement>();
+
+	// Where a card SITS is placed; where a merged card STARTS is authored. A merge is not a drag, so the
+	// leader keeps the top the user gave it rather than banking whatever the push rule had added.
 	const placed = $derived(arrangement.placed(id));
 
-	/** Just the rectangle: a placed or authored pane carries more than that. */
 	function rectOf({ x, y, w, h }: Rect): Rect {
 		return { x, y, w, h };
 	}
@@ -38,8 +43,8 @@
 		return rectOf(arrangement.authored(pane));
 	}
 
-	/** Grid tracks, not flex: `fr` shares are exact, so a divider lands on the fraction its split
-	    control is drawn at. */
+	/** Grid tracks, not flex: `fr` shares are exact, so a divider lands on the fraction its control is
+	    drawn at. */
 	const tracks = $derived(group.weights.map((w) => `minmax(0, ${w}fr)`).join(' '));
 	const stacked = $derived(group.axis === 'column' || env.folded);
 
@@ -49,8 +54,7 @@
 		return g.ids.length === 1 || g.axis === axis;
 	}
 
-	/** The KPI card this one may merge with on an axis. Nothing matching means no control, which is the
-	    only signal the absence needs. */
+	/** The KPI card this one may merge with on an axis. Nothing matching means no control. */
 	function neighbour(axis: MergeAxis): PlacedPane | null {
 		if (!flat(id, axis)) return null;
 		return (
@@ -70,17 +74,55 @@
 	);
 
 	function join(axis: MergeAxis, other: PlacedPane): void {
-		const [mine, theirs] = [authored(id), authored(other.id)];
-		const span = (r: Rect) => (axis === 'row' ? r.w : r.h);
+		// Spans as PLACED: a displaced pane is authored above where it renders, so a union of the two
+		// authored rectangles can be shorter than the pair on screen and squeeze every section in the card.
+		const [mine, theirs] = [rectOf(placed), rectOf(other)];
+		const covered = spanOf(unionRect(mine, theirs), axis);
 
-		// The rectangle first, then the grouping: the board is rebuilt around the new pane set as soon as
-		// the grouping changes, and the merged card must already own the space both cards held.
-		arrangement.seed({ [id]: unionRect(mine, theirs) });
-		kpis.merge(id, other.id, axis, (member) => span(member === other.id ? theirs : mine));
+		// The rectangle first, then the grouping: changing the grouping rebuilds the board around the new
+		// pane set, and the merged card must already own the space both cards held.
+		arrangement.seed({ [id]: withSpan(authored(id), axis, covered) });
+		kpis.merge(id, other.id, axis, (member) => spanOf(member === other.id ? theirs : mine, axis));
 	}
 
+	function squeezed(axis: MergeAxis): boolean {
+		const sections = sectionsEl ? [...sectionsEl.children] : [];
+		return sections.some((s) => overflows(s, flowOf(axis)));
+	}
+
+	/**
+	 * Grow the card until no section is squeezed. A merge shares the space it inherits out by WEIGHT, so a
+	 * section can be handed less than the content in it — the merged card carries one card's padding where
+	 * the two carried two, and a section's share of that saving need not be the slack it had. Measured
+	 * once the card is real rather than predicted, for the reason every minimum here is (see `spill.ts`).
+	 */
+	async function grow(axis: MergeAxis): Promise<void> {
+		for (let room = COLS; room > 0 && squeezed(axis); room--) {
+			const rect = authored(id);
+			arrangement.resizeTo(id, withSpan(rect, axis, spanOf(rect, axis) + 1));
+			await tick();
+		}
+		arrangement.commit();
+	}
+
+	/** The grouping already fitted. Plain, not state: it must not re-run the check that sets it. */
+	let fitted = '';
+
+	// An effect rather than the tail of `join`: a merge rebuilds the board around the new pane set, so the
+	// element the gesture had bound is gone and the card to measure is the one this render just made. Keyed
+	// on the GROUPING alone — a resize is the gesture's business, and it holds its own last fitting size.
+	$effect(() => {
+		const el = sectionsEl;
+		const grouping = `${group.axis}:${group.ids.join('|')}`;
+		if (!el || env.folded || grouping === fitted) return;
+		fitted = grouping;
+		if (group.ids.length > 1) void grow(group.axis);
+	});
+
 	function cut(index: number): void {
-		const { ids, rects } = kpis.split(id, index, authored(id));
+		const rect = authored(id);
+		const floors = splitFloors(sectionsEl!, group, index, spanOf(rect, group.axis));
+		const { ids, rects } = kpis.split(id, index, rect, floors);
 		arrangement.seed({ [ids[0]]: rects[0], [ids[1]]: rects[1] });
 	}
 
@@ -91,26 +133,22 @@
 </script>
 
 <Pane {id}>
-	<!-- Folded, the board is one or two columns wide and the coordinates are gone, so a row card's
-	     sections have no room to sit side by side: they stack, whatever the merge said. -->
-	<!-- `data-measure-x`: each section declares the width it needs (see `Kpi.svelte`), and a section
-	     that has stopped shrinking overhangs its track without ever reaching the card's own scroll
-	     width. This is the box that shows it, so it is the box the resize probe reads (see
-	     `grid/spill.ts`). -->
-	<div class="sections" class:stacked style:--tracks={tracks} data-measure-x>
+	<!-- Folded, there are no coordinates and no room to sit side by side: sections stack whatever the merge
+	     said. `data-measure` per SECTION, not on the box around them — only the LAST section's overhang
+	     reaches that box, so measuring it alone let every earlier section be squeezed until it painted over
+	     its neighbour (see `grid/spill.ts`). -->
+	<div class="sections" class:stacked style:--tracks={tracks} bind:this={sectionsEl}>
 		{#each group.ids as member (member)}
-			<div class="section"><Kpi {data} spec={kpis.spec(member)} /></div>
+			<div class="section" data-measure><Kpi {data} spec={kpis.spec(member)} /></div>
 		{/each}
 	</div>
 
 	{#snippet affordances()}
 		{#if dividers.length}
-			<!-- Over the card's CONTENT box, so a fraction here is the same fraction the grid tracks put
-			     the divider at. -->
+			<!-- Over the card's CONTENT box, so a fraction here is the fraction the tracks put the divider
+			     at. The divider IS the split control. -->
 			<div class="cuts" class:stacked>
 				{#each dividers as fraction, i (i)}
-					<!-- The divider IS the split control: a merged card has one per join, and clicking it
-					     splits the card there. -->
 					<button
 						type="button"
 						class="cut"
@@ -126,10 +164,8 @@
 
 		{#each merges as [axis, other] (axis)}
 			{#if other}
-				<!-- Straddling the cell's outer edge, so it sits in the gap lane between the pair it would join,
-				     but a QUARTER along that edge rather than halfway. The resize strip runs the whole edge and
-				     the middle is where a hand goes for it, so a control there is a control in the way: pressing
-				     to resize hit this instead and the pane would not move. -->
+				<!-- In the gap lane between the pair it would join, a quarter along rather than halfway: the
+				     middle of an edge is where a hand goes to resize, and a control there swallowed the press. -->
 				<button
 					type="button"
 					class="join {axis}"
@@ -165,8 +201,8 @@
 		grid-template-columns: minmax(0, 1fr);
 		grid-template-rows: var(--tracks);
 	}
-	/* Padding INSIDE the track, never a gap or a margin: either would move the boundary away from the
-	   fraction the split control is drawn at. */
+	/* Padding INSIDE the track, never a gap or a margin: either moves the boundary away from the fraction
+	   the split control is drawn at. */
 	.section {
 		display: flex;
 		min-width: 0;
@@ -191,8 +227,8 @@
 	}
 
 	/* --- arrange-mode controls ------------------------------------------------
-	   Both live in the pane's affordance layer, which covers the CELL (see grid/Pane), because the card
-	   is `inert` while arranging and a button inside it could not be clicked. */
+	   Both live in the pane's affordance layer over the CELL (see grid/Pane): the card is `inert` while
+	   arranging, so a button inside it could not be clicked. */
 
 	.cuts {
 		position: absolute;
@@ -223,10 +259,8 @@
 		background: var(--arrange-line);
 	}
 
-	/* Straddles the cell's edge, so half of it lies over the NEIGHBOUR — whose own drag layer would
-	   otherwise swallow the click, being later in the DOM. A positive z-index outranks that layer, which
-	   sits at `auto` and is ordered only by document position. `data-no-drag` keeps it a button: the
-	   resize strip underneath must not read a press on it as the start of a drag. */
+	/* Half of it lies over the NEIGHBOUR, whose drag layer sits at `z-index: auto` and would otherwise
+	   swallow the click by being later in the DOM. */
 	.join {
 		position: absolute;
 		z-index: 2;
@@ -246,13 +280,11 @@
 		color: var(--ink);
 		border-color: var(--arrange-line);
 	}
-	/* One `transform`, in this order. A percentage translate resolves along the element's OWN axes and the
-	   `rotate` property applies before `transform`, so rotating first sent the offset diagonally and the
-	   control drifted off the edge. */
+	/* One `transform`, translate before rotate: a percentage translate resolves along the element's OWN
+	   axes, so rotating first sent the offset diagonally and the control drifted off the edge. */
 	.join.row {
 		right: 0;
 		top: 25%;
-		/* The glyph joins along its own axis; turned, it reads as joining left-to-right. */
 		transform: translate(50%, -50%) rotate(90deg);
 	}
 	.join.column {

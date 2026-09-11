@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { money, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
+	import { sumBy } from '$lib/utils/num';
 	// The registry adapts a Flow primitive into these, adding a colour per node role.
 	interface SankeyNode {
 		id: string;
@@ -58,7 +59,10 @@
 		const nCol = cols.length;
 		const colCount = (c: number) => nodes.filter((n) => n.col === c).length;
 		const colTotal = (c: number) =>
-			nodes.filter((n) => n.col === c).reduce((a, n) => a + n.value, 0);
+			sumBy(
+				nodes.filter((n) => n.col === c),
+				(n) => n.value
+			);
 
 		// A single value→pixel scale, sized so the fullest column fills the height.
 		const maxTotal = Math.max(1, ...cols.map(colTotal));

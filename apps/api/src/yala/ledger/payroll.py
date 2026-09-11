@@ -6,10 +6,9 @@ Options are derived from account metadata so beancount stays the source of truth
 * deductions    — every ``Expenses:Deductions:*`` account, labelled by its leaf and offered for
   every employer.
 * contributions — an ``Assets:Investments:*`` account carrying an ``employer`` meta, whose presence
-  *is* the "payroll-contributable" marker and scopes it to that employer. Its comma-separated
+  *is* the payroll-contributable marker and scopes it to that employer. Its comma-separated
   ``labels`` meta lists the line items it offers; the chosen one is written as a ``label``
-  posting-meta on a leg to the *same* account, so a split is income-only and never fragments the
-  holding.
+  posting-meta on a leg to the *same* account, so a split never fragments the holding.
 """
 
 from __future__ import annotations

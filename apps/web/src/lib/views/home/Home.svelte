@@ -12,8 +12,7 @@
 	import { matching, Pref } from '$lib/utils/persist.svelte';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import Board from '$lib/layout/grid/Board.svelte';
-	import { KpiBoard } from '$lib/kpi/board.svelte';
-	import { setKpiBoard } from '$lib/kpi/context';
+	import { useKpiBoard } from '$lib/kpi/context';
 	import KpiCards from '$lib/kpi/KpiCards.svelte';
 	import MonthNav from '$lib/nav/MonthNav.svelte';
 	import BalanceChecklist from '$lib/balance/BalanceChecklist.svelte';
@@ -51,16 +50,12 @@
 		saved: { rect: { x: 32, y: 0, w: 16, h: 6 }, spec: { figure: 'change.saved_mom', scope: mo } }
 	});
 
-	const kpis = new KpiBoard('home', () => KPIS);
-	setKpiBoard(kpis);
+	const kpis = useKpiBoard('home', () => KPIS);
 
-	// The calendar is a CHART, not a list: it reserves its week rows, so it scales to whatever height
-	// its pane has and its only minimum is a legibility floor.
-	//
-	// The day's entries and pending share the column beside it at a SET height, so each holds still
-	// between a quiet day and a busy one and scrolls instead. Pending's top overlaps the day above it;
-	// the push rule settles that, which is why the two read as a stack. Balances runs the full width
-	// below and fits its content, since it is as long as your accounts are.
+	// The calendar is a CHART, not a list: it reserves its week rows, so it scales to its pane's height and
+	// its only minimum is legibility. The day's entries and pending sit beside it at a SET height, so each
+	// holds still between a quiet day and a busy one and scrolls instead. Balances fits its content, being
+	// as long as your accounts are.
 	const LAYOUT = $derived(
 		kpis.board({
 			calendar: { x: 0, y: 6, w: 31, h: 26, content: 'scale' },

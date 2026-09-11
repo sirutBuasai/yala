@@ -9,12 +9,8 @@ export interface ValueScale<S extends (v: number) => number = (v: number) => num
 	ticks: number[];
 }
 
-/**
- * What to draw at before the box has been measured. Off the normal path — a chart mounts with its box
- * already measured and the charts are never server-rendered — so this only keeps a container that
- * measures zero from producing a degenerate viewBox. One value, because three charts guessing
- * differently at the same box read as though the number mattered.
- */
+/** What to draw at before the box has been measured, which only keeps a container measuring zero from
+    producing a degenerate viewBox. One value, so no two charts appear to disagree about the box. */
 export const UNMEASURED = { w: 900, h: 300 };
 
 /** A chart's margins: top, right, bottom, left. */

@@ -15,7 +15,7 @@
 		paychecks: PaycheckOut[];
 		/** Supply to make rows clickable — they open the paycheck editor. */
 		onedit?: (locator: string) => void;
-		/** Hide the per-row date (e.g. in the calendar day panel, which already names the day). */
+		/** Hide the per-row date, for a pane that already names the day. */
 		showDate?: boolean;
 		/** Which figures to break out into columns, in order. Trailing amount is always net. */
 		fields?: PaycheckField[];

@@ -5,9 +5,35 @@
 
 import { MIN_H, MIN_W } from '$lib/layout/grid/units';
 import type { Rect } from '$lib/layout/grid/types';
+import { sum } from '$lib/utils/num';
 
 /** Which way a merged card runs. Always flat, never a grid. */
 export type MergeAxis = 'row' | 'column';
+
+/** Pick whichever of a pair belongs to the axis — the one primitive every axis-dependent read goes
+    through, so none of them can disagree about which way `column` runs. */
+export function along<T>(axis: MergeAxis, row: T, column: T): T {
+	return axis === 'row' ? row : column;
+}
+
+/** A rectangle's span along the axis. */
+export function spanOf(rect: Rect, axis: MergeAxis): number {
+	return along(axis, rect.w, rect.h);
+}
+
+export function withSpan(rect: Rect, axis: MergeAxis, span: number): Rect {
+	return along<Rect>(axis, { ...rect, w: span }, { ...rect, h: span });
+}
+
+/** The document axis a merge axis runs along, for anything that measures boxes. */
+export function flowOf(axis: MergeAxis): 'x' | 'y' {
+	return along(axis, 'x', 'y');
+}
+
+/** The board's own floor along the axis. */
+export function floorOf(axis: MergeAxis): number {
+	return along(axis, MIN_W, MIN_H);
+}
 
 export interface KpiGroup {
 	/** Member KPI ids in section order. The first is the group's pane id on the board. */
@@ -42,8 +68,6 @@ export function boundsOf(rects: Rect[]): Rect {
 	return rects.reduce((box, r) => unionRect(box, r));
 }
 
-const MIN_SPAN = { row: MIN_W, column: MIN_H } as const;
-
 /**
  * The groups a board actually has: stored ones filtered to KPIs that still exist, then a group of one
  * for each KPI left over. A group reduced to one member stops being a merge and rejoins the rest.
@@ -53,8 +77,7 @@ export function groupsFor(rects: Record<string, Rect>, stored: KpiGroup[]): KpiG
 	const merged: KpiGroup[] = [];
 
 	for (const group of stored) {
-		// `claimed` grows as the filter runs, so a member taken by an earlier group — or by an earlier slot
-		// in this one — is dropped rather than rendered twice under the same key.
+		// `claimed` grows as the filter runs, so no id can be rendered twice under the same key.
 		const ids = group.ids.filter((id) => {
 			if (!rects[id] || claimed.has(id)) return false;
 			claimed.add(id);
@@ -68,9 +91,7 @@ export function groupsFor(rects: Record<string, Rect>, stored: KpiGroup[]): KpiG
 			ids,
 			axis: group.axis,
 			weights: ids.map(
-				(id) =>
-					group.weights[group.ids.indexOf(id)] ??
-					(group.axis === 'row' ? rects[id]!.w : rects[id]!.h)
+				(id) => group.weights[group.ids.indexOf(id)] ?? spanOf(rects[id]!, group.axis)
 			)
 		});
 	}
@@ -97,14 +118,14 @@ export function mergeGroups(
 	a: string,
 	b: string,
 	axis: MergeAxis,
-	spanOf: (id: string) => number
+	memberSpan: (id: string) => number
 ): KpiGroup[] {
 	const first = groups.find((g) => g.ids[0] === a);
 	const second = groups.find((g) => g.ids[0] === b);
 	if (!first || !second) return groups;
 
-	// A group of one has no axis, and either side may already be merged the other way, so only weights
-	// from a group running the SAME way carry over.
+	// A group of one has no axis, and either side may be merged the other way: only weights from a group
+	// running the SAME way carry over.
 	const ids = [...first.ids, ...second.ids];
 	const weights = ids.map(
 		(id) =>
@@ -114,7 +135,7 @@ export function mergeGroups(
 			(second.ids.length > 1 && second.axis === axis
 				? second.weights[second.ids.indexOf(id)]
 				: undefined) ??
-			spanOf(id)
+			memberSpan(id)
 	);
 
 	return [{ ids, axis, weights }, ...groups.filter((g) => g !== first && g !== second)];
@@ -133,35 +154,46 @@ export function splitGroup(groups: KpiGroup[], leader: string, index: number): K
 	return [...halves.filter((h) => h.ids.length > 1), ...groups.filter((g) => g !== group)];
 }
 
-/** How a split divides the card's rectangle: each half takes the share of the axis its sections held. */
-export function splitRects(group: KpiGroup, rect: Rect, index: number): [Rect, Rect] {
-	const total = group.weights.reduce((a, w) => a + w, 0) || 1;
-	const before = group.weights.slice(0, index).reduce((a, w) => a + w, 0);
+/**
+ * How a split divides the card's rectangle: each half takes the share its sections held, floored at
+ * `floors` — the span its own content needs once it is a card of its own (measured: see `measure.ts`).
+ * Splitting costs a card's padding twice over, so a share alone can be less than a half can hold.
+ *
+ * Too small for both floors and there is no legal split: both keep their floor and the second overlaps,
+ * for the push rule to send below. An overlapping half can be dragged anywhere; a clipped one cannot be
+ * made to fit at all.
+ */
+export function splitRects(
+	group: KpiGroup,
+	rect: Rect,
+	index: number,
+	floors: [number, number]
+): [Rect, Rect] {
+	const total = sum(group.weights) || 1;
+	const before = sum(group.weights.slice(0, index));
 	const axis = group.axis;
-	const span = axis === 'row' ? rect.w : rect.h;
+	const span = spanOf(rect, axis);
 
-	// A card already at the board's minimum cannot give both halves a legal rectangle, so the second is
-	// left overlapping and the push rule sends it below.
-	const floor = MIN_SPAN[axis];
-	const kept = Math.max(
-		floor,
-		Math.min(Math.max(floor, span - floor), Math.round((before / total) * span))
+	const [first, second] = floors.map((f) => Math.max(floorOf(axis), f)) as [number, number];
+	const kept = Math.max(first, Math.min(span - second, Math.round((before / total) * span)));
+	const rest = Math.max(second, span - kept);
+
+	return along<[Rect, Rect]>(
+		axis,
+		[
+			{ ...rect, w: kept },
+			{ ...rect, x: rect.x + kept, w: rest }
+		],
+		[
+			{ ...rect, h: kept },
+			{ ...rect, y: rect.y + kept, h: rest }
+		]
 	);
-
-	return axis === 'row'
-		? [
-				{ ...rect, w: kept },
-				{ ...rect, x: rect.x + kept, w: rect.w - kept }
-			]
-		: [
-				{ ...rect, h: kept },
-				{ ...rect, y: rect.y + kept, h: rect.h - kept }
-			];
 }
 
 /** Fraction of the axis each divider sits at. */
 export function dividerFractions(weights: number[]): number[] {
-	const total = weights.reduce((a, w) => a + w, 0) || 1;
+	const total = sum(weights) || 1;
 	const out: number[] = [];
 	let run = 0;
 	for (const w of weights.slice(0, -1)) {

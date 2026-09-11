@@ -1,13 +1,12 @@
 """User settings: the handful of figures the ledger can't derive, stored in the ledger itself.
 
 They are *assumptions* rather than facts, so they have to be stated. They live as ``custom``
-directives rather than in a config file, so they version with the data they describe and stay
-readable without this app::
+directives rather than in a config file, so they version with the data they describe::
 
-    2026-01-01 custom "yala-setting" "swr" 4.0
+    <date> custom "yala-setting" "<key>" <value>
 
 Directives are **dated and superseding**: the latest one for a key wins, so a change leaves the old
-value in place as history. :data:`SETTINGS` is the single source of truth for every key — reads,
+value behind as history. :data:`SETTINGS` is the single source of truth for every key — reads,
 writes, API validation and the ``data.json`` contract all derive from it.
 """
 

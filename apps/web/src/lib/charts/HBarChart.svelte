@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { fitFontSize, UNMEASURED } from '$lib/charts/axis';
 	import { money, moneyK, esc } from '$lib/utils/format';
-	import { clamp } from '$lib/utils/num';
+	import { clamp, sumBy } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Empty from '$lib/ui/Empty.svelte';
 
@@ -18,7 +18,7 @@
 	let { items, total }: Props = $props();
 
 	const rows = $derived([...items].sort((a, b) => b.value - a.value));
-	const sum = $derived(total ?? rows.reduce((a, r) => a + r.value, 0));
+	const sum = $derived(total ?? sumBy(rows, (r) => r.value));
 
 	// Measured on both axes (as the bar/line charts are) so the labels and value text keep a constant
 	// on-screen size instead of shrinking with the pane — a fixed viewBox made them unreadable in a

@@ -67,11 +67,8 @@ export function accountLeaf(name: string | null | undefined): string {
 	return name ? (String(name).split(':').pop() ?? '') : '';
 }
 
-/**
- * An account's display name — a LOOKUP, not a computation: the API has already applied the naming
- * rule, and deriving it here too would put that rule in two languages. The fallback is the raw leaf,
- * so an account created after this document loaded reads as unresolved rather than as renamed.
- */
+/** An account's display name — a LOOKUP, not a computation: the API has applied the naming rule, and
+    deriving it here would put that rule in two languages. Falls back to the raw leaf. */
 export function formatAccount(name: string | null | undefined): string {
 	if (!name) return '';
 

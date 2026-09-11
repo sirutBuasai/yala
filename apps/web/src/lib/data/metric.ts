@@ -57,11 +57,8 @@ function goodUp(m: Measure): boolean {
 	return typeof m === 'string' ? GOOD_UP[m] : m.group === 'contributions';
 }
 
-/**
- * The tone a movement of `delta` in `m` earns — good or bad NEWS, never merely positive. Standing
- * still is neither: a figure that did not move has no verdict to report, and painting 0% red because
- * the measure happens to be spending says something that isn't true.
- */
+/** Good or bad NEWS, never merely positive. Standing still is neither: a figure that did not move has
+    no verdict to report. */
 export function toneOf(m: Measure, delta: number): Tone | undefined {
 	if (delta === 0) return undefined;
 	return delta > 0 === goodUp(m) ? 'good' : 'bad';
@@ -425,12 +422,10 @@ export function extremum(
 }
 
 /**
- * How far a month sits from its own recent norm: the measure this month minus the average of the
- * prior `window` months that have data. A trailing average rather than the previous month, which one
- * noisy month makes meaningless. `null` when there's no history to form a norm from.
- *
- * The figure IS a deviation, so its sign is its meaning and it carries a tone — which way is good
- * comes from the measure, so spending over the norm reads bad and income over it reads good.
+ * How far a month sits from its own recent norm: this month minus the average of the prior `window`
+ * months with data — a trailing average, since one noisy month makes a single comparison meaningless.
+ * `null` without the history to form a norm. The figure IS a deviation, so it carries a tone, and which
+ * way is good comes from the measure.
  */
 export function vsTypical(
 	data: DashboardData,
@@ -462,9 +457,8 @@ export function vsTypical(
 
 /**
  * A measure with its period-over-period change as a `delta`: against the prior year (`at` = a year,
- * default latest) or the prior month (`at` = a "YYYY-MM" key). The delta is a percentage, omitted
- * when the prior period is 0. The VALUE is a plain level and carries no tone; the delta carries
- * whether the move was good news.
+ * default latest) or the prior month (`at` = a month key). The delta is a percentage, omitted when the
+ * prior period is 0. The value is a plain level; only the delta carries whether the move was good news.
  */
 export function change(
 	data: DashboardData,

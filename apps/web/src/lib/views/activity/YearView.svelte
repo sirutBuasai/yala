@@ -7,8 +7,7 @@
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import { figurePanes } from '$lib/layout/grid/figure';
 	import FigurePane from '$lib/layout/grid/FigurePane.svelte';
-	import { KpiBoard } from '$lib/kpi/board.svelte';
-	import { setKpiBoard } from '$lib/kpi/context';
+	import { useKpiBoard } from '$lib/kpi/context';
 	import KpiCards from '$lib/kpi/KpiCards.svelte';
 	import StatMatrix from '$lib/charts/StatMatrix.svelte';
 
@@ -47,8 +46,7 @@
 		}
 	});
 
-	const kpis = new KpiBoard('activity:year', () => KPIS);
-	setKpiBoard(kpis);
+	const kpis = useKpiBoard('activity:year', () => KPIS);
 
 	// The cash-flow pane fits its content, being a block of figures whose height follows its rows.
 	// Everything below it is a chart, so it scales to whatever height the user gives it.

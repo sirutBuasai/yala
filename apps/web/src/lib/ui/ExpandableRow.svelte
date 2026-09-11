@@ -11,7 +11,7 @@
 		chip?: Snippet;
 		/** Error from the last action, shown at the foot of the open drawer. */
 		error?: string;
-		/** Verb on the closed toggle — "Manage", "Retire". Closing always says "Done". */
+		/** Verb on the closed toggle, named by the caller. Closing always says Done. */
 		action?: string;
 		/** Fired when the drawer opens, for a row whose controls need loading first. Deliberately not
 		    on close: backing out shouldn't fetch anything. */

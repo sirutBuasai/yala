@@ -592,7 +592,7 @@ input[type='checkbox']:checked {
 	border-color: var(--lav);
 	color: var(--ink);
 }
-/* borderless icon button that hugs its glyph (e.g. a kebab menu trigger in a pane header) */
+/* borderless icon button that hugs its glyph */
 .iconbtn {
 	display: inline-flex;
 	align-items: center;

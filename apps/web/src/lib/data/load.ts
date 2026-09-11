@@ -1,9 +1,8 @@
 // Data loading, liveness, and the schema-version guard.
 //
 // ONE read path, tried in order: the local API, else the static `data.json` the builder wrote. Both
-// carry the same account lists, so every form renders either way; whether a write can land is
-// answered in exactly one place (`postJson`). Liveness is a FACT about the environment, reported as
-// `live` rather than offered as a mode to switch.
+// carry the same account lists, so every form renders either way, and whether a write can land is
+// answered in one place (`postJson`). Liveness is a fact about the environment, not a mode to switch.
 
 import { get, writable } from 'svelte/store';
 import { asset } from '$app/paths';
@@ -33,10 +32,8 @@ export const accounts = writable<AccountsInfo | null>(null);
 export const live = writable(false);
 export const loadState = writable<LoadState>({ status: 'loading' });
 
-// Account display names and institutions live in the document, but are read by pure helpers
-// (`formatAccount`, `accountVar`) that have no access to a store. Syncing here rather than at each
-// `data.set` means a future loader can't forget to, and the directory can never describe a document
-// that is no longer loaded.
+// Display names and institutions live in the document but are read by pure helpers with no access to a
+// store. Synced here rather than at each `data.set`, so no loader can forget to.
 data.subscribe((doc) => setAccountDirectory(doc?.meta.accounts));
 
 function checkSchema(doc: DashboardData): string | null {
@@ -155,11 +152,9 @@ function publish(doc: DashboardData, fromApi: boolean, lists: AccountsInfo | nul
 }
 
 /**
- * Load the dashboard: the local API first, the built snapshot second.
- *
- * Liveness is re-established on every load, never remembered. Persisting which source the user "had
- * chosen" made a transient failure permanent: fall back once while the API restarts and no later
- * load ever retried it.
+ * Load the dashboard: the local API first, the built snapshot second. Liveness is re-established every
+ * load, never remembered — persisting it made a transient failure permanent, since falling back once
+ * while the API restarted meant no later load retried it.
  */
 export async function loadData(): Promise<void> {
 	loadState.set({ status: 'loading' });
@@ -230,9 +225,8 @@ async function refreshAccounts(): Promise<void> {
 export type CreatableAccountKind = 'category' | 'funding_cash' | 'funding_credit' | 'investment';
 
 /**
- * How an account is to be named: either a `leaf` written directly, or the descriptive form — the
- * institution and account name as a person writes them, which the API joins into the leaf. The
- * aliases are short forms, used only when the rendered name overruns the display budget.
+ * How an account is to be named: a `leaf` written directly, or the descriptive form the API joins into
+ * one. Aliases are short forms, used only when the rendered name overruns the display budget.
  */
 export interface AccountNaming {
 	leaf?: string;
@@ -385,11 +379,9 @@ export interface SettingsInfo {
 }
 
 /**
- * The settings the snapshot carries, in the shape the API serves.
- *
- * The re-keying is the whole reason this needs a function: a setting's real key is hyphenated, but a
- * hyphen is not a legal field name, so the CONTRACT spells the same keys with underscores. Reading
- * `settings` straight through populates only the keys with no hyphen and silently blanks the rest.
+ * The settings the snapshot carries, in the shape the API serves. The re-keying is the reason this needs
+ * a function: a setting's real key is hyphenated, which is not a legal field name, so the contract
+ * spells the same keys with underscores and reading them straight through blanks every hyphenated one.
  */
 function snapshotSettings(): SettingsInfo | null {
 	const doc = get(data);
@@ -406,8 +398,7 @@ function snapshotSettings(): SettingsInfo | null {
 /** Effective settings plus their specs. Reports *why* it failed, because the reasons need different
     actions: a 404 from a live API means the running API predates this page and needs a restart. */
 export async function getSettings(): Promise<{ info: SettingsInfo | null; error: string | null }> {
-	// No API: read the snapshot's own copy, so the form still renders and only the WRITE is refused.
-	// Checked first, because a static host answers 404 for every path, which would otherwise read as
+	// Checked before any request: a static host answers 404 for every path, which would otherwise read as
 	// a stale API and tell the user to restart something that isn't running.
 	if (!get(live)) {
 		const info = snapshotSettings();

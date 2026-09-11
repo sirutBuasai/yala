@@ -11,8 +11,7 @@
 	import Board from '$lib/layout/grid/Board.svelte';
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import FigurePane from '$lib/layout/grid/FigurePane.svelte';
-	import { KpiBoard } from '$lib/kpi/board.svelte';
-	import { setKpiBoard } from '$lib/kpi/context';
+	import { useKpiBoard } from '$lib/kpi/context';
 	import KpiCards from '$lib/kpi/KpiCards.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
@@ -66,8 +65,7 @@
 		}
 	});
 
-	const kpis = new KpiBoard('activity:month', () => KPIS);
-	setKpiBoard(kpis);
+	const kpis = useKpiBoard('activity:month', () => KPIS);
 
 	// The KPIs, then the month's shape, then its records. A list sitting beside a neighbour takes a SET
 	// height, so the row keeps its line and scrolls once the month is busy; the history below has

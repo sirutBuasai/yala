@@ -25,11 +25,8 @@ export function categoryVar(category: string): string {
 	return `var(--${CATEGORY_TOKEN[category] ?? 'lav'})`;
 }
 
-/**
- * The colour for an account's dot. Deliberately not a palette or an institution list here: the ledger
- * declares a hex per institution and the API resolves it per account, so recolouring is a ledger edit.
- * The declared colour is used as-is in BOTH themes; the neutral swatch stands in when none is on file.
- */
+/** The colour for an account's dot: a lookup, not a palette. The ledger declares the hex and the API
+    resolves it per account, so recolouring is a ledger edit. Used as-is in BOTH themes. */
 export function accountVar(account: string | null | undefined): string {
 	return accountInfo(account)?.color ?? 'var(--inst-neutral)';
 }

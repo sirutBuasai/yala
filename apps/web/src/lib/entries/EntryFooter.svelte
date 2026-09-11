@@ -13,7 +13,7 @@
 		deleteQuestion: string;
 		onsubmit: () => void;
 		ondelete: () => void;
-		/** Left-side running total (e.g. "Your share", "Take-home", "Moves"). */
+		/** Left-side running total, worded by the form that owns it. */
 		summary?: Snippet;
 	}
 	let {

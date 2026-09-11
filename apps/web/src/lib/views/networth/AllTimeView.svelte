@@ -6,8 +6,7 @@
 	import Board from '$lib/layout/grid/Board.svelte';
 	import { figurePanes } from '$lib/layout/grid/figure';
 	import FigurePane from '$lib/layout/grid/FigurePane.svelte';
-	import { KpiBoard } from '$lib/kpi/board.svelte';
-	import { setKpiBoard } from '$lib/kpi/context';
+	import { useKpiBoard } from '$lib/kpi/context';
 	import KpiCards from '$lib/kpi/KpiCards.svelte';
 
 	interface Props {
@@ -36,8 +35,7 @@
 		}
 	};
 
-	const kpis = new KpiBoard('networth:all', () => KPIS);
-	setKpiBoard(kpis);
+	const kpis = useKpiBoard('networth:all', () => KPIS);
 
 	const PANES = $derived(
 		kpis.board({

@@ -8,7 +8,7 @@
 	interface Props {
 		/** Not named `state`: a variable of that name makes Svelte read `$state` as a store access. */
 		save: SaveState;
-		/** Shown when there's neither an error nor a confirmation (e.g. "Unset"). */
+		/** Shown when there is neither an error nor a confirmation. */
 		fallback?: Snippet;
 	}
 	let { save, fallback }: Props = $props();

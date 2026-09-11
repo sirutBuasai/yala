@@ -1,11 +1,7 @@
 <script lang="ts">
-	// The naming half of an "add account" form: who holds it, what it is called, and the short forms
-	// to fall back on. Shared by the bank / credit card / investment panels so the three can't drift
-	// on wording or on which fields are optional.
-	//
-	// Deliberately no live preview of the resulting name: the naming rule lives in Python so there is
-	// exactly one of it, and reproducing it here would reintroduce the drift it was moved to avoid.
-	// The panel reports the name the API created once the account is open.
+	// The naming half of an "add account" form, shared by every account panel so they can't drift on
+	// wording or on which fields are optional. No live preview of the resulting name: that rule lives in
+	// Python, and reproducing it here is what would let the two drift.
 	import { TEXT_MAX } from '$lib/forms/validate';
 
 	interface Props {

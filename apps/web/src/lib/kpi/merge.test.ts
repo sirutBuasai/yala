@@ -165,16 +165,19 @@ describe('splitGroup', () => {
 });
 
 describe('splitRects', () => {
+	/** Content that fits in anything, so a case is only about the weights. */
+	const roomy: [number, number] = [0, 0];
+
 	it('divides the width by the share the sections held', () => {
 		const group: KpiGroup = { ids: ['a', 'b'], axis: 'row', weights: [12, 36] };
-		const [left, right] = splitRects(group, rect(0, 0, 48, 7), 1);
+		const [left, right] = splitRects(group, rect(0, 0, 48, 7), 1, roomy);
 		expect(left).toEqual(rect(0, 0, 12, 7));
 		expect(right).toEqual(rect(12, 0, 36, 7));
 	});
 
 	it('divides the height on a stacked card', () => {
 		const group: KpiGroup = { ids: ['a', 'b'], axis: 'column', weights: [7, 7] };
-		const [top, bottom] = splitRects(group, rect(0, 0, 12, 14), 1);
+		const [top, bottom] = splitRects(group, rect(0, 0, 12, 14), 1, roomy);
 		expect(top).toEqual(rect(0, 0, 12, 7));
 		expect(bottom).toEqual(rect(0, 7, 12, 7));
 	});
@@ -183,15 +186,31 @@ describe('splitRects', () => {
 		// A hair-thin first section would otherwise be handed a width below the board's floor, which
 		// storage then widens back over its neighbour.
 		const row: KpiGroup = { ids: ['a', 'b'], axis: 'row', weights: [1, 99] };
-		const [left, right] = splitRects(row, rect(0, 0, 2 * MIN_W, 7), 1);
+		const [left, right] = splitRects(row, rect(0, 0, 2 * MIN_W, 7), 1, roomy);
 		expect(left.w).toBe(MIN_W);
 		expect(right.w).toBe(MIN_W);
 
 		const col: KpiGroup = { ids: ['a', 'b'], axis: 'column', weights: [1, 99] };
-		const [top, bottom] = splitRects(col, rect(0, 0, 12, 2 * MIN_H), 1);
+		const [top, bottom] = splitRects(col, rect(0, 0, 12, 2 * MIN_H), 1, roomy);
 		expect(top.h).toBe(MIN_H);
 		expect(bottom.h).toBe(MIN_H);
 		expect(bottom.y).toBe(MIN_H);
+	});
+
+	it('gives a half the span its content needs, not the share its weight asks for', () => {
+		const group: KpiGroup = { ids: ['a', 'b'], axis: 'row', weights: [4, 20] };
+		const [left, right] = splitRects(group, rect(0, 0, 24, 7), 1, [10, 8]);
+		expect(left.w).toBe(10);
+		expect(right).toEqual(rect(10, 0, 14, 7));
+	});
+
+	it('overlaps the second half when the card cannot fit both, rather than clipping either', () => {
+		// The state a merged card left at its own minimum is in: splitting it costs a card's worth of
+		// padding twice over, so the halves need more room than the card has.
+		const group: KpiGroup = { ids: ['a', 'b'], axis: 'row', weights: [10, 10] };
+		const [left, right] = splitRects(group, rect(0, 0, 20, 7), 1, [12, 12]);
+		expect(left.w).toBe(12);
+		expect(right).toEqual(rect(12, 0, 12, 7));
 	});
 });
 

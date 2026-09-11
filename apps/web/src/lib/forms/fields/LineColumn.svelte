@@ -14,7 +14,7 @@
 	interface Props {
 		rows: AmountRow[];
 		header: string;
-		/** Label for the "add a row" button, e.g. "+ row" or "+ credit". */
+		/** Label for the add-a-row button, worded by the caller. */
 		addLabel: string;
 		options: string[];
 		selectAriaLabel: string;

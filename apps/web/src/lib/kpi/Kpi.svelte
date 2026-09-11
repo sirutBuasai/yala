@@ -77,12 +77,9 @@
 
 <style>
 	/**
-	 * Nothing here reflows, so the card demands the same width whatever size it is — which is what lets
-	 * the pane's resize probe treat the demand as a floor rather than a moving target.
-	 *
-	 * `min-content` resolves to the widest of the children: title, caption, stat row, chart. It has to be
-	 * a BOX, not text ink: ink that overflows a box the card doesn't scroll never reaches the card's own
-	 * scroll width, so the drag sailed past it and the title clipped in silence.
+	 * Nothing here reflows, so the demand is the same at every size and the resize probe can treat it as a
+	 * floor. `min-content` must resolve to a BOX, not text ink: ink overflowing a box the card doesn't
+	 * scroll never reaches the card's scroll width, so a drag sailed past it and the title clipped.
 	 */
 	.kpi {
 		display: flex;
@@ -109,13 +106,10 @@
 		min-width: var(--chart-min, 0);
 	}
 	/**
-	 * Floored at the figure's own height, NOT at `--figure-h-floor`: that is sized for a plot area with
-	 * axes, and it exceeds a KPI's whole stat row, which stopped a card with a chart resizing at all. This
-	 * floor also sits below the text's, so a card scales the same with or without a chart.
-	 *
-	 * Floored from the TOP so the excess overflows downward. Scrollable overflow is measured from a box's
-	 * top-left, so a chart growing upward would be invisible to the resize probe and would paint over the
-	 * title instead of stopping the drag.
+	 * Floored at the figure's own height, NOT `--figure-h-floor`, which is sized for a plot area with axes
+	 * and exceeds a whole stat row — with it, a card carrying a chart would not resize at all. Floored from
+	 * the TOP so the excess overflows downward: scrollable overflow is measured from a box's top-left, so a
+	 * chart growing upward would be invisible to the probe and would paint over the title.
 	 */
 	.behind {
 		position: absolute;

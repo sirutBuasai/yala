@@ -1,8 +1,7 @@
 // Svelte action: trap Tab focus within a node, focus into it on mount, and restore focus on destroy.
 //
-// Where focus LANDS matters as much as trapping it. Taking the first focusable blindly landed on the
-// dismiss button, which sits first in the DOM because it belongs in the header, so opening a form
-// announced "close". Hence the `[data-autofocus]` / not-`[data-dismiss]` order below.
+// Where focus LANDS matters as much as trapping it: the first focusable is the header's dismiss button,
+// so taking it blindly made opening a form announce "close".
 
 const FOCUSABLE =
 	'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';

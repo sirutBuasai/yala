@@ -1,5 +1,5 @@
 <script lang="ts">
-	// A directional arrow (shaft + head), e.g. the transaction sort-order toggle.
+	// A directional arrow: shaft plus head.
 	interface Props {
 		dir: 'up' | 'down';
 		size?: number;

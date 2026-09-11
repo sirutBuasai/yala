@@ -2,6 +2,7 @@
 
 import type { DashboardData } from '$lib/data/types';
 import { isoDate } from '$lib/utils/period';
+import { sumBy } from '$lib/utils/num';
 
 /** Day-of-month from an ISO "YYYY-MM-DD". */
 export const dayOf = (date: string): number => +date.slice(8, 10);
@@ -63,8 +64,8 @@ export function dayCells(data: DashboardData, monthKey: string): DayCell[] {
 			txns,
 			pays,
 			xfers,
-			spent: txns.reduce((a, t) => a + t.amount, 0),
-			income: pays.reduce((a, p) => a + p.net, 0),
+			spent: sumBy(txns, (t) => t.amount),
+			income: sumBy(pays, (p) => p.net),
 			cats: ranked.slice(0, MAX_DOTS),
 			more: ranked.length > MAX_DOTS,
 			pending: txns.some((t) => t.pending) || xfers.some((t) => t.pending)
@@ -82,7 +83,7 @@ export function weekRows(cells: DayCell[], firstWeekday: number): WeekRow[] {
 	const out: WeekRow[] = [];
 	for (let i = 0; i < slots.length; i += 7) {
 		const week = slots.slice(i, i + 7);
-		out.push({ cells: week, total: week.reduce((s, c) => s + (c?.spent ?? 0), 0) });
+		out.push({ cells: week, total: sumBy(week, (c) => c?.spent ?? 0) });
 	}
 	return out;
 }

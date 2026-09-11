@@ -1,8 +1,7 @@
 <script lang="ts">
-	// A dismissible overlay panel over a backdrop. `variant` picks the presentation:
-	// 'modal' floats near the top-center; 'drawer' slides in from the right edge. When `accent`
-	// is set the header becomes a full-bleed tinted band (with an optional `kicker` and a
-	// `controls` snippet, e.g. an entry-type switcher); the header stays fixed and the body scrolls.
+	// A dismissible overlay panel over a backdrop. `variant` picks the presentation: 'modal' floats near
+	// the top-center, 'drawer' slides in from the right edge. With `accent` the header becomes a full-bleed
+	// tinted band; either way the header stays fixed and the body scrolls.
 	import type { Snippet } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { focusTrap } from '$lib/utils/focusTrap';
@@ -16,9 +15,9 @@
 		accent?: string;
 		/** Kicker text color; use a mode-aware `-text` accent so it stays legible on the light band. */
 		accentText?: string;
-		/** Small uppercase label above the title (e.g. "New entry"). */
+		/** Small uppercase label above the title. */
 		kicker?: string;
-		/** Extra header content below the title row, inside the band (e.g. a type switcher). */
+		/** Extra header content below the title row, inside the band. */
 		controls?: Snippet;
 		children: Snippet;
 	}
@@ -91,7 +90,7 @@
 		z-index: 50;
 	}
 	.backdrop:has(.modal) {
-		/* Anchor near the top so content that loads in (e.g. paycheck rows) grows downward
+		/* Anchor near the top so content that loads in grows downward
 		   instead of re-centering and jumping. */
 		display: flex;
 		align-items: flex-start;

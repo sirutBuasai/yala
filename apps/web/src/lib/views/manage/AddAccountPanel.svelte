@@ -1,18 +1,12 @@
 <script lang="ts">
-	// The body of an "add an account" pane, used for banks, credit cards and investments.
+	// The body of an "add an account" pane, used for banks, credit cards and investments. Presentational:
+	// it has no pane of its own, so the view places and titles it, which also lets the folded layout reuse
+	// it. What differs per kind is props and a snippet; naming, validation, submit and confirmation are
+	// identical and live here once.
 	//
-	// Presentational: it has no pane of its own, so the view places and titles it (see Manage). That
-	// keeps this file testable without a board around it, and it is the same seam that lets the folded
-	// layout reuse it unchanged.
-	//
-	// The three differ in whether the account has a product half, what the placeholders say, and
-	// whether extra controls (subtree, share/payroll flags) ride along; those are props and a snippet.
-	// The naming fields, validation, submit, busy state and confirmation are identical, so they live
-	// here once rather than three times.
-	//
-	// The caller supplies `open`, which does the POST and hands back what the API resolved. The panel
-	// never composes a display name itself: that rule lives in Python (see `yala.ledger.naming`), and
-	// guessing at it here to preview it is what would let the two drift apart.
+	// The caller's `open` does the POST and hands back what the API resolved. The panel never composes a
+	// display name itself: that rule lives in Python (see `yala.ledger.naming`), and previewing it here is
+	// what would let the two drift apart.
 
 	import type { Snippet } from 'svelte';
 	import type { AccountNaming, OpenedAccount } from '$lib/data/load';

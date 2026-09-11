@@ -2,16 +2,21 @@
 // draws is about its NEIGHBOUR, so every KPI card needs the whole board's grouping, not a prop.
 
 import { getContext, setContext } from 'svelte';
-import type { KpiBoard } from './board.svelte';
+import { KpiBoard } from './board.svelte';
+import type { KpiBoardDefs } from './spec';
 
 const KEY = Symbol('kpi-board');
 
-export function setKpiBoard(board: KpiBoard): void {
+/** A view's own KPI board, in context. One call, so a board can never be built without being set —
+    every KPI card on it would then throw for a context that isn't there. */
+export function useKpiBoard(key: string, defs: () => KpiBoardDefs): KpiBoard {
+	const board = new KpiBoard(key, defs);
 	setContext(KEY, board);
+	return board;
 }
 
 export function getKpiBoard(): KpiBoard {
 	const board = getContext<KpiBoard | undefined>(KEY);
-	if (!board) throw new Error('kpi: no KpiBoard in context — the view must call setKpiBoard()');
+	if (!board) throw new Error('kpi: no KpiBoard in context — the view must call useKpiBoard()');
 	return board;
 }

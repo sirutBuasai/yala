@@ -1,12 +1,10 @@
 <script lang="ts">
-	// Heatmap over a Matrix, on the shared --s1..--s6 sequential ramp.
+	// Heatmap over a Matrix, on the shared sequential ramp.
 	//
-	// Rows are scaled to their own max by default, because a real ledger's categories span orders of
-	// magnitude within one year and a single grid-wide scale leaves the median cell near-blank. The
-	// trade-off is that intensity is no longer comparable BETWEEN rows; row order carries that.
-	//
-	// One hue rather than per-category hues: the category palette isn't luminance-matched, so at
-	// equal value a warm hue reads far brighter than a cool one and colour would fight the data.
+	// Rows are scaled to their own max by default: categories span orders of magnitude, and one grid-wide
+	// scale leaves the median cell near-blank. Intensity is then not comparable BETWEEN rows, which is
+	// what row order carries instead. One hue, not per-category hues — the category palette isn't
+	// luminance-matched, so at equal value a warm hue would read brighter and fight the data.
 	import { fitFontSize } from '$lib/charts/axis';
 	import { money, esc } from '$lib/utils/format';
 	import { theme } from '$lib/utils/theme';

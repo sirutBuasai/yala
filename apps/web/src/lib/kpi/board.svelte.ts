@@ -67,8 +67,8 @@ export class KpiBoard {
 	);
 
 	/**
-	 * The whole pane table: KPI cards first so they lead the priority order, then the view's own. Refuses
-	 * a duplicate id, which would merely shadow one entry and drop that pane silently.
+	 * The whole pane table: KPI cards first so they lead the priority order, then the view's own. Refuses a
+	 * duplicate id, which would shadow one entry and drop that pane silently.
 	 *
 	 * MUST be called inside a `$derived`: merging changes which panes this returns, and a table computed
 	 * once leaves the board reserving rows for a pane nothing renders.
@@ -103,14 +103,22 @@ export class KpiBoard {
 		return this.groups.some((g) => g.ids[0] === id);
 	}
 
-	merge(a: string, b: string, axis: MergeAxis, spanOf: (id: string) => number): void {
-		this.#pref.value = mergeGroups(this.groups, a, b, axis, spanOf);
+	merge(a: string, b: string, axis: MergeAxis, memberSpan: (id: string) => number): void {
+		this.#pref.value = mergeGroups(this.groups, a, b, axis, memberSpan);
 	}
 
-	/** Split at the divider before section `index`, and the rectangles the two halves take. */
-	split(leader: string, index: number, rect: Rect): { ids: [string, string]; rects: [Rect, Rect] } {
+	/**
+	 * Split at the divider before section `index`, and the rectangles the two halves take. `floors` is
+	 * what each half's content needs, which only the pane can measure (see `measure.ts`).
+	 */
+	split(
+		leader: string,
+		index: number,
+		rect: Rect,
+		floors: [number, number]
+	): { ids: [string, string]; rects: [Rect, Rect] } {
 		const group = this.group(leader);
-		const rects = splitRects(group, rect, index);
+		const rects = splitRects(group, rect, index, floors);
 		this.#pref.value = splitGroup(this.groups, leader, index);
 		return { ids: [leader, group.ids[index]!], rects };
 	}

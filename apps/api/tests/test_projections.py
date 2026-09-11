@@ -82,7 +82,7 @@ def test_transfer_state_rejects_non_two_leg_entry():
 def test_paycheck_state_summarizes_employer_gross_and_deposit():
     entry = _txn(
         [
-            _posting("Income:Salary:Amazon", -1000),
+            _posting("Income:Salary:EmployerA", -1000),
             _posting("Expenses:Deductions:Tax", 200),
             _posting("Assets:Investments:HSA", 100),
             _posting("Assets:Cash:BankA", 700),
@@ -91,7 +91,7 @@ def test_paycheck_state_summarizes_employer_gross_and_deposit():
         payee="paycheck",
     )
     s = projections.paycheck_state(entry, {})
-    assert s["employer"] == "Amazon"
+    assert s["employer"] == "EmployerA"
     assert s["gross"] == 1000.0
     assert s["deposit_account"] == "Assets:Cash:BankA"
     assert s["deductions"] == {"Tax": 200.0}

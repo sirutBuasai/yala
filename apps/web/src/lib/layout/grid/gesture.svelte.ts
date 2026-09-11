@@ -1,7 +1,6 @@
 // One pane's gesture as a state object: what the press captured, what the pointer has done since, and
-// whether the content will stand for it. No DOM — whether the content spilled and when a candidate size
-// has been laid out both arrive as functions, so a test can drive a gesture with scripted answers
-// instead of a browser.
+// whether the content will stand for it. No DOM — spilling and settling arrive as functions, so a test
+// can drive a gesture with scripted answers instead of a browser.
 
 import { EDGES, moveRect, resizeRect, type Edge } from './resize';
 import { clampRect } from './resolve';
@@ -9,10 +8,7 @@ import { UNIT } from './units';
 import type { DragOrigin } from './lift';
 import type { AuthoredPane, HeightMode, Rect } from './types';
 
-/**
- * What a gesture needs from the arrangement it is editing. Declared structurally rather than by
- * importing `Arrangement`, so a test can hand in a fake.
- */
+/** Structural rather than an `Arrangement` import, so a test can hand in a fake. */
 export interface GestureTarget {
 	authored(id: string): AuthoredPane;
 	mode(id: string): HeightMode;
@@ -25,8 +21,8 @@ export interface GestureTarget {
 }
 
 export interface GestureProbes {
-	/** Has the content outgrown the box the candidate size gave it? Injected, so the gesture never
-	    looks at the DOM: the pane knows which elements to ask (see `spill.ts`). */
+	/** Has the content outgrown the box the candidate size gave it? The pane knows which elements to ask
+	    (see `spill.ts`). */
 	spills: () => boolean;
 	/** Wait for the candidate size to have been laid out. The pane passes Svelte's `tick`. */
 	settle: () => Promise<void>;
@@ -54,14 +50,14 @@ export class PaneGesture {
 	#base: Rect | null = null;
 	/** The board a move re-derives from, so a swap made mid-drag can be undone by dragging back. */
 	#origin: DragOrigin | null = null;
-	/** The most recent candidate whose content fitted. A rejected resize is held here, so the edge
-	    sticks the way a native min-size does and the gesture is never thrown away on release. */
+	/** The most recent candidate whose content fitted. A rejected resize is held here, so the edge sticks
+	    the way a native min-size does rather than the gesture being thrown away on release. */
 	#fitting: Rect | null = null;
 	/** Serial, so a superseded spill check cannot undo a newer candidate. */
 	#attempt = 0;
 
-	/** `pane` is read on each use rather than taken once: which pane a component shows is a live prop,
-	    and a gesture that captured it at construction would go on arranging the first one. */
+	/** `pane` is a getter, not a value: which pane a component shows is a live prop, and a gesture that
+	    captured it at construction would go on arranging the first one. */
 	constructor(pane: () => string, arrangement: GestureTarget, probes: GestureProbes) {
 		this.#pane = pane;
 		this.#arrangement = arrangement;
@@ -148,10 +144,8 @@ export class PaneGesture {
 		this.#base = null;
 	}
 
-	/**
-	 * One keypress worth of gesture — pressed, travelled a single unit and released at once. Does
-	 * nothing if this height mode does not put the edge the arrow points at in the user's hands.
-	 */
+	/** One keypress worth of gesture: pressed, travelled a unit and released at once. Does nothing if this
+	    height mode does not put the edge the arrow points at in the user's hands. */
 	step(dx: number, dy: number, resize: boolean): void {
 		if (resize) {
 			const edge: Edge = dx ? 'e' : 's';

@@ -1,10 +1,9 @@
 """Account display names, derived from the ledger and nothing else.
 
 The ledger holds each account's real, verbose name; shortening is presentation, so it happens here
-at read time and is driven only by the ``institution``, ``bank_alias`` and ``account_alias`` meta an
+at read time, driven only by the ``institution``, ``bank_alias`` and ``account_alias`` meta an
 ``open`` declares. ``institution`` is required whenever an alias is in play: substituting only the
-bank half of a name means something has to say where that half ends, and matching the declared
-institution as a prefix of the rendered name is the only way to know without guessing.
+bank half of a name needs something to say where that half ends.
 
 :data:`NAME_CAP` is a target, not a guarantee — a name with no alias to apply is returned at full
 length, so callers must still be able to truncate.

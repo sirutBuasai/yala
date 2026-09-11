@@ -23,6 +23,7 @@
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import AmountInput from '$lib/ui/AmountInput.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
+	import { sumBy } from '$lib/utils/num';
 
 	interface Props {
 		id: string;
@@ -112,14 +113,25 @@
 
 	const effective = (row: Row) =>
 		parsed(row) ?? expected(row.account) ?? previous(row.account) ?? 0;
-	const assets = $derived(rows.filter((r) => !r.liability).reduce((s, r) => s + effective(r), 0));
+	const assets = $derived(
+		sumBy(
+			rows.filter((r) => !r.liability),
+			effective
+		)
+	);
 	// Liabilities are stored negative; the tally shows what is owed.
 	const liabilities = $derived(
-		rows.filter((r) => r.liability).reduce((s, r) => s + Math.abs(effective(r)), 0)
+		sumBy(
+			rows.filter((r) => r.liability),
+			(r) => Math.abs(effective(r))
+		)
 	);
 
 	const subtotal = (group: Group) =>
-		rows.filter((r) => r.group === group).reduce((s, r) => s + effective(r), 0);
+		sumBy(
+			rows.filter((r) => r.group === group),
+			effective
+		);
 
 	let busy = $state(false);
 	let err = $state('');

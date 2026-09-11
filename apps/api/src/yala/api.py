@@ -132,7 +132,7 @@ def _clean_optional_text(value: object) -> str | None:
 
 
 # A transaction/transfer amount must be positive; a credit or payroll line item may be zero
-# (e.g. a $0 deduction) but never negative. Both are finite and bounded (see MAX_AMOUNT).
+# but never negative. Both are finite and bounded (see MAX_AMOUNT).
 Amount = Annotated[float, Field(gt=0, le=MAX_AMOUNT, allow_inf_nan=False)]
 NonNegAmount = Annotated[float, Field(ge=0, le=MAX_AMOUNT, allow_inf_nan=False)]
 Text = Annotated[str, AfterValidator(_clean_text)]
@@ -774,9 +774,9 @@ def _close_money(body: AccountCloseIn, account: str) -> tuple[str, Decimal]:
     date = _parse_date(body.date)
 
     if not body.destination:
-        # A bare close is not a write-off. Beancount accepts `close` whatever the account holds, and
-        # the account then drops out of the balance sheet carrying its value with it — an asset
-        # vanishes, a debt is forgiven, and no entry says where it went.
+        # A bare close is not a write-off: beancount accepts `close` whatever the account
+        # holds, and the account then drops off the balance sheet carrying its value with
+        # it, with no entry saying where it went.
         held = _ledger().balance(account, date)
         if held != 0:
             raise HTTPException(

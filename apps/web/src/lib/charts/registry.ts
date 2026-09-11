@@ -57,11 +57,8 @@ export interface ChartDef<P extends Record<string, unknown> = Record<string, unk
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PropsOf<C> = C extends Component<infer P, any, any> ? P : never;
 
-/**
- * Register one chart. `adapt` must return exactly the props inferred from `component`, so renaming a
- * chart's prop is a compile error here; the type is then erased so the registry array can hold
- * heterogeneous charts.
- */
+/** `adapt` must return exactly the props inferred from `component`, so renaming a chart's prop is a
+    compile error here; the type is then erased so the registry can hold heterogeneous charts. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function def<C extends Component<any, any, any>>(d: {
 	id: string;
@@ -75,11 +72,8 @@ function def<C extends Component<any, any, any>>(d: {
 
 // --- colour assignment ---
 
-/**
- * Role token per well-known series, keyed by the label the data layer gives the series — so the data
- * stays colour-blind and a series carries one hue everywhere it appears. Anything unnamed cycles the
- * fallback palette.
- */
+/** Role token per well-known series, keyed by the label the data layer gives it, so the data stays
+    colour-blind and a series carries one hue everywhere. Anything unnamed cycles the fallback palette. */
 const SERIES_ROLE: Record<string, string> = {
 	// Flows.
 	Income: 'var(--role-income)',
@@ -122,10 +116,8 @@ const PALETTE = [
 	'var(--berry)'
 ];
 
-/**
- * A series' colour from its NAME, so one measure carries one hue wherever it is drawn. Exported
- * because a KPI's sparkline and ring are marks too, and colour is assigned here or nowhere.
- */
+/** A series' colour from its NAME, so one measure carries one hue wherever it is drawn. Exported
+    because a KPI's sparkline and ring are marks too. */
 export function seriesColor(name: string, index = 0): string {
 	return (
 		SERIES_ROLE[name] ??
@@ -134,10 +126,8 @@ export function seriesColor(name: string, index = 0): string {
 	);
 }
 
-/**
- * How a categorical chart's keys take their colour. A categorical's keys are just strings, so only
- * the caller knows whether they name spending categories, ledger accounts, or roles.
- */
+/** A categorical's keys are just strings, so only the caller knows whether they name spending
+    categories, ledger accounts, or roles. */
 export type ColorBy = 'category' | 'account' | 'role';
 
 function keyColor(key: string, mode: ColorBy = 'category'): string {
@@ -167,10 +157,8 @@ function seriesOf(p: Series | MultiSeries): { labels: string[]; list: Series[] }
 	return { labels: base.points.map((pt) => pt.label), list };
 }
 
-/**
- * A lone series may be given an explicit fill; anything plotted alongside others takes its role
- * colour, since an override could only ever speak for one of them.
- */
+/** A lone series may be given an explicit fill; anything plotted alongside others takes its role
+    colour, since an override could only speak for one of them. */
 function fillOf(list: Series[], s: Series, i: number, opts: AdaptOpts): string {
 	return list.length === 1 && opts.color ? opts.color : seriesColor(s.name, i);
 }

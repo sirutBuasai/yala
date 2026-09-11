@@ -189,9 +189,8 @@ export function netWorthAccounts(data: DashboardData): Categorical {
 //
 //     ΔNetWorth = saved + everything-else,  saved = logged income − logged spending
 //
-// The remainder is deliberately left as one term rather than split into market growth and unlogged
-// flow: while an investment account is snapshotted as a single currency figure, its pad absorbs
-// both, so the two are mathematically inseparable and any "market return" would be a guess.
+// The remainder stays one term: an investment account is snapshotted as a single currency figure whose
+// pad absorbs both market growth and unlogged flow, so splitting them would be a guess.
 
 /** The snapshots bounding a scope: the balance it started from, and the last one within it. */
 function bounds(

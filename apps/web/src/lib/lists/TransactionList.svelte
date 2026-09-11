@@ -37,7 +37,7 @@
 		transactions: TxnRow[];
 		/** Supply to make rows clickable — they open the transaction editor. */
 		onedit?: (locator: string) => void;
-		/** Hide the per-row date (e.g. when the surrounding pane already names the day). */
+		/** Hide the per-row date, for a pane that already names the day. */
 		showDate?: boolean;
 		/** Which columns to render between the payee and the amount, in order. */
 		fields?: TxnField[];

@@ -1,15 +1,12 @@
-// One pointer-drag action, shared by moving and resizing. It knows about the DOM and nothing about
-// the board: it reports how far the pointer has travelled, and the pane decides what that means.
-// Deltas are CUMULATIVE from the press, so the board's clamping is re-derived from a fixed origin
-// rather than accumulated — dragging a pane into a wall and back out again is exact.
+// One pointer-drag action, shared by moving and resizing. It knows the DOM and nothing about the board:
+// it reports how far the pointer has travelled, and the pane decides what that means. Deltas are
+// CUMULATIVE from the press, so clamping is re-derived from a fixed origin rather than accumulated —
+// dragging a pane into a wall and back out again is exact.
 //
-// A press is not yet a drag: the gesture stays pending until the pointer has travelled `THRESHOLD`,
-// and only then claims the event. That is what lets a control sit on a drag surface and stay
-// clickable — Svelte delegates pointer events to the document root, so a component's click handler
-// runs after this action's direct listener, and calling `preventDefault` on the press swallows the
-// click with it.
-//
-// `[data-no-drag]` remains for a control that must never begin a gesture at all.
+// A press is not yet a drag: the gesture stays pending until the pointer has travelled `THRESHOLD`. That
+// is what lets a control sit on a drag surface and stay clickable, because Svelte delegates pointer
+// events to the document root and `preventDefault` on the press would swallow the click with it.
+// `[data-no-drag]` is for a control that must never begin a gesture at all.
 
 const OPT_OUT = '[data-no-drag]';
 
@@ -44,9 +41,8 @@ export function drag(node: HTMLElement, params: DragParams) {
 		dy: e.clientY - (origin?.y ?? e.clientY)
 	});
 
-	/** Pointer capture is best-effort: it keeps the gesture alive once the pointer leaves the handle,
-	    but a stale or synthetic pointer id makes the call throw, and losing capture beats losing the
-	    gesture. */
+	/** Best-effort: capture keeps the gesture alive once the pointer leaves the handle, but a stale or
+	    synthetic pointer id makes the call throw, and losing capture beats losing the gesture. */
 	function capture(take: boolean): void {
 		try {
 			if (take) node.setPointerCapture(pointer);
@@ -63,15 +59,14 @@ export function drag(node: HTMLElement, params: DragParams) {
 		dragging = false;
 		capture(false);
 		removeEventListener('keydown', onkeydown, true);
-		// A press that never passed the threshold was a click, not an abandoned gesture: nothing began,
-		// so there is nothing to end or to put back.
+		// A press that never passed the threshold was a click: nothing began, so nothing to end or put back.
 		if (!began) return;
 		if (ended && last) current.onend(last);
 		else current.oncancel?.();
 	}
 
 	function onkeydown(e: KeyboardEvent): void {
-		// Escape abandons the gesture. Captured, so a focused control inside the pane can't eat it.
+		// Listened for in the capture phase, so a focused control inside the pane cannot eat it.
 		if (e.key !== 'Escape') return;
 		e.preventDefault();
 		finish(false);
@@ -81,9 +76,8 @@ export function drag(node: HTMLElement, params: DragParams) {
 		// Primary button only: a right-click or a two-finger scroll is not a drag.
 		if (current.disabled || origin || e.button !== 0) return;
 		if ((e.target as Element | null)?.closest(OPT_OUT)) return;
-		// Deliberately no `preventDefault` yet — see the threshold note at the top of this file. Capture
-		// IS taken now, though: the listeners are on this node, so without it the moves stop arriving the
-		// moment the pointer leaves it, and a control small enough to click is left in a few pixels.
+		// No `preventDefault` yet (see the threshold note above), but capture IS taken now: the listeners
+		// are on this node, so without it the moves stop arriving the moment the pointer leaves it.
 		origin = { x: e.clientX, y: e.clientY };
 		pointer = e.pointerId;
 		capture(true);
