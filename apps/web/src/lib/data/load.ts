@@ -18,8 +18,7 @@ export type AccountsInfo = AccountLists;
 export type PayrollOption = AccountLists['payroll_options'][number];
 
 /** What every write says when there is no API to write to. */
-export const API_UNAVAILABLE =
-	'The local API is not running, so nothing can be saved. Start it with `make serve-api`.';
+export const API_UNAVAILABLE = 'Unable to write data: the app is in read-only mode.';
 
 export interface LoadState {
 	status: 'loading' | 'ready' | 'error';
@@ -38,11 +37,11 @@ data.subscribe((doc) => setAccountDirectory(doc?.meta.accounts));
 
 function checkSchema(doc: DashboardData): string | null {
 	if (doc.schema_version !== EXPECTED_SCHEMA) {
-		return `data.json is schema v${doc.schema_version} but this app expects v${EXPECTED_SCHEMA}. Rebuild it with \`python -m yala.builder\`.`;
+		return `Data schema mismatch: this file is v${doc.schema_version} but the app expects v${EXPECTED_SCHEMA}.`;
 	}
 
 	if (!doc.meta.month_keys.length) {
-		return 'No transactions in the ledger yet. Add some, then rebuild with `python -m yala.builder`.';
+		return 'No transactions currently recorded in the ledger.';
 	}
 
 	return null;
@@ -187,7 +186,7 @@ export async function loadData(): Promise<void> {
 	} catch (err) {
 		loadState.set({
 			status: 'error',
-			message: `Could not load data.json (${(err as Error).message}). Rebuild it with \`python -m yala.builder\`, or start the API with \`make serve-api\`.`
+			message: `Unable to load data (${(err as Error).message}).`
 		});
 	}
 }
@@ -406,8 +405,7 @@ export async function getSettings(): Promise<{ info: SettingsInfo | null; error:
 			? { info, error: null }
 			: {
 					info: null,
-					error:
-						'This `data.json` predates the settings form. Rebuild it with `python -m yala.builder`, or start the API with `make serve-api`.'
+					error: 'Data is stale. Please reload the app.'
 				};
 	}
 
@@ -416,7 +414,7 @@ export async function getSettings(): Promise<{ info: SettingsInfo | null; error:
 
 	const hint =
 		status === 404
-			? 'This build expects a /api/settings endpoint the running API does not have. Restart it (`make serve-api`) to pick up the current backend.'
+			? 'Unable to write data. Please reload the app.'
 			: (error ?? 'could not load settings');
 	return { info: null, error: hint };
 }

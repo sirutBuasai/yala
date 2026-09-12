@@ -122,13 +122,6 @@
 	}
 	input {
 		width: 6rem;
-		background-color: var(--inset);
-		border: 1px solid var(--border);
-		color: var(--ink);
-		border-radius: var(--radius-md);
-		padding: var(--pad-control);
-		font-size: var(--text-control);
-		font-family: inherit;
 		font-variant-numeric: tabular-nums;
 		text-align: right;
 	}

@@ -240,19 +240,19 @@ class FileLedgerSink(LedgerSink):
             open_date = opened.get(account)
 
             if open_date is None:
-                raise ValueError(f"Unable to insert transaction: {account} does not exist.")
+                raise ValueError(f"unable to insert transaction: {account} does not exist")
 
             if open_date > date:
                 raise ValueError(
-                    f"Unable to insert transaction: {account} is not open as of date "
-                    f"{date.isoformat()} (opened {open_date.isoformat()})."
+                    f"unable to insert transaction: {account} is not open as of date "
+                    f"{date.isoformat()} (opened {open_date.isoformat()})"
                 )
 
             close_date = closed.get(account)
             if close_date is not None and close_date <= date:
                 raise ValueError(
-                    f"Unable to insert transaction: {account} is closed as of date "
-                    f"{date.isoformat()} (closed {close_date.isoformat()})."
+                    f"unable to insert transaction: {account} is closed as of date "
+                    f"{date.isoformat()} (closed {close_date.isoformat()})"
                 )
 
     # --- spending ---

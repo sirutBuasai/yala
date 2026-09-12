@@ -36,6 +36,7 @@
 	<label>
 		<span>Institution</span>
 		<input
+			class="field-input"
 			aria-label="institution"
 			bind:value={institution}
 			placeholder={institutionPlaceholder}
@@ -47,6 +48,7 @@
 		<label>
 			<span>Account name</span>
 			<input
+				class="field-input"
 				aria-label="account name"
 				bind:value={accountName}
 				placeholder={accountNamePlaceholder}
@@ -59,13 +61,14 @@
 
 <p class="cap">
 	Written into the ledger as the full name, spelled as you type it. The short forms below are only
-	used if that name is too long for a list row — leave them blank and it is kept in full.
+	used if that name is too long for a list row. Leave them blank and it is kept in full.
 </p>
 
 <div class="fields">
 	<label>
 		<span>Institution short form <i>optional</i></span>
 		<input
+			class="field-input"
 			aria-label="institution alias"
 			bind:value={bankAlias}
 			placeholder="e.g. BoE"
@@ -77,6 +80,7 @@
 		<label>
 			<span>Account short form <i>optional</i></span>
 			<input
+				class="field-input"
 				aria-label="account alias"
 				bind:value={accountAlias}
 				placeholder={accountAliasPlaceholder}
@@ -112,13 +116,6 @@
 		opacity: 0.8;
 	}
 	.fields input {
-		background-color: var(--inset);
-		border: 1px solid var(--border);
-		color: var(--ink);
-		border-radius: var(--radius-md);
-		padding: var(--pad-control);
-		font-size: var(--text-control);
-		font-family: inherit;
 		min-width: 0;
 	}
 	p.cap {

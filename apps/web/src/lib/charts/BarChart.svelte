@@ -2,7 +2,8 @@
 	// One bar chart for 1..n series: a single series renders as plain columns with value labels, two
 	// or more as grouped bars with a legend. Callers pick "Bar", never "column" vs "grouped bars".
 	import { scaleBand } from 'd3-scale';
-	import { moneyYScale, plotSize, UNMEASURED } from '$lib/charts/axis';
+	import { moneyYScale, plotSize } from '$lib/charts/axis';
+	import { ChartBox } from '$lib/charts/box.svelte';
 	import { money, moneyK, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Legend from '$lib/charts/Legend.svelte';
@@ -20,10 +21,9 @@
 
 	const single = $derived(series.length <= 1);
 
-	let boxW = $state(0);
-	let boxH = $state(0);
-	const W = $derived(boxW || UNMEASURED.w);
-	const H = $derived(boxH || UNMEASURED.h);
+	const box = new ChartBox();
+	const W = $derived(box.w);
+	const H = $derived(box.h);
 	const m = { t: 22, r: 14, b: 30, l: 56 };
 	const plot = $derived(plotSize(W, H, m));
 	const iw = $derived(plot.iw);
@@ -52,7 +52,7 @@
 	<Legend keys={series} />
 {/if}
 
-<div class="figurebox" bind:clientWidth={boxW} bind:clientHeight={boxH}>
+<div class="figurebox" bind:clientWidth={box.clientWidth} bind:clientHeight={box.clientHeight}>
 	<svg class="chart" viewBox="0 0 {W} {H}" role="img" aria-label={label}>
 		<g class="axis" transform="translate({m.l},{m.t})">
 			{#each ticks as t (t)}

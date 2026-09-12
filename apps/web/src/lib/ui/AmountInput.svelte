@@ -29,6 +29,7 @@
 <span class="amountinput" class:has-prefix={!!prefix}>
 	{#if prefix}<span class="prefix" aria-hidden="true">{prefix}</span>{/if}
 	<input
+		class="field-input"
 		{id}
 		type="number"
 		step="0.01"
@@ -52,13 +53,6 @@
 	.amountinput input {
 		flex: 1;
 		min-width: 0;
-		background-color: var(--inset);
-		border: 1px solid var(--border);
-		color: var(--ink);
-		border-radius: var(--radius-md);
-		padding: var(--pad-control);
-		font-size: var(--text-control);
-		font-family: inherit;
 		font-variant-numeric: tabular-nums;
 		text-align: right;
 	}

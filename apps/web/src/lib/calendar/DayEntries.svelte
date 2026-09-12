@@ -42,7 +42,7 @@
 {/if}
 
 {#if empty}
-	<Empty>No activity this day. Add an entry above.</Empty>
+	<Empty>No activity this day.</Empty>
 {/if}
 
 <style>

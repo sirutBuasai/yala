@@ -88,9 +88,9 @@
 	error={value != null ? err : undefined}
 >
 	{#if value == null}
-		<p class="cap">{err || 'Valuing…'}</p>
+		<p class="cap">{err || 'Valuing...'}</p>
 	{:else}
-		<p class="cap">Worth <b>{money(value)}</b> — split it across destinations:</p>
+		<p class="cap">Worth <b>{money(value)}</b>, split it across destinations:</p>
 		{#each legs as leg, i (i)}
 			<div class="leg">
 				<div class="grow">

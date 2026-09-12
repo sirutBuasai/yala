@@ -117,7 +117,7 @@ describe('loadData', () => {
 		await loadData();
 
 		expect(get(loadState).status).toBe('error');
-		expect(get(loadState).message).toContain('schema v2');
+		expect(get(loadState).message).toContain('this file is v2');
 	});
 
 	it('reports an empty ledger (no month_keys) as an error', async () => {
@@ -430,7 +430,7 @@ describe('getSettings', () => {
 
 		const { info, error } = await getSettings();
 		expect(info).toBeNull();
-		expect(error).toContain('yala.builder');
+		expect(error).toContain('stale');
 	});
 
 	describe('with an API', () => {
@@ -452,8 +452,7 @@ describe('getSettings', () => {
 			const { info, error } = await getSettings();
 
 			expect(info).toBeNull();
-			expect(error).toContain('Restart');
-			expect(error).toContain('serve-api');
+			expect(error).toContain('reload');
 		});
 
 		it('reports an unreachable API distinctly from a missing endpoint', async () => {
@@ -461,7 +460,7 @@ describe('getSettings', () => {
 			const { error } = await getSettings();
 
 			expect(error).toContain('unreachable');
-			expect(error).not.toContain('Restart');
+			expect(error).not.toContain('reload');
 		});
 
 		it('surfaces a rejected value as the API worded it', async () => {

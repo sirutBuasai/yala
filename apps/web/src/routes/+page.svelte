@@ -136,7 +136,7 @@
 					{$data.meta.transaction_count.toLocaleString()} txns ·
 					{$data.meta.years[0]}–{$data.meta.years[$data.meta.years.length - 1]}
 				{:else}
-					personal finance · warm-dark
+					personal finance
 				{/if}
 			</span>
 		</div>
@@ -159,7 +159,7 @@
 
 	<div aria-live="polite" aria-atomic="true">
 		{#if $loadState.status === 'loading'}
-			<Banner>Loading <code>data.json</code>…</Banner>
+			<Banner>Loading <code>data.json</code>...</Banner>
 		{:else if $loadState.status === 'error'}
 			<Banner role="alert">{$loadState.message}</Banner>
 		{/if}
@@ -168,13 +168,8 @@
 	<!-- A standing notice: the banner only EXPLAINS why a save will be refused; the write guard in
 	     `load.ts` is what actually refuses it. -->
 	{#if $loadState.status === 'ready' && !$live && !bannerClosed}
-		<Banner
-			role="status"
-			closeLabel="Dismiss the read-only notice"
-			onclose={() => (bannerClosed = true)}
-		>
-			Reading the built <code>data.json</code>: the local API isn't running, so nothing can be
-			saved. Start it with <code>make serve-api</code>.
+		<Banner role="status" closeLabel="Dismiss" onclose={() => (bannerClosed = true)}>
+			Read-only mode.
 		</Banner>
 	{/if}
 

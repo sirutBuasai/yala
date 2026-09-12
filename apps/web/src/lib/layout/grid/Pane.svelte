@@ -4,9 +4,9 @@
 	const MODE_ORDER: HeightMode[] = ['fixed', 'fit', 'cap'];
 
 	const MODE_LABELS: Record<HeightMode, string> = {
-		fixed: 'Set height — the list fits inside the pane and scrolls',
-		fit: 'Fit to content — the pane extends as the list grows',
-		cap: 'Fit to content up to a limit — drag the bottom edge to set it'
+		fixed: 'Set fixed height',
+		fit: 'Grows with content',
+		cap: 'Grows to the bottom edge'
 	};
 </script>
 

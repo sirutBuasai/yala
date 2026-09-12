@@ -40,7 +40,7 @@
 		<SettingField {spec} value={info.values[spec.key] ?? null} onsaved={saved} />
 	{/each}
 {:else if loading}
-	<p class="hint">Loading…</p>
+	<p class="hint">Loading...</p>
 {:else}
 	<p class="err" role="alert">{error}</p>
 	<button type="button" class="btn-accent" onclick={load}>Try again</button>

@@ -183,10 +183,10 @@ describe('targets', () => {
 // --- rates and risk ---
 
 describe('rates and risk', () => {
-	it('labels compound growth as a balance figure, not a return', () => {
+	it('labels compound growth as a balance figure, contributions included', () => {
 		const s = scalar('networth.balance_growth');
 		expect(s.label).toEqual({ text: 'Balance growth' });
-		expect(s.note?.text).toContain('not a return');
+		expect(s.note?.text).toContain('including contributions');
 		expect(s.value!).toBeGreaterThan(100);
 	});
 
@@ -308,7 +308,7 @@ describe('year-end levels behind a KPI', () => {
 		if (p.kind !== 'series') throw new Error('expected series');
 
 		expect(p.points.map((pt) => pt.label)).toEqual(['2024', '2025']);
-		// December's snapshot closes 2024, not January's.
+		// A year closes on its LAST snapshot, not its first.
 		expect(p.points.map((pt) => pt.value)).toEqual([3000, 6000]);
 	});
 

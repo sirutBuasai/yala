@@ -310,7 +310,7 @@ def _reject_if_sweep(entry: data.Transaction) -> None:
     if is_sweep([p.account for p in entry.postings], _ledger()):
         raise HTTPException(
             status_code=409,
-            detail="This sweep is auto-managed and can't be edited or deleted.",
+            detail="this sweep is auto-managed and can't be edited or deleted",
         )
 
 

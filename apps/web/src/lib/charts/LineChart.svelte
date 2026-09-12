@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { line, area } from 'd3-shape';
-	import { moneyYScale, logYScale, labelIndices, plotSize, UNMEASURED } from '$lib/charts/axis';
+	import { moneyYScale, logYScale, labelIndices, plotSize } from '$lib/charts/axis';
+	import { ChartBox } from '$lib/charts/box.svelte';
 	import { money, esc } from '$lib/utils/format';
 	import { clamp } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
@@ -29,10 +30,9 @@
 
 	const showLegend = $derived(!endLabels && series.length > 1);
 
-	let boxW = $state(0);
-	let boxH = $state(0);
-	const W = $derived(boxW || UNMEASURED.w);
-	const H = $derived(boxH || UNMEASURED.h);
+	const box = new ChartBox();
+	const W = $derived(box.w);
+	const H = $derived(box.h);
 	// The end-label gutter is a share of the box, not a constant, so a narrow card doesn't hand most
 	// of its plot to labels.
 	const m = $derived({ t: 16, r: endLabels ? clamp(W * 0.2, 96, 170) : 16, b: 28, l: 60 });
@@ -131,7 +131,7 @@
 	<Legend keys={series} />
 {/if}
 
-<div class="figurebox" bind:clientWidth={boxW} bind:clientHeight={boxH}>
+<div class="figurebox" bind:clientWidth={box.clientWidth} bind:clientHeight={box.clientHeight}>
 	<svg class="chart" viewBox="0 0 {W} {H}" role="img" aria-label={label}>
 		<defs>
 			{#each series as s, si (s.name)}

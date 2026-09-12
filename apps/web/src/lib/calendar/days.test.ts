@@ -143,7 +143,7 @@ describe('latestActivityDay', () => {
 });
 
 describe('dayForKey', () => {
-	// July 2026 starts on a Wednesday, hence the weekday 3.
+	// The trailing 3 is the weekday the fixture month starts on.
 	const jul = (key: string, day: number) => dayForKey(key, day, '2026-07', 3);
 
 	it('steps a day sideways and a week vertically', () => {

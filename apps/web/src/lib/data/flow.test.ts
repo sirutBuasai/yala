@@ -25,18 +25,18 @@ describe('moneyFlow', () => {
 		expect(node(m, 'HSA')!.value).toBeCloseTo(300);
 	});
 
-	it('routes contributions into Savings, which reconciles to lifetime saved', () => {
+	it('routes contributions into Saved, which reconciles to lifetime saved', () => {
 		const d = makeData();
 		const m = moneyFlow(d);
 		const savedLifetime = d.overview.by_year.reduce((a, r) => a + r.saved, 0);
 
-		expect(node(m, 'Savings')!.value).toBeCloseTo(savedLifetime);
-		// Savings is fed by every contribution label plus the take-home cash surplus.
-		const sources = linksInto(m, 'Savings')
+		expect(node(m, 'Saved')!.value).toBeCloseTo(savedLifetime);
+		// Saved is fed by every contribution label plus the take-home cash surplus.
+		const sources = linksInto(m, 'Saved')
 			.map((l) => l.source)
 			.sort();
 		expect(sources).toEqual(['HSA', 'Roth401k', 'Take-home']);
-		expect(linksInto(m, 'Savings').reduce((a, l) => a + l.value, 0)).toBeCloseTo(savedLifetime);
+		expect(linksInto(m, 'Saved').reduce((a, l) => a + l.value, 0)).toBeCloseTo(savedLifetime);
 	});
 
 	it('falls back to a single Contributions bucket when no paycheck breakdown exists', () => {

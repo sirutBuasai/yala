@@ -86,7 +86,7 @@
 					title: words('Where it all went'),
 					caption: {
 						context: String(year),
-						text: 'from gross income to spending category split'
+						text: 'gross income to each spending category'
 					}
 				}
 			},

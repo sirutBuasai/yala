@@ -16,11 +16,11 @@ describe('Credits', () => {
 	);
 	afterEach(() => setAccountDirectory({}));
 
-	it('starts with no rows and adds one on "+ credit"', async () => {
+	it('starts with no rows and adds one on "+ Credit"', async () => {
 		render(Credits, { props: { credits: reactive([]), creditAccounts: accts } });
 		expect(screen.queryByPlaceholderText('0')).not.toBeInTheDocument();
 
-		await fireEvent.click(screen.getByText('+ credit'));
+		await fireEvent.click(screen.getByText('+ Credit'));
 		expect(screen.getByPlaceholderText('0')).toBeInTheDocument();
 	});
 

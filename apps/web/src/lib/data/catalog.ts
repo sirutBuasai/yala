@@ -53,6 +53,7 @@ import {
 	componentKeys,
 	count,
 	extremum,
+	extremumLabel,
 	measureLabel,
 	ratio,
 	signed,
@@ -156,7 +157,7 @@ const CHART_DEFS: DataDef[] = [
 	},
 	{
 		id: 'overview.income_spent_saved',
-		label: 'Income vs Spending vs Savings',
+		label: 'Income vs spending vs saved',
 		kind: 'multiseries',
 		scopes: ['all', 'year'],
 		build: (data, scope) =>
@@ -281,10 +282,9 @@ const TRENDS: Field[] = ['income', 'spending', 'saved'];
 /** Measures with a running total — the shape of an accumulation, not a level. */
 const RUNNING: Field[] = ['gross', 'deductions', 'contributions', 'net', 'saved'];
 
-// A running total comes in two windows, because the two answer different questions. `running.*` spans
-// the months the measure MOVED in, so a year-to-date accumulation fills its chart instead of reaching
-// its total in July and drawing a flat line to December. `revolving.*` spans the last twelve months
-// whatever the calendar says, which is the one that keeps its meaning across a year boundary.
+// Two windows, because they answer different questions. `running.*` spans the months the measure MOVED
+// in, so a year-to-date accumulation fills its chart instead of flatlining after the last active month.
+// `revolving.*` spans the trailing twelve months, which keeps its meaning across a year boundary.
 const SERIES_DEFS: DataDef[] = [
 	...TRENDS.map((f): DataDef => ({
 		id: `trend.${f}`,
@@ -485,10 +485,10 @@ const COUNTS: { id: string; label: string; of: Countable }[] = [
 	{ id: 'count.categories', label: 'Categories', of: 'categories' }
 ];
 
-const EXTREMA: { id: string; label: string; of: ExtremumOf; scopes: ScopeLevel[] }[] = [
-	{ id: 'max.category', label: 'Biggest category', of: 'category', scopes: ALL_SCOPES },
-	{ id: 'max.transaction', label: 'Biggest transaction', of: 'transaction', scopes: ALL_SCOPES },
-	{ id: 'max.month', label: 'Biggest month', of: 'month', scopes: ['all', 'year'] }
+const EXTREMA: { id: string; of: ExtremumOf; scopes: ScopeLevel[] }[] = [
+	{ id: 'max.category', of: 'category', scopes: ALL_SCOPES },
+	{ id: 'max.transaction', of: 'transaction', scopes: ALL_SCOPES },
+	{ id: 'max.month', of: 'month', scopes: ['all', 'year'] }
 ];
 
 // A level plus its period-over-period badge. Labelled by the measure alone — the badge's own note
@@ -546,8 +546,8 @@ const STAT_DEFS: DataDef[] = [
 		scalarDef(c.id, c.label, ALL_SCOPES, (data, scope) => count(data, scope, c.of))
 	),
 	...EXTREMA.map((e) =>
-		scalarDef(e.id, e.label, e.scopes, (data, scope) =>
-			extremum(data, scope, e.of, 'max', { label: words(e.label) })
+		scalarDef(e.id, extremumLabel('max', e.of), e.scopes, (data, scope) =>
+			extremum(data, scope, e.of, 'max')
 		)
 	),
 	...CHANGES.map((c) =>

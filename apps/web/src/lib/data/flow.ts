@@ -83,7 +83,7 @@ export function moneyFlow(data: DashboardData, year?: number): Flow {
 		nodes.push({ id: k, label: k, value: v, col: 1, role: 'deduction' });
 		links.push({ source: 'Gross', target: k, value: v });
 	}
-	// Contributions are savings parked before take-home — they route onward into Savings.
+	// Contributions are savings parked before take-home — they route onward into Saved.
 	for (const [k, v] of Object.entries(con)) {
 		nodes.push({ id: k, label: k, value: v, col: 1, role: 'saving' });
 		links.push({ source: 'Gross', target: k, value: v });
@@ -91,11 +91,11 @@ export function moneyFlow(data: DashboardData, year?: number): Flow {
 	nodes.push({ id: 'Take-home', label: 'Take-home', value: takeHome, col: 1, role: 'takehome' });
 	links.push({ source: 'Gross', target: 'Take-home', value: takeHome });
 
-	// Savings sits atop the last column, aligned with the contribution nodes feeding it, so those
+	// Saved sits atop the last column, aligned with the contribution nodes feeding it, so those
 	// ribbons don't cross the spending fan.
 	nodes.push({
-		id: 'Savings',
-		label: 'Savings',
+		id: 'Saved',
+		label: 'Saved',
 		value: conTotal + cashSavings,
 		col: 2,
 		role: 'saving'
@@ -104,10 +104,10 @@ export function moneyFlow(data: DashboardData, year?: number): Flow {
 		nodes.push({ id: c.category, label: c.category, value: c.amount, col: 2, role: 'category' });
 	}
 
-	// Link order is load-bearing: the chart stacks each source's outgoing fan in it, so Savings'
+	// Link order is load-bearing: the chart stacks each source's outgoing fan in it, so Saved's
 	// incoming links must precede the category links to stay at the top.
-	for (const [k, v] of Object.entries(con)) links.push({ source: k, target: 'Savings', value: v });
-	links.push({ source: 'Take-home', target: 'Savings', value: cashSavings });
+	for (const [k, v] of Object.entries(con)) links.push({ source: k, target: 'Saved', value: v });
+	links.push({ source: 'Take-home', target: 'Saved', value: cashSavings });
 	for (const c of cats) links.push({ source: 'Take-home', target: c.category, value: c.amount });
 
 	return { kind: 'flow', unit: MONEY(data.currency), nodes, links };

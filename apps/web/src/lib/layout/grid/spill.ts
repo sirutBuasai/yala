@@ -1,9 +1,7 @@
-// Has this pane's content outgrown the box it was given? A real minimum is a frontier `h ≥ f(w)`, not a
-// pair of numbers — a chart may reflow its legend and need MORE height when narrow — so it is measured
-// at the candidate size rather than predicted.
-//
-// Only an axis whose overflow is `visible` counts: anything else is the author having already decided
-// what happens past the edge, and resizing the pane is not the remedy.
+// Has this pane's content outgrown the box it was given? Measured at the candidate size rather than
+// predicted, because a minimum is a frontier `h >= f(w)`: a chart may need MORE height when narrow.
+// Only an axis whose overflow is `visible` counts; anything else already decided what happens past the
+// edge.
 
 /**
  * Tolerance, so a layout artefact never reads as a spill: scroll and client sizes round independently
@@ -31,16 +29,10 @@ const tooWide = (el: Element) => overflows(el, 'x');
 const MEASURED = '[data-measure]';
 
 /**
- * True when the content no longer fits the card. Probed on the card, its children and the body's too: a
- * size-container wrapper computes its own box without regard to its contents, so what spills out of one
- * never reaches the card's scroll height.
- *
- * Sideways is the card plus `MEASURED` boxes only, not everywhere inside: a list row bleeds past the
- * card's padding by design so its hover runs edge to edge, and reading that as overflow made every list
- * pane unshrinkable.
- *
- * `body` is a parameter rather than found by class: it is the card component's own markup, and renaming
- * it there would silently stop half the measurement happening.
+ * True when the content no longer fits the card. Children and body are probed too: a size-container
+ * wrapper computes its own box regardless of contents, so a spill inside one never reaches the card's
+ * scroll height. Sideways is deliberately limited to the card and `MEASURED` boxes — a list row bleeds
+ * past the card's padding by design, and counting that made every list pane unshrinkable.
  */
 export function spills(card: HTMLElement, body?: HTMLElement): boolean {
 	if (tooWide(card) || tooTall(card)) return true;

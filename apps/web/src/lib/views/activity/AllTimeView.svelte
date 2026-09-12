@@ -37,7 +37,7 @@
 				scope: all,
 				chart: 'sankey',
 				title: words('Where it all went'),
-				caption: { context: 'Lifetime', text: 'from gross income to spending category split' }
+				caption: { context: 'Lifetime', text: 'gross income to each spending category' }
 			}
 		},
 		// Levels beside rate: how big, versus how efficient, which the bars alone can't say.
@@ -66,7 +66,7 @@
 				scope: all,
 				chart: 'line',
 				title: words('Savings rate by year'),
-				caption: words('calculated as rate of net income')
+				caption: words('of net income')
 			}
 		},
 		// Log scale, because a linear axis crushes the small categories under the biggest ones. End
@@ -84,7 +84,7 @@
 				log: true,
 				endLabels: true,
 				title: words('Spending by category, by year'),
-				caption: words('yearly trend of categorical spending')
+				caption: words('log-scaled yearly trend of spending by category')
 			}
 		}
 	} satisfies BoardLayout);

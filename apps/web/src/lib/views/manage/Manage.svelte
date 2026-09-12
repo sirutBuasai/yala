@@ -118,7 +118,7 @@
 		id="settings"
 		title={words('Planning assumptions')}
 		caption={words(
-			"The few figures the ledger can't work out on its own. Everything else on the dashboard is derived from your entries. Saved into the ledger itself, dated — so revising one leaves the old value behind as history."
+			"The few figures the ledger can't work out on its own. Everything else on the dashboard is derived from your entries. Saved into the ledger itself, dated, so revising one leaves the old value behind as history."
 		)}
 		density="panel"
 	>
@@ -162,7 +162,7 @@
 		id="addbank"
 		title={words('Add a bank account')}
 		caption={words(
-			'Named by institution alone — a second account at the same bank is when a product name starts to earn its place.'
+			'Named by institution alone. Add the product name once you hold two at one bank.'
 		)}
 		density="panel"
 	>
@@ -197,7 +197,7 @@
 		id="addcard"
 		title={words('Add a credit card')}
 		caption={words(
-			"Issuer plus the card's own name, both spelled out — the ledger keeps the full name and the short forms only stand in when a row can't fit it."
+			"Issuer plus the card's own name, both spelled out. Short forms stand in where a row is too narrow."
 		)}
 		density="panel"
 	>
@@ -222,7 +222,7 @@
 	<Pane
 		id="addinvestment"
 		title={words('Add an investment account')}
-		caption={words('Share accounts open unconstrained + seeded; a USD-only plan is tickerless.')}
+		caption={words('Leave "holds tickers" off for a plan that only ever holds dollars.')}
 		density="panel"
 	>
 		<AddAccountPanel
@@ -254,13 +254,15 @@
 				</label>
 				{#if invContributable}
 					<input
+						class="field-input"
 						aria-label="employer"
 						bind:value={invEmployer}
 						placeholder="employer (e.g. Employer1)"
 						maxlength={LEAF_MAX}
 					/>
 					<input
-						aria-label="labels"
+						class="field-input"
+						aria-label="contribution options"
 						bind:value={invLabels}
 						placeholder="contribution options, comma-separated (e.g. Roth401k,Trad401k,AfterTax401k)"
 					/>
@@ -340,12 +342,5 @@
 	input {
 		flex: 1;
 		min-width: 0;
-		background-color: var(--inset);
-		border: 1px solid var(--border);
-		color: var(--ink);
-		border-radius: var(--radius-md);
-		padding: var(--pad-control);
-		font-size: var(--text-control);
-		font-family: inherit;
 	}
 </style>

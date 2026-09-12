@@ -39,7 +39,7 @@
 	{#if transactions.length}
 		<TransactionList {transactions} {onedit} fields={['source']} />
 	{:else}
-		<Empty>Nothing pending — you're all reconciled.</Empty>
+		<Empty>Nothing pending.</Empty>
 	{/if}
 </Pane>
 

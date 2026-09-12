@@ -451,7 +451,9 @@ a {
 }
 
 /* --- form controls: themed to the site, replacing the native OS chrome --- */
-.field input {
+/* `.field-input` is the opt-in for an input outside a `.field` wrapper. */
+.field input,
+.field-input {
 	background-color: var(--inset);
 	border: 1px solid var(--border);
 	color: var(--ink);

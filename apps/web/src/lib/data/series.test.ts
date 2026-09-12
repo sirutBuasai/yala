@@ -71,8 +71,6 @@ describe('measureByYear', () => {
 });
 
 describe('measureActive', () => {
-	// The window a running total wants: padded to December it reaches its total partway across and
-	// draws a flat line to the edge, which in a card-width chart is a solid block that says nothing.
 	it('spans only the months the measure moved in', () => {
 		const s = measureActive(makeData(), 'spending', 2025);
 		expect(s.points).toEqual([{ label: 'Jan', value: 45.5 }]);

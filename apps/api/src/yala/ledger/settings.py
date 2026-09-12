@@ -53,7 +53,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
         default=Decimal(4),
         help=(
             "Share of the portfolio you plan to withdraw each year. Sets the financial-"
-            "independence target: annual spending divided by this rate. 4% is the common default."
+            "independence target: annual spending divided by this rate."
         ),
     ),
     SettingSpec(
@@ -84,10 +84,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
         minimum=Decimal(1),
         maximum=Decimal(120),
         default=Decimal(6),
-        help=(
-            "Months of spending you want held in cash. Marks the threshold on the runway gauge; "
-            "three to six months is the usual advice."
-        ),
+        help="Months of spending you want held in cash. Marks the threshold on the runway gauge.",
     ),
     SettingSpec(
         key="birth-year",

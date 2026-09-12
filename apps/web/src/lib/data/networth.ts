@@ -491,7 +491,7 @@ export function balanceGrowth(data: DashboardData): Scalar {
 		unit: PERCENT,
 		label: words('Balance growth'),
 		value,
-		note: words('per year — contributions included, not a return')
+		note: words('per year including contributions')
 	};
 }
 

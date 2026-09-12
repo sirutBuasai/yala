@@ -241,13 +241,13 @@ def _write_share_ledger(root: Path) -> Path:
     (root / "main.beancount").write_text(
         'option "operating_currency" "USD"\n'
         "2020-01-01 commodity USD\n"
-        "2020-01-01 commodity VOO\n"
+        "2020-01-01 commodity TICKA\n"
         "2020-01-01 open Assets:Investments:Taxable:Brokerage\n"
         "2020-01-01 open Equity:Opening-Balances\n"
         "2020-01-01 open Equity:Adjustments:Investments:Brokerage\n"
         "2026-08-19 pad Assets:Investments:Taxable:Brokerage Equity:Opening-Balances\n"
-        "2026-08-20 balance Assets:Investments:Taxable:Brokerage  10 VOO\n"
-        "2026-08-20 price VOO 500.00 USD\n"
+        "2026-08-20 balance Assets:Investments:Taxable:Brokerage  10 TICKA\n"
+        "2026-08-20 price TICKA 500.00 USD\n"
     )
     return root
 
@@ -256,7 +256,7 @@ def test_log_balance_reclassifies_shares_to_usd(tmp_path: Path):
     root = _write_share_ledger(tmp_path / "shares")
     account = "Assets:Investments:Taxable:Brokerage"
 
-    # 10 VOO @ 500 = 5000 market; log a 5200 USD total.
+    # 10 TICKA @ 500 = 5000 market; log a 5200 USD total.
     FileLedgerSink(root).log_balance(account, Decimal("5200.00"), SEP, adjustment_account(account))
 
     led = Ledger(root / "main.beancount", strict=True).load()

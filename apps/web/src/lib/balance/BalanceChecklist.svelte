@@ -117,8 +117,8 @@
 		const gap = check(row) ?? 0;
 
 		return whyBlocked(row) === 'negative'
-			? "can't hold a negative balance — please enter a valid balance."
-			: `is off by ${moneyExact(Math.abs(gap))} — please log the missing ${missingEntryKind(gap)} first.`;
+			? "can't hold a negative balance, please enter a positive figure."
+			: `is off by ${moneyExact(Math.abs(gap))}, please log the missing ${missingEntryKind(gap)} first.`;
 	}
 
 	const filled = $derived(rows.filter((r) => parsed(r) != null));
@@ -180,7 +180,7 @@
 <Pane
 	{id}
 	title={words('Log balances')}
-	caption={words("monthly snapshot of each account's balances")}
+	caption={words("monthly snapshot of each account's balance")}
 >
 	{#snippet actions()}
 		{#if rows.length}
@@ -189,7 +189,7 @@
 	{/snippet}
 
 	{#if !rows.length}
-		<p class="cap">No loggable accounts yet. Open one under Manage.</p>
+		<p class="cap">No tracked accounts yet. Open one under Manage.</p>
 	{:else}
 		<dl class="agg bleed-x">
 			<div>
@@ -269,7 +269,10 @@
 												title={`${formatAccount(row.account)} ${blockedPredicate(row)}`}>✕</Badge
 											>
 										{:else}
-											<Badge tone="warn" filled title="Adjustment this month would post"
+											<Badge
+												tone="warn"
+												filled
+												title="Untracked transfers this month will post as an adjustment"
 												>{moneyExact(chk)}</Badge
 											>
 										{/if}
@@ -301,7 +304,7 @@
 
 			<div class="actions">
 				<button class="btn-primary" onclick={saveAll} disabled={busy || !savable.length}>
-					{busy ? 'Saving…' : savable.length ? `Save ${savable.length}` : 'Save'}
+					{busy ? 'Saving...' : savable.length ? `Save ${savable.length}` : 'Save'}
 				</button>
 			</div>
 		</div>

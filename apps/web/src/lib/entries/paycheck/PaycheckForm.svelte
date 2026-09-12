@@ -209,8 +209,8 @@
 
 <FormSection label="Deductions">
 	<LineColumn
-		header="Tax, benefits, insurance…"
-		addLabel="+ row"
+		header="Tax, benefits, insurance..."
+		addLabel="+ Row"
 		bind:rows={deductions}
 		options={deductionOptions}
 		selectAriaLabel="deduction type"
@@ -219,8 +219,8 @@
 
 <FormSection label="Contributions">
 	<LineColumn
-		header="401k, HSA…"
-		addLabel="+ row"
+		header="401k, HSA..."
+		addLabel="+ Row"
 		bind:rows={contributions}
 		options={contributionOptions}
 		selectAriaLabel="contribution type"

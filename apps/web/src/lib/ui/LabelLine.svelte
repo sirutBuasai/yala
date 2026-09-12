@@ -64,7 +64,7 @@
 		bind:this={field}
 		class="name"
 		type="text"
-		aria-label={`${what}, without the part the app fills in`}
+		aria-label={`Rename ${what}`}
 		{placeholder}
 		bind:value={draft}
 		style:width="{width}ch"

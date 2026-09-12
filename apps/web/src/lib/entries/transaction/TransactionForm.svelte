@@ -142,7 +142,7 @@
 			<label for="tx-payee">Title</label><input
 				id="tx-payee"
 				bind:value={payee}
-				placeholder="e.g. lucky"
+				placeholder="e.g. Coffee"
 				maxlength={TEXT_MAX}
 			/>
 		</div>
@@ -195,7 +195,7 @@
 	{#snippet summary()}
 		<span class="share">Your share: <b>{money(yourShare)}</b></span>
 		{#if yourShare < 0}
-			<span class="net-refund">Reimbursements exceed the bill — records a net refund.</span>
+			<span class="net-refund">Reimbursements exceed the bill, so this records a net refund.</span>
 		{/if}
 	{/snippet}
 </EntryFooter>

@@ -37,6 +37,9 @@
 	// Shrink rather than truncate: an SVG text node has no ellipsis.
 	const rowFont = $derived(fitFontSize(ML - 10, rows, 7, 11));
 
+	// An unlabelled role="img" announces only "image".
+	const label = $derived(`Heatmap: ${rows.join(', ')} across ${cols.length} months`);
+
 	const globalMax = $derived(Math.max(1, ...values.flat()));
 	const rowMax = $derived(rows.map((_, i) => Math.max(1, ...(values[i] ?? []).map(Math.abs))));
 	const scaleOf = (i: number) => (normalize === 'row' ? rowMax[i]! : globalMax);
@@ -56,13 +59,13 @@
 		const lightText = s < 0 ? dark : dark ? s <= 3 : s >= 3;
 		return lightText ? 'var(--on-accent-light)' : 'var(--on-accent)';
 	}
-	function label(v: number): string {
+	function cellLabel(v: number): string {
 		if (v === 0) return '';
 		return Math.abs(v) >= 1000 ? (v / 1000).toFixed(1) + 'k' : String(Math.round(v));
 	}
 </script>
 
-<svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Category by month heatmap">
+<svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
 	{#each cols as c, j (c)}
 		<text class="colh" x={ML + cw * j + cw / 2} y={MT - 8} text-anchor="middle">{c}</text>
 	{/each}
@@ -92,7 +95,7 @@
 				x={ML + cw * j + cw / 2}
 				y={MT + CELL_H * i + CELL_H / 2 + 4}
 				text-anchor="middle"
-				fill={fg(v, i)}>{label(v)}</text
+				fill={fg(v, i)}>{cellLabel(v)}</text
 			>
 		{/each}
 	{/each}

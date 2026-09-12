@@ -88,7 +88,7 @@
 					figure: 'networth.thresholds',
 					scope: all,
 					chart: 'bullet',
-					title: words('Progress to thresholds'),
+					title: words('Financial progress'),
 					caption: words('key metrics for financial independence')
 				}
 			},

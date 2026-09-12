@@ -69,9 +69,7 @@
 		<AllTimeView {data} />
 	{/if}
 {:else}
-	<p class="cap pad">
-		No balances logged yet. Use <b>+ Log balance</b> to snapshot a cash or investment account.
-	</p>
+	<p class="cap pad">No balances logged yet. Log each account balance to start tracking.</p>
 {/if}
 
 <EditModals bind:this={modals} {accounts} {onsaved} addTitle="Log balance" />

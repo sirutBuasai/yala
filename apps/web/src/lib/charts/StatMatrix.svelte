@@ -65,7 +65,7 @@
 <table class="matrix">
 	<thead>
 		<tr>
-			<th class="rh"><span class="vh">Measure</span></th>
+			<th class="rh"><span class="vh">Period</span></th>
 			{#each columns as c (c)}<th>{c}</th>{/each}
 		</tr>
 	</thead>

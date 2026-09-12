@@ -18,11 +18,7 @@ export const CONTENT = COLS * UNIT;
  */
 export const GAP = 14;
 
-export const INSET = GAP / 2;
-
 export const WRAP_PAD = 24;
-
-export const WRAP_WIDTH = CONTENT + 2 * WRAP_PAD;
 
 /**
  * Universal floor for a pane, in units. Pure-vector charts never overflow — they only get

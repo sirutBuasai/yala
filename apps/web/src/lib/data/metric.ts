@@ -370,6 +370,10 @@ export function count(data: DashboardData, scope: Scope, of: Countable, opts: Op
 
 export type ExtremumOf = 'transaction' | 'category' | 'month';
 
+/** How an extremum names itself, shared with the catalog so the two can't drift. */
+export const extremumLabel = (mode: 'max' | 'min', of: ExtremumOf) =>
+	`${mode === 'max' ? 'Largest' : 'Smallest'} ${of}`;
+
 /** The largest or smallest transaction, category spend, or month spend in a scope; the winner's
  *  name lands in the note. */
 export function extremum(
@@ -412,13 +416,12 @@ export function extremum(
 		}
 	}
 
-	const verb = mode === 'max' ? 'Largest' : 'Smallest';
 	return {
 		kind: 'scalar',
 		unit: MONEY(data.currency),
-		label: opts.label ?? words(`${verb} ${of}`),
+		label: opts.label ?? words(extremumLabel(mode, of)),
 		value,
-		// The winner's own name, read off the data — a rename must not be able to bake yesterday's in.
+		// Read off the data: a rename must not be able to freeze the winner's name.
 		note: opts.note ?? live(name)
 	};
 }

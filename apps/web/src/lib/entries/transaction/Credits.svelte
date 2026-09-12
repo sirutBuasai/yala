@@ -15,8 +15,8 @@
 
 <LineColumn
 	bind:rows={credits}
-	header="Refunds or reimbursement from others."
-	addLabel="+ credit"
+	header="Refunds, reimbursements..."
+	addLabel="+ Credit"
 	options={creditAccounts}
 	selectAriaLabel="credit account"
 	optionLabel={formatAccount}

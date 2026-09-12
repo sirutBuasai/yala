@@ -113,6 +113,8 @@
 	const sort = new Pref<TxnSort>('txn-sort', 'date', oneOf(TXN_SORTS.map((s) => s.key)));
 	const sortDir = new Pref<'asc' | 'desc'>('txn-sort-dir', 'desc', oneOf(['asc', 'desc'] as const));
 
+	const countIn = (n: number) => live(`${n} in ${label}`);
+
 	let modals: ReturnType<typeof EditModals>;
 </script>
 
@@ -143,11 +145,7 @@
 		{/if}
 	</Pane>
 
-	<Pane
-		id="paychecks"
-		title={words('Paychecks')}
-		caption={live(`${md?.paychecks.length ?? 0} in ${label}`)}
-	>
+	<Pane id="paychecks" title={words('Paychecks')} caption={countIn(md?.paychecks.length ?? 0)}>
 		{#snippet actions()}
 			<button class="btn-ghost" onclick={() => modals.add('paycheck')}>+ Add</button>
 		{/snippet}
@@ -165,7 +163,7 @@
 	<Pane
 		id="transfers"
 		title={words('Bill pay & transfers')}
-		caption={live(`${md?.transfers?.length ?? 0} in ${label}`)}
+		caption={countIn(md?.transfers?.length ?? 0)}
 	>
 		{#snippet actions()}
 			<button class="btn-ghost" onclick={() => modals.add('transfer')}>+ Add</button>
@@ -180,7 +178,7 @@
 	<Pane
 		id="history"
 		title={words('Transaction history')}
-		caption={live(`${md?.transactions.length ?? 0} in ${label}`)}
+		caption={countIn(md?.transactions.length ?? 0)}
 	>
 		{#snippet actions()}
 			<div class="pactions">

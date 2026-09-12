@@ -22,6 +22,9 @@
 	}
 	let { nodes, links }: Props = $props();
 
+	// An unlabelled role="img" announces only "image".
+	const label = $derived(`Money flow: ${nodes.map((n) => n.label).join(', ')}`);
+
 	const W = 1000;
 	const H = 540;
 	const NODE_W = 13;
@@ -154,7 +157,7 @@
 	}
 </script>
 
-<svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Money flow from gross income">
+<svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
 	{#each layout.ribbons as r (r.l.source + '>' + r.l.target)}
 		<path
 			d={ribbonPath(r.sx, r.sy, r.tx, r.ty)}

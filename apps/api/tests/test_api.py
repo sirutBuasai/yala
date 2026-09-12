@@ -512,7 +512,7 @@ def test_post_transaction_before_open_date_is_422_with_clear_detail(client: Test
     )
     assert r.status_code == 422
     detail = r.json()["detail"]
-    assert detail.startswith("Unable to insert transaction:")
+    assert detail.startswith("unable to insert transaction:")
     assert "Liabilities:CC:CardC" in detail
     assert "not open as of date" in detail
     assert "2026-08-14" in detail

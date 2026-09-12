@@ -31,7 +31,7 @@ async function openDrawer(destinations: string[], value: number) {
 	});
 
 	await fireEvent.click(screen.getByText('Retire'));
-	await waitFor(() => expect(screen.queryByText('Valuing…')).not.toBeInTheDocument());
+	await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
 	return fetchSpy;
 }
 

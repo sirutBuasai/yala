@@ -50,7 +50,7 @@
 <ExpandableRow name={label} error={err}>
 	{#snippet chip()}
 		{#if sweepDest}
-			<span class="sweep" title="sweeps to">→ {formatAccount(sweepDest)}</span>
+			<span class="sweep" title="Sweeps to">→ {formatAccount(sweepDest)}</span>
 		{/if}
 	{/snippet}
 

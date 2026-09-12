@@ -22,7 +22,7 @@
 		if (cell.income) parts.push(`${money(cell.income)} income`);
 		if (cell.pending) parts.push('has pending entries');
 		if (!cell.txns.length && !cell.income) parts.push('no activity');
-		return parts.join(' — ');
+		return parts.join('. ');
 	});
 </script>
 
@@ -36,7 +36,7 @@
 	aria-selected={selected}
 	aria-label={label}
 	tabindex={selected ? 0 : -1}
-	title={cell.pending ? 'Pending — click to reconcile' : undefined}
+	title={cell.pending ? 'Click to complete pending txn' : undefined}
 	onclick={() => onpick(cell.day)}
 >
 	<span class="dn" aria-hidden="true">{cell.day}</span>

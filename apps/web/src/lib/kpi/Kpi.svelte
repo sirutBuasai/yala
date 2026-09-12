@@ -170,6 +170,11 @@
 		align-items: baseline;
 		gap: var(--gap-row);
 	}
+	/* Arranging covers the card with a drag surface, but this layer is z-indexed above it and nothing in
+	   here is interactive, so a press on the figure landed on nothing and the card would not drag. */
+	:global(.board.arranging) .front {
+		pointer-events: none;
+	}
 	.num {
 		font-size: var(--text-display);
 		font-weight: var(--fw-semibold);

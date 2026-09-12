@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { fitFontSize, UNMEASURED } from '$lib/charts/axis';
+	import { fitFontSize } from '$lib/charts/axis';
+	import { ChartBox } from '$lib/charts/box.svelte';
 	import { money, moneyK, esc } from '$lib/utils/format';
 	import { clamp, sumBy } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
@@ -23,12 +24,13 @@
 	// Measured on both axes (as the bar/line charts are) so the labels and value text keep a constant
 	// on-screen size instead of shrinking with the pane — a fixed viewBox made them unreadable in a
 	// narrow card.
-	let boxW = $state(0);
-	let boxH = $state(0);
-	const W = $derived(boxW || UNMEASURED.w);
+	const box = new ChartBox();
+	const W = $derived(box.w);
 	/** Rows share the pane's height so a tall pane has no empty band under the last bar, down to a
 	    floor where a row stops being a readable bar with a label beside it. */
-	const rowH = $derived(boxH ? Math.max(24, (boxH - 4) / Math.max(1, rows.length)) : 29);
+	const rowH = $derived(
+		box.measuredH ? Math.max(24, (box.clientHeight - 4) / Math.max(1, rows.length)) : 29
+	);
 	// Both gutters scale with the box between a readable floor and a ceiling that stops them eating
 	// the bars — a constant gutter either clipped names in a narrow card or wasted space in a wide one.
 	const m = $derived({
@@ -52,7 +54,7 @@
 	);
 </script>
 
-<div class="figurebox" bind:clientWidth={boxW} bind:clientHeight={boxH}>
+<div class="figurebox" bind:clientWidth={box.clientWidth} bind:clientHeight={box.clientHeight}>
 	{#if rows.length}
 		<svg class="chart" viewBox="0 0 {W} {H}" role="img" aria-label={label}>
 			{#each rows as d, i (d.label)}

@@ -5,7 +5,8 @@
 	import { esc } from '$lib/utils/format';
 	import { formatUnit, type Unit } from '$lib/data/primitives';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
-	import { labelIndices, plotSize, UNMEASURED } from '$lib/charts/axis';
+	import { labelIndices, plotSize } from '$lib/charts/axis';
+	import { ChartBox } from '$lib/charts/box.svelte';
 	import Legend from '$lib/charts/Legend.svelte';
 
 	interface Band {
@@ -20,10 +21,9 @@
 	}
 	let { labels, series, unit }: Props = $props();
 
-	let boxW = $state(0);
-	let boxH = $state(0);
-	const W = $derived(boxW || UNMEASURED.w);
-	const H = $derived(boxH || UNMEASURED.h);
+	const box = new ChartBox();
+	const W = $derived(box.w);
+	const H = $derived(box.h);
 	const m = { t: 12, r: 16, b: 28, l: 46 };
 	const plot = $derived(plotSize(W, H, m));
 	const iw = $derived(plot.iw);
@@ -31,6 +31,9 @@
 	const n = $derived(labels.length);
 
 	const xPos = (i: number) => (n > 1 ? (iw * i) / (n - 1) : iw / 2);
+
+	// An unlabelled role="img" announces only "image".
+	const label = $derived(`Stacked area: ${series.map((s) => s.name).join(', ')}`);
 
 	/** Running totals per point, so each band sits on the one below it. */
 	const stacks = $derived.by(() => {
@@ -75,8 +78,8 @@
 	}
 </script>
 
-<div class="figurebox" bind:clientWidth={boxW} bind:clientHeight={boxH}>
-	<svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Stacked area chart">
+<div class="figurebox" bind:clientWidth={box.clientWidth} bind:clientHeight={box.clientHeight}>
+	<svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
 		<g class="axis" transform={`translate(${m.l},${m.t})`}>
 			{#each ticks as t (t)}
 				<line class="gridline" x1="0" y1={y(t)} x2={iw} y2={y(t)} />

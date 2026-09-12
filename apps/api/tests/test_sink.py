@@ -271,7 +271,7 @@ def test_paycheck_to_unopened_deposit_account_raises_not_found(ledger_dir: Path)
             deposit_account="Assets:Cash:NonExistent",  # never opened
         )
     msg = str(exc.value)
-    assert msg.startswith("Unable to insert transaction:")
+    assert msg.startswith("unable to insert transaction:")
     assert "Assets:Cash:NonExistent" in msg
     assert "does not exist" in msg
     assert target.read_bytes() == before
@@ -907,7 +907,7 @@ def test_append_before_funding_open_date_raises_clear_error(ledger_dir: Path):
             funding_account="Liabilities:CC:CardC",  # opened 2026-08-14
         )
     msg = str(exc.value)
-    assert msg.startswith("Unable to insert transaction:")
+    assert msg.startswith("unable to insert transaction:")
     assert "Liabilities:CC:CardC" in msg
     assert "2026-08-14" in msg
     assert "not open as of date" in msg
@@ -925,7 +925,7 @@ def test_append_after_close_date_raises_closed_error(ledger_dir: Path):
             funding_account="Liabilities:CC:CardD",  # closed 2024-10-01
         )
     msg = str(exc.value)
-    assert msg.startswith("Unable to insert transaction:")
+    assert msg.startswith("unable to insert transaction:")
     assert "Liabilities:CC:CardD" in msg
     assert "is closed as of date 2025-03-02" in msg
     assert "closed 2024-10-01" in msg

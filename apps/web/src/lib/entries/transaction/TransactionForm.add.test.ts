@@ -95,7 +95,7 @@ describe('TransactionForm (add)', () => {
 		render(TransactionForm, { props: { accounts, onsaved: vi.fn() } });
 
 		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '300' } });
-		await fireEvent.click(screen.getByText('+ credit'));
+		await fireEvent.click(screen.getByText('+ Credit'));
 		// Total bill and the credit amount now share the "0" placeholder; the credit row is last.
 		const amounts = screen.getAllByPlaceholderText('0');
 		await fireEvent.input(amounts[amounts.length - 1]!, { target: { value: '200' } });
@@ -112,13 +112,13 @@ describe('TransactionForm (add)', () => {
 
 		await fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'refund' } });
 		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '10' } });
-		await fireEvent.click(screen.getByText('+ credit'));
+		await fireEvent.click(screen.getByText('+ Credit'));
 		const amounts = screen.getAllByPlaceholderText('0');
 		await fireEvent.input(amounts[amounts.length - 1]!, { target: { value: '20' } });
 
 		// net share is −$10: a non-blocking warning, not a validation error
 		expect(
-			screen.getByText('Reimbursements exceed the bill — records a net refund.')
+			screen.getByText('Reimbursements exceed the bill, so this records a net refund.')
 		).toBeInTheDocument();
 
 		await fireEvent.click(screen.getByText('+ Add'));

@@ -33,7 +33,7 @@
 		id,
 		ariaLabel,
 		optionLabel = (v) => v,
-		placeholder = 'Select…',
+		placeholder = 'Select...',
 		onchange,
 		triggerClass,
 		align,

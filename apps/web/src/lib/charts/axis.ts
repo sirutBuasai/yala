@@ -22,13 +22,9 @@ export interface Margins {
 }
 
 /**
- * The plot area inside a measured box, floored at zero on both axes. The box is the shared
- * `.figurebox` at its measured pixel size (see app.css), which also bounds how tall a chart may grow
- * inside a stretched pane.
- *
- * The floor is the point: a pane can be made shorter than a chart's own margins, and a negative height
- * makes the browser reject the `<rect>` outright and inverts every d3 scale built on that range, so the
- * chart draws upside down.
+ * The plot area inside a measured box, floored at zero on both axes. The floor is the point: a pane can
+ * be shorter than a chart's own margins, and a negative height makes the browser reject the `<rect>` and
+ * inverts every d3 scale built on that range.
  */
 export function plotSize(w: number, h: number, m: Margins): { iw: number; ih: number } {
 	return { iw: Math.max(0, w - m.l - m.r), ih: Math.max(0, h - m.t - m.b) };

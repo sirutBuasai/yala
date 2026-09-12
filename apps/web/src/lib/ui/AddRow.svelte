@@ -28,6 +28,7 @@
 
 <div class="addrow">
 	<input
+		class="field-input"
 		aria-label={ariaLabel}
 		bind:value
 		{placeholder}
@@ -48,13 +49,6 @@
 	.addrow input {
 		flex: 1;
 		min-width: 8rem;
-		background-color: var(--inset);
-		border: 1px solid var(--border);
-		color: var(--ink);
-		border-radius: var(--radius-md);
-		padding: var(--pad-control);
-		font-size: var(--text-control);
-		font-family: inherit;
 	}
 	.addrow button {
 		flex: none;
