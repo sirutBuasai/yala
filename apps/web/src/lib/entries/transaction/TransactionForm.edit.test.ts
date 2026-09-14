@@ -6,10 +6,10 @@ import { makeAccounts } from '$lib/data/__fixtures__/dashboard';
 
 const accounts = makeAccounts({
 	spending_categories: ['Grocery', 'Takeouts'],
-	funding_accounts: ['Liabilities:CC:CardA', 'Assets:Cash:BankA'],
+	funding_accounts: ['Liabilities:CC:CardA', 'Assets:Cash:BankA', 'Assets:Cash:Wallet'],
 	employers: ['EmployerA'],
-	cash_accounts: ['Assets:Cash:BankA'],
-	credit_accounts: ['Assets:Cash:Wallet', 'Liabilities:CC:CardA']
+	cash_accounts: ['Assets:Cash:BankA', 'Assets:Cash:Wallet'],
+	card_accounts: ['Liabilities:CC:CardA']
 });
 
 const prefill = {

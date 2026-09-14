@@ -4,7 +4,7 @@
   Income:Salary:Employer1    -6000.00 USD
   Expenses:Deductions:Tax    1200.00 USD
   Expenses:Deductions:Insurance    50.00 USD
-  Assets:Investments:TaxAdvantaged:HSA:Broker1    150.00 USD
+  Assets:Investments:TaxAdvantaged:Broker1HSA    150.00 USD
   Assets:Investments:TaxAdvantaged:Employer401k    1600.00 USD
     label: "Roth401k"
   Assets:Cash:BankB    3000.00 USD

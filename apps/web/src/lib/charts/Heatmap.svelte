@@ -1,10 +1,8 @@
 <script lang="ts">
-	// Heatmap over a Matrix, on the shared sequential ramp.
-	//
-	// Rows are scaled to their own max by default: categories span orders of magnitude, and one grid-wide
-	// scale leaves the median cell near-blank. Intensity is then not comparable BETWEEN rows, which is
-	// what row order carries instead. One hue, not per-category hues — the category palette isn't
-	// luminance-matched, so at equal value a warm hue would read brighter and fight the data.
+	// Heatmap over a Matrix, on the shared sequential ramp. Rows scale to their own max by default, since
+	// categories span orders of magnitude and one grid-wide scale leaves the median cell near-blank;
+	// intensity is therefore not comparable between rows. One hue rather than per-category hues: the
+	// category palette isn't luminance-matched, so at equal value a warm hue would read brighter.
 	import { fitFontSize } from '$lib/charts/axis';
 	import { money, esc } from '$lib/utils/format';
 	import { theme } from '$lib/utils/theme';

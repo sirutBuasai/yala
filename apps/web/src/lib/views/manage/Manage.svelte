@@ -1,29 +1,17 @@
 <script lang="ts">
-	// Manage — categories, accounts and the few assumptions the ledger can't derive. Every pane is a
-	// form block (`density="panel"`) sized to its own content.
+	// Everything the ledger declares, plus the few assumptions it can't derive, as one console: an index
+	// of accounts on the left, one detail panel on the right. Every panel is driven by the kind
+	// capabilities the API sends, so a kind gains a control server-side rather than here.
+	import type { AccountsInfo } from '$lib/data/load';
 	import type { DashboardData } from '$lib/data/types';
-	import { openAccount, closeAccount, type AccountsInfo } from '$lib/data/load';
-	import type { BoardLayout } from '$lib/layout/grid/types';
-	import { formatAccount } from '$lib/utils/format';
-	import { accountVar } from '$lib/utils/theme';
-	import { SaveState } from '$lib/forms/saveState.svelte';
-	import { LEAF_MAX, problems, validateLeaf } from '$lib/forms/validate';
-	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
+	import { accountInfo } from '$lib/data/directory.svelte';
+	import { accountLeaf } from '$lib/utils/format';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
-	import Board from '$lib/layout/grid/Board.svelte';
-	import Pane from '$lib/layout/grid/Pane.svelte';
-	import DeleteConfirm from '$lib/ui/DeleteConfirm.svelte';
-	import Select from '$lib/forms/fields/Select.svelte';
-	import AccountRow from '$lib/views/manage/AccountRow.svelte';
-	import AddAccountPanel from '$lib/views/manage/AddAccountPanel.svelte';
-	import InvestmentRow from '$lib/views/manage/InvestmentRow.svelte';
+	import AccountIndex from '$lib/views/manage/AccountIndex.svelte';
+	import AccountPanel from '$lib/views/manage/AccountPanel.svelte';
+	import NewAccount from '$lib/views/manage/NewAccount.svelte';
 	import SettingsPanel from '$lib/views/manage/SettingsPanel.svelte';
-	import AddRow from '$lib/ui/AddRow.svelte';
-	import ItemList from '$lib/ui/ItemList.svelte';
-	import { words } from '$lib/ui/label';
-
-	/** Ledger prefix for credit cards, to pick them out of the mixed payback-source list. */
-	const LIABILITY = 'Liabilities:';
+	import { KIND_ORDER } from '$lib/views/manage/kinds';
 
 	interface Props {
 		data: DashboardData;
@@ -31,316 +19,171 @@
 		/** Called after a change that alters ledger data, to refresh the dashboard. */
 		onsaved?: () => void;
 	}
-	let { accounts, onsaved }: Props = $props();
+	let { data, accounts, onsaved }: Props = $props();
 
-	// "Add one" beside "here are the ones you have", in two columns. The y values set reading order
-	// only: every pane fits its content, so the real heights settle on first render.
-	const LAYOUT = {
-		settings: { x: 0, y: 0, w: 24, h: 24, content: 'flow', mode: 'fit' },
-		addcategory: { x: 24, y: 0, w: 24, h: 4, content: 'flow', mode: 'fit' },
-		categories: { x: 24, y: 4, w: 24, h: 22, content: 'flow', mode: 'fit' },
-		addbank: { x: 0, y: 24, w: 24, h: 12, content: 'flow', mode: 'fit' },
-		banks: { x: 24, y: 26, w: 24, h: 10, content: 'flow', mode: 'fit' },
-		addcard: { x: 0, y: 36, w: 24, h: 13, content: 'flow', mode: 'fit' },
-		cards: { x: 24, y: 36, w: 24, h: 12, content: 'flow', mode: 'fit' },
-		addinvestment: { x: 0, y: 49, w: 24, h: 16, content: 'flow', mode: 'fit' },
-		investments: { x: 24, y: 48, w: 24, h: 15, content: 'flow', mode: 'fit' }
-	} satisfies BoardLayout;
+	/** What each kind of account may carry, as the API describes it. */
+	const kinds = $derived(Object.fromEntries((accounts?.kinds ?? []).map((k) => [k.name, k])));
+	const kindNames = $derived(KIND_ORDER.filter((name) => kinds[name]));
 
 	const categories = $derived(accounts?.spending_categories ?? []);
-	const banks = $derived(accounts?.cash_accounts ?? []);
-	// The full money set is the candidate pool for sweep and drain destinations.
-	const destinations = $derived(accounts?.credit_accounts ?? []);
-	const sweeps = $derived(accounts?.sweeps ?? {});
+	const cards = $derived(accounts?.card_accounts ?? []);
+	const employers = $derived(accounts?.employers ?? []);
+	const deductions = $derived(accounts?.deduction_accounts ?? []);
 
-	// --- spending categories ---
-	let name = $state('');
-	const cat = new SaveState();
+	/** The active accounts of each kind, so a rule stated per kind can be turned into a list.
+	    Two of the lists arrive leaf-keyed, because that is how an entry names them; each kind ships
+	    its own `prefix`, so resolving those to paths never restates the ledger's taxonomy here. */
+	const byKind = $derived<Record<string, string[]>>({
+		category: categories.map((c) => `${kinds.category?.prefix ?? ''}${c}`),
+		bank: accounts?.cash_accounts ?? [],
+		card: cards,
+		investment: accounts?.investment_accounts ?? [],
+		employer: employers.map((e) => `${kinds.employer?.prefix ?? ''}${e}`),
+		deduction: deductions
+	});
 
-	async function add() {
-		const leaf = name.trim();
-		const problem =
-			validateLeaf(leaf, 'category name') ??
-			(categories.includes(leaf) ? `${leaf} already exists.` : null);
-		if (problem) return cat.fail(problem);
+	// Where a sweep may land, and so where a close may move a balance: taken from the kind table rather
+	// than restated, since the API refuses anything else. An investment may also settle a card.
+	const destinations = $derived(
+		(accounts?.kinds ?? []).filter((k) => k.sweep_target).flatMap((k) => byKind[k.name] ?? [])
+	);
 
-		if (await cat.run(() => openAccount('category', leaf).then((r) => r.error), `Added ${leaf}.`)) {
-			name = '';
-		}
+	/** Current value per account, for the panel's facts rail. Assets and liabilities only — a category
+	    or an employer holds nothing. */
+	const balances = $derived(
+		Object.fromEntries((data.networth?.accounts ?? []).map((a) => [a.account, a.value]))
+	);
+
+	/** Names already in use, so a duplicate is named in the form rather than as a ledger error. */
+	const taken = $derived<Record<string, string[]>>({
+		category: categories,
+		employer: employers,
+		deduction: deductions.map(accountLeaf)
+	});
+
+	type Shown = { at: 'account'; account: string } | { at: 'settings' };
+
+	let shown = $state<Shown>({ at: 'settings' });
+	// Opening an account is a flow of its own, over the page rather than in it — nothing on the page is
+	// being looked at while it runs.
+	let opening = $state(false);
+
+	const selected = $derived(shown.at === 'account' ? shown.account : null);
+
+	function saved() {
+		onsaved?.();
 	}
 
-	const close = (category: string) =>
-		cat.run(() => closeAccount(`Expenses:${category}`), `Closed ${category}.`);
-
-	// --- money accounts (banks and cards) ---
-	// `credit_accounts` mixes cash and cards (it is the payback-source pool), so the card list filters
-	// it rather than being a list of its own.
-	const cards = $derived((accounts?.credit_accounts ?? []).filter((a) => a.startsWith(LIABILITY)));
-
-	// --- investment accounts ---
-	const investments = $derived(accounts?.investment_accounts ?? []);
-	// Retire to any money account or another investment.
-	const investDestinations = $derived([...(accounts?.credit_accounts ?? []), ...investments]);
-
-	let invSubtree = $state('Taxable');
-	let invShares = $state(true);
-	let invContributable = $state(false);
-	let invEmployer = $state('');
-	let invLabels = $state('');
-
-	const splitCsv = (s: string) =>
-		s
-			.split(',')
-			.map((x) => x.trim())
-			.filter(Boolean);
-
-	/** The payroll half of an investment. Both halves are written as account metadata, so they follow
-	    the leaf rule, and a contributable account with neither would offer nothing to contribute to. */
-	function validatePayrollFields(): string | null {
-		if (!invContributable) return null;
-
-		const labels = splitCsv(invLabels);
-		const checks = problems()
-			.add(validateLeaf(invEmployer.trim(), 'employer'))
-			.add(labels.length ? null : 'List at least one contribution option.');
-		for (const label of labels) checks.add(validateLeaf(label, 'contribution option'));
-
-		return checks.message() || null;
-	}
+	/** An account that has just been renamed is at a new path. The panel resolves where it went, so
+	    only a close — or a rename it could not place — falls back to the settings panel. */
+	$effect(() => {
+		if (shown.at === 'account' && !accountInfo(shown.account)) shown = { at: 'settings' };
+	});
 </script>
 
-<ViewHeader title="Manage">
-	<span class="cap">Categories, accounts &amp; assumptions</span>
-</ViewHeader>
+<ViewHeader title="Manage" />
 
-<Board key="manage" layout={LAYOUT}>
-	<Pane
-		id="settings"
-		title={words('Planning assumptions')}
-		caption={words(
-			"The few figures the ledger can't work out on its own. Everything else on the dashboard is derived from your entries. Saved into the ledger itself, dated, so revising one leaves the old value behind as history."
-		)}
-		density="panel"
-	>
-		<SettingsPanel onsaved={() => onsaved?.()} />
-	</Pane>
-
-	<Pane id="addcategory" title={words('Add a spending category')} density="panel">
-		<AddRow
-			bind:value={name}
-			ariaLabel="new category name"
-			placeholder="e.g. Groceries"
-			disabled={cat.busy}
-			onadd={add}
-		/>
-		<SaveFeedback save={cat} />
-	</Pane>
-
-	<Pane
-		id="categories"
-		title={words('Existing categories')}
-		count={categories.length}
-		density="panel"
-	>
-		<ItemList any={categories.length > 0} empty="No spending categories yet.">
-			{#each categories as category (category)}
-				<li class="simple">
-					<span class="name">{category}</span>
-					<DeleteConfirm
-						label="Close"
-						confirmLabel="Yes, close"
-						question={`Close ${category}?`}
-						ondelete={() => close(category)}
-						oncancel={() => cat.reset()}
-					/>
-				</li>
-			{/each}
-		</ItemList>
-	</Pane>
-
-	<Pane
-		id="addbank"
-		title={words('Add a bank account')}
-		caption={words(
-			'Named by institution alone. Add the product name once you hold two at one bank.'
-		)}
-		density="panel"
-	>
-		<AddAccountPanel
-			withAccountName={false}
-			open={(naming) => openAccount('funding_cash', naming)}
-		/>
-	</Pane>
-
-	<Pane
-		id="banks"
-		title={words('Your bank accounts')}
-		count={banks.length}
-		caption={words(
-			"Set a passthrough's sweep destination, or retire an account (drain its balance to another account, then close it)."
-		)}
-		density="panel"
-	>
-		<ItemList any={banks.length > 0} empty="No bank accounts yet.">
-			{#each banks as account (account)}
-				<AccountRow
-					{account}
-					{destinations}
-					sweepDest={sweeps[account]}
-					onchanged={() => onsaved?.()}
-				/>
-			{/each}
-		</ItemList>
-	</Pane>
-
-	<Pane
-		id="addcard"
-		title={words('Add a credit card')}
-		caption={words(
-			"Issuer plus the card's own name, both spelled out. Short forms stand in where a row is too narrow."
-		)}
-		density="panel"
-	>
-		<AddAccountPanel
-			accountNamePlaceholder="e.g. Cash Rewards"
-			accountNameLabel="Card name"
-			open={(naming) => openAccount('funding_credit', naming)}
-		/>
-	</Pane>
-
-	<Pane id="cards" title={words('Your credit cards')} count={cards.length} density="panel">
-		<ItemList any={cards.length > 0} empty="No credit cards yet.">
-			{#each cards as account (account)}
-				<li class="row">
-					<i class="dot" style:background={accountVar(account)}></i>
-					<span>{formatAccount(account)}</span>
-				</li>
-			{/each}
-		</ItemList>
-	</Pane>
-
-	<Pane
-		id="addinvestment"
-		title={words('Add an investment account')}
-		caption={words('Leave "holds tickers" off for a plan that only ever holds dollars.')}
-		density="panel"
-	>
-		<AddAccountPanel
-			institutionPlaceholder="e.g. Example Brokerage"
-			accountNamePlaceholder="e.g. Roth IRA"
-			accountAliasPlaceholder="short account name (e.g. Roth)"
-			validateExtra={validatePayrollFields}
-			open={(naming) =>
-				openAccount('investment', naming, {
-					subtree: invSubtree as 'Taxable' | 'TaxAdvantaged',
-					holds_shares: invShares,
-					employer: invContributable && invEmployer.trim() ? invEmployer.trim() : null,
-					labels: invContributable ? splitCsv(invLabels) : []
-				})}
+<div class="console">
+	<aside>
+		<AccountIndex
+			{kindNames}
+			{selected}
+			onselect={(account) => (shown = { at: 'account', account })}
 		>
-			{#snippet extra()}
-				<div class="subtree">
-					<Select
-						ariaLabel="investment subtree"
-						bind:value={invSubtree}
-						options={['Taxable', 'TaxAdvantaged']}
-					/>
-				</div>
-				<label class="chk"
-					><input type="checkbox" bind:checked={invShares} /> Holds tickers (shares)</label
+			{#snippet actions()}
+				<button type="button" class="btn-primary new" onclick={() => (opening = true)}
+					>+ New account</button
 				>
-				<label class="chk">
-					<input type="checkbox" bind:checked={invContributable} /> Payroll-contributable
-				</label>
-				{#if invContributable}
-					<input
-						class="field-input"
-						aria-label="employer"
-						bind:value={invEmployer}
-						placeholder="employer (e.g. Employer1)"
-						maxlength={LEAF_MAX}
-					/>
-					<input
-						class="field-input"
-						aria-label="contribution options"
-						bind:value={invLabels}
-						placeholder="contribution options, comma-separated (e.g. Roth401k,Trad401k,AfterTax401k)"
-					/>
-				{/if}
 			{/snippet}
-		</AddAccountPanel>
-	</Pane>
+		</AccountIndex>
+		<div class="foot">
+			<button
+				type="button"
+				class="btn-mini"
+				aria-pressed={shown.at === 'settings'}
+				onclick={() => (shown = { at: 'settings' })}>Financial planning</button
+			>
+		</div>
+	</aside>
 
-	<Pane
-		id="investments"
-		title={words('Your investments')}
-		count={investments.length}
-		caption={words(
-			'Retire an account to value its holdings in USD and split that total across destinations.'
-		)}
-		density="panel"
-	>
-		<ItemList any={investments.length > 0} empty="No investment accounts yet.">
-			{#each investments as account (account)}
-				<InvestmentRow {account} destinations={investDestinations} onchanged={() => onsaved?.()} />
-			{/each}
-		</ItemList>
-	</Pane>
-</Board>
+	{#if shown.at === 'account'}
+		<AccountPanel
+			account={shown.account}
+			{kinds}
+			destinations={[
+				...destinations,
+				...(accountInfo(shown.account)?.kind === 'investment' ? cards : [])
+			]}
+			{employers}
+			balance={balances[shown.account] ?? null}
+			onchanged={saved}
+			onrenamed={(account) => (shown = { at: 'account', account })}
+		/>
+	{:else}
+		<main>
+			<h2>Financial planning</h2>
+			<p class="cap">
+				Assumptions used to calculate financial independence metrics and runway targets.
+			</p>
+			<SettingsPanel onsaved={saved} />
+		</main>
+	{/if}
+</div>
+
+{#if opening}
+	<NewAccount {kinds} {employers} {taken} onclose={() => (opening = false)} onsaved={saved} />
+{/if}
 
 <style>
-	.subtree {
-		max-width: 14rem;
-		margin-bottom: var(--gap-row);
+	.console {
+		display: grid;
+		grid-template-columns: minmax(16rem, 21rem) minmax(0, 1fr);
+		gap: var(--gap-grid);
+		align-items: start;
 	}
-	.row {
-		display: flex;
-		align-items: center;
-		gap: var(--gap-inline);
-		background: var(--inset);
+	/* AccountPanel is its own card, since it pads each half of its split separately. */
+	aside,
+	main {
+		background: var(--surface);
 		border: 1px solid var(--border);
-		border-radius: var(--radius-md);
-		padding: var(--space-3) var(--space-5);
-		font-size: var(--text-control);
-		color: var(--ink-2);
+		border-radius: var(--radius-xl);
+		padding: var(--pad-card-y) var(--pad-card-x);
+		min-width: 0;
 	}
-	.row .dot {
-		width: 10px;
-		height: 10px;
-		border-radius: var(--radius-pill);
+	aside {
+		display: flex;
+		flex-direction: column;
+		gap: var(--gap-row);
+		position: sticky;
+		top: var(--space-6);
+		max-height: calc(100vh - 8rem);
+	}
+	.new {
 		flex: 0 0 auto;
 	}
-	/* A plain, non-expanding managed item: a category has nothing to configure, only to close. */
-	.simple {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: var(--gap-inline);
-		background: var(--inset);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-md);
-		padding: var(--space-3) var(--space-5);
-		font-size: var(--text-control);
-		color: var(--ink-2);
+	.foot {
+		border-top: 1px solid var(--border);
+		padding-top: var(--gap-row);
 	}
-	.simple .name {
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
+	h2 {
+		font-family: var(--font-display);
+		font-size: var(--text-panel);
+		letter-spacing: var(--ls-snug);
+		margin: 0 0 var(--space-3);
 	}
-	.chk {
-		display: flex;
-		align-items: center;
-		gap: var(--gap-inline);
-		font-size: var(--text-control);
-		color: var(--ink-2);
+	.cap {
+		font-size: var(--text-caption);
+		color: var(--ink-3);
+		margin: 0 0 var(--space-6);
 	}
-	.chk input {
-		flex: 0 0 auto;
-	}
-	input {
-		flex: 1;
-		min-width: 0;
+
+	@media (max-width: 60rem) {
+		.console {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		aside {
+			position: static;
+			max-height: none;
+		}
 	}
 </style>

@@ -3,6 +3,7 @@
 	// with what the ledger will accept. Each setting is independent, so it commits on blur or Enter
 	// rather than behind one submit for unrelated values.
 	import { setSetting, type SettingSpec } from '$lib/data/load';
+	import { NOT_SET, SAVED } from '$lib/copy';
 	import { SaveState } from '$lib/forms/saveState.svelte';
 	import { validateRange } from '$lib/forms/validate';
 	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
@@ -53,7 +54,7 @@
 		}
 
 		const chosen = entry;
-		if (await save.run(() => setSetting(spec.key, chosen), 'Saved.')) {
+		if (await save.run(() => setSetting(spec.key, chosen), SAVED)) {
 			onsaved(spec.key, chosen);
 		}
 	}
@@ -72,7 +73,7 @@
 				min={spec.min}
 				max={spec.max}
 				{step}
-				placeholder={unset ? 'not set' : ''}
+				placeholder={unset ? NOT_SET : ''}
 				bind:value={entry}
 				disabled={save.busy}
 				oninput={() => save.reset()}
@@ -92,7 +93,7 @@
 
 	<SaveFeedback {save}>
 		{#snippet fallback()}
-			{#if unset}Unset — features needing it stay hidden.{/if}
+			{#if unset}Not set. Features that need it stay hidden.{/if}
 		{/snippet}
 	</SaveFeedback>
 </div>

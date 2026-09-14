@@ -15,14 +15,12 @@ from typing import TYPE_CHECKING
 
 from beancount.core import data
 
+from yala.ledger.accounts import sweep_destination, tier_of
 from yala.ledger.constants import (
     ADJUSTMENTS,
     ASSETS,
     CASH,
     DEFAULT_CURRENCY,
-    INVEST_ADJUSTMENTS,
-    INVEST_TAX_ADVANTAGED,
-    INVEST_TAXABLE,
     INVESTMENTS,
     LIABILITIES,
 )
@@ -34,31 +32,16 @@ if TYPE_CHECKING:
     from yala.ledger.core import Ledger
 
 
-def adjustment_account(account: str) -> str:
-    """The ``Equity:Adjustments:*`` plug account paired with snapshots of ``account``.
-
-    Cash keeps its leaf; investments drop the tax tier so both tiers of one broker share a plug.
-    Raises ``ValueError`` for an account that has neither form."""
-    if account.startswith(CASH):
-        return ADJUSTMENTS + account[len(CASH) :]
-    if account.startswith(INVEST_TAXABLE):
-        return INVEST_ADJUSTMENTS + account[len(INVEST_TAXABLE) :]
-    if account.startswith(INVEST_TAX_ADVANTAGED):
-        return INVEST_ADJUSTMENTS + account[len(INVEST_TAX_ADVANTAGED) :]
-    raise ValueError(f"no adjustment account for {account}")
-
-
 # Allocation buckets, in display order: how an asset account contributes to the asset split.
 BUCKETS = ("Liquid", "Taxable", "Tax-advantaged")
+
+#: Investment tax tier -> its allocation bucket. Anything not invested is liquid.
+_TIER_BUCKETS = {"Taxable": "Taxable", "TaxAdvantaged": "Tax-advantaged"}
 
 
 def bucket(account: str) -> str:
     """The allocation bucket an asset account falls into (``BUCKETS``)."""
-    if account.startswith(INVEST_TAXABLE):
-        return "Taxable"
-    if account.startswith(INVEST_TAX_ADVANTAGED):
-        return "Tax-advantaged"
-    return "Liquid"  # anything not invested
+    return _TIER_BUCKETS.get(tier_of(account) or "", "Liquid")
 
 
 @dataclass
@@ -182,11 +165,15 @@ class NetWorth:
         ]
 
     def loggable_accounts(self) -> list[str]:
-        """Active cash + investment accounts that have an ``Equity:Adjustments:*`` plug to pad
-        into (excludes swept passthroughs, whose balance belongs to their destination)."""
-        declared = set(self._led.declared_accounts(ADJUSTMENTS))
+        """Active cash + investment accounts whose balance can be snapshotted.
+
+        Every one of them is opened with a plug to pad into, so the rule is stated rather than
+        inferred from a plug's presence: what is excluded is a passthrough, whose balance is swept
+        to its destination and so belongs there.
+        """
+        meta = self._led.account_meta()
         candidates = self._led.active_accounts(CASH) + self._led.active_accounts(INVESTMENTS)
-        return [a for a in candidates if _adjustment_or_none(a) in declared]
+        return [a for a in candidates if sweep_destination(meta.get(a)) is None]
 
     def loggable_liabilities(self) -> list[str]:
         """Active liability accounts, which are snapshot-able but *verify-only*.
@@ -196,10 +183,3 @@ class NetWorth:
         rather than that money moved untracked, and :meth:`FileLedgerSink.verify_balance` refuses
         to pad it."""
         return self._led.active_accounts(LIABILITIES)
-
-
-def _adjustment_or_none(account: str) -> str | None:
-    try:
-        return adjustment_account(account)
-    except ValueError:
-        return None

@@ -8,6 +8,7 @@
 <script lang="ts">
 	// A labeled column of {value, amount} rows, reused for a paycheck's deduction/contribution lines
 	// and a transaction's credits.
+	import RowColumn from '$lib/forms/fields/RowColumn.svelte';
 	import Select from '$lib/forms/fields/Select.svelte';
 	import AmountInput from '$lib/ui/AmountInput.svelte';
 
@@ -28,59 +29,28 @@
 		selectAriaLabel,
 		optionLabel = (v) => v
 	}: Props = $props();
-
-	function add() {
-		rows = [...rows, { value: options[0] ?? '', amount: null }];
-	}
-	function remove(i: number) {
-		rows = rows.filter((_, idx) => idx !== i);
-	}
 </script>
 
-<div class="linecol">
-	<div class="linehdr">
-		<span>{header}</span>
-		<button type="button" class="btn-mini" onclick={add}>{addLabel}</button>
-	</div>
-	{#each rows as row, i (i)}
-		<div class="linerow">
-			<div class="grow">
-				<Select ariaLabel={selectAriaLabel} bind:value={row.value} {options} {optionLabel} />
-			</div>
-			<AmountInput bind:value={row.amount} ariaLabel="amount" />
-			<button type="button" class="btn-mini rm" onclick={() => remove(i)}>✕</button>
+<RowColumn
+	bind:rows
+	{header}
+	{addLabel}
+	blank={() => ({ value: options[0] ?? '', amount: null })}
+	noun="line"
+>
+	{#snippet row(item)}
+		<div class="cell">
+			<Select ariaLabel={selectAriaLabel} bind:value={item.value} {options} {optionLabel} />
 		</div>
-	{/each}
-</div>
+		<div class="cell">
+			<AmountInput bind:value={item.amount} ariaLabel="Amount" />
+		</div>
+	{/snippet}
+</RowColumn>
 
 <style>
-	.linehdr {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		font-size: var(--text-secondary);
-		color: var(--ink-2);
-		margin-bottom: var(--gap-inline);
-	}
-	.linerow {
-		display: flex;
-		gap: var(--gap-row);
-		margin-bottom: var(--gap-inline);
-	}
-	.grow {
+	.cell {
 		flex: 1;
 		min-width: 0;
-	}
-	/* The amount cell's chrome lives in AmountInput; here it only shares the row. */
-	.linerow :global(.amountinput) {
-		flex: 1;
-		min-width: 0;
-	}
-	.rm {
-		flex: 0 0 auto;
-	}
-	.rm:hover {
-		border-color: var(--crit);
-		color: var(--crit-text);
 	}
 </style>

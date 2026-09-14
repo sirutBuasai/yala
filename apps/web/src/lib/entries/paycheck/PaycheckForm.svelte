@@ -4,7 +4,7 @@
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data/load';
-	import { deleteTransaction, getJson, postJson } from '$lib/data/load';
+	import { deleteTransaction, fetchEntry, postJson } from '$lib/data/load';
 	import { formatAccount, money } from '$lib/utils/format';
 	import {
 		lastContributionLabels,
@@ -93,13 +93,9 @@
 		// Edit mode: prefill from the paycheck addressed by `locator`.
 		const l = locator;
 		(async () => {
-			const {
-				ok,
-				data: s,
-				error
-			} = await getJson<Record<string, any>>(`/api/paycheck?locator=${encodeURIComponent(l)}`);
-			if (!ok) {
-				msg = error ?? 'load failed';
+			const { entry: s, error } = await fetchEntry('paycheck', l);
+			if (!s) {
+				msg = error!;
 				err = true;
 				return;
 			}

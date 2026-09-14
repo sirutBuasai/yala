@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime as dt
-import shutil
 from decimal import Decimal
 from pathlib import Path
 
@@ -11,52 +10,40 @@ import pytest
 from beancount.core import data
 from fastapi.testclient import TestClient
 
-from yala import config
-from yala.api import app
+from tests.conftest import load_ledger as _load
 from yala.ledger import Ledger
-from yala.ledger.networth import adjustment_account
+from yala.ledger.accounts import plug_account
 from yala.sink import FileLedgerSink
 
-FIXTURE_LEDGER = Path(__file__).parent / "fixtures" / "ledger"
 SEP = dt.date(2026, 9, 1)
 
 
-@pytest.fixture
-def ledger_dir(tmp_path: Path) -> Path:
-    dst = tmp_path / "ledger"
-    shutil.copytree(FIXTURE_LEDGER, dst)
-    return dst
+# --- plug_account mapping (pure) ---
 
 
-def _load(ledger_dir: Path) -> Ledger:
-    led = Ledger(ledger_dir / "main.beancount", strict=True).load()
-    assert led.errors == []
-    return led
-
-
-# --- adjustment_account mapping (pure) ---
-
-
-def test_adjustment_account_mapping():
-    assert adjustment_account("Assets:Cash:BankA") == "Equity:Adjustments:BankA"
+def test_plug_account_keeps_the_tax_tier():
+    """One plug per account. Two accounts differing only by tier are different accounts, so a plug
+    that dropped the tier would be shared and could not say which account it served."""
+    assert plug_account("Assets:Cash:BankA") == "Equity:Adjustments:BankA"
     assert (
-        adjustment_account("Assets:Investments:Taxable:BrokerA")
-        == "Equity:Adjustments:Investments:BrokerA"
+        plug_account("Assets:Investments:Taxable:BrokerA")
+        == "Equity:Adjustments:Investments:Taxable:BrokerA"
     )
     assert (
-        adjustment_account("Assets:Investments:TaxAdvantaged:BrokerBHSA")
-        == "Equity:Adjustments:Investments:BrokerBHSA"
+        plug_account("Assets:Investments:TaxAdvantaged:BrokerA")
+        == "Equity:Adjustments:Investments:TaxAdvantaged:BrokerA"
     )
     # a colon-nested account keeps its full path below the tax tier
     assert (
-        adjustment_account("Assets:Investments:TaxAdvantaged:HSA:BrokerB")
-        == "Equity:Adjustments:Investments:HSA:BrokerB"
+        plug_account("Assets:Investments:TaxAdvantaged:BrokerBHSA")
+        == "Equity:Adjustments:Investments:TaxAdvantaged:BrokerBHSA"
     )
 
 
-def test_adjustment_account_rejects_non_balance_sheet():
-    with pytest.raises(ValueError):
-        adjustment_account("Liabilities:CC:CardA")
+def test_plug_account_is_none_where_there_is_no_plug():
+    """A liability is verify-only and a category holds nothing, so neither has a plug."""
+    assert plug_account("Liabilities:CC:CardA") is None
+    assert plug_account("Expenses:Grocery") is None
 
 
 # --- log_balance: USD account (no conversion) ---
@@ -64,9 +51,7 @@ def test_adjustment_account_rejects_non_balance_sheet():
 
 def test_log_balance_usd_account_pads_to_asserted_value(ledger_dir: Path):
     account = "Assets:Cash:BankA"
-    FileLedgerSink(ledger_dir).log_balance(
-        account, Decimal("1000.00"), SEP, adjustment_account(account)
-    )
+    FileLedgerSink(ledger_dir).log_balance(account, Decimal("1000.00"), SEP, plug_account(account))
 
     led = _load(ledger_dir)
     assert led.balance(account, SEP) == Decimal("1000.00")
@@ -81,7 +66,7 @@ def test_log_balance_usd_account_pads_to_asserted_value(ledger_dir: Path):
 def test_log_balance_stamps_an_id_for_later_editing(ledger_dir: Path):
     account = "Assets:Cash:BankA"
     entry_id = FileLedgerSink(ledger_dir).log_balance(
-        account, Decimal("1000.00"), SEP, adjustment_account(account)
+        account, Decimal("1000.00"), SEP, plug_account(account)
     )
 
     assert f'id: "{entry_id}"' in (ledger_dir / "assets" / "2026.beancount").read_text()
@@ -93,7 +78,7 @@ def test_log_balance_monthly_history_skips_unneeded_pads(ledger_dir: Path):
 
     beancount rejects a pad it doesn't need, so one is written only for the months that moved."""
     account = "Assets:Cash:BankA"
-    plug = adjustment_account(account)
+    plug = plug_account(account)
     sink = FileLedgerSink(ledger_dir)
 
     for date, amount in [
@@ -118,7 +103,7 @@ def test_log_balance_monthly_history_skips_unneeded_pads(ledger_dir: Path):
 def _log_months(ledger_dir: Path, account: str, plan: list[tuple[dt.date, str]]) -> None:
     sink = FileLedgerSink(ledger_dir)
     for date, amount in plan:
-        sink.log_balance(account, Decimal(amount), date, adjustment_account(account))
+        sink.log_balance(account, Decimal(amount), date, plug_account(account))
 
 
 def test_update_balance_edits_the_located_assertion_in_place(ledger_dir: Path):
@@ -148,7 +133,7 @@ def test_update_balance_adds_then_drops_pads_as_the_figure_requires(ledger_dir: 
     Raising a figure needs a pad at its own date *and* at the next assertion that re-pins the
     account; setting it back leaves both unused, which beancount rejects."""
     account = "Assets:Cash:BankA"
-    plug = adjustment_account(account)
+    plug = plug_account(account)
     _log_months(
         ledger_dir, account, [(dt.date(2026, 9, 1), "1000.00"), (dt.date(2026, 10, 1), "1000.00")]
     )
@@ -181,7 +166,7 @@ def test_update_balance_stamps_an_id_on_a_migrated_assertion(ledger_dir: Path):
     what makes a second edit of the same snapshot safe."""
     account = "Assets:Cash:BankA"
     sink = FileLedgerSink(ledger_dir)
-    entry_id = sink.log_balance(account, Decimal("1000.00"), SEP, adjustment_account(account))
+    entry_id = sink.log_balance(account, Decimal("1000.00"), SEP, plug_account(account))
 
     # strip the id back off, leaving a bare directive
     path = ledger_dir / "assets" / "2026.beancount"
@@ -202,7 +187,7 @@ def test_update_balance_stamps_an_id_on_a_migrated_assertion(ledger_dir: Path):
 def test_balances_can_be_logged_several_times_in_one_month(ledger_dir: Path):
     """Snapshots are addressed by id, not by month, so a month may hold as many as you log."""
     account = "Assets:Cash:BankA"
-    plug = adjustment_account(account)
+    plug = plug_account(account)
     sink = FileLedgerSink(ledger_dir)
 
     ids = {
@@ -244,7 +229,7 @@ def _write_share_ledger(root: Path) -> Path:
         "2020-01-01 commodity TICKA\n"
         "2020-01-01 open Assets:Investments:Taxable:Brokerage\n"
         "2020-01-01 open Equity:Opening-Balances\n"
-        "2020-01-01 open Equity:Adjustments:Investments:Brokerage\n"
+        "2020-01-01 open Equity:Adjustments:Investments:Taxable:Brokerage\n"
         "2026-08-19 pad Assets:Investments:Taxable:Brokerage Equity:Opening-Balances\n"
         "2026-08-20 balance Assets:Investments:Taxable:Brokerage  10 TICKA\n"
         "2026-08-20 price TICKA 500.00 USD\n"
@@ -257,7 +242,7 @@ def test_log_balance_reclassifies_shares_to_usd(tmp_path: Path):
     account = "Assets:Investments:Taxable:Brokerage"
 
     # 10 TICKA @ 500 = 5000 market; log a 5200 USD total.
-    FileLedgerSink(root).log_balance(account, Decimal("5200.00"), SEP, adjustment_account(account))
+    FileLedgerSink(root).log_balance(account, Decimal("5200.00"), SEP, plug_account(account))
 
     led = Ledger(root / "main.beancount", strict=True).load()
     assert led.errors == []
@@ -265,7 +250,9 @@ def test_log_balance_reclassifies_shares_to_usd(tmp_path: Path):
     assert led.holdings(account, SEP) == {"USD": Decimal("5200.00")}
     assert led.value(account, SEP) == Decimal("5200.00")
     # only the untracked delta reached the plug, not the whole share value
-    assert led.balance("Equity:Adjustments:Investments:Brokerage", SEP) == Decimal("-200.00")
+    assert led.balance("Equity:Adjustments:Investments:Taxable:Brokerage", SEP) == Decimal(
+        "-200.00"
+    )
 
 
 # --- NetWorth domain ---
@@ -278,7 +265,7 @@ def test_networth_series_and_adjustments(ledger_dir: Path):
         "Assets:Investments:TaxAdvantaged:Employer401k",
         Decimal("2000.00"),
         SEP,
-        "Equity:Adjustments:Investments:Employer401k",
+        "Equity:Adjustments:Investments:TaxAdvantaged:Employer401k",
     )
 
     nw = _load(ledger_dir).net_worth
@@ -288,26 +275,18 @@ def test_networth_series_and_adjustments(ledger_dir: Path):
     assert point.net_worth == point.assets - point.liabilities
 
     labels = {a.label for a in nw.adjustments() if a.value != 0}
-    assert {"BankA", "Investments:Employer401k"} <= labels
+    assert {"BankA", "Investments:TaxAdvantaged:Employer401k"} <= labels
 
 
 def test_loggable_accounts_excludes_swept(ledger_dir: Path):
+    """Stated, not inferred from a plug's absence: every cash and investment account is opened with
+    a plug, so what excludes a passthrough is its `sweep_to`, not a missing one."""
     loggable = _load(ledger_dir).net_worth.loggable_accounts()
     assert "Assets:Cash:BankA" in loggable
-    # a swept passthrough has no plug to pad into
     assert "Assets:Cash:Passthrough" not in loggable
 
 
 # --- /api/balance endpoint ---
-
-
-@pytest.fixture
-def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    ledger_dir = tmp_path / "ledger"
-    shutil.copytree(FIXTURE_LEDGER, ledger_dir)
-    monkeypatch.setattr(config, "LEDGER_DIR", ledger_dir)
-    monkeypatch.setattr(config, "MAIN_LEDGER", ledger_dir / "main.beancount")
-    return TestClient(app)
 
 
 def test_post_balance_logs_and_shows_in_data(client: TestClient):
@@ -398,7 +377,8 @@ def test_post_liability_balance_writes_no_pad(client: TestClient):
         ).status_code
         == 200
     )
-    text = "".join(p.read_text() for p in (config.LEDGER_DIR / "liabilities").glob("*.beancount"))
+    root = client.ledger_dir / "liabilities"  # type: ignore[attr-defined]
+    text = "".join(p.read_text() for p in root.glob("*.beancount"))
     assert f"balance {CARD}" in text
     assert "pad" not in text
 

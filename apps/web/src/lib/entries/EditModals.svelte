@@ -51,6 +51,7 @@
 	import { get } from 'svelte/store';
 	import { data } from '$lib/data/load';
 	import type { AccountsInfo } from '$lib/data/load';
+	import { EDIT_ENTRY } from '$lib/copy';
 	import { latestEntryDate } from '$lib/data/scope';
 	import { lastEntryDate, lastEntryKind } from '$lib/utils/editPrefs';
 	import { tablistKeydown } from '$lib/utils/tablist';
@@ -202,7 +203,7 @@
 {#if editingTxn && accounts}
 	<Overlay
 		title={KIND.transaction.label}
-		kicker="Edit entry"
+		kicker={EDIT_ENTRY}
 		accent={KIND.transaction.accent}
 		accentText={KIND.transaction.accentText}
 		onclose={() => (editingTxn = null)}
@@ -214,7 +215,7 @@
 {#if editingPaycheck && accounts}
 	<Overlay
 		title={KIND.paycheck.label}
-		kicker="Edit entry"
+		kicker={EDIT_ENTRY}
 		accent={KIND.paycheck.accent}
 		accentText={KIND.paycheck.accentText}
 		onclose={() => (editingPaycheck = null)}
@@ -226,7 +227,7 @@
 {#if editingTransfer && accounts}
 	<Overlay
 		title={KIND.transfer.label}
-		kicker="Edit entry"
+		kicker={EDIT_ENTRY}
 		accent={KIND.transfer.accent}
 		accentText={KIND.transfer.accentText}
 		onclose={() => (editingTransfer = null)}

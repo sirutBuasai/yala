@@ -3,7 +3,7 @@ import {
 	LEAF_MAX,
 	problems,
 	TEXT_MAX,
-	validateLeaf,
+	validateLabel,
 	validateName,
 	validateOptionalName,
 	validateRange,
@@ -75,31 +75,39 @@ describe('problems', () => {
 	});
 });
 
-describe('validateLeaf', () => {
-	it("requires a name, using the caller's noun", () => {
-		expect(validateLeaf('', 'category name')).toBe('Enter a category name.');
-		expect(validateLeaf('', 'bank account name')).toBe('Enter a bank account name.');
+describe('validateLabel', () => {
+	it("requires a value, using the caller's noun, worded as every other empty field is", () => {
+		expect(validateLabel('', 'contribution option')).toBe('Contribution option is required.');
 	});
 
-	it('accepts letters, numbers and hyphens', () => {
-		expect(validateLeaf('BankA-Savings2', 'name')).toBeNull();
+	it('accepts letters, digits and spaces, a label being shown as typed rather than composed', () => {
+		expect(validateLabel('Roth 401k')).toBeNull();
+		expect(validateLabel('After Tax 2')).toBeNull();
 	});
 
-	it('rejects a name with a colon, space, or other punctuation', () => {
-		for (const bad of ['Assets:Cash', 'my account', 'caf\u00e9', 'a_b']) {
-			expect(validateLeaf(bad, 'name')).toBe('Use only letters, numbers, or hyphens.');
-		}
+	it('rejects a comma, which is what joins the labels an account offers', () => {
+		expect(validateLabel('Roth,401k')).toBe('Contribution option cannot contain a comma.');
 	});
 
-	it('caps the length at what the ledger accepts', () => {
-		expect(validateLeaf('A'.repeat(LEAF_MAX), 'name')).toBeNull();
-		expect(validateLeaf('A'.repeat(LEAF_MAX + 1), 'name')).toBe(
-			`Use at most ${LEAF_MAX} characters.`
+	it('rejects punctuation, which no other name in the app allows either', () => {
+		expect(validateLabel('Roth 401(k)')).toBe(
+			'Contribution option can only contain letters, numbers and spaces.'
 		);
 	});
 
-	it('picks the article the noun needs', () => {
-		expect(validateLeaf('', 'employer')).toBe('Enter an employer.');
+	// A label is stored as one comma-joined metadata value on a single ledger line, so whitespace
+	// that ends a line cannot be treated as "just a space".
+	it('rejects a newline or a tab, which would break the line its meta is written on', () => {
+		const wrong = 'Contribution option can only contain letters, numbers and spaces.';
+		expect(validateLabel('Roth\n401k')).toBe(wrong);
+		expect(validateLabel('Roth\t401k')).toBe(wrong);
+	});
+
+	it('caps the length at what the ledger accepts', () => {
+		expect(validateLabel('A'.repeat(LEAF_MAX))).toBeNull();
+		expect(validateLabel('A'.repeat(LEAF_MAX + 1))).toBe(
+			`Contribution option must be at most ${LEAF_MAX} characters.`
+		);
 	});
 });
 
@@ -108,10 +116,13 @@ describe('validateName', () => {
 		expect(validateName('Bank of Example', 'Institution')).toBeNull();
 	});
 
-	it('requires a value that composes to something', () => {
+	it('requires a value, and one the composer will not silently shorten', () => {
 		expect(validateName('  ', 'Institution')).toBe('Institution is required.');
 		expect(validateName('!!!', 'Institution')).toBe(
-			'Institution needs at least one letter or number.'
+			'Institution can only contain letters, numbers and spaces.'
+		);
+		expect(validateName('!Test', 'Institution')).toBe(
+			'Institution can only contain letters, numbers and spaces.'
 		);
 	});
 
@@ -126,7 +137,7 @@ describe('validateOptionalName', () => {
 	it('passes a blank value but still checks a filled one', () => {
 		expect(validateOptionalName('   ', 'Account short form')).toBeNull();
 		expect(validateOptionalName('!!', 'Account short form')).toBe(
-			'Account short form needs at least one letter or number.'
+			'Account short form can only contain letters, numbers and spaces.'
 		);
 	});
 });

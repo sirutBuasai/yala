@@ -88,7 +88,7 @@ describe('loadData', () => {
 
 	it('falls back when the API answers with a document this build cannot read', async () => {
 		const bad = makeData();
-		(bad as { schema_version: number }).schema_version = 2;
+		(bad as { schema_version: number }).schema_version = 99;
 		vi.stubGlobal('fetch', routed({ '/api/data': bad, 'data.json': makeData() }));
 
 		await loadData();
@@ -111,13 +111,13 @@ describe('loadData', () => {
 
 	it('reports a schema-version mismatch in the SNAPSHOT as an error', async () => {
 		const bad = makeData();
-		(bad as { schema_version: number }).schema_version = 2;
+		(bad as { schema_version: number }).schema_version = 99;
 		vi.stubGlobal('fetch', routed({ 'data.json': bad }, ['/api/']));
 
 		await loadData();
 
 		expect(get(loadState).status).toBe('error');
-		expect(get(loadState).message).toContain('this file is v2');
+		expect(get(loadState).message).toContain('this file is v99');
 	});
 
 	it('reports an empty ledger (no month_keys) as an error', async () => {
@@ -195,31 +195,31 @@ describe('opening and closing accounts', () => {
 
 	const bodyOf = (spy: ReturnType<typeof vi.fn>, url: string) => bodiesOf(spy, url)[0];
 
-	it('opens a simple account from a bare leaf', async () => {
-		const spy = stubWrite({ account: 'Expenses:Gifts', name: 'Gifts' });
+	it('opens an account from a name typed as words, and reports what the API called it', async () => {
+		const spy = stubWrite({ account: 'Expenses:GiftCards', name: 'Gift Cards' });
 
-		expect(await openAccount('category', 'Gifts')).toEqual({
-			account: 'Expenses:Gifts',
-			name: 'Gifts',
+		expect(await openAccount('category', 'Gift Cards')).toEqual({
+			account: 'Expenses:GiftCards',
+			name: 'Gift Cards',
 			error: null
 		});
-		expect(bodyOf(spy, '/api/account')).toEqual({ kind: 'category', leaf: 'Gifts' });
+		// sent as typed: composing the leaf is the API's job, so the two can't disagree
+		expect(bodyOf(spy, '/api/account')).toEqual({ kind: 'category', name: 'Gift Cards' });
 	});
 
-	it('sends the investment-only fields alongside the naming half', async () => {
+	it('sends the per-kind fields alongside the naming half', async () => {
 		const spy = stubWrite({ account: 'Assets:Investments:Taxable:BrokerageA' });
 
 		await openAccount(
 			'investment',
-			{ institution: 'Brokerage A' },
-			{ subtree: 'Taxable', holds_shares: false, employer: 'EmployerA', labels: ['OptionA'] }
+			{ institution_name: 'Brokerage A' },
+			{ tier: 'Taxable', employer: 'EmployerA', labels: ['OptionA'] }
 		);
 
 		expect(bodyOf(spy, '/api/account')).toEqual({
 			kind: 'investment',
-			institution: 'Brokerage A',
-			subtree: 'Taxable',
-			holds_shares: false,
+			institution_name: 'Brokerage A',
+			tier: 'Taxable',
 			employer: 'EmployerA',
 			labels: ['OptionA']
 		});

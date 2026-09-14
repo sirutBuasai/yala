@@ -1,5 +1,6 @@
 // Small pure formatting helpers shared across components and charts.
 
+import { NO_VALUE } from '$lib/copy';
 import { accountInfo } from '$lib/data/directory.svelte';
 import { monthOf } from '$lib/utils/period';
 
@@ -44,8 +45,11 @@ export function moneyCompact(n: number | null | undefined): string {
 }
 
 export function pct(part: number, whole: number): string {
-	return whole ? ((part / whole) * 100).toFixed(0) + '%' : '—';
+	return whole ? ((part / whole) * 100).toFixed(0) + '%' : NO_VALUE;
 }
+
+/** First letter upper-cased, the rest left alone: a field's noun used to open a sentence. */
+export const sentenceCase = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** Escape a string for safe interpolation into HTML. */
 export function esc(s: unknown): string {
@@ -90,6 +94,14 @@ export function monthName(key: string): string {
 /** An inclusive year range, or `empty` when there are no years. */
 export function yearSpan(years: number[], empty = ''): string {
 	return years.length ? `${years[0]}–${years[years.length - 1]}` : empty;
+}
+
+/** A "YYYY-MM-DD" date as it reads in prose: "Jan 15, 2025". Unparseable input is returned as it
+    came, since a date the app cannot read is still better shown than swallowed. */
+export function dateLong(date: string | null | undefined): string {
+	const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date ?? '');
+
+	return m ? `${MONTHS[+m[2]! - 1]} ${+m[3]!}, ${m[1]}` : (date ?? '');
 }
 
 /** A "YYYY-MM-DD" date as a compact "M/D". */

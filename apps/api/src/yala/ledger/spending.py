@@ -1,7 +1,5 @@
-"""Spending domain: discretionary ``Expenses:*`` transactions.
-
-**Discretionary** excludes the ``Expenses:Deductions:*`` subtree — payroll deductions belong to
-income, not spending.
+"""Spending domain: discretionary ``Expenses:*`` transactions, meaning everything outside the
+``Expenses:Deductions:*`` subtree, payroll deductions belonging to income rather than spending.
 
 **Invariant:** a discretionary spending transaction has exactly one ``Expenses:*`` posting.
 """

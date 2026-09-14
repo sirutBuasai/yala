@@ -1,13 +1,12 @@
 """User settings: the handful of figures the ledger can't derive, stored in the ledger itself.
 
-They are *assumptions* rather than facts, so they have to be stated. They live as ``custom``
-directives rather than in a config file, so they version with the data they describe::
+Held as ``custom`` directives rather than in a config file, so they version with the data they
+describe::
 
     <date> custom "yala-setting" "<key>" <value>
 
 Directives are **dated and superseding**: the latest one for a key wins, so a change leaves the old
-value behind as history. :data:`SETTINGS` is the single source of truth for every key — reads,
-writes, API validation and the ``data.json`` contract all derive from it.
+value behind as history. :data:`SETTINGS` is the single source of truth for every key.
 """
 
 from __future__ import annotations
@@ -51,10 +50,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
         minimum=Decimal("0.1"),
         maximum=Decimal(20),
         default=Decimal(4),
-        help=(
-            "Share of the portfolio you plan to withdraw each year. Sets the financial-"
-            "independence target: annual spending divided by this rate."
-        ),
+        help="Share of the portfolio you plan to withdraw each year at retirement.",
     ),
     SettingSpec(
         key="real-return",
@@ -64,8 +60,8 @@ SETTINGS: tuple[SettingSpec, ...] = (
         maximum=Decimal(20),
         default=Decimal(5),
         help=(
-            "Long-run return above inflation, used to project what today's balance grows into "
-            "without further contributions."
+            "Investment annual returns, used for balance growth projections without further "
+            "contributions."
         ),
     ),
     SettingSpec(
@@ -75,7 +71,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
         minimum=Decimal(18),
         maximum=Decimal(100),
         default=Decimal(60),
-        help="The age the projection aims at.",
+        help="The age the balance growth projection ends.",
     ),
     SettingSpec(
         key="runway-target",
@@ -84,7 +80,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
         minimum=Decimal(1),
         maximum=Decimal(120),
         default=Decimal(6),
-        help="Months of spending you want held in cash. Marks the threshold on the runway gauge.",
+        help="Number of months in spending you want held in liquid assets.",
     ),
     SettingSpec(
         key="birth-year",
@@ -94,8 +90,8 @@ SETTINGS: tuple[SettingSpec, ...] = (
         maximum=Decimal(2100),
         default=None,
         help=(
-            "Only used to work out how many years remain until your target age. Leave this unset "
-            "and age-based projections stay hidden."
+            "Your birth year, used with your target retirement age for the balance growth "
+            "projection."
         ),
     ),
 )

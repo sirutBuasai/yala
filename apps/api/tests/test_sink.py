@@ -4,30 +4,15 @@ from __future__ import annotations
 
 import datetime as dt
 import re
-import shutil
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 from beancount.core import data
 
+from tests.conftest import load_ledger as _loads_clean
 from yala.ledger import Ledger
 from yala.sink import FileLedgerSink
-
-FIXTURE_LEDGER = Path(__file__).parent / "fixtures" / "ledger"
-
-
-@pytest.fixture
-def ledger_dir(tmp_path: Path) -> Path:
-    dst = tmp_path / "ledger"
-    shutil.copytree(FIXTURE_LEDGER, dst)
-    return dst
-
-
-def _loads_clean(ledger_dir: Path) -> Ledger:
-    led = Ledger(ledger_dir / "main.beancount", strict=True).load()
-    assert led.errors == []
-    return led
 
 
 def test_append_transaction_grows_file_and_loads(ledger_dir: Path):
@@ -211,7 +196,7 @@ def test_update_rolls_back_on_broken_ledger(ledger_dir: Path):
 _EMPLOYER = "Income:Salary:Employer1"
 _TAX = "Expenses:Deductions:Tax"
 _INSURANCE = "Expenses:Deductions:Insurance"
-_HSA = "Assets:Investments:TaxAdvantaged:HSA:Broker1"
+_HSA = "Assets:Investments:TaxAdvantaged:Broker1HSA"
 _K401 = "Assets:Investments:TaxAdvantaged:Employer401k"
 
 
@@ -438,7 +423,7 @@ def test_new_year_file_creates_include(ledger_dir: Path):
     _loads_clean(ledger_dir)
 
 
-def test_open_account_adds_contribution_type(ledger_dir: Path):
+def test_open_account_declares_the_account(ledger_dir: Path):
     FileLedgerSink(ledger_dir).open_account("Assets:Investments:Brokerage")
     led = _loads_clean(ledger_dir)
     assert "Assets:Investments:Brokerage" in led.declared_accounts("Assets:Investments:")
@@ -456,26 +441,26 @@ def test_open_account_escapes_a_quote_in_metadata(ledger_dir: Path):
     """A quote or backslash in a typed value is escaped, so the file still parses."""
     sink = FileLedgerSink(ledger_dir)
 
-    sink.open_account("Assets:Cash:Quoted", meta={"institution": 'Bank "X" \\ Example'})
+    sink.open_account("Assets:Cash:Quoted", meta={"institution_name": 'Bank "X" \\ Example'})
 
     led = _loads_clean(ledger_dir)
     opened = next(
         e for e in led.entries if isinstance(e, data.Open) and e.account == "Assets:Cash:Quoted"
     )
-    assert opened.meta["institution"] == 'Bank "X" \\ Example'
+    assert opened.meta["institution_name"] == 'Bank "X" \\ Example'
 
 
 def test_set_account_meta_escapes_a_quote(ledger_dir: Path):
     sink = FileLedgerSink(ledger_dir)
     sink.open_account("Assets:Cash:Tagged")
 
-    sink.set_account_meta("Assets:Cash:Tagged", "institution", 'A "B"')
+    sink.set_account_meta("Assets:Cash:Tagged", "institution_name", 'A "B"')
 
     led = _loads_clean(ledger_dir)
     opened = next(
         e for e in led.entries if isinstance(e, data.Open) and e.account == "Assets:Cash:Tagged"
     )
-    assert opened.meta["institution"] == 'A "B"'
+    assert opened.meta["institution_name"] == 'A "B"'
 
 
 def test_open_account_lands_beside_its_siblings(ledger_dir: Path):
@@ -487,6 +472,104 @@ def test_open_account_lands_beside_its_siblings(ledger_dir: Path):
 
     assert "open Expenses:Gifts" in family_file.read_text()
     assert "Expenses:Gifts" in _loads_clean(ledger_dir).declared_accounts("Expenses:")
+
+
+def test_set_account_metas_sets_and_removes_several_keys_in_one_write(ledger_dir: Path):
+    """Descriptive metadata is edited as a set, so committing key by key would leave a half-applied
+    form behind on a rejected value."""
+    sink = FileLedgerSink(ledger_dir)
+    sink.open_account(
+        "Assets:Cash:Tagged", meta={"institution_name": "Bank A", "institution_alias": "BA"}
+    )
+
+    sink.set_account_metas(
+        "Assets:Cash:Tagged", {"institution_alias": None, "account_alias": "Checking"}
+    )
+
+    meta = _loads_clean(ledger_dir).account_meta()["Assets:Cash:Tagged"]
+    assert meta["institution_name"] == "Bank A"  # untouched keys survive
+    assert meta["account_alias"] == "Checking"
+    assert "institution_alias" not in meta
+
+
+def test_set_account_metas_on_an_unknown_account_raises(ledger_dir: Path):
+    with pytest.raises(KeyError):
+        FileLedgerSink(ledger_dir).set_account_metas("Assets:Cash:Ghost", {"institution_name": "A"})
+
+
+@pytest.mark.parametrize("writer", ["open", "meta"])
+def test_a_control_character_in_metadata_is_refused(ledger_dir: Path, writer: str):
+    """Beancount accepts a raw newline inside a quoted string, so the strict reload would pass and
+    the file would silently gain a line. The sink refuses it instead."""
+    sink = FileLedgerSink(ledger_dir)
+
+    with pytest.raises(ValueError, match="institution"):
+        if writer == "open":
+            sink.open_account("Assets:Cash:Bad", meta={"institution_name": "A\nB"})
+        else:
+            sink.set_account_meta("Assets:Cash:BankA", "institution", "A\nB")
+
+
+def test_close_account_can_record_what_triggered_it(ledger_dir: Path):
+    sink = FileLedgerSink(ledger_dir)
+    sink.open_account("Expenses:Deductions:Scoped")
+
+    sink.close_account(
+        "Expenses:Deductions:Scoped", meta={"closed_with": "Income:Salary:Employer1"}
+    )
+
+    close = next(
+        e
+        for e in _loads_clean(ledger_dir).entries
+        if isinstance(e, data.Close) and e.account == "Expenses:Deductions:Scoped"
+    )
+    assert close.meta["closed_with"] == "Income:Salary:Employer1"
+
+
+# --- multi-file writes ---
+
+
+def test_rewrite_files_commits_several_files_as_one_unit(ledger_dir: Path):
+    touched = [p for p in ledger_dir.glob("**/*.beancount") if "Expenses:Takeouts" in p.read_text()]
+    assert len(touched) > 1  # the point of the primitive
+
+    FileLedgerSink(ledger_dir).rewrite_files(
+        {p: p.read_text().replace("Expenses:Takeouts", "Expenses:Dining") for p in touched}
+    )
+
+    led = _loads_clean(ledger_dir)
+    assert "Expenses:Dining" in led.active_accounts("Expenses:")
+    assert "Expenses:Takeouts" not in led.declared_accounts("Expenses:")
+
+
+def test_rewrite_files_rolls_every_file_back_when_the_result_is_broken(ledger_dir: Path):
+    """The unit of rollback is the set, not the file: a rename that half-applied would leave the
+    ledger naming an account that no longer exists everywhere else."""
+    sink = FileLedgerSink(ledger_dir)
+    accounts_file = ledger_dir / "accounts.beancount"
+    spending_file = ledger_dir / "spending" / "2026.beancount"
+    before = {p: p.read_text() for p in (accounts_file, spending_file)}
+
+    with pytest.raises(Exception):
+        # The postings move but the declaration does not, so the reload fails.
+        sink.rewrite_files(
+            {
+                accounts_file: accounts_file.read_text() + "\n; touched\n",
+                spending_file: spending_file.read_text().replace(
+                    "Expenses:Takeouts", "Expenses:Undeclared"
+                ),
+            }
+        )
+
+    assert {p: p.read_text() for p in (accounts_file, spending_file)} == before
+
+
+def test_rewrite_files_with_nothing_to_do_is_a_no_op(ledger_dir: Path):
+    before = (ledger_dir / "accounts.beancount").read_text()
+
+    FileLedgerSink(ledger_dir).rewrite_files({})
+
+    assert (ledger_dir / "accounts.beancount").read_text() == before
 
 
 def test_close_account_deactivates_category(ledger_dir: Path):
@@ -743,7 +826,7 @@ def test_update_raises_on_stale_line_locator(ledger_dir: Path, monkeypatch):
     """If the resolver hands back a lineno that no longer holds that entry, refuse the write."""
     from beancount.core import data
 
-    import yala.sink as sink_mod
+    import yala.sink.writer as sink_mod
 
     led = Ledger(ledger_dir / "main.beancount", strict=True).load()
     txns = {

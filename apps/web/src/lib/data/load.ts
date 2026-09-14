@@ -221,17 +221,22 @@ async function refreshAccounts(): Promise<void> {
 }
 
 /** A kind of account the API can open on demand (the leaf is appended under the kind's prefix). */
-export type CreatableAccountKind = 'category' | 'funding_cash' | 'funding_credit' | 'investment';
+export type CreatableAccountKind =
+	'category' | 'bank' | 'card' | 'investment' | 'employer' | 'deduction';
+
+/** An investment's tax tier. It is a path segment, so changing it is a move, not a metadata edit. */
+export type AccountTier = 'Taxable' | 'TaxAdvantaged';
 
 /**
- * How an account is to be named: a `leaf` written directly, or the descriptive form the API joins into
- * one. Aliases are short forms, used only when the rendered name overruns the display budget.
+ * How an account is to be named: the whole name in one field, or the two halves the API joins.
+ * Either way the words are sent as typed and the API composes the account's leaf, so a space is
+ * accepted anywhere. Aliases are short forms, used only when the rendered name overruns.
  */
 export interface AccountNaming {
-	leaf?: string;
-	institution?: string;
+	name?: string;
+	institution_name?: string;
 	account_name?: string;
-	bank_alias?: string;
+	institution_alias?: string;
 	account_alias?: string;
 }
 
@@ -243,24 +248,28 @@ export interface OpenedAccount {
 	error: string | null;
 }
 
-/** The fields only an investment account has; the API rejects them on any other kind. */
-export interface InvestmentFields {
-	subtree?: 'Taxable' | 'TaxAdvantaged';
-	holds_shares?: boolean;
+/**
+ * What an account may carry beyond its name, each accepted only by the kinds it applies to: a tier
+ * for an investment, an employer scope for an investment or a deduction, contribution labels for an
+ * investment. The API rejects one sent to a kind that has no room for it.
+ */
+export interface AccountExtras {
+	date?: string;
+	tier?: AccountTier;
 	employer?: string | null;
 	labels?: string[];
 }
 
 /**
  * Open a ledger account of any kind and refresh the account lists so the new one appears
- * everywhere. A bare string names it by `leaf`; `extra` carries the investment-only fields.
+ * everywhere. A bare string is the name as typed; `extra` carries the per-kind fields.
  */
 export async function openAccount(
 	kind: CreatableAccountKind,
 	naming: string | AccountNaming,
-	extra: InvestmentFields = {}
+	extra: AccountExtras = {}
 ): Promise<OpenedAccount> {
-	const body = typeof naming === 'string' ? { leaf: naming } : naming;
+	const body = typeof naming === 'string' ? { name: naming } : naming;
 	const { ok, data, error } = await postJson<{ account?: string; name?: string }>('/api/account', {
 		kind,
 		...body,
@@ -290,6 +299,9 @@ export interface CloseOptions {
 	destination?: string;
 	legs?: DrainLeg[];
 	date?: string;
+	/** Which of an employer's linked accounts close with it. Sent even when empty — the ones left out
+	    are unlinked from it, so the API refuses to guess. */
+	close_with?: string[];
 }
 
 /** Close an account and refresh the lists. Returns an error message, or null. */
@@ -303,6 +315,61 @@ export async function closeAccount(
 /** Set `account`'s sweep destination (or clear it when `dest` is null); returns an error, or null. */
 export async function setSweep(account: string, dest: string | null): Promise<string | null> {
 	return writeAccounts('/api/account/sweep', { account, dest }, 'sweep update failed');
+}
+
+/**
+ * Rename an account, move an investment to another tax tier, or both. Not a metadata edit: this
+ * rewrites the account's name in every posting, assertion and quoted value across the ledger.
+ *
+ * `account` in the result is where it now lives, which the API is the only authority on — the path is
+ * composed from the parts server-side, so a caller must never try to spell it.
+ */
+export async function renameAccount(
+	account: string,
+	change: {
+		name?: string;
+		institution_name?: string;
+		account_name?: string;
+		tier?: AccountTier;
+	}
+): Promise<{ account: string | null; error: string | null }> {
+	const { ok, data, error } = await postJson<{ account?: string }>('/api/account/rename', {
+		account,
+		...change
+	});
+	if (!ok) return { account: null, error: error ?? 'rename failed' };
+	await refreshAccounts();
+	return { account: data.account ?? null, error: null };
+}
+
+/** Undo a close — a mis-click, or a rehire. Returns an error message, or null. */
+export async function reopenAccount(account: string): Promise<string | null> {
+	return writeAccounts('/api/account/reopen', { account }, 'reopen failed');
+}
+
+/**
+ * What an account is called and what it offers. Only the keys present are changed; an explicit null
+ * clears one. Editing a short form shortens the displayed name — it does not rename the account. The
+ * two name halves are absent on purpose: they name the account, so they are renamed, not edited.
+ */
+export interface AccountMeta {
+	institution_alias?: string | null;
+	account_alias?: string | null;
+	employer?: string | null;
+	labels?: string[];
+}
+
+export async function setAccountMeta(account: string, meta: AccountMeta): Promise<string | null> {
+	return writeAccounts('/api/account/meta', { account, ...meta }, 'update failed');
+}
+
+/** Rename one contribution label, in what the account offers and in its logged history. */
+export async function relabelAccount(
+	account: string,
+	old: string,
+	next: string
+): Promise<string | null> {
+	return writeAccounts('/api/account/relabel', { account, old, new: next }, 'relabel failed');
 }
 
 /** Current USD value of an account's holdings (for prefilling the retirement split). */
@@ -417,6 +484,20 @@ export async function getSettings(): Promise<{ info: SettingsInfo | null; error:
 			? 'Unable to write data. Please reload the app.'
 			: (error ?? 'could not load settings');
 	return { info: null, error: hint };
+}
+
+/**
+ * The entry a locator names, for an edit form to prefill from. `entry` is undefined on failure, so a
+ * caller checks it rather than the flag, and the message is the one every form reports.
+ */
+export async function fetchEntry(
+	kind: 'transaction' | 'transfer' | 'paycheck',
+	locator: string
+): Promise<{ entry?: Record<string, any>; error?: string }> {
+	const { ok, data, error } = await getJson<Record<string, any>>(
+		`/api/${kind}?locator=${encodeURIComponent(locator)}`
+	);
+	return ok ? { entry: data } : { error: error ?? 'load failed' };
 }
 
 /** Set one setting; returns an error message, or null on success. */

@@ -1,8 +1,7 @@
 // Money-flow primitive: gross → deductions / contributions + take-home → spending categories + savings.
-//
-// Totals come from the yearly rollup and conserve, but their split into named buckets only exists
-// per-paycheck, so paycheck proportions are scaled onto the rollup totals — which keeps the diagram
-// reconciled with the KPIs even when paychecks are sparse.
+// Totals come from the yearly rollup, but their split into named buckets exists only per-paycheck, so
+// paycheck proportions are scaled onto the rollup totals. That keeps the diagram reconciled with the
+// KPIs even when paychecks are sparse.
 
 import type { DashboardData } from '$lib/data/types';
 import type { Flow, FlowLink, FlowNode } from './primitives';

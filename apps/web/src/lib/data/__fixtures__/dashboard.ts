@@ -7,16 +7,60 @@ import type {
 	NetWorthSnapshot
 } from '$lib/data/types';
 
+/** Every capability flag on a kind, so adding one to the contract is a single-line change here. */
+const KIND_FLAGS = [
+	'tiered',
+	'named',
+	'product',
+	'scopable',
+	'labelled',
+	'plugged',
+	'drains',
+	'splits',
+	'sweeps',
+	'sweep_target'
+] as const;
+
+type KindName = AccountLists['kinds'][number]['name'];
+
+/** Each kind's account prefix and the flags it has on, mirroring `yala.ledger.accounts.KINDS`. */
+const KIND_TABLE: Record<KindName, { prefix: string; on: (typeof KIND_FLAGS)[number][] }> = {
+	category: { prefix: 'Expenses:', on: [] },
+	bank: {
+		prefix: 'Assets:Cash:',
+		on: ['named', 'plugged', 'drains', 'splits', 'sweeps', 'sweep_target']
+	},
+	card: { prefix: 'Liabilities:CC:', on: ['named', 'product'] },
+	investment: {
+		prefix: 'Assets:Investments:',
+		on: ['tiered', 'named', 'product', 'scopable', 'labelled', 'plugged', 'splits', 'sweep_target']
+	},
+	employer: { prefix: 'Income:Salary:', on: [] },
+	deduction: { prefix: 'Expenses:Deductions:', on: ['scopable'] }
+};
+
+// Built without a cast, so a capability added to the contract fails here until the table names it.
+const KINDS: AccountLists['kinds'] = Object.entries(KIND_TABLE).map(([name, { prefix, on }]) => ({
+	name: name as KindName,
+	prefix,
+	...(Object.fromEntries(KIND_FLAGS.map((flag) => [flag, on.includes(flag)])) as Record<
+		(typeof KIND_FLAGS)[number],
+		boolean
+	>)
+}));
+
 /** The pickable account sets, as the API sends them — a factory so the shape is declared once. */
 export function makeAccounts(over: Partial<AccountLists> = {}): AccountLists {
 	return {
+		kinds: KINDS,
 		spending_categories: [],
 		funding_accounts: [],
-		employers: [],
-		payroll_options: [],
 		cash_accounts: [],
-		credit_accounts: [],
+		card_accounts: [],
 		investment_accounts: [],
+		employers: [],
+		deduction_accounts: [],
+		payroll_options: [],
 		balance_accounts: [],
 		liability_accounts: [],
 		sweeps: {},
@@ -45,8 +89,8 @@ export function makeData(): DashboardData {
 			date_range: { start: '2024-12-05', end: '2025-01-20' },
 			categories: ['Grocery', 'Takeouts'],
 			accounts: {
-				'Assets:Cash:BankA': { name: 'Bank A', institution: 'Bank of Example' },
-				'Liabilities:CC:CardA': { name: 'Card A', institution: 'Bank of Example' }
+				'Assets:Cash:BankA': { name: 'Bank A', institution_name: 'Bank of Example' },
+				'Liabilities:CC:CardA': { name: 'Card A', institution_name: 'Bank of Example' }
 			},
 			domains: {
 				spending: true,

@@ -2,36 +2,18 @@
 
 from __future__ import annotations
 
-import shutil
 from decimal import Decimal
-from pathlib import Path
 
-import pytest
 from fastapi.testclient import TestClient
 
-from yala import config
-from yala.api import app
 from yala.ledger import Ledger
 from yala.ledger.sweep import sweep_payee
-
-FIXTURE_LEDGER = Path(__file__).parent / "fixtures" / "ledger"
 
 # The fixture ledger's sweep pair.
 PASSTHROUGH = "Assets:Cash:Passthrough"
 PASSTHROUGH_DEST = "Assets:Cash:Savings"
 # Derived as production does, so the test cannot drift from the payee actually written.
 SWEEP_PAYEE = sweep_payee(PASSTHROUGH)
-
-
-@pytest.fixture
-def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    ledger_dir = tmp_path / "ledger"
-    shutil.copytree(FIXTURE_LEDGER, ledger_dir)
-    monkeypatch.setattr(config, "LEDGER_DIR", ledger_dir)
-    monkeypatch.setattr(config, "MAIN_LEDGER", ledger_dir / "main.beancount")
-    c = TestClient(app)
-    c.ledger_dir = ledger_dir  # type: ignore[attr-defined]
-    return c
 
 
 # --- helpers ---

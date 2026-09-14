@@ -29,44 +29,49 @@ option "operating_currency" "USD"
 2026-08-14 open Liabilities:CC:CardC USD
 
 ; ------------------------------------------------
-; Payroll — employers as Income:Salary:<Employer>; the open set (minus closes)
-; is the active-employer list. Employer2 was left; its plan accounts stay open.
+; Payroll — one employer still paying, one left behind so the closed case is covered
 ; ------------------------------------------------
 2020-01-01 open Income:Salary:Employer1 USD
 2020-01-01 open Income:Salary:Employer2 USD
 2022-01-01 close Income:Salary:Employer2
 
+; A deduction with no `employer` is offered by every employer; one that names an employer is
+; offered by that employer alone.
 2020-01-01 open Expenses:Deductions:Tax USD
 2020-01-01 open Expenses:Deductions:Insurance USD
+2020-01-01 open Expenses:Deductions:Employer1Benefit USD
+  employer: "Employer1"
 
-; Payroll contributions: an `employer` meta marks an investment account as payroll-contributable
-; and scopes it; `labels` (comma-separated) lists its line-item options, and the chosen label is
-; recorded as a `label` posting-meta on the single shared account so net worth sees one 401k pot.
-2020-01-01 open Assets:Investments:TaxAdvantaged:HSA:Broker1
+; An `employer` meta marks an investment account payroll-contributable; `labels` lists the line
+; items it offers, and the chosen one is recorded per posting so net worth still sees a single pot.
+2020-01-01 open Assets:Investments:TaxAdvantaged:Broker1HSA
   labels: "HSA"
   employer: "Employer1"
 2020-01-01 open Assets:Investments:TaxAdvantaged:Employer401k USD
   labels: "Roth401k,Trad401k,AfterTax401k"
   employer: "Employer1"
 
-; A closed payroll account exercises active-account filtering of options.
+; Closed, so the option lists have an inactive account to filter out.
 2020-01-01 open Assets:Investments:TaxAdvantaged:LegacyPlan
   labels: "LegacyPlan"
   employer: "Employer1"
 2026-08-21 close Assets:Investments:TaxAdvantaged:LegacyPlan
 
 ; ------------------------------------------------
-; Equity — opening balances + per-account adjustment plugs (net-worth snapshots)
+; Equity — opening balances, and one adjustment plug per snapshot-able account.
+; The plug keeps the investment tax tier, so two accounts differing only by tier never share one.
+; A passthrough gets none: its balance is swept.
 ; ------------------------------------------------
 2020-01-01 open Equity:Opening-Balances
 2020-01-01 open Equity:Adjustments:BankA
 2020-01-01 open Equity:Adjustments:BankB
+2020-01-01 open Equity:Adjustments:Wallet
 2020-01-01 open Equity:Adjustments:Savings
-2020-01-01 open Equity:Adjustments:Investments:HSA:Broker1
-2020-01-01 open Equity:Adjustments:Investments:Employer401k
+2020-01-01 open Equity:Adjustments:Investments:TaxAdvantaged:Broker1HSA
+2020-01-01 open Equity:Adjustments:Investments:TaxAdvantaged:Employer401k
 
 ; ------------------------------------------------
-; Closed Accounts (exercise active-account filtering)
+; Closed, so the active-account lists have something to filter out
 ; ------------------------------------------------
 2020-01-01 open Liabilities:CC:CardD USD
 2024-10-01 close Liabilities:CC:CardD

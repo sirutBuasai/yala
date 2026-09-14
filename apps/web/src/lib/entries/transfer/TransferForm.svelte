@@ -3,7 +3,7 @@
 	// with one it prefills that entry and saves an update or deletes it.
 	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data/load';
-	import { deleteTransaction, getJson, postJson } from '$lib/data/load';
+	import { deleteTransaction, fetchEntry, postJson } from '$lib/data/load';
 	import { formatAccount, money } from '$lib/utils/format';
 	import { lastEntryDate, lastTransferFrom, lastTransferTo, seed } from '$lib/utils/editPrefs';
 	import { problems, TEXT_MAX } from '$lib/forms/validate';
@@ -37,7 +37,7 @@
 	let err = $state(false);
 
 	// A bill pay can target any money-in account except the one being paid from.
-	const toAccounts = $derived(accounts.credit_accounts.filter((a) => a !== from_account));
+	const toAccounts = $derived(accounts.funding_accounts.filter((a) => a !== from_account));
 
 	$effect(() => {
 		if (locator == null) {
@@ -48,13 +48,9 @@
 		}
 		const l = locator;
 		(async () => {
-			const {
-				ok,
-				data: s,
-				error
-			} = await getJson<Record<string, any>>(`/api/transfer?locator=${encodeURIComponent(l)}`);
-			if (!ok) {
-				msg = error ?? 'load failed';
+			const { entry: s, error } = await fetchEntry('transfer', l);
+			if (!s) {
+				msg = error!;
 				err = true;
 				return;
 			}

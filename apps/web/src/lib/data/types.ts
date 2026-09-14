@@ -15,8 +15,18 @@ export type Start = string;
 export type End = string;
 export type Categories = string[];
 export type Name = string;
-export type Institution = string | null;
+export type InstitutionName = string | null;
+export type AccountName = string | null;
+export type InstitutionAlias = string | null;
+export type AccountAlias = string | null;
 export type Color = string | null;
+export type Kind = ('category' | 'bank' | 'card' | 'investment' | 'employer' | 'deduction') | null;
+export type Tier = ('Taxable' | 'TaxAdvantaged') | null;
+export type Closed = boolean;
+export type Opened = string | null;
+export type Employer = string | null;
+export type Labels = string[];
+export type SweepTo = string | null;
 export type Spending = boolean;
 export type Income = boolean;
 export type Networth = boolean;
@@ -47,7 +57,7 @@ export type Bill = number | null;
 export type Transactions = Txn[];
 export type Date1 = string;
 export type Payee1 = string;
-export type Employer = string | null;
+export type Employer1 = string | null;
 export type Gross = number;
 export type Net = number;
 export type TakeHome = number;
@@ -92,22 +102,36 @@ export type BirthYear = number | null;
 export type SettingSpecs = SettingField[] | null;
 export type Key = string;
 export type Label2 = string;
-export type Kind = 'percent' | 'age' | 'year' | 'months';
+export type Kind1 = 'percent' | 'age' | 'year' | 'months';
 export type Min = number;
 export type Max = number;
 export type Default = number | null;
 export type Help = string;
+export type Name1 = 'category' | 'bank' | 'card' | 'investment' | 'employer' | 'deduction';
+export type Prefix = string;
+export type Tiered = boolean;
+export type Plugged = boolean;
+export type Named = boolean;
+export type Product = boolean;
+export type Scopable = boolean;
+export type Labelled = boolean;
+export type Drains = boolean;
+export type Splits = boolean;
+export type Sweeps = boolean;
+export type SweepTarget = boolean;
+export type Kinds = AccountKind[];
 export type SpendingCategories = string[];
 export type FundingAccounts = string[];
+export type CashAccounts = string[];
+export type CardAccounts = string[];
+export type InvestmentAccounts = string[];
 export type Employers = string[];
-export type Kind1 = 'deduction' | 'contribution';
+export type DeductionAccounts = string[];
+export type Kind2 = 'deduction' | 'contribution';
 export type Label3 = string;
-export type Employer1 = string | null;
+export type Employer2 = string | null;
 export type Account2 = string;
 export type PayrollOptions = PayrollOption[];
-export type CashAccounts = string[];
-export type CreditAccounts = string[];
-export type InvestmentAccounts = string[];
 export type BalanceAccounts = string[];
 export type LiabilityAccounts = string[];
 
@@ -150,20 +174,27 @@ export interface Accounts {
 	[k: string]: AccountInfo;
 }
 /**
- * How one account presents itself: its display name and who holds it.
- *
- * Both are resolved from ledger metadata by :mod:`yala.ledger.naming`, so the frontend looks a
- * name up rather than deriving it. That keeps one implementation of the naming rule instead of
- * one per language, and it means the ledger stays the only place that decides what an account is
- * called.
+ * One account's whole record: what it is called, what it is, and what it carries. Every field
+ * is resolved from ledger metadata by the backend, so the naming rule has one implementation
+ * rather than one per language.
  *
  * This interface was referenced by `DashboardData`'s JSON-Schema
  * via the `definition` "AccountInfo".
  */
 export interface AccountInfo {
 	name: Name;
-	institution?: Institution;
+	institution_name?: InstitutionName;
+	account_name?: AccountName;
+	institution_alias?: InstitutionAlias;
+	account_alias?: AccountAlias;
 	color?: Color;
+	kind?: Kind;
+	tier?: Tier;
+	closed?: Closed;
+	opened?: Opened;
+	employer?: Employer;
+	labels?: Labels;
+	sweep_to?: SweepTo;
 }
 /**
  * Which domains carry data.
@@ -262,7 +293,7 @@ export interface Txn {
 export interface PaycheckOut {
 	date: Date1;
 	payee: Payee1;
-	employer?: Employer;
+	employer?: Employer1;
 	gross: Gross;
 	deductions: Deductions;
 	contributions: Contributions;
@@ -358,11 +389,8 @@ export interface NetWorthAdjustment {
 	value: Value1;
 }
 /**
- * Effective user settings: what the ledger states, else the built-in default.
- *
- * A null means the setting is unset and has no default — features depending on it stay hidden
- * rather than guessing. Keys mirror :data:`yala.ledger.settings.SETTINGS`; ``test_settings``
- * asserts the two can't drift.
+ * Effective user settings: what the ledger states, else the built-in default. A null means
+ * unset with no default, and features depending on it stay hidden rather than guessing.
  *
  * This interface was referenced by `DashboardData`'s JSON-Schema
  * via the `definition` "SettingsSection".
@@ -375,11 +403,8 @@ export interface SettingsSection {
 	birth_year?: BirthYear;
 }
 /**
- * The spec behind one setting: how the form names it, bounds it, and explains it.
- *
- * Snapshotted alongside the values so the settings form renders with no API running — the same
- * rule every other form follows. Writing one still needs the API, and the frontend's single write
- * guard is what says so.
+ * The spec behind one setting: how the form names it, bounds it, and explains it. Snapshotted
+ * alongside the values so the settings form renders with no API running.
  *
  * This interface was referenced by `DashboardData`'s JSON-Schema
  * via the `definition` "SettingField".
@@ -387,7 +412,7 @@ export interface SettingsSection {
 export interface SettingField {
 	key: Key;
 	label: Label2;
-	kind: Kind;
+	kind: Kind1;
 	min: Min;
 	max: Max;
 	default: Default;
@@ -396,38 +421,62 @@ export interface SettingField {
 /**
  * The pickable account sets the entry forms and the Manage panels choose from.
  *
- * Snapshotted into ``data.json`` as well as served live from ``/api/accounts`` (both from one
- * builder function) so the forms still render — and Manage still lists what you have — when the
- * local API is down. Writes are refused by the frontend's single write guard, not by an absent
- * list: a form that vanishes reads as a missing feature rather than as an unreachable server.
+ * Snapshotted into ``data.json`` as well as served live from ``/api/accounts`` so the forms still
+ * render when the local API is down. Writes are then refused by the frontend's write guard rather
+ * than by an absent list, since a form that vanishes reads as a missing feature.
  *
  * This interface was referenced by `DashboardData`'s JSON-Schema
  * via the `definition` "AccountLists".
  */
 export interface AccountLists {
+	kinds: Kinds;
 	spending_categories: SpendingCategories;
 	funding_accounts: FundingAccounts;
-	employers: Employers;
-	payroll_options: PayrollOptions;
 	cash_accounts: CashAccounts;
-	credit_accounts: CreditAccounts;
+	card_accounts: CardAccounts;
 	investment_accounts: InvestmentAccounts;
+	employers: Employers;
+	deduction_accounts: DeductionAccounts;
+	payroll_options: PayrollOptions;
 	balance_accounts: BalanceAccounts;
 	liability_accounts: LiabilityAccounts;
-	sweeps: Sweeps;
+	sweeps: Sweeps1;
 }
 /**
- * One selectable paycheck line, scoped to an employer (null = offered by every employer).
+ * What one kind of account is allowed to carry, so a form offers exactly the controls that
+ * apply. Copied off :data:`yala.ledger.accounts.KINDS`, which the routes enforce and which
+ * documents each flag, so the form and the API cannot disagree.
+ *
+ * This interface was referenced by `DashboardData`'s JSON-Schema
+ * via the `definition` "AccountKind".
+ */
+export interface AccountKind {
+	name: Name1;
+	prefix: Prefix;
+	tiered: Tiered;
+	plugged: Plugged;
+	named: Named;
+	product: Product;
+	scopable: Scopable;
+	labelled: Labelled;
+	drains: Drains;
+	splits: Splits;
+	sweeps: Sweeps;
+	sweep_target: SweepTarget;
+}
+/**
+ * One selectable paycheck line, scoped to an employer (null = offered by every employer). A
+ * contribution always names one, that meta being what marks its account payroll-contributable.
  *
  * This interface was referenced by `DashboardData`'s JSON-Schema
  * via the `definition` "PayrollOption".
  */
 export interface PayrollOption {
-	kind: Kind1;
+	kind: Kind2;
 	label: Label3;
-	employer: Employer1;
+	employer: Employer2;
 	account: Account2;
 }
-export interface Sweeps {
+export interface Sweeps1 {
 	[k: string]: string;
 }

@@ -2,23 +2,29 @@
 
 from __future__ import annotations
 
+from typing import get_args
+
 import pytest
 from pydantic import ValidationError
 
+from yala.ledger.accounts import KIND_FIELDS, KINDS, TIERS
 from yala.schema import (
     SCHEMA_VERSION,
     AccountInfo,
+    AccountKind,
     CategoryAmount,
     DashboardData,
     DateRange,
     Domains,
     IncomeSection,
     IncomeYear,
+    KindName,
     Meta,
     MonthMatrixRow,
     MonthPage,
     Overview,
     PaycheckOut,
+    TierName,
     Txn,
     YearPage,
     YearSpend,
@@ -38,7 +44,7 @@ def example_data() -> DashboardData:
             date_range=DateRange(start="2024-12-05", end="2025-01-20"),
             categories=["Grocery", "Takeouts"],
             accounts={
-                "Liabilities:CC:CardA": AccountInfo(name="Card A", institution="BankA"),
+                "Liabilities:CC:CardA": AccountInfo(name="Card A", institution_name="BankA"),
                 "Expenses:Grocery": AccountInfo(name="Grocery"),
             },
             domains=Domains(
@@ -157,3 +163,61 @@ def test_extra_key_is_rejected():
     payload["surprise"] = "not allowed"
     with pytest.raises(ValidationError):
         DashboardData(**payload)
+
+
+def test_account_info_carries_the_whole_record():
+    """One authoritative per-account entry: a form prefills from this rather than deriving anything
+    about an account for itself."""
+    info = AccountInfo(
+        name="Broker A Roth",
+        institution_name="Broker A",
+        kind="investment",
+        tier="TaxAdvantaged",
+        closed=False,
+        opened="2026-03-01",
+        institution_alias="BA",
+        account_alias="Roth",
+        employer="Employer1",
+        labels=["OptionA", "OptionB"],
+    )
+
+    assert info.model_dump()["labels"] == ["OptionA", "OptionB"]
+    assert info.sweep_to is None
+
+
+def test_account_info_defaults_to_a_bare_name():
+    """An account this app does not manage — a plug, an opening-balance account — still needs a
+    name, and nothing else about it is known."""
+    info = AccountInfo(name="Adjustments")
+
+    assert info.kind is None and not info.closed and info.labels == []
+
+
+def test_account_kind_rejects_an_unknown_kind():
+    with pytest.raises(ValidationError):
+        AccountKind(**{f: False for f in KIND_FIELDS} | {"name": "mystery", "prefix": "X:"})
+
+
+# --- the contract cannot drift from the kind table it describes ---
+
+
+def test_the_kind_names_match_the_ledgers_own():
+    assert set(get_args(KindName)) == {k.name for k in KINDS}
+
+
+def test_the_tier_names_match_the_ledgers_own():
+    assert set(get_args(TierName)) == set(TIERS)
+
+
+def test_every_kind_field_is_shipped_and_nothing_else_is():
+    """`catalog.account_lists` copies these across by name, so a capability added to `Kind` reaches
+    the form only if the contract carries a field of the same name."""
+    assert set(AccountKind.model_fields) == set(KIND_FIELDS)
+
+
+def test_a_kind_round_trips_into_the_contract_model():
+    for kind in KINDS:
+        shipped = AccountKind(**{f: getattr(kind, f) for f in KIND_FIELDS})
+
+        assert shipped.name == kind.name
+        assert shipped.prefix == kind.prefix

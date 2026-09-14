@@ -7,7 +7,7 @@
 	// On-brand replacement for <input type="date">: a Popup-hosted calendar. Keyboard: arrows move
 	// the day, Enter selects, Esc closes.
 	import { untrack } from 'svelte';
-	import { MONTHS } from '$lib/utils/format';
+	import { MONTHS, dateLong } from '$lib/utils/format';
 	import Popup from '$lib/overlay/Popup.svelte';
 	import Chevron from '$lib/icons/Chevron.svelte';
 
@@ -16,14 +16,11 @@
 		value: string;
 		id?: string;
 		ariaLabel?: string;
+		/** Overrides the empty state. Defaults to today's date, since that is what leaving it blank
+		    means: every route this feeds dates an entry today when no date is sent. */
 		placeholder?: string;
 	}
-	let {
-		value = $bindable(''),
-		id,
-		ariaLabel = 'Date',
-		placeholder = 'yyyy-mm-dd'
-	}: Props = $props();
+	let { value = $bindable(''), id, ariaLabel = 'Date', placeholder }: Props = $props();
 
 	const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -44,10 +41,13 @@
 	function iso(y: number, m: number, d: number) {
 		return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 	}
-	function display(v: string) {
-		const p = parse(v);
-		return p ? `${MONTHS[p.m]} ${p.d}, ${p.y}` : '';
-	}
+	/** The empty state, read the same way a chosen date is — so it says what blank will mean rather
+	    than spelling out a format nobody types into this. */
+	const empty = $derived.by(() => {
+		if (placeholder) return placeholder;
+		const now = new Date();
+		return dateLong(iso(now.getFullYear(), now.getMonth(), now.getDate()));
+	});
 
 	function seedView() {
 		const p = parse(value);
@@ -137,7 +137,7 @@
 	{onkeynav}
 >
 	{#snippet trigger()}
-		<span class="val" class:placeholder={!value}>{value ? display(value) : placeholder}</span>
+		<span class="val" class:placeholder={!value}>{value ? dateLong(value) : empty}</span>
 		<svg class="cal" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
 			<rect
 				x="2"

@@ -9,10 +9,10 @@ import { makeAccounts } from '$lib/data/__fixtures__/dashboard';
 
 const accounts = makeAccounts({
 	spending_categories: ['Grocery', 'Takeouts'],
-	funding_accounts: ['Liabilities:CC:CardA', 'Assets:Cash:BankA'],
+	funding_accounts: ['Liabilities:CC:CardA', 'Assets:Cash:BankA', 'Assets:Cash:Wallet'],
 	employers: ['EmployerA'],
-	cash_accounts: ['Assets:Cash:BankA'],
-	credit_accounts: ['Assets:Cash:Wallet', 'Liabilities:CC:CardA']
+	cash_accounts: ['Assets:Cash:BankA', 'Assets:Cash:Wallet'],
+	card_accounts: ['Liabilities:CC:CardA']
 });
 
 function okFetch(body: unknown = { ok: true, id: 'new-id' }) {
@@ -25,8 +25,8 @@ beforeEach(() => {
 	lastCategory.set('');
 	// account pickers label their options from the directory, so seed it alongside the lists
 	setAccountDirectory({
-		'Liabilities:CC:CardA': { name: 'Card A', institution: 'BankA' },
-		'Assets:Cash:BankA': { name: 'Bank A', institution: 'BankA' },
+		'Liabilities:CC:CardA': { name: 'Card A', institution_name: 'BankA' },
+		'Assets:Cash:BankA': { name: 'Bank A', institution_name: 'BankA' },
 		'Assets:Cash:Wallet': { name: 'Wallet' }
 	});
 });
@@ -125,7 +125,7 @@ describe('TransactionForm (add)', () => {
 		await waitFor(() => expect(onsaved).toHaveBeenCalledOnce());
 		const sent = JSON.parse(fetchSpy.mock.calls[0]![1].body);
 		expect(sent.amount).toBe(10);
-		expect(sent.credits).toEqual([{ account: 'Assets:Cash:Wallet', amount: 20 }]);
+		expect(sent.credits).toEqual([{ account: 'Liabilities:CC:CardA', amount: 20 }]);
 	});
 
 	it('remembers the chosen funding account for the next add this session', async () => {

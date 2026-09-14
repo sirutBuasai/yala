@@ -102,9 +102,9 @@ describe('formatAccount', () => {
 		setAccountDirectory({
 			'Liabilities:CC:CardA': {
 				name: 'BoE Cash Rewards',
-				institution: 'Bank of Example'
+				institution_name: 'Bank of Example'
 			},
-			'Assets:Cash:BankA': { name: 'Bank of Example', institution: 'Bank of Example' }
+			'Assets:Cash:BankA': { name: 'Bank of Example', institution_name: 'Bank of Example' }
 		});
 
 		// Neither name is derivable from its path.

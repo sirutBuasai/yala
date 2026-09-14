@@ -13,11 +13,10 @@ import datetime as dt
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from beancount.core import data
-
 from yala.ledger import Ledger, LedgerError
+from yala.ledger.accounts import sweep_destination
 from yala.ledger.constants import SWEEP_META
-from yala.ledger.entities import leaf
+from yala.ledger.paths import leaf
 from yala.money import round_cents
 
 if TYPE_CHECKING:
@@ -35,9 +34,15 @@ def sweep_payee(source: str) -> str:
     return f"{leaf(source).lower()} sweep"
 
 
-def _edges(ledger: Ledger) -> dict[str, str]:
-    """Each passthrough's immediate destination, read from its ``sweep_to`` open-meta."""
-    return {a: m[SWEEP_META] for a, m in ledger.account_meta().items() if m.get(SWEEP_META)}
+def sweep_edges(ledger: Ledger) -> dict[str, str]:
+    """Each passthrough's immediate destination, read from its ``sweep_to`` open-meta.
+
+    The one reader of that meta across the app: reconciliation follows these edges, the cycle check
+    validates a candidate against them, and the contract ships them as-is.
+    """
+    meta = ledger.account_meta()
+    edges = {a: sweep_destination(m) for a, m in meta.items()}
+    return {a: dest for a, dest in edges.items() if dest is not None}
 
 
 def resolve_terminal(edges: dict[str, str], source: str) -> str:
@@ -55,7 +60,7 @@ def resolve_terminal(edges: dict[str, str], source: str) -> str:
 
 def sweep_targets(ledger: Ledger) -> dict[str, str]:
     """Every configured passthrough source mapped to its resolved terminal destination."""
-    edges = _edges(ledger)
+    edges = sweep_edges(ledger)
     return {source: resolve_terminal(edges, source) for source in edges}
 
 
@@ -72,26 +77,20 @@ def _last_day(year: int, month: int) -> dt.date:
     return dt.date(year, month, calendar.monthrange(year, month)[1])
 
 
-def _active_at(ledger: Ledger, on: dt.date) -> set[str]:
-    """Accounts open (not closed) as of ``on``."""
-    opened: set[str] = set()
-    closed: set[str] = set()
-    for e in ledger.entries:
-        if isinstance(e, data.Open) and e.date <= on:
-            opened.add(e.account)
-        elif isinstance(e, data.Close) and e.date <= on:
-            closed.add(e.account)
-    return opened - closed
-
-
 def _sweeps_in(
     ledger: Ledger, source: str, terminal: str, year: int, month: int
 ) -> list["Transfer"]:
+    """The month's sweeps for one passthrough: the entries reconcile owns, and may rewrite or drop.
+
+    Matched on the payee as well as the pair of accounts. On the pair alone, a hand-entered transfer
+    between a passthrough and its destination reads as the sweep and is silently deleted.
+    """
     pair = {source, terminal}
+    payee = sweep_payee(source)
     return [
         t
         for t in ledger.transfers.transactions(year, month)
-        if {t.from_account, t.to_account} == pair
+        if {t.from_account, t.to_account} == pair and t.payee == payee
     ]
 
 
@@ -188,7 +187,7 @@ def reconcile_month(sink: "FileLedgerSink", year: int, month: int) -> None:
     failure is isolated and surfaced as an aggregated error rather than aborting the rest."""
     ledger = Ledger(sink.main_ledger, strict=True).load()
     date = _last_day(year, month)
-    active = _active_at(ledger, date)
+    active = set(ledger.active_accounts(as_of=date))
 
     failures: list[str] = []
     for source, terminal in sweep_targets(ledger).items():
@@ -213,7 +212,7 @@ def retire_passthrough(sink: "FileLedgerSink", account: str, on: dt.date) -> Non
     """Prepare a passthrough for closing: delete its close-month sweep (dated month-end, so it
     would otherwise fall after the close) and drop its ``sweep_to``. No-op if not a passthrough."""
     ledger = Ledger(sink.main_ledger, strict=True).load()
-    if not ledger.account_meta().get(account, {}).get(SWEEP_META):
+    if sweep_destination(ledger.account_meta().get(account)) is None:
         return
 
     payee = sweep_payee(account)

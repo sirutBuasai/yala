@@ -1,59 +1,36 @@
-"""Opening and closing investment accounts through the shared account routes: currency constraint,
-genesis seed + plug, meta, and the value-to-USD split-drain retirement flow."""
+"""Opening and closing investment accounts through the shared account routes: the unconstrained
+open, the genesis seed and paired plug, the metadata, and the split-drain retirement."""
 
 from __future__ import annotations
 
 import datetime as dt
-import shutil
-import textwrap
 from decimal import Decimal
-from pathlib import Path
 
-import pytest
 from beancount.core import data
 from fastapi.testclient import TestClient
 
-from yala import config
-from yala.api import app
+from tests.conftest import append_accounts, load_ledger
 from yala.ledger import Ledger
-
-FIXTURE_LEDGER = Path(__file__).parent / "fixtures" / "ledger"
 
 BANK_A = "Assets:Cash:BankA"
 BANK_B = "Assets:Cash:BankB"
 BROKERAGE = "Assets:Investments:Taxable:Brokerage"
-BROKERAGE_PLUG = "Equity:Adjustments:Investments:Brokerage"
+BROKERAGE_PLUG = "Equity:Adjustments:Investments:Taxable:Brokerage"
 TICKER = "TICKA"
 
 
-@pytest.fixture
-def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    ledger_dir = tmp_path / "ledger"
-    shutil.copytree(FIXTURE_LEDGER, ledger_dir)
-    monkeypatch.setattr(config, "LEDGER_DIR", ledger_dir)
-    monkeypatch.setattr(config, "MAIN_LEDGER", ledger_dir / "main.beancount")
-    c = TestClient(app)
-    c.ledger_dir = ledger_dir  # type: ignore[attr-defined]
-    return c
-
-
 def _ledger(client: TestClient) -> Ledger:
-    return Ledger(client.ledger_dir / "main.beancount").load()  # type: ignore[attr-defined]
+    return load_ledger(client.ledger_dir)  # type: ignore[attr-defined]
 
 
 def _open_entry(led: Ledger, account: str) -> data.Open:
     return next(e for e in led.entries if isinstance(e, data.Open) and e.account == account)
 
 
-def _append_ledger(client: TestClient, text: str) -> None:
-    path = client.ledger_dir / "accounts.beancount"  # type: ignore[attr-defined]
-    path.write_text(path.read_text() + textwrap.dedent(text))
-
-
 def _seed_shares(client: TestClient, price: str = "500.00") -> None:
     """Give BROKERAGE a priced share holding (10 shares, bought from BANK_A)."""
-    _append_ledger(
-        client,
+    append_accounts(
+        client.ledger_dir,  # type: ignore[attr-defined]
         f"""
         2020-01-01 commodity {TICKER}
         2026-01-01 open {BROKERAGE}
@@ -69,61 +46,74 @@ def _seed_shares(client: TestClient, price: str = "500.00") -> None:
 # --- add ---
 
 
-def test_add_share_account_is_unconstrained_with_seed_and_plug(client: TestClient):
-    r = client.post(
-        "/api/account",
-        json={"kind": "investment", "subtree": "Taxable", "leaf": "AcctA", "holds_shares": True},
-    )
+def test_add_investment_is_unconstrained_with_seed_and_plug(client: TestClient):
+    """One kind of investment account, opened unconstrained, so the same account can be snapshotted
+    in dollars some months and in share quantities others."""
+    r = client.post("/api/account", json={"kind": "investment", "tier": "Taxable", "name": "AcctA"})
     assert r.status_code == 200
     led = _ledger(client)
     account = "Assets:Investments:Taxable:AcctA"
     assert account in led.active_accounts()
     assert _open_entry(led, account).currencies is None  # unconstrained
-    assert "Equity:Adjustments:Investments:AcctA" in led.active_accounts()
+    assert "Equity:Adjustments:Investments:Taxable:AcctA" in led.active_accounts()
     assert any(isinstance(e, data.Balance) and e.account == account for e in led.entries)
 
 
-def test_add_usd_only_plan_is_constrained_without_seed_or_plug(client: TestClient):
+def test_add_investment_keeps_its_payroll_metadata(client: TestClient):
     r = client.post(
         "/api/account",
         json={
             "kind": "investment",
-            "subtree": "TaxAdvantaged",
-            "leaf": "PlanA",
-            "holds_shares": False,
-            "employer": "EmployerA",
+            "tier": "TaxAdvantaged",
+            "name": "PlanA",
+            "employer": "Employer1",
             "labels": ["OptionA", "OptionB"],
         },
     )
     assert r.status_code == 200
     led = _ledger(client)
-    account = "Assets:Investments:TaxAdvantaged:PlanA"
-    assert _open_entry(led, account).currencies == ["USD"]  # USD-constrained
-    assert "Equity:Adjustments:Investments:PlanA" not in led.active_accounts()
-    meta = led.account_meta()[account]
-    assert meta["employer"] == "EmployerA"
+    meta = led.account_meta()["Assets:Investments:TaxAdvantaged:PlanA"]
+    assert meta["employer"] == "Employer1"
     assert meta["labels"] == "OptionA,OptionB"
 
 
-def test_add_nested_name_and_bad_segment(client: TestClient):
-    assert (
-        client.post(
-            "/api/account",
-            json={
-                "kind": "investment",
-                "subtree": "TaxAdvantaged",
-                "leaf": "GroupA:AcctB",
-                "holds_shares": True,
-            },
-        ).status_code
-        == 200
+def test_plug_and_account_share_an_open_date(client: TestClient):
+    """A snapshot pads the day before the date it asserts, so a plug opened after the account it
+    serves could not absorb the first one."""
+    r = client.post(
+        "/api/account",
+        json={"kind": "investment", "tier": "Taxable", "name": "AcctB", "date": "2026-03-01"},
     )
-    assert "Assets:Investments:TaxAdvantaged:GroupA:AcctB" in _ledger(client).active_accounts()
-    # lowercase-initial segment is a beancount parse error → rejected up front
-    bad = client.post(
-        "/api/account", json={"kind": "investment", "subtree": "Taxable", "leaf": "acctA"}
+    assert r.status_code == 200
+    led = _ledger(client)
+    account = "Assets:Investments:Taxable:AcctB"
+    assert _open_entry(led, account).date == dt.date(2026, 3, 1)
+    assert _open_entry(led, "Equity:Adjustments:Investments:Taxable:AcctB").date == dt.date(
+        2026, 3, 1
     )
-    assert bad.status_code == 422
+
+
+def test_a_name_composes_to_one_segment(client: TestClient):
+    """An account's name is a single path segment. The tax tier is the only segment above it, so a
+    typed colon has nothing to nest under and is refused rather than silently dropped."""
+    r = client.post(
+        "/api/account",
+        json={"kind": "investment", "tier": "TaxAdvantaged", "name": "group a:acct b"},
+    )
+
+    assert r.status_code == 422
+    assert "letters, numbers and spaces" in r.json()["detail"]
+
+
+def test_a_spaced_lowercase_name_still_lands_as_a_legal_account(client: TestClient):
+    r = client.post(
+        "/api/account",
+        json={"kind": "investment", "tier": "TaxAdvantaged", "name": "group a acct b"},
+    )
+
+    assert r.status_code == 200, r.text
+    assert r.json()["account"] == "Assets:Investments:TaxAdvantaged:GroupAAcctB"
+    assert "Assets:Investments:TaxAdvantaged:GroupAAcctB" in _ledger(client).active_accounts()
 
 
 # --- close ---
@@ -165,8 +155,8 @@ def test_close_legs_must_sum_to_value(client: TestClient):
 
 
 def test_close_without_price_is_422(client: TestClient):
-    _append_ledger(
-        client,
+    append_accounts(
+        client.ledger_dir,  # type: ignore[attr-defined]
         f"""
         2020-01-01 commodity {TICKER}
         2026-01-01 open {BROKERAGE}
@@ -188,17 +178,11 @@ def test_close_without_price_is_422(client: TestClient):
     assert "price" in r.json()["detail"]
 
 
-def test_close_usd_plan_splits_without_plug(client: TestClient):
-    # The API opens as of today, so fund/close on today or later.
+def test_close_dollar_only_investment_splits_and_closes_its_plug(client: TestClient):
+    # The account is opened as of today by default, so fund and close it on today or later.
     today = dt.date.today().isoformat()
     client.post(
-        "/api/account",
-        json={
-            "kind": "investment",
-            "subtree": "TaxAdvantaged",
-            "leaf": "PlanA",
-            "holds_shares": False,
-        },
+        "/api/account", json={"kind": "investment", "tier": "TaxAdvantaged", "name": "PlanA"}
     )
     account = "Assets:Investments:TaxAdvantaged:PlanA"
     client.post(
@@ -216,4 +200,25 @@ def test_close_usd_plan_splits_without_plug(client: TestClient):
     assert r.status_code == 200
     led = _ledger(client)
     assert account not in led.active_accounts()
+    assert "Equity:Adjustments:Investments:TaxAdvantaged:PlanA" not in led.active_accounts()
     assert led.balance(account) == 0
+
+
+def test_value_endpoint_reads_a_past_date(client: TestClient):
+    """A retirement's legs must sum to the value on the day it is dated, so the form has to be able
+    to ask for that day's figure rather than today's."""
+    _seed_shares(client)  # 10 shares @ 500 from 2026-01-05
+
+    before = client.get(
+        "/api/investment/value", params={"account": BROKERAGE, "date": "2026-01-04"}
+    )
+    after = client.get("/api/investment/value", params={"account": BROKERAGE, "date": "2026-01-06"})
+
+    assert before.json()["value"] == 0.0
+    assert after.json()["value"] == 5000.0
+
+
+def test_value_endpoint_rejects_a_malformed_date(client: TestClient):
+    r = client.get("/api/investment/value", params={"account": BROKERAGE, "date": "2026-13-40"})
+
+    assert r.status_code == 422

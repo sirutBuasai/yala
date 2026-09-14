@@ -14,13 +14,13 @@ describe('accountInfo', () => {
 		setAccountDirectory({
 			'Liabilities:CC:BankOfExampleCashRewards': {
 				name: 'BoE Cash Rewards',
-				institution: 'Bank of Example'
+				institution_name: 'Bank of Example'
 			}
 		});
 
 		expect(accountInfo('Liabilities:CC:BankOfExampleCashRewards')).toEqual({
 			name: 'BoE Cash Rewards',
-			institution: 'Bank of Example'
+			institution_name: 'Bank of Example'
 		});
 	});
 
@@ -37,7 +37,7 @@ describe('syncing with the loaded document', () => {
 	}
 
 	it('follows the data store, so a loader cannot forget to update it', () => {
-		data.set(doc({ 'Assets:Cash:BankA': { name: 'Bank A', institution: 'Bank of Example' } }));
+		data.set(doc({ 'Assets:Cash:BankA': { name: 'Bank A', institution_name: 'Bank of Example' } }));
 
 		expect(accountInfo('Assets:Cash:BankA')?.name).toBe('Bank A');
 	});

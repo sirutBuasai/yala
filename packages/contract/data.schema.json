@@ -2,13 +2,13 @@
   "$defs": {
     "AccountInfo": {
       "additionalProperties": false,
-      "description": "How one account presents itself: its display name and who holds it.\n\nBoth are resolved from ledger metadata by :mod:`yala.ledger.naming`, so the frontend looks a\nname up rather than deriving it. That keeps one implementation of the naming rule instead of\none per language, and it means the ledger stays the only place that decides what an account is\ncalled.",
+      "description": "One account's whole record: what it is called, what it is, and what it carries. Every field\nis resolved from ledger metadata by the backend, so the naming rule has one implementation\nrather than one per language.",
       "properties": {
         "name": {
           "title": "Name",
           "type": "string"
         },
-        "institution": {
+        "institution_name": {
           "anyOf": [
             {
               "type": "string"
@@ -18,7 +18,43 @@
             }
           ],
           "default": null,
-          "title": "Institution"
+          "title": "Institution Name"
+        },
+        "account_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Account Name"
+        },
+        "institution_alias": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Institution Alias"
+        },
+        "account_alias": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Account Alias"
         },
         "color": {
           "anyOf": [
@@ -31,6 +67,91 @@
           ],
           "default": null,
           "title": "Color"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "category",
+                "bank",
+                "card",
+                "investment",
+                "employer",
+                "deduction"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kind"
+        },
+        "tier": {
+          "anyOf": [
+            {
+              "enum": [
+                "Taxable",
+                "TaxAdvantaged"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tier"
+        },
+        "closed": {
+          "default": false,
+          "title": "Closed",
+          "type": "boolean"
+        },
+        "opened": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Opened"
+        },
+        "employer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Employer"
+        },
+        "labels": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "array"
+        },
+        "sweep_to": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sweep To"
         }
       },
       "required": [
@@ -39,10 +160,95 @@
       "title": "AccountInfo",
       "type": "object"
     },
+    "AccountKind": {
+      "additionalProperties": false,
+      "description": "What one kind of account is allowed to carry, so a form offers exactly the controls that\napply. Copied off :data:`yala.ledger.accounts.KINDS`, which the routes enforce and which\ndocuments each flag, so the form and the API cannot disagree.",
+      "properties": {
+        "name": {
+          "enum": [
+            "category",
+            "bank",
+            "card",
+            "investment",
+            "employer",
+            "deduction"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "prefix": {
+          "title": "Prefix",
+          "type": "string"
+        },
+        "tiered": {
+          "title": "Tiered",
+          "type": "boolean"
+        },
+        "plugged": {
+          "title": "Plugged",
+          "type": "boolean"
+        },
+        "named": {
+          "title": "Named",
+          "type": "boolean"
+        },
+        "product": {
+          "title": "Product",
+          "type": "boolean"
+        },
+        "scopable": {
+          "title": "Scopable",
+          "type": "boolean"
+        },
+        "labelled": {
+          "title": "Labelled",
+          "type": "boolean"
+        },
+        "drains": {
+          "title": "Drains",
+          "type": "boolean"
+        },
+        "splits": {
+          "title": "Splits",
+          "type": "boolean"
+        },
+        "sweeps": {
+          "title": "Sweeps",
+          "type": "boolean"
+        },
+        "sweep_target": {
+          "title": "Sweep Target",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "prefix",
+        "tiered",
+        "plugged",
+        "named",
+        "product",
+        "scopable",
+        "labelled",
+        "drains",
+        "splits",
+        "sweeps",
+        "sweep_target"
+      ],
+      "title": "AccountKind",
+      "type": "object"
+    },
     "AccountLists": {
       "additionalProperties": false,
-      "description": "The pickable account sets the entry forms and the Manage panels choose from.\n\nSnapshotted into ``data.json`` as well as served live from ``/api/accounts`` (both from one\nbuilder function) so the forms still render \u2014 and Manage still lists what you have \u2014 when the\nlocal API is down. Writes are refused by the frontend's single write guard, not by an absent\nlist: a form that vanishes reads as a missing feature rather than as an unreachable server.",
+      "description": "The pickable account sets the entry forms and the Manage panels choose from.\n\nSnapshotted into ``data.json`` as well as served live from ``/api/accounts`` so the forms still\nrender when the local API is down. Writes are then refused by the frontend's write guard rather\nthan by an absent list, since a form that vanishes reads as a missing feature.",
       "properties": {
+        "kinds": {
+          "items": {
+            "$ref": "#/$defs/AccountKind"
+          },
+          "title": "Kinds",
+          "type": "array"
+        },
         "spending_categories": {
           "items": {
             "type": "string"
@@ -57,20 +263,6 @@
           "title": "Funding Accounts",
           "type": "array"
         },
-        "employers": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Employers",
-          "type": "array"
-        },
-        "payroll_options": {
-          "items": {
-            "$ref": "#/$defs/PayrollOption"
-          },
-          "title": "Payroll Options",
-          "type": "array"
-        },
         "cash_accounts": {
           "items": {
             "type": "string"
@@ -78,11 +270,11 @@
           "title": "Cash Accounts",
           "type": "array"
         },
-        "credit_accounts": {
+        "card_accounts": {
           "items": {
             "type": "string"
           },
-          "title": "Credit Accounts",
+          "title": "Card Accounts",
           "type": "array"
         },
         "investment_accounts": {
@@ -90,6 +282,27 @@
             "type": "string"
           },
           "title": "Investment Accounts",
+          "type": "array"
+        },
+        "employers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Employers",
+          "type": "array"
+        },
+        "deduction_accounts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Deduction Accounts",
+          "type": "array"
+        },
+        "payroll_options": {
+          "items": {
+            "$ref": "#/$defs/PayrollOption"
+          },
+          "title": "Payroll Options",
           "type": "array"
         },
         "balance_accounts": {
@@ -115,13 +328,15 @@
         }
       },
       "required": [
+        "kinds",
         "spending_categories",
         "funding_accounts",
-        "employers",
-        "payroll_options",
         "cash_accounts",
-        "credit_accounts",
+        "card_accounts",
         "investment_accounts",
+        "employers",
+        "deduction_accounts",
+        "payroll_options",
         "balance_accounts",
         "liability_accounts",
         "sweeps"
@@ -639,7 +854,7 @@
     },
     "PayrollOption": {
       "additionalProperties": false,
-      "description": "One selectable paycheck line, scoped to an employer (null = offered by every employer).",
+      "description": "One selectable paycheck line, scoped to an employer (null = offered by every employer). A\ncontribution always names one, that meta being what marks its account payroll-contributable.",
       "properties": {
         "kind": {
           "enum": [
@@ -680,7 +895,7 @@
     },
     "SettingField": {
       "additionalProperties": false,
-      "description": "The spec behind one setting: how the form names it, bounds it, and explains it.\n\nSnapshotted alongside the values so the settings form renders with no API running \u2014 the same\nrule every other form follows. Writing one still needs the API, and the frontend's single write\nguard is what says so.",
+      "description": "The spec behind one setting: how the form names it, bounds it, and explains it. Snapshotted\nalongside the values so the settings form renders with no API running.",
       "properties": {
         "key": {
           "title": "Key",
@@ -738,7 +953,7 @@
     },
     "SettingsSection": {
       "additionalProperties": false,
-      "description": "Effective user settings: what the ledger states, else the built-in default.\n\nA null means the setting is unset and has no default \u2014 features depending on it stay hidden\nrather than guessing. Keys mirror :data:`yala.ledger.settings.SETTINGS`; ``test_settings``\nasserts the two can't drift.",
+      "description": "Effective user settings: what the ledger states, else the built-in default. A null means\nunset with no default, and features depending on it stay hidden rather than guessing.",
       "properties": {
         "swr": {
           "title": "Swr",

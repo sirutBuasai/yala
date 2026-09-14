@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from pathlib import Path
 
 import pytest
@@ -65,3 +66,23 @@ def test_account_meta_strips_source_location_and_keeps_declared_meta():
     assert "filename" not in k401 and "lineno" not in k401
     assert k401["employer"] == "Employer1"
     assert k401["labels"] == "Roth401k,Trad401k,AfterTax401k"
+
+
+def test_open_close_dates_keeps_the_earliest_of_each():
+    opened, closed = Ledger(FIXTURE_LEDGER).load().open_close_dates()
+
+    assert opened["Liabilities:CC:CardC"] == dt.date(2026, 8, 14)
+    assert closed["Liabilities:CC:CardD"] == dt.date(2024, 10, 1)
+    assert "Liabilities:CC:CardA" not in closed
+
+
+def test_active_accounts_can_be_read_as_of_a_past_date():
+    """The dated view is what reconciliation needs: an account closed since is still active in the
+    month it was swept."""
+    led = Ledger(FIXTURE_LEDGER).load()
+
+    assert "Liabilities:CC:CardD" in led.active_accounts(as_of=dt.date(2024, 1, 1))
+    assert "Liabilities:CC:CardD" not in led.active_accounts(as_of=dt.date(2025, 1, 1))
+    # an account is active from its own open date, not the day after
+    assert "Liabilities:CC:CardC" in led.active_accounts(as_of=dt.date(2026, 8, 14))
+    assert "Liabilities:CC:CardC" not in led.active_accounts(as_of=dt.date(2026, 8, 13))

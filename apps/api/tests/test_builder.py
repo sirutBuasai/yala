@@ -111,7 +111,7 @@ def test_account_directory_names_match_the_naming_rule():
 
     for account, info in meta.accounts.items():
         assert info.name == account_name(account, ledger.account_meta()[account])
-        assert info.institution == institution_of(ledger.account_meta()[account])
+        assert info.institution_name == institution_of(ledger.account_meta()[account])
 
 
 def test_income_helper_independently():

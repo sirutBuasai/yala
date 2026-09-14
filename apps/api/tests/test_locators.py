@@ -16,6 +16,8 @@ from yala.ledger.locators import (
     ledger_relative,
     locator_of,
     resolve_ledger_path,
+    source_file,
+    source_of,
 )
 
 FIXTURE_LEDGER = Path(__file__).parent / "fixtures" / "ledger" / "main.beancount"
@@ -58,3 +60,27 @@ def test_find_entry_raises_keyerror_on_unknown_locator():
     entries = Ledger(FIXTURE_LEDGER).load().entries
     with pytest.raises(KeyError):
         find_entry(entries, "id:does-not-exist")
+
+
+# --- where a directive sits ---
+
+
+def test_source_of_returns_the_file_and_line_a_directive_was_parsed_from():
+    entries = Ledger(FIXTURE_LEDGER).load().entries
+    txn = next(e for e in entries if isinstance(e, data.Transaction))
+
+    path, lineno = source_of(txn)
+
+    assert path.is_file()
+    # 1-based, so it indexes the file the way an editor numbers it
+    assert path.read_text().splitlines()[lineno - 1].startswith(txn.date.isoformat())
+
+
+def test_source_of_raises_for_a_directive_with_no_source():
+    """A synthesized directive — one a `pad` generated — was never parsed from a file."""
+    with pytest.raises(KeyError):
+        source_of(data.Close({}, None, "Assets:Cash:BankA"))
+
+
+def test_source_file_is_none_for_a_directive_with_no_source():
+    assert source_file(data.Close({}, None, "Assets:Cash:BankA")) is None

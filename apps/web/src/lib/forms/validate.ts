@@ -1,6 +1,8 @@
 // Shared client-side validation for every form that writes to the ledger. A fast first pass only —
 // the API re-validates authoritatively. Problems are collected and reported together.
 
+import { sentenceCase } from '$lib/utils/format';
+
 /** Mirrors the backend's `MAX_TEXT` / `MAX_LEAF` ceilings. */
 export const TEXT_MAX = 200;
 export const LEAF_MAX = 60;
@@ -10,28 +12,38 @@ function amountProblem(value: number, label: string, allowZero: boolean): string
 	return allowZero ? `${label} must be 0 or more.` : `${label} must be greater than 0.`;
 }
 
-/** Mirrors the backend's `_LEAF_RE`: a name is a single leaf segment. */
-const LEAF_RE = /^[A-Za-z0-9-]+$/;
-const ALNUM_RE = /[A-Za-z0-9]/;
+const NAME_RE = /^[A-Za-z0-9 ]+$/;
 
-/** Returns a message, or null when the name passes. */
-export function validateLeaf(leaf: string, noun: string): string | null {
-	if (!leaf) return `Enter ${/^[aeiou]/i.test(noun) ? 'an' : 'a'} ${noun}.`;
-	if (!LEAF_RE.test(leaf)) return 'Use only letters, numbers, or hyphens.';
-	if (leaf.length > LEAF_MAX) return `Use at most ${LEAF_MAX} characters.`;
+/** The character and length rules every typed name shares, worded the same whatever is being named. */
+function nameProblem(text: string, label: string, max: number): string | null {
+	const Label = sentenceCase(label);
+	if (!NAME_RE.test(text)) return `${Label} can only contain letters, numbers and spaces.`;
+	if (text.length > max) return `${Label} must be at most ${max} characters.`;
 	return null;
 }
 
 /**
+ * A contribution label. Shown as typed rather than composed into an account path, so it takes a
+ * space — but not whitespace at large: an account's labels are written as one comma-joined metadata
+ * value on a single ledger line, which a newline or a tab would break.
+ */
+export function validateLabel(value: string, noun = 'contribution option'): string | null {
+	const text = value.trim();
+	if (!text) return `${sentenceCase(noun)} is required.`;
+	// Named on its own, ahead of the general rule: a comma is what joins them, so it is the one
+	// character a person has a reason to expect would work.
+	if (text.includes(',')) return `${sentenceCase(noun)} cannot contain a comma.`;
+	return nameProblem(text, noun, LEAF_MAX);
+}
+
+/**
  * Validate a name typed as words. The backend composes the stored leaf from the letters and digits
- * alone, so a value with neither would compose to an empty account name.
+ * alone, so anything else would be dropped and the account stored under a name nobody typed.
  */
 export function validateName(value: string, label: string): string | null {
 	const text = value.trim();
 	if (!text) return `${label} is required.`;
-	if (!ALNUM_RE.test(text)) return `${label} needs at least one letter or number.`;
-	if (text.length > TEXT_MAX) return `${label} must be at most ${TEXT_MAX} characters.`;
-	return null;
+	return nameProblem(text, label, TEXT_MAX);
 }
 
 /** The same rules for a name the form allows to be left blank. */

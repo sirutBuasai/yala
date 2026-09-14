@@ -14,11 +14,6 @@ from yala.ledger.constants import EXPENSES
 from yala.ledger.locators import locator_of
 
 
-def leaf(account: str) -> str:
-    """The last segment of an account path."""
-    return account.split(":")[-1]
-
-
 @dataclass
 class Posting:
     account: str

@@ -3,6 +3,7 @@
 	// A row that can't be saved blocks (see `blockReason`); "Save" commits the rest and says what it
 	// skipped.
 	import type { DashboardData } from '$lib/data/types';
+	import { NO_VALUE } from '$lib/copy';
 	import { type AccountsInfo, live, logBalance, networthAt, updateBalance } from '$lib/data/load';
 	import { formatAccount, money, moneyExact } from '$lib/utils/format';
 	import { accountVar } from '$lib/utils/theme';
@@ -242,12 +243,12 @@
 											<span class="label">{formatAccount(row.account)}</span>
 										</span>
 									</td>
-									<td class="num muted">{prev == null ? '—' : moneyExact(prev)}</td>
-									<td class="num muted">{exp == null ? '—' : moneyExact(exp)}</td>
+									<td class="num muted">{prev == null ? NO_VALUE : moneyExact(prev)}</td>
+									<td class="num muted">{exp == null ? NO_VALUE : moneyExact(exp)}</td>
 									<td class="entrycell">
 										<AmountInput
 											prefix="$"
-											placeholder="—"
+											placeholder={NO_VALUE}
 											signed
 											disabled={busy}
 											ariaLabel={`Balance for ${formatAccount(row.account)}`}
@@ -255,11 +256,11 @@
 										/>
 									</td>
 									<td class="num" class:pos={value != null && prev != null && value - prev >= 0}
-										>{value == null || prev == null ? '—' : moneyExact(value - prev)}</td
+										>{value == null || prev == null ? NO_VALUE : moneyExact(value - prev)}</td
 									>
 									<td class="num">
 										{#if chk == null}
-											—
+											{NO_VALUE}
 										{:else if matches(row)}
 											<Badge tone="good" filled title="Matches the ledger">✓</Badge>
 										{:else if blockedRow(row)}

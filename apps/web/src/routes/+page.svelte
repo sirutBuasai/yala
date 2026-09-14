@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import '../app.css';
 	import { data, accounts, live, loadState, loadData, refreshData } from '$lib/data/load';
+	import { yearSpan } from '$lib/utils/format';
 	import HomeView from '$lib/views/home/Home.svelte';
 	import ActivityView from '$lib/views/activity/Activity.svelte';
 	import NetWorthView from '$lib/views/networth/NetWorth.svelte';
@@ -134,7 +135,7 @@
 				{#if $data}
 					{$live ? 'live' : 'snapshot'} ·
 					{$data.meta.transaction_count.toLocaleString()} txns ·
-					{$data.meta.years[0]}–{$data.meta.years[$data.meta.years.length - 1]}
+					{yearSpan($data.meta.years)}
 				{:else}
 					personal finance
 				{/if}

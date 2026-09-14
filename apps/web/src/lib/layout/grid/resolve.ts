@@ -1,8 +1,8 @@
 // Collision resolution: the whole geometry rule set, pure, with no DOM and no Svelte.
 //
-// Every collision resolves by pushing DOWN, never sideways — a 2D cascade has no termination
-// guarantee. A pane's top is the lowest of its authored top and the bottoms of the column-sharing
-// panes ahead of it, recomputed from scratch each render: the authored top is a floor, not a target.
+// Every collision resolves by pushing DOWN, never sideways: a 2D cascade has no termination guarantee. A
+// pane's top is the lowest of its authored top and the bottoms of the column-sharing panes ahead of it,
+// recomputed from scratch each render — the authored top is a floor, not a target.
 
 import { COLS, MIN_H, MIN_W } from './units';
 import type { PlacedPane, Rect, SizedPane } from './types';

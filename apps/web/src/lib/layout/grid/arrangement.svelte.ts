@@ -1,8 +1,6 @@
 // One board's state: the authored panes, the measurements a fitted pane needs, and the resolved
-// placement derived from both. Runes only, no DOM.
-//
-// What is persisted is exactly the authored pane — rectangle, height mode, ceiling — plus the array's
-// ORDER, which is the priority order the resolver breaks ties with. Displacement is never written.
+// placement derived from both. Runes only, no DOM. What persists is the authored pane plus the array's
+// ORDER, which is the priority order the resolver breaks ties with; displacement is never written.
 
 import { Pref, listOf, type Revive } from '$lib/utils/persist.svelte';
 import { assertNoOverlap, clampRect, resolve, boardRows } from './resolve';

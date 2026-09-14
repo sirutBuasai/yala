@@ -8,7 +8,7 @@ import { makeAccounts } from '$lib/data/__fixtures__/dashboard';
 const accounts = makeAccounts({
 	funding_accounts: ['Assets:Cash:BankA', 'Liabilities:CC:CardA'],
 	cash_accounts: ['Assets:Cash:BankA'],
-	credit_accounts: ['Liabilities:CC:CardA']
+	card_accounts: ['Liabilities:CC:CardA']
 });
 
 function okFetch() {
@@ -47,7 +47,7 @@ describe('TransferForm (add) — bill pay', () => {
 		const wide = makeAccounts({
 			...accounts,
 			cash_accounts: ['Assets:Cash:BankA'],
-			credit_accounts: [
+			funding_accounts: [
 				'Assets:Cash:BankA',
 				'Assets:Cash:BankB',
 				'Assets:Cash:Passthrough',

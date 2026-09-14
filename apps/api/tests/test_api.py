@@ -2,25 +2,8 @@
 
 from __future__ import annotations
 
-import shutil
-from pathlib import Path
-
 import pytest
 from fastapi.testclient import TestClient
-
-from yala import config
-from yala.api import app
-
-FIXTURE_LEDGER = Path(__file__).parent / "fixtures" / "ledger"
-
-
-@pytest.fixture
-def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    ledger_dir = tmp_path / "ledger"
-    shutil.copytree(FIXTURE_LEDGER, ledger_dir)
-    monkeypatch.setattr(config, "LEDGER_DIR", ledger_dir)
-    monkeypatch.setattr(config, "MAIN_LEDGER", ledger_dir / "main.beancount")
-    return TestClient(app)
 
 
 def test_get_data_returns_contract(client: TestClient):
@@ -34,13 +17,15 @@ def test_get_accounts_keys(client: TestClient):
     assert r.status_code == 200
     body = r.json()
     assert set(body) == {
+        "kinds",
         "spending_categories",
         "funding_accounts",
-        "employers",
-        "payroll_options",
         "cash_accounts",
-        "credit_accounts",
+        "card_accounts",
         "investment_accounts",
+        "employers",
+        "deduction_accounts",
+        "payroll_options",
         "balance_accounts",
         "liability_accounts",
         "sweeps",
@@ -49,6 +34,21 @@ def test_get_accounts_keys(client: TestClient):
     assert "Liabilities:CC:CardD" not in body["funding_accounts"]
     # only open employers surface; Employer2 was closed
     assert body["employers"] == ["Employer1"]
+
+
+def test_get_accounts_describes_what_each_kind_can_carry(client: TestClient):
+    """The form renders its controls from this, rather than restating which fields a kind has room
+    for and drifting from what the routes enforce."""
+    kinds = {k["name"]: k for k in client.get("/api/accounts").json()["kinds"]}
+
+    assert set(kinds) == {"category", "bank", "card", "investment", "employer", "deduction"}
+    assert kinds["investment"]["tiered"] and kinds["investment"]["splits"]
+    assert kinds["bank"]["plugged"] and kinds["bank"]["drains"]
+    # a cash account is named by institution alone; a card has a product half too
+    assert not kinds["bank"]["product"] and kinds["card"]["product"]
+    assert not kinds["card"]["plugged"] and not kinds["card"]["drains"]
+    assert kinds["deduction"]["scopable"] and not kinds["deduction"]["labelled"]
+    assert not any(kinds["category"][f] for f in ("tiered", "named", "scopable", "plugged"))
 
 
 def test_accounts_payroll_options_scoped_and_split(client: TestClient):
@@ -73,15 +73,23 @@ def test_accounts_payroll_options_scoped_and_split(client: TestClient):
     assert client.get("/api/data").json()["income"]["by_year"]
 
 
-def test_accounts_credit_accounts(client: TestClient):
+def test_accounts_funding_pool_mixes_cash_and_cards(client: TestClient):
+    """One pool for what a payment comes from or a refund lands in; the cards are listed on their
+    own beside it, so nothing has to filter the pool to find them."""
     body = client.get("/api/accounts").json()
-    credit = body["credit_accounts"]
-    assert "Assets:Cash:Wallet" in credit
-    # a payback can be a credit-card refund/credit
-    assert any(a.startswith("Liabilities:CC:") for a in credit)
-    assert "Liabilities:CC:CardA" in credit
+    funding = body["funding_accounts"]
+
+    assert "Assets:Cash:Wallet" in funding
+    assert "Liabilities:CC:CardA" in funding
     # the abandoned friends/receivable model is no longer a payback source
-    assert not any(a.startswith("Assets:Receivable:") for a in credit)
+    assert not any(a.startswith("Assets:Receivable:") for a in funding)
+
+    assert body["card_accounts"] == [
+        "Liabilities:CC:CardA",
+        "Liabilities:CC:CardB",
+        "Liabilities:CC:CardC",
+    ]
+    assert all(a.startswith("Assets:Cash:") for a in body["cash_accounts"])
 
 
 def test_post_transaction_is_visible_on_next_get(client: TestClient):
@@ -194,23 +202,55 @@ def test_txn_detail_when_funding_and_credit_share_account(client: TestClient):
     assert sorted(s["amount"] for s in d["credits"]) == [250.0, 500.0]
 
 
-def test_post_account_invalid_leaf_is_422(client: TestClient):
-    r = client.post("/api/account", json={"kind": "category", "leaf": "Bad Leaf"})
+def test_post_account_composes_a_typed_name_for_every_kind(client: TestClient):
+    """A space is accepted wherever a name is typed: the server composes the leaf, so a category is
+    named the same way a bank account is."""
+    r = client.post("/api/account", json={"kind": "category", "name": "Gift Cards"})
+
+    assert r.status_code == 200, r.text
+    assert r.json()["account"] == "Expenses:GiftCards"
+    # and it reads back as the words that were typed
+    assert r.json()["name"] == "Gift Cards"
+    assert "GiftCards" in client.get("/api/accounts").json()["spending_categories"]
+
+
+def test_post_account_composes_a_lowercase_name(client: TestClient):
+    """Beancount rejects a lowercase-initial account name outright, so composition is what makes a
+    casually typed name usable at all."""
+    r = client.post("/api/account", json={"kind": "employer", "name": "acme corp"})
+
+    assert r.status_code == 200, r.text
+    assert r.json()["account"] == "Income:Salary:AcmeCorp"
+
+
+def test_post_account_punctuation_only_name_is_422(client: TestClient):
+    r = client.post("/api/account", json={"kind": "category", "name": "!!!"})
+
     assert r.status_code == 422
+    assert "name can only contain" in r.json()["detail"]
+
+
+def test_post_account_name_carrying_punctuation_is_422(client: TestClient):
+    """Refused rather than composed: dropping the punctuation would open an account under a name
+    the person did not type."""
+    r = client.post("/api/account", json={"kind": "category", "name": "!Test"})
+
+    assert r.status_code == 422
+    assert "name can only contain" in r.json()["detail"]
 
 
 def test_post_account_declares_spending_category(client: TestClient):
-    r = client.post("/api/account", json={"kind": "category", "leaf": "Gifts"})
+    r = client.post("/api/account", json={"kind": "category", "name": "Gifts"})
     assert r.status_code == 200
     assert r.json()["account"] == "Expenses:Gifts"
     cats = client.get("/api/accounts").json()["spending_categories"]
     assert "Gifts" in cats
 
 
-def test_post_account_declares_funding_credit_and_cash(client: TestClient):
-    rc = client.post("/api/account", json={"kind": "funding_credit", "leaf": "CardZ"})
+def test_post_account_declares_card_and_bank(client: TestClient):
+    rc = client.post("/api/account", json={"kind": "card", "name": "CardZ"})
     assert rc.json()["account"] == "Liabilities:CC:CardZ"
-    rk = client.post("/api/account", json={"kind": "funding_cash", "leaf": "BankZ"})
+    rk = client.post("/api/account", json={"kind": "bank", "name": "BankZ"})
     assert rk.json()["account"] == "Assets:Cash:BankZ"
 
     funding = client.get("/api/accounts").json()["funding_accounts"]
@@ -224,8 +264,8 @@ def test_post_account_composes_the_leaf_from_institution_and_name(client: TestCl
     r = client.post(
         "/api/account",
         json={
-            "kind": "funding_credit",
-            "institution": "Bank of A",
+            "kind": "card",
+            "institution_name": "Bank of A",
             "account_name": "Cash Rewards",
         },
     )
@@ -240,10 +280,10 @@ def test_post_account_writes_naming_metadata_and_applies_the_alias(client: TestC
     r = client.post(
         "/api/account",
         json={
-            "kind": "funding_credit",
-            "institution": "Bank of A",
+            "kind": "card",
+            "institution_name": "Bank of A",
             "account_name": "Cash Rewards",
-            "bank_alias": "BoA",
+            "institution_alias": "BoA",
         },
     )
 
@@ -253,11 +293,11 @@ def test_post_account_writes_naming_metadata_and_applies_the_alias(client: TestC
     meta = client.get("/api/data").json()["meta"]["accounts"]
     entry = meta["Liabilities:CC:BankOfACashRewards"]
     assert entry["name"] == "BoA Cash Rewards"
-    assert entry["institution"] == "Bank of A"
+    assert entry["institution_name"] == "Bank of A"
 
 
 def test_post_account_cash_is_named_by_institution_alone(client: TestClient):
-    r = client.post("/api/account", json={"kind": "funding_cash", "institution": "Bank of A"})
+    r = client.post("/api/account", json={"kind": "bank", "institution_name": "Bank of A"})
 
     assert r.json()["account"] == "Assets:Cash:BankOfA"
     # Under the cap, so the alias would not fire even if one were declared.
@@ -270,10 +310,10 @@ def test_post_account_accepts_blank_optional_aliases(client: TestClient):
     r = client.post(
         "/api/account",
         json={
-            "kind": "funding_credit",
-            "institution": "Bank of A",
+            "kind": "card",
+            "institution_name": "Bank of A",
             "account_name": "Cash Rewards",
-            "bank_alias": "",
+            "institution_alias": "",
             "account_alias": "   ",
         },
     )
@@ -283,23 +323,24 @@ def test_post_account_accepts_blank_optional_aliases(client: TestClient):
 
     # A blank alias must not be written as an empty metadata value either.
     opened = client.get("/api/data").json()["meta"]["accounts"]["Liabilities:CC:BankOfACashRewards"]
-    assert opened["institution"] == "Bank of A"
+    assert opened["institution_name"] == "Bank of A"
 
 
-def test_post_account_keeps_a_quoted_institution_intact(client: TestClient):
-    """Naming metadata is written as text, so a quote is escaped rather than breaking the file."""
+def test_post_account_refuses_a_quoted_institution(client: TestClient):
+    """The institution names the account, so it is held to the name rule; the sink's escaping is
+    what keeps a quote arriving by any other route from breaking the file."""
     r = client.post(
         "/api/account",
-        json={"kind": "funding_cash", "institution": 'Bank "X" A'},
+        json={"kind": "bank", "institution_name": 'Bank "X" A'},
     )
 
-    assert r.status_code == 200, r.text
-    meta = client.get("/api/data").json()["meta"]["accounts"]
-    assert meta["Assets:Cash:BankXA"]["institution"] == 'Bank "X" A'
+    assert r.status_code == 422
+    assert "institution_name can only contain" in r.json()["detail"]
+    assert "Assets:Cash:BankXA" not in client.get("/api/data").json()["meta"]["accounts"]
 
 
 def test_post_account_needs_a_name_or_an_institution(client: TestClient):
-    r = client.post("/api/account", json={"kind": "funding_cash"})
+    r = client.post("/api/account", json={"kind": "bank"})
 
     assert r.status_code == 422
     assert "institution" in r.json()["detail"]
@@ -310,11 +351,10 @@ def test_post_account_investment_composes_the_leaf_and_keeps_employer_metadata(c
         "/api/account",
         json={
             "kind": "investment",
-            "subtree": "TaxAdvantaged",
-            "institution": "Brokerage A",
+            "tier": "TaxAdvantaged",
+            "institution_name": "Brokerage A",
             "account_name": "Retirement Plan",
-            "bank_alias": "BA",
-            "holds_shares": False,
+            "institution_alias": "BA",
             "employer": "Employer1",
         },
     )
@@ -326,19 +366,18 @@ def test_post_account_investment_composes_the_leaf_and_keeps_employer_metadata(c
     assert r.json()["name"] == "BA Retirement Plan"
 
     meta = client.get("/api/data").json()["meta"]["accounts"]
-    assert meta[account]["institution"] == "Brokerage A"
+    assert meta[account]["institution_name"] == "Brokerage A"
 
 
-def test_post_account_investment_without_an_institution_takes_the_leaf_verbatim(
+def test_post_account_investment_without_an_institution_uses_the_typed_name(
     client: TestClient,
 ):
     r = client.post(
         "/api/account",
         json={
             "kind": "investment",
-            "subtree": "Taxable",
-            "leaf": "BrokerageA",
-            "holds_shares": False,
+            "tier": "Taxable",
+            "name": "BrokerageA",
         },
     )
 
@@ -346,35 +385,37 @@ def test_post_account_investment_without_an_institution_takes_the_leaf_verbatim(
     assert r.json()["name"] == "Brokerage A"
 
 
-def test_post_account_investment_without_a_subtree_is_422(client: TestClient):
-    r = client.post("/api/account", json={"kind": "investment", "leaf": "BrokerageA"})
+def test_post_account_investment_without_a_tier_is_422(client: TestClient):
+    r = client.post("/api/account", json={"kind": "investment", "name": "BrokerageA"})
 
     assert r.status_code == 422
-    assert "subtree" in r.json()["detail"]
+    assert "tier" in r.json()["detail"]
 
 
 @pytest.mark.parametrize(
-    "field,value",
+    "kind,field,value",
     [
-        ("subtree", "Taxable"),
-        ("holds_shares", False),
-        ("employer", "EmployerA"),
-        ("labels", ["OptionA"]),
+        ("bank", "tier", "Taxable"),
+        ("bank", "employer", "EmployerA"),
+        ("bank", "labels", ["OptionA"]),
+        ("category", "institution_name", "Bank A"),
+        ("employer", "institution_alias", "E1"),
+        ("deduction", "labels", ["OptionA"]),
     ],
 )
-def test_post_account_investment_only_field_on_another_kind_is_422(
-    client: TestClient, field: str, value: object
+def test_post_account_field_the_kind_cannot_carry_is_422(
+    client: TestClient, kind: str, field: str, value: object
 ):
     """One open route means the body carries fields most kinds have no use for. Sending one is a
     mistake worth naming rather than dropping."""
-    r = client.post("/api/account", json={"kind": "funding_cash", "leaf": "BankZ", field: value})
+    r = client.post("/api/account", json={"kind": kind, "name": "ThingZ", field: value})
 
     assert r.status_code == 422
     assert field in r.json()["detail"]
 
 
 def test_close_category_removes_it_from_pickers(client: TestClient):
-    client.post("/api/account", json={"kind": "category", "leaf": "Gifts"})
+    client.post("/api/account", json={"kind": "category", "name": "Gifts"})
     assert "Gifts" in client.get("/api/accounts").json()["spending_categories"]
 
     r = client.post("/api/account/close", json={"account": "Expenses:Gifts"})
@@ -432,19 +473,17 @@ def test_closing_a_money_account_to_a_destination_moves_its_balance(client: Test
     assert "Assets:Cash:BankA" not in client.get("/api/accounts").json()["cash_accounts"]
 
 
-def test_close_non_closeable_account_is_422(client: TestClient):
-    r = client.post("/api/account/close", json={"account": "Income:Salary:Employer1"})
+def test_close_unmanaged_account_is_422(client: TestClient):
+    """An adjustment plug or an opening-balance account belongs to the ledger's plumbing, not to
+    anything the Manage tab offers to close."""
+    r = client.post("/api/account/close", json={"account": "Equity:Opening-Balances"})
     assert r.status_code == 422
+    assert "manageable" in r.json()["detail"]
 
 
-def test_close_deductions_account_is_422(client: TestClient):
-    r = client.post("/api/account/close", json={"account": "Expenses:Deductions:Tax"})
-    assert r.status_code == 422
-
-
-def test_close_unopened_category_is_422(client: TestClient):
+def test_close_unopened_category_is_404(client: TestClient):
     r = client.post("/api/account/close", json={"account": "Expenses:DoesNotExist"})
-    assert r.status_code == 422
+    assert r.status_code == 404
 
 
 def test_close_category_with_a_destination_is_422(client: TestClient):
@@ -484,7 +523,7 @@ def test_close_investment_with_a_destination_is_422(client: TestClient):
 
 
 def test_new_category_is_usable_by_a_transaction(client: TestClient):
-    client.post("/api/account", json={"kind": "category", "leaf": "Gifts"})
+    client.post("/api/account", json={"kind": "category", "name": "Gifts"})
     r = client.post(
         "/api/transaction",
         json={
@@ -878,7 +917,7 @@ def test_transaction_body_rejects_non_finite_amount(bad_amount: float):
     # defense in depth. Assert it at the model layer (HTTP's error-echo can't encode nan/inf).
     from pydantic import ValidationError
 
-    from yala.api import TransactionIn
+    from yala.routes.entries.transactions import TransactionIn
 
     with pytest.raises(ValidationError):
         TransactionIn(**_txn_body(amount=bad_amount))
@@ -1012,31 +1051,73 @@ def test_post_transaction_date_outside_the_window_is_422(client: TestClient, bad
 
 
 def test_post_account_name_too_long_is_422(client: TestClient):
-    r = client.post("/api/account", json={"kind": "category", "leaf": "A" * 61})
+    r = client.post("/api/account", json={"kind": "category", "name": "A" * 61})
     assert r.status_code == 422
-    assert "must be 1-60" in r.json()["detail"]
+    assert "at most 60 characters" in r.json()["detail"]
 
 
 def test_post_account_punctuation_only_institution_is_422(client: TestClient):
     """Composition keeps only letters and digits, so "!!!" would compose to an empty leaf; the
     failure is reported against the field the words came from."""
-    r = client.post("/api/account", json={"kind": "funding_cash", "institution": "!!!"})
+    r = client.post("/api/account", json={"kind": "bank", "institution_name": "!!!"})
     assert r.status_code == 422
-    assert r.json()["detail"] == "institution must contain at least one letter or number"
+    assert "institution_name can only contain" in r.json()["detail"]
 
 
-def test_post_account_investment_invalid_label_is_422(client: TestClient):
+def test_post_account_investment_label_may_contain_a_space(client: TestClient):
+    """A label is shown as typed rather than composed into a path, so it is not held to the leaf
+    rule."""
     r = client.post(
         "/api/account",
         json={
             "kind": "investment",
-            "subtree": "Taxable",
-            "leaf": "BrokerageB",
-            "labels": ["Option A"],
+            "tier": "Taxable",
+            "name": "BrokerageB",
+            "employer": "Employer1",
+            "labels": ["Roth 401k"],
         },
     )
+
+    assert r.status_code == 200, r.text
+    labels = {o["label"] for o in client.get("/api/accounts").json()["payroll_options"]}
+    assert "Roth 401k" in labels
+
+
+def test_post_account_investment_label_with_a_comma_is_422(client: TestClient):
+    """The ``labels`` meta is comma-joined, so a comma inside one would split it in two."""
+    r = client.post(
+        "/api/account",
+        json={
+            "kind": "investment",
+            "tier": "Taxable",
+            "name": "BrokerageC",
+            "labels": ["Roth,401k"],
+        },
+    )
+
     assert r.status_code == 422
-    assert "label must be" in r.json()["detail"]
+    assert "no comma" in r.json()["detail"]
+
+
+@pytest.mark.parametrize("label", ["Roth 401(k)", "Roth\n401k", "Roth\t401k", "Roth;401k"])
+def test_post_account_investment_label_takes_only_letters_digits_and_spaces(
+    client: TestClient, label: str
+):
+    """A label takes a space but no other whitespace and no punctuation: the labels an account
+    offers are written as one comma-joined value on a single ledger line, so a newline inside one
+    would end that line early."""
+    r = client.post(
+        "/api/account",
+        json={
+            "kind": "investment",
+            "tier": "Taxable",
+            "name": "BrokerageD",
+            "labels": [label],
+        },
+    )
+
+    assert r.status_code == 422
+    assert "letters, digits or spaces" in r.json()["detail"]
 
 
 def test_update_transaction_invalid_date_is_422(client: TestClient):

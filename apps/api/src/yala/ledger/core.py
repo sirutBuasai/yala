@@ -17,6 +17,7 @@ from beancount.core import data, prices
 from yala import config
 from yala.ledger.constants import INTERNAL_META
 from yala.ledger.entities import Posting, Transaction
+from yala.ledger.locators import scrub_paths
 from yala.money import round_cents
 
 if TYPE_CHECKING:
@@ -43,6 +44,7 @@ class Ledger:
         self._txn_cache: list[Transaction] | None = None
         self._meta_cache: dict[str, dict] | None = None
         self._price_cache = None
+        self._open_close_cache: tuple[dict[str, dt.date], dict[str, dt.date]] | None = None
 
     def load(self) -> "Ledger":
         if not self.path.exists():
@@ -55,11 +57,16 @@ class Ledger:
         self._txn_cache = None  # entries changed; drop the derived views
         self._meta_cache = None
         self._price_cache = None
+        self._open_close_cache = None
 
         if self.strict and errors:
             shown = "; ".join(str(getattr(e, "message", e)) for e in errors[:5])
             more = "" if len(errors) <= 5 else f" (+{len(errors) - 5} more)"
-            raise LedgerError(f"{len(errors)} error(s) loading {self.path}: {shown}{more}")
+            # Scrubbed: this reaches the browser as an HTTP error detail, and beancount stamps
+            # absolute paths into its own messages.
+            raise LedgerError(
+                scrub_paths(f"{len(errors)} error(s) loading {self.path}: {shown}{more}")
+            )
 
         return self
 
@@ -187,21 +194,42 @@ class Ledger:
             if isinstance(e, data.Open) and (prefix is None or e.account.startswith(prefix))
         )
 
-    def active_accounts(self, prefix: str | None = None) -> list[str]:
-        """Accounts opened without a later close as of today, optionally filtered by prefix."""
+    def open_close_dates(self) -> tuple[dict[str, dt.date], dict[str, dt.date]]:
+        """``(opened, closed)`` — the earliest declared date of each kind, per account.
+
+        The dates rather than the names, so a caller that has to explain *why* an account was
+        unavailable on a given day can name the day it opened or closed. Cached: the account lists
+        ask for them once per prefix, and :meth:`is_open` once per account.
+        """
+        if self._open_close_cache is not None:
+            return self._open_close_cache
+
         self._require()
-        today = dt.date.today()
-        opened: set[str] = set()
-        closed: set[str] = set()
+        opened: dict[str, dt.date] = {}
+        closed: dict[str, dt.date] = {}
 
         for e in self._entries:
-            if isinstance(e, data.Open) and e.date <= today:
-                opened.add(e.account)
-            elif isinstance(e, data.Close) and e.date <= today:
-                closed.add(e.account)
+            if isinstance(e, data.Open):
+                opened[e.account] = min(e.date, opened.get(e.account, e.date))
+            elif isinstance(e, data.Close):
+                closed[e.account] = min(e.date, closed.get(e.account, e.date))
 
-        active = opened - closed
-        return sorted(a for a in active if prefix is None or a.startswith(prefix))
+        self._open_close_cache = (opened, closed)
+        return self._open_close_cache
+
+    def active_accounts(self, prefix: str | None = None, as_of: dt.date | None = None) -> list[str]:
+        """Accounts opened without a later close as of ``as_of`` (today if None), optionally
+        filtered by prefix."""
+        on = as_of or dt.date.today()
+        opened, closed = self.open_close_dates()
+
+        return sorted(
+            a
+            for a, date in opened.items()
+            if date <= on
+            and not (a in closed and closed[a] <= on)
+            and (prefix is None or a.startswith(prefix))
+        )
 
     def is_open(self, account: str) -> bool:
         return account in self.active_accounts()

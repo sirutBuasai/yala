@@ -521,8 +521,8 @@ input[type='checkbox']:checked {
 .btn-danger {
 	background: var(--crit);
 }
-.btn-primary:hover,
-.btn-danger:hover {
+.btn-primary:hover:not(:disabled),
+.btn-danger:hover:not(:disabled) {
 	filter: brightness(1.08);
 }
 .btn-ghost {
@@ -555,12 +555,12 @@ input[type='checkbox']:checked {
 	font-weight: var(--fw-medium);
 	cursor: pointer;
 }
-.btn-danger-quiet:hover {
+.btn-danger-quiet:hover:not(:disabled) {
 	background: color-mix(in srgb, var(--crit) 12%, transparent);
 	border-color: var(--crit);
 }
-.btn-ghost:hover,
-.btn-cancel:hover {
+.btn-ghost:hover:not(:disabled),
+.btn-cancel:hover:not(:disabled) {
 	border-color: var(--lav);
 	color: var(--ink);
 }
@@ -580,11 +580,19 @@ input[type='checkbox']:checked {
 	border-radius: var(--radius-pill);
 	padding: var(--pad-pill);
 }
-.btn-accent:hover {
+.btn-accent:hover:not(:disabled) {
 	border-color: var(--lav);
 }
-.btn-accent:disabled {
-	opacity: 0.6;
+/* A disabled control has to LOOK disabled. Only `.btn-accent` used to say so, which left a disabled
+   Save indistinguishable from a live one — the hover rules above are held off for the same reason. */
+.btn-primary:disabled,
+.btn-danger:disabled,
+.btn-danger-quiet:disabled,
+.btn-cancel:disabled,
+.btn-ghost:disabled,
+.btn-accent:disabled,
+.btn-mini:disabled {
+	opacity: 0.5;
 	cursor: default;
 }
 /* small outline button for inline row/type actions */
@@ -598,7 +606,7 @@ input[type='checkbox']:checked {
 	cursor: pointer;
 	white-space: nowrap;
 }
-.btn-mini:hover {
+.btn-mini:hover:not(:disabled) {
 	border-color: var(--lav);
 	color: var(--ink);
 }
@@ -694,11 +702,20 @@ input[type='checkbox']:checked {
 	min-width: 0;
 	flex: 1;
 }
-.field label {
+.field label,
+.field > span {
 	font-size: var(--text-label);
 	color: var(--ink-3);
 	text-transform: uppercase;
 	letter-spacing: var(--ls-wide);
+}
+/* An aside inside a field label — "optional", "defaults to today" — reads as prose, not as another
+   small-caps label. */
+.field label i,
+.field > span i {
+	text-transform: none;
+	letter-spacing: 0;
+	opacity: 0.8;
 }
 /* Responsive row of form fields in an add/edit section, shared by every entry form so their
    field spacing stays identical. */

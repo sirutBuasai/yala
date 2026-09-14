@@ -1,11 +1,8 @@
 <script lang="ts">
-	// The grid itself, and the dot lattice under it. The grid runs at ZERO gap and every pane insets itself
-	// by half a gap instead (see `units.ts`), which lets the dots be one repeating gradient whose spacing
-	// IS the snap distance. The lattice is this container's background, never an overlay, so it reads
-	// through the gap lanes without sitting on content.
-	//
-	// Split from `Board` because it OWNS the arrangement: `Board` remounts it when the pane set changes,
-	// and a fresh instance re-reads the stored panes under the same key.
+	// The grid itself, and the dot lattice under it. The grid runs at ZERO gap, each pane insetting itself
+	// by half a gap instead (see `units.ts`), so the dots can be one repeating gradient whose spacing IS
+	// the snap distance. Split from `Board` because it OWNS the arrangement: `Board` remounts it when the
+	// pane set changes, and the fresh instance re-reads the stored panes.
 	import type { Snippet } from 'svelte';
 	import { Arrangement } from './arrangement.svelte';
 	import { BoardLabels } from './labels';

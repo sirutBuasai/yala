@@ -1,14 +1,13 @@
-"""Payroll option resolution — shared by read (income), write (sink), and the accounts API.
+"""Payroll option resolution, shared by read (income), write (sink), and the accounts API.
 
 Options are derived from account metadata so beancount stays the source of truth:
 
 * employers     — the leaf of an ``Income:Salary:*`` account.
-* deductions    — every ``Expenses:Deductions:*`` account, labelled by its leaf and offered for
-  every employer.
+* deductions    — every ``Expenses:Deductions:*`` account, labelled by its leaf. Its ``employer``
+  meta scopes it to one employer; without one it is offered by every employer.
 * contributions — an ``Assets:Investments:*`` account carrying an ``employer`` meta, whose presence
-  *is* the payroll-contributable marker and scopes it to that employer. Its comma-separated
-  ``labels`` meta lists the line items it offers; the chosen one is written as a ``label``
-  posting-meta on a leg to the *same* account, so a split never fragments the holding.
+  *is* the payroll-contributable marker. Its comma-separated ``labels`` meta lists the line items it
+  offers.
 """
 
 from __future__ import annotations
@@ -19,8 +18,9 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from yala.ledger.accounts import employer_scope, labels_of
 from yala.ledger.constants import DEDUCTIONS, INCOME, INVESTMENTS, SALARY
-from yala.ledger.entities import leaf
+from yala.ledger.paths import leaf
 
 if TYPE_CHECKING:
     from yala.ledger.core import Ledger
@@ -49,35 +49,38 @@ def employers(ledger: "Ledger") -> list[str]:
     return [leaf(a) for a in ledger.active_accounts(SALARY)]
 
 
-def _labels(meta: dict) -> list[str]:
-    """The line-item labels an account offers, from its comma-separated ``labels`` meta."""
-    return [s.strip() for s in (meta.get("labels") or "").split(",") if s.strip()]
-
-
 def contribution_label(meta: dict, account: str, label: str | None = None) -> str:
     """Label for a contribution leg: its ``label`` posting-meta if tagged, else the account's sole
     ``labels`` entry (an untagged single-label account), else the account leaf."""
     if label:
         return label
 
-    labels = _labels(meta)
+    labels = labels_of(meta)
     return labels[0] if len(labels) == 1 else leaf(account)
 
 
 def options(ledger: "Ledger") -> list[PayrollOption]:
-    """Every active payroll deduction/contribution option, unscoped (filter by employer)."""
+    """Every payroll deduction/contribution option on offer, across all employers (filter by one).
+
+    An option scoped to an employer who has been closed is dropped: no paycheck can be written
+    against that employer, so offering its line items would be offering something unusable.
+    """
     meta = ledger.account_meta()
+    active_employers = set(employers(ledger))
     out: list[PayrollOption] = []
 
     for account in ledger.active_accounts():
         m = meta.get(account, {})
+        employer = employer_scope(m)
+
+        if employer is not None and employer not in active_employers:
+            continue
 
         if account.startswith(DEDUCTIONS):
-            out.append(PayrollOption("deduction", leaf(account), account, None))  # generic
+            out.append(PayrollOption("deduction", leaf(account), account, employer))
 
-        elif account.startswith(INVESTMENTS) and m.get("employer"):
-            employer = m.get("employer")
-            for label in _labels(m) or [leaf(account)]:
+        elif account.startswith(INVESTMENTS) and employer:
+            for label in labels_of(m) or [leaf(account)]:
                 out.append(PayrollOption("contribution", label, account, employer))
 
     return out

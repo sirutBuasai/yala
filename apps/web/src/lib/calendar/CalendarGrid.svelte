@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Owns the ARIA grid semantics and arrow-key movement, but NOT which day is selected — the board
 	// above does, so the day panel and the grid always agree.
+	import { NO_VALUE } from '$lib/copy';
 	import { dayForKey, type WeekRow } from '$lib/calendar/days';
 	import { money, moneyCompact, MONTHS } from '$lib/utils/format';
 	import { monthOf, yearOf } from '$lib/utils/period';
@@ -65,7 +66,7 @@
 				{/if}
 			{/each}
 			<WeekTotal total={row.total} {peak} label={`Week total ${money(row.total)}`}>
-				{row.total ? moneyCompact(row.total) : '—'}
+				{row.total ? moneyCompact(row.total) : NO_VALUE}
 			</WeekTotal>
 		</div>
 	{/each}

@@ -22,9 +22,8 @@ export function series(
 
 // --- one measure over time ---
 //
-// Every monthly and yearly money series comes from these three, which read the SAME aggregates the
-// scalar metrics do (`measureValue`). A per-measure builder would be a second definition of the
-// measure, free to disagree with the figure beside it.
+// All three read the SAME aggregates the scalar metrics do (`measureValue`): a per-measure builder would
+// be a second definition of the measure, free to disagree with the figure beside it.
 
 /** The month keys a monthly series spans, with the labels to plot them under. */
 function monthAxis(data: DashboardData, year?: number): { keys: string[]; labels: string[] } {

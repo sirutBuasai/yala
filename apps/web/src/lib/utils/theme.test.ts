@@ -30,7 +30,7 @@ describe('accountVar', () => {
 
 	it('uses the colour the ledger declared, as-is', () => {
 		setAccountDirectory({
-			'Assets:Cash:BankA': { name: 'Bank A', institution: 'Bank of Example', color: '#de85c8' }
+			'Assets:Cash:BankA': { name: 'Bank A', institution_name: 'Bank of Example', color: '#de85c8' }
 		});
 
 		expect(accountVar('Assets:Cash:BankA')).toBe('#de85c8');
@@ -41,10 +41,10 @@ describe('accountVar', () => {
 		setAccountDirectory({
 			'Assets:Cash:CardB': {
 				name: 'Bank A',
-				institution: 'Bank of Example',
+				institution_name: 'Bank of Example',
 				color: '#4a6f9e'
 			},
-			'Liabilities:CC:BankB': { name: 'Card A', institution: 'Card Issuer', color: '#d94c4c' }
+			'Liabilities:CC:BankB': { name: 'Card A', institution_name: 'Card Issuer', color: '#d94c4c' }
 		});
 
 		expect(accountVar('Assets:Cash:CardB')).toBe('#4a6f9e');
@@ -53,8 +53,16 @@ describe('accountVar', () => {
 
 	it('colours two accounts at one institution as one family', () => {
 		setAccountDirectory({
-			'Assets:Cash:BankA': { name: 'Bank A', institution: 'Bank of Example', color: '#639cc3' },
-			'Liabilities:CC:CardA': { name: 'Card A', institution: 'Bank of Example', color: '#639cc3' }
+			'Assets:Cash:BankA': {
+				name: 'Bank A',
+				institution_name: 'Bank of Example',
+				color: '#639cc3'
+			},
+			'Liabilities:CC:CardA': {
+				name: 'Card A',
+				institution_name: 'Bank of Example',
+				color: '#639cc3'
+			}
 		});
 
 		expect(accountVar('Liabilities:CC:CardA')).toBe(accountVar('Assets:Cash:BankA'));
@@ -65,7 +73,7 @@ describe('accountVar', () => {
 			// An employer is not held anywhere, so it has no institution and no colour.
 			'Income:Salary:Employer1': { name: 'Employer 1' },
 			// An institution with no colour declared in the ledger yet.
-			'Assets:Cash:BankB': { name: 'Bank B', institution: 'Second Example Bank' }
+			'Assets:Cash:BankB': { name: 'Bank B', institution_name: 'Second Example Bank' }
 		});
 
 		expect(accountVar('Income:Salary:Employer1')).toBe('var(--inst-neutral)');

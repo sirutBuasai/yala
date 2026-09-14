@@ -4,6 +4,7 @@
 	// at narrower widths, which pulled the pane grid off its own dot lattice.
 	import { page } from '$app/stores';
 	import { fly, fade } from 'svelte/transition';
+	import { CLOSE_MENU } from '$lib/copy';
 	import { focusTrap } from '$lib/utils/focusTrap';
 	import { dur } from '$lib/utils/motion';
 	import Close from '$lib/icons/Close.svelte';
@@ -37,7 +38,7 @@
 {#if open}
 	<button
 		class="backdrop"
-		aria-label="Close menu"
+		aria-label={CLOSE_MENU}
 		transition:fade={{ duration: dur(150) }}
 		onclick={close}
 	></button>
@@ -53,7 +54,7 @@
 		<div class="head">
 			<span id="sidebar-title" class="serif title">Yala</span>
 			<!-- data-dismiss so the focus trap opens the sidebar on its first LINK, not on close. -->
-			<button class="close iconbtn" data-dismiss aria-label="Close menu" onclick={close}>
+			<button class="close iconbtn" data-dismiss aria-label={CLOSE_MENU} onclick={close}>
 				<Close size={16} />
 			</button>
 		</div>

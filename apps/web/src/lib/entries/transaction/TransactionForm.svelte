@@ -3,7 +3,7 @@
 	// saves an update or deletes it.
 	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data/load';
-	import { deleteTransaction, getJson, postJson } from '$lib/data/load';
+	import { deleteTransaction, fetchEntry, postJson } from '$lib/data/load';
 	import { formatAccount, money } from '$lib/utils/format';
 	import { lastCategory, lastEntryDate, lastFundingAccount, seed } from '$lib/utils/editPrefs';
 	import { problems, TEXT_MAX, validateRows } from '$lib/forms/validate';
@@ -51,13 +51,9 @@
 		// Edit mode: prefill from the ledger entry (its `amount` is the total bill).
 		const l = locator;
 		(async () => {
-			const {
-				ok,
-				data: s,
-				error
-			} = await getJson<Record<string, any>>(`/api/transaction?locator=${encodeURIComponent(l)}`);
-			if (!ok) {
-				msg = error ?? 'load failed';
+			const { entry: s, error } = await fetchEntry('transaction', l);
+			if (!s) {
+				msg = error!;
 				err = true;
 				return;
 			}
@@ -179,7 +175,7 @@
 </FormSection>
 
 <FormSection label="Reimbursements">
-	<Credits bind:credits creditAccounts={accounts.credit_accounts} />
+	<Credits bind:credits creditAccounts={accounts.funding_accounts} />
 </FormSection>
 
 <EntryFooter

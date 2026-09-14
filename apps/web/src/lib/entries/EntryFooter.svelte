@@ -2,6 +2,7 @@
 	// Shared footer for the entry forms: a running summary left, and right either an Add button
 	// (add mode) or Save + Delete (edit mode).
 	import type { Snippet } from 'svelte';
+	import { SAVE_CHANGES } from '$lib/copy';
 	import DeleteConfirm from '$lib/ui/DeleteConfirm.svelte';
 
 	interface Props {
@@ -46,7 +47,7 @@
 		{#if msg}<span class="edit-msg" class:err role={err ? 'alert' : 'status'}>{msg}</span>{/if}
 		{#if editing}
 			<div class="actions">
-				<button class="btn-primary" onclick={onsubmit}>Save changes</button>
+				<button class="btn-primary" onclick={onsubmit}>{SAVE_CHANGES}</button>
 				<DeleteConfirm
 					label={deleteLabel}
 					question={deleteQuestion}

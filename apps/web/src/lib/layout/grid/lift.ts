@@ -1,10 +1,9 @@
 // What a drag does to the board, beyond what the push rule can say on its own. Pure, no DOM.
 //
 // The dragged pane is a piston: it travels a row at a time, taking whatever it TOUCHES in the direction
-// of travel. Pushing is the ONLY thing that moves another pane — nothing is towed behind one, so a pane
-// with slack in front of it is free there and one the piston leaves behind keeps the position the user
-// gave it, gap and all. Everything re-derives from the board as the PRESS found it, never from the board
-// the gesture is already editing.
+// of travel. Pushing is the ONLY thing that moves another pane — nothing is towed — so a pane the piston
+// leaves behind keeps the position the user gave it, gap and all. Everything re-derives from the board as
+// the PRESS found it, never from the board the gesture is already editing.
 
 import { clampRect, sharesColumns } from './resolve';
 import type { AuthoredPane, PlacedPane } from './types';

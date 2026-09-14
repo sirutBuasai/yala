@@ -7,6 +7,7 @@
 	// One KPI. A card of its own and a section of a merged card are the same thing, so this is the only
 	// component that renders a figure.
 	import type { DashboardData } from '$lib/data/types';
+	import { NO_VALUE } from '$lib/copy';
 	import type { Scalar, Series } from '$lib/data/primitives';
 	import { build } from '$lib/data/catalog';
 	import { deltaLabel, formatDelta, formatUnit } from '$lib/data/primitives';
@@ -53,7 +54,7 @@
 	// A tone means the sign carries the meaning (see `Scalar.tone`), so the sign is shown.
 	const value = $derived(
 		scalar.value === null
-			? '—'
+			? NO_VALUE
 			: scalar.tone
 				? formatDelta(scalar.value, scalar.unit)
 				: formatUnit(scalar.value, scalar.unit)

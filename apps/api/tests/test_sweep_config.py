@@ -3,41 +3,21 @@ flow, exercised through the API path."""
 
 from __future__ import annotations
 
-import shutil
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-from yala import config
-from yala.api import app
-from yala.ledger import Ledger
+from tests.conftest import BANK_A, BANK_B, FIXTURE_LEDGER, PASSTHROUGH, SAVINGS, load_ledger
 from yala.ledger.sweep import sweep_payee
 
-FIXTURE_LEDGER = Path(__file__).parent / "fixtures" / "ledger"
-
-PASSTHROUGH = "Assets:Cash:Passthrough"
 # Derived as production does, so the test cannot drift from the payee actually written.
 SWEEP_PAYEE = sweep_payee(PASSTHROUGH)
-SAVINGS = "Assets:Cash:Savings"
-BANK_A = "Assets:Cash:BankA"
-BANK_B = "Assets:Cash:BankB"
-
-
-@pytest.fixture
-def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    ledger_dir = tmp_path / "ledger"
-    shutil.copytree(FIXTURE_LEDGER, ledger_dir)
-    monkeypatch.setattr(config, "LEDGER_DIR", ledger_dir)
-    monkeypatch.setattr(config, "MAIN_LEDGER", ledger_dir / "main.beancount")
-    c = TestClient(app)
-    c.ledger_dir = ledger_dir  # type: ignore[attr-defined]
-    return c
 
 
 def _balance(client: TestClient, account: str) -> Decimal:
-    led = Ledger(client.ledger_dir / "main.beancount").load()  # type: ignore[attr-defined]
+    led = load_ledger(client.ledger_dir)  # type: ignore[attr-defined]
     return sum(
         (p.amount for t in led.transactions() for p in t.postings if p.account == account),
         Decimal(0),
@@ -187,6 +167,8 @@ def test_failing_passthrough_is_isolated_and_surfaced(
 ):
     # Two passthroughs, one failing: the loop must still reconcile the other, then raise an
     # aggregated error naming the failure.
+    import shutil
+
     import yala.ledger.sweep as sweep
     from yala.sink import FileLedgerSink
 
@@ -211,3 +193,34 @@ def test_failing_passthrough_is_isolated_and_surfaced(
 
     assert set(seen) == {PASSTHROUGH, BANK_A}  # both attempted despite the first failing
     assert PASSTHROUGH in str(ei.value)
+
+
+def test_a_hand_entered_transfer_between_the_pair_is_not_claimed_as_the_sweep(client: TestClient):
+    """Reconcile owns the entries it wrote and no others. Matched on the account pair alone, a real
+    transfer between a passthrough and its destination reads as the sweep and is deleted."""
+    client.post(
+        "/api/transaction",
+        json={
+            "date": "2026-02-10",
+            "payee": "spend",
+            "amount": 30.0,
+            "category": "Takeouts",
+            "funding_account": PASSTHROUGH,
+        },
+    )
+    r = client.post(
+        "/api/transfer",
+        json={
+            "date": "2026-02-11",
+            "from_account": SAVINGS,
+            "to_account": PASSTHROUGH,
+            "amount": 500.0,
+            "payee": "top up",
+        },
+    )
+    assert r.status_code == 200, r.text
+
+    transfers = client.get("/api/data").json()["months"]["2026-02"]["transfers"]
+    kept = [t for t in transfers if t["payee"] == "top up"]
+
+    assert len(kept) == 1 and kept[0]["amount"] == 500.0

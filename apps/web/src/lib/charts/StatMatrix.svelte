@@ -7,6 +7,7 @@
 	// badge, which is where the colour goes. A caption the whole row shares is said under the row label
 	// rather than repeated in every cell.
 	import type { DashboardData } from '$lib/data/types';
+	import { NO_VALUE } from '$lib/copy';
 	import type { Scope } from '$lib/data/scope';
 	import { build } from '$lib/data/catalog';
 	import { deltaLabel, formatUnit, type Scalar } from '$lib/data/primitives';
@@ -38,7 +39,7 @@
 				const d = s.delta;
 				return {
 					key: c.id,
-					text: s.value === null ? '—' : formatUnit(s.value, s.unit),
+					text: s.value === null ? NO_VALUE : formatUnit(s.value, s.unit),
 					// Read to text here: a row's cells are compared for agreement below, and two notes that say
 					// the same thing arrive as two objects.
 					note: labelText(s.note),

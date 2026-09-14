@@ -14,6 +14,27 @@ class NoopResizeObserver implements ResizeObserver {
 }
 globalThis.ResizeObserver ??= NoopResizeObserver;
 
+// jsdom implements no Web Animations API, and Svelte drives every transition through
+// `element.animate` — without this, rendering anything that transitions in (an overlay) throws. The
+// stub reports itself already finished: a test asserts what a panel shows, never how it arrived.
+Element.prototype.animate ??= () =>
+	({
+		cancel() {},
+		play() {},
+		pause() {},
+		finish() {},
+		reverse() {},
+		currentTime: 0,
+		startTime: 0,
+		playbackRate: 1,
+		playState: 'finished',
+		finished: Promise.resolve(),
+		onfinish: null,
+		effect: { getComputedTiming: () => ({}), updateTiming() {} },
+		addEventListener() {},
+		removeEventListener() {}
+	}) as unknown as Animation;
+
 // Mark the API as reachable. Without this the SINGLE write guard in `load.ts` refuses every POST
 // before it is made, and any test that asserts on a request body sees no request at all.
 beforeEach(() => {

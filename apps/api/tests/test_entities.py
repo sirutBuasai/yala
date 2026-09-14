@@ -1,22 +1,17 @@
-"""Entity wrappers (``Posting``/``Transaction``) and the ``leaf`` account-name helper."""
+"""Entity wrappers: what a ``Posting``/``Transaction`` derives from its own postings and meta."""
 
 from __future__ import annotations
 
 import datetime as dt
 from decimal import Decimal
 
-from yala.ledger.entities import Posting, Transaction, leaf
+from yala.ledger.entities import Posting, Transaction
 
 
 def _txn(postings, meta=None, flag="*"):
     return Transaction(
         date=dt.date(2025, 8, 2), payee="example", postings=postings, meta=meta or {}, flag=flag
     )
-
-
-def test_leaf_returns_last_segment():
-    assert leaf("Assets:Cash:BankB") == "BankB"
-    assert leaf("Solo") == "Solo"
 
 
 def test_source_is_the_most_negative_non_expense_posting():

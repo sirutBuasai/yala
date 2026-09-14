@@ -13,17 +13,12 @@ import sys
 from decimal import Decimal
 from pathlib import Path
 
-from yala.ledger import Ledger, payroll
-from yala.ledger.constants import CASH, CREDIT_CARDS, INVESTMENTS, SWEEP_META
+from yala.catalog import account_directory, account_lists, setting_fields
+from yala.ledger import Ledger
 from yala.ledger.income import Paycheck
-from yala.ledger.institutions import colors as institution_colors
-from yala.ledger.naming import account_name, institution_of
-from yala.ledger.settings import SETTINGS
 from yala.money import money
 from yala.schema import (
     SCHEMA_VERSION,
-    AccountInfo,
-    AccountLists,
     CategoryAmount,
     DashboardData,
     DateRange,
@@ -39,8 +34,6 @@ from yala.schema import (
     NetWorthSnapshot,
     Overview,
     PaycheckOut,
-    PayrollOption,
-    SettingField,
     SettingsSection,
     Transfer,
     Txn,
@@ -94,73 +87,6 @@ def _transfer_out(t) -> Transfer:
     )
 
 
-def _accounts(ledger) -> dict[str, AccountInfo]:
-    """The account directory: display name, institution and colour per declared account.
-
-    Closed accounts are included — they still appear in historical rows, and a directory with gaps
-    would force callers to keep a fallback naming rule of their own.
-    """
-    account_meta = ledger.account_meta()
-    palette = institution_colors(ledger.entries)
-
-    def info(account: str, meta: dict) -> AccountInfo:
-        institution = institution_of(meta)
-
-        return AccountInfo(
-            name=account_name(account, meta),
-            institution=institution,
-            color=palette.get(institution) if institution else None,
-        )
-
-    return {account: info(account, meta) for account, meta in sorted(account_meta.items())}
-
-
-def account_lists(ledger) -> AccountLists:
-    """The pickable account sets, for the forms and the Manage panels.
-
-    Shared by the snapshot and by the accounts endpoint, which the frontend treats as
-    interchangeable, so the two must not be able to describe different sets.
-    """
-    cash = ledger.active_accounts(CASH)
-    funding = sorted(cash + ledger.active_accounts(CREDIT_CARDS))
-
-    return AccountLists(
-        spending_categories=ledger.spending.categories(),
-        funding_accounts=funding,
-        employers=payroll.employers(ledger),
-        payroll_options=[
-            PayrollOption(kind=o.kind, label=o.label, employer=o.employer, account=o.account)
-            for o in payroll.options(ledger)
-        ],
-        cash_accounts=cash,
-        credit_accounts=funding,
-        investment_accounts=ledger.active_accounts(INVESTMENTS),
-        balance_accounts=ledger.net_worth.loggable_accounts(),
-        liability_accounts=ledger.net_worth.loggable_liabilities(),
-        sweeps={a: m[SWEEP_META] for a, m in ledger.account_meta().items() if m.get(SWEEP_META)},
-    )
-
-
-def setting_fields() -> list[SettingField]:
-    """The spec behind every setting, as the form needs it.
-
-    Derived from :data:`yala.ledger.settings.SETTINGS`, and shared by the snapshot and the settings
-    endpoint for the same reason as :func:`account_lists`.
-    """
-    return [
-        SettingField(
-            key=s.key,
-            label=s.label,
-            kind=s.kind,
-            min=float(s.minimum),
-            max=float(s.maximum),
-            default=None if s.default is None else float(s.default),
-            help=s.help,
-        )
-        for s in SETTINGS
-    ]
-
-
 def _meta(ledger, spending, income, categories, all_years, all_months, networth_has_data) -> Meta:
     date_range = spending.date_range()
 
@@ -174,7 +100,7 @@ def _meta(ledger, spending, income, categories, all_years, all_months, networth_
             else None
         ),
         categories=categories,
-        accounts=_accounts(ledger),
+        accounts=account_directory(ledger),
         domains=Domains(
             spending=spending.count() > 0,
             income=len(income.paychecks()) > 0,

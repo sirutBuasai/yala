@@ -15,6 +15,31 @@ describe('DatePicker', () => {
 		expect(screen.getByLabelText('Date')).toHaveTextContent('Jan 15, 2025');
 	});
 
+	// Blank means today everywhere this is used — every route dates an entry today when none is sent —
+	// so the empty state says today's date rather than spelling out a format nobody types in here.
+	it('reads as today when empty and given no placeholder', () => {
+		const now = new Date();
+		const MONTHS = [
+			'Jan',
+			'Feb',
+			'Mar',
+			'Apr',
+			'May',
+			'Jun',
+			'Jul',
+			'Aug',
+			'Sep',
+			'Oct',
+			'Nov',
+			'Dec'
+		];
+		const today = `${MONTHS[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+
+		render(DatePicker, { props: { value: '', ariaLabel: 'Date' } });
+
+		expect(screen.getByLabelText('Date')).toHaveTextContent(today);
+	});
+
 	it('opens a calendar on the value’s month and navigates months', async () => {
 		render(DatePicker, { props: { value: '2025-01-15', ariaLabel: 'Date' } });
 		await fireEvent.click(screen.getByLabelText('Date'));

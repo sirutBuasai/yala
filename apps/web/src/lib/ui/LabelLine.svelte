@@ -1,9 +1,7 @@
 <script lang="ts">
-	// One card label, and the pencil that renames it in place. Inline content only — the caller keeps its
-	// own heading or paragraph, so the field inherits exactly the type it is replacing.
-	//
-	// Only the words are editable. A label's derived half sits in front of the field as ghost text, so
-	// what you are typing reads where it will render, and the period or count cannot be typed over.
+	// One card label, and the pencil that renames it in place. Inline content only, so the field inherits
+	// exactly the type it replaces. Only the words are editable: a label's derived half sits in front of
+	// the field as ghost text, which is what keeps the period or count from being typed over.
 	import type { Snippet } from 'svelte';
 	import Pencil from '$lib/icons/Pencil.svelte';
 	import { labelGhost, labelText, type Label } from './label';

@@ -14,8 +14,6 @@ ASSETS = "Assets:"
 LIABILITIES = "Liabilities:"
 EQUITY = "Equity:"
 INVESTMENTS = ASSETS + "Investments:"
-INVEST_TAXABLE = INVESTMENTS + "Taxable:"
-INVEST_TAX_ADVANTAGED = INVESTMENTS + "TaxAdvantaged:"
 CASH = ASSETS + "Cash:"
 CREDIT_CARDS = LIABILITIES + "CC:"
 # Per-account plugs that absorb the delta when a balance is re-asserted.
@@ -32,6 +30,16 @@ BALANCE = "balance"
 PAD = "pad"
 
 SWEEP_META = "sweep_to"
+#: Employer an account is scoped to. On an investment it also marks the account payroll-
+#: contributable; absent, the account serves every employer.
+EMPLOYER_META = "employer"
+#: Comma-joined contribution labels an investment account offers.
+LABELS_META = "labels"
+#: Which of those labels a contribution posting was made under.
+LABEL_META = "label"
+#: Written on a ``close`` a cascade produced, naming what triggered it, so reopening that account
+#: undoes exactly the closes it caused and leaves an independent one alone.
+CLOSED_WITH_META = "closed_with"
 
 # Source-location keys beancount injects onto every directive.
 INTERNAL_META = frozenset({"filename", "lineno"})

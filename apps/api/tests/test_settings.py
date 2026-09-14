@@ -3,30 +3,19 @@
 from __future__ import annotations
 
 import datetime as dt
-import shutil
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-from yala import config
-from yala.api import app
 from yala.builder import build
 from yala.ledger import Ledger
 from yala.ledger.settings import SETTINGS, SETTINGS_BY_KEY, coerce
 from yala.schema import SettingsSection
 from yala.sink import SETTINGS_FILE, FileLedgerSink
 
-FIXTURE_LEDGER = Path(__file__).parent / "fixtures" / "ledger"
 JAN = dt.date(2026, 1, 1)
-
-
-@pytest.fixture
-def ledger_dir(tmp_path: Path) -> Path:
-    dst = tmp_path / "ledger"
-    shutil.copytree(FIXTURE_LEDGER, dst)
-    return dst
 
 
 def _load(ledger_dir: Path) -> Ledger:
@@ -172,15 +161,6 @@ def test_builder_emits_effective_settings(ledger_dir: Path):
 
 
 # --- the endpoint ---
-
-
-@pytest.fixture
-def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    ledger_dir = tmp_path / "ledger"
-    shutil.copytree(FIXTURE_LEDGER, ledger_dir)
-    monkeypatch.setattr(config, "LEDGER_DIR", ledger_dir)
-    monkeypatch.setattr(config, "MAIN_LEDGER", ledger_dir / "main.beancount")
-    return TestClient(app)
 
 
 def test_get_settings_returns_values_and_specs(client: TestClient):

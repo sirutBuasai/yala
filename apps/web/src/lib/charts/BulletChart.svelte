@@ -2,6 +2,7 @@
 	// Bullet graphs (Few): a value bar, the threshold it's judged against as a marker, and optional
 	// qualitative bands shaded behind. Every row is scaled to its own maximum, so rows measured
 	// differently sit in one set without one crushing another.
+	import { NO_VALUE } from '$lib/copy';
 	import { formatUnit, type Unit } from '$lib/data/primitives';
 	import { labelText, type Label } from '$lib/ui/label';
 
@@ -38,7 +39,7 @@
 			<div class="head">
 				<span class="name">{row.label}</span>
 				<span class="figure" class:reached={reached(row)}>
-					{row.value == null ? '—' : formatUnit(row.value, row.unit)}
+					{row.value == null ? NO_VALUE : formatUnit(row.value, row.unit)}
 					<span class="of">/ {formatUnit(row.target, row.unit)}</span>
 				</span>
 			</div>

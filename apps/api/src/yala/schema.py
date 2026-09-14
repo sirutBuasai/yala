@@ -9,11 +9,14 @@ from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict
 
-#: The contract's version, declared once. The model annotates the field with the ``Literal`` (so a
-#: document carrying any other version fails validation) and every writer sends
-#: :data:`SCHEMA_VERSION`, which is read back off that same literal.
+#: Declared once as a ``Literal``, so a document carrying any other version fails validation.
 SchemaVersion = Literal[1]
 SCHEMA_VERSION: int = get_args(SchemaVersion)[0]
+
+#: Spelled once for the whole contract. ``test_schema`` asserts they cannot drift from
+#: :data:`yala.ledger.accounts.KINDS` / ``TIERS``.
+KindName = Literal["category", "bank", "card", "investment", "employer", "deduction"]
+TierName = Literal["Taxable", "TaxAdvantaged"]
 
 
 class _Base(BaseModel):
@@ -36,20 +39,25 @@ class Domains(_Base):
 
 
 class AccountInfo(_Base):
-    """How one account presents itself: its display name and who holds it.
+    """One account's whole record: what it is called, what it is, and what it carries. Every field
+    is resolved from ledger metadata by the backend, so the naming rule has one implementation
+    rather than one per language."""
 
-    Both are resolved from ledger metadata by :mod:`yala.ledger.naming`, so the frontend looks a
-    name up rather than deriving it. That keeps one implementation of the naming rule instead of
-    one per language, and it means the ledger stays the only place that decides what an account is
-    called.
-    """
-
-    name: str  # display name, already shortened if the real name overran the cap
-    institution: str | None = None  # declared holder; null for employers and untagged accounts
-    # The holding institution's colour as the ledger declares it, a `#rrggbb` literal (see
-    # :mod:`yala.ledger.institutions`). Used as-is in both themes. Null when nothing was declared,
-    # and the UI falls back to a neutral swatch.
-    color: str | None = None
+    name: str  # display name, already shortened if the composed name overran the cap
+    # The name in the parts it was typed in, and the short form of each. Null where the kind has no
+    # such part, or for an account declared without them.
+    institution_name: str | None = None
+    account_name: str | None = None
+    institution_alias: str | None = None
+    account_alias: str | None = None
+    color: str | None = None  # the institution's `#rrggbb`, used as-is in both themes
+    kind: KindName | None = None  # null for an account this app does not manage
+    tier: TierName | None = None  # investments only
+    closed: bool = False
+    opened: str | None = None  # "YYYY-MM-DD"
+    employer: str | None = None  # scoping employer leaf; null = serves every employer
+    labels: list[str] = []  # contribution line items this account offers
+    sweep_to: str | None = None  # set on a passthrough, which holds no balance of its own
 
 
 class Meta(_Base):
@@ -178,7 +186,8 @@ class NetWorthSection(_Base):
 
 
 class PayrollOption(_Base):
-    """One selectable paycheck line, scoped to an employer (null = offered by every employer)."""
+    """One selectable paycheck line, scoped to an employer (null = offered by every employer). A
+    contribution always names one, that meta being what marks its account payroll-contributable."""
 
     kind: Literal["deduction", "contribution"]
     label: str
@@ -186,34 +195,53 @@ class PayrollOption(_Base):
     account: str
 
 
+class AccountKind(_Base):
+    """What one kind of account is allowed to carry, so a form offers exactly the controls that
+    apply. Copied off :data:`yala.ledger.accounts.KINDS`, which the routes enforce and which
+    documents each flag, so the form and the API cannot disagree."""
+
+    name: KindName
+    #: Account-path prefix, so the frontend can resolve a leaf-keyed list to full paths instead of
+    #: restating the ledger's taxonomy.
+    prefix: str
+    tiered: bool
+    plugged: bool
+    named: bool
+    product: bool
+    scopable: bool
+    labelled: bool
+    drains: bool
+    splits: bool
+    sweeps: bool
+    sweep_target: bool
+
+
 class AccountLists(_Base):
     """The pickable account sets the entry forms and the Manage panels choose from.
 
-    Snapshotted into ``data.json`` as well as served live from ``/api/accounts`` (both from one
-    builder function) so the forms still render — and Manage still lists what you have — when the
-    local API is down. Writes are refused by the frontend's single write guard, not by an absent
-    list: a form that vanishes reads as a missing feature rather than as an unreachable server.
+    Snapshotted into ``data.json`` as well as served live from ``/api/accounts`` so the forms still
+    render when the local API is down. Writes are then refused by the frontend's write guard rather
+    than by an absent list, since a form that vanishes reads as a missing feature.
     """
 
-    spending_categories: list[str]
+    kinds: list[AccountKind]
+    spending_categories: list[str]  # leaf-relative, as a transaction names one
+    # What a payment can come from or a refund can land in: cash accounts and cards together.
     funding_accounts: list[str]
-    employers: list[str]
-    payroll_options: list[PayrollOption]
     cash_accounts: list[str]
-    credit_accounts: list[str]
+    card_accounts: list[str]
     investment_accounts: list[str]
-    balance_accounts: list[str]
-    liability_accounts: list[str]
+    employers: list[str]
+    deduction_accounts: list[str]
+    payroll_options: list[PayrollOption]
+    balance_accounts: list[str]  # snapshot-able: active cash + investments, passthroughs excluded
+    liability_accounts: list[str]  # snapshot-able but verify-only: no plug to pad into
     sweeps: dict[str, str]  # passthrough account -> its sweep destination
 
 
 class SettingField(_Base):
-    """The spec behind one setting: how the form names it, bounds it, and explains it.
-
-    Snapshotted alongside the values so the settings form renders with no API running — the same
-    rule every other form follows. Writing one still needs the API, and the frontend's single write
-    guard is what says so.
-    """
+    """The spec behind one setting: how the form names it, bounds it, and explains it. Snapshotted
+    alongside the values so the settings form renders with no API running."""
 
     key: str
     label: str
@@ -225,12 +253,8 @@ class SettingField(_Base):
 
 
 class SettingsSection(_Base):
-    """Effective user settings: what the ledger states, else the built-in default.
-
-    A null means the setting is unset and has no default — features depending on it stay hidden
-    rather than guessing. Keys mirror :data:`yala.ledger.settings.SETTINGS`; ``test_settings``
-    asserts the two can't drift.
-    """
+    """Effective user settings: what the ledger states, else the built-in default. A null means
+    unset with no default, and features depending on it stay hidden rather than guessing."""
 
     swr: float  # withdrawal rate, percent
     real_return: float  # expected return above inflation, percent
