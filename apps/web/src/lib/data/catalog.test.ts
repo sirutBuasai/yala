@@ -7,13 +7,14 @@ import {
 	CATALOG_BY_ID,
 	dataOfKind
 } from '$lib/data/catalog';
+import { seriesColor } from '$lib/charts/registry';
 import { makeData } from '$lib/data/__fixtures__/dashboard';
 
 describe('dataOfKind', () => {
 	it('groups catalog entries by the primitive kind they produce', () => {
 		expect(dataOfKind('categorical').every((d) => d.kind === 'categorical')).toBe(true);
 		expect(dataOfKind('flow').map((d) => d.id)).toContain('money.flow');
-		expect(dataOfKind('multiseries').map((d) => d.id)).toContain('overview.income_spent_saved');
+		expect(dataOfKind('multiseries').map((d) => d.id)).toContain('overview.cash_flow_bars');
 	});
 });
 
@@ -89,23 +90,31 @@ describe('income.paychecks table', () => {
 });
 
 describe('spending.category_by_month matrix', () => {
-	it('produces a categories × 12-month value grid', () => {
+	it('produces a months × categories value grid, months down', () => {
 		const p = build(makeData(), 'spending.category_by_month', { level: 'year', year: 2025 });
 		if (p.kind !== 'matrix') throw new Error('expected matrix');
-		expect(p.cols).toHaveLength(12);
-		expect(p.rows).toEqual(['Grocery', 'Takeouts']); // biggest first
-		// values[categoryIndex][monthIndex]
-		expect(p.values[0]![0]).toBe(30);
-		expect(p.values[1]![0]).toBe(15.5);
+		expect(p.rows).toEqual(['Jan']); // the fixture logs one month
+		expect(p.cols).toEqual(['Grocery', 'Takeouts']); // biggest first
+		// values[monthIndex][categoryIndex]
+		expect(p.values[0]).toEqual([30, 15.5]);
 	});
 });
 
-describe('overview.income_spent_saved', () => {
-	it('bundles three compatible series over the same labels', () => {
-		const p = build(makeData(), 'overview.income_spent_saved', { level: 'all' });
+describe('overview.cash_flow_bars', () => {
+	it('bundles four compatible series over the same labels', () => {
+		const p = build(makeData(), 'overview.cash_flow_bars', { level: 'all' });
 		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
-		expect(p.series.map((s) => s.name)).toEqual(['Income', 'Spent', 'Saved']);
+		expect(p.series.map((s) => s.name)).toEqual(['Net income', 'Take-home', 'Spent', 'Saved']);
 		expect(p.labels).toEqual(['2024', '2025']);
+	});
+
+	// The bars sit side by side, so two sharing a role token would read as one measure. Whether two
+	// DIFFERENT tokens resolve to distinguishable hues is app.css's to keep.
+	it('gives every bar its own role token', () => {
+		const p = build(makeData(), 'overview.cash_flow_bars', { level: 'all' });
+		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
+		const roles = p.series.map((s) => seriesColor(s.name));
+		expect(new Set(roles).size).toBe(roles.length);
 	});
 });
 

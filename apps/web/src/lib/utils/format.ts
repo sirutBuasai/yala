@@ -44,6 +44,16 @@ export function moneyCompact(n: number | null | undefined): string {
 	return Math.abs(n || 0) >= 1000 ? moneyK(n) : money(n);
 }
 
+/** The same abbreviation without the currency, for a grid of figures where a symbol per cell is noise
+    and the unit is already stated once. Rounds — pair it with `moneyExact` wherever the reader can ask
+    for the figure itself. */
+export function numCompact(n: number | null | undefined): string {
+	const v = n || 0;
+	return Math.abs(v) >= 1000
+		? (v / 1000).toFixed(Math.abs(v) < 10000 ? 1 : 0) + 'k'
+		: String(Math.round(v));
+}
+
 export function pct(part: number, whole: number): string {
 	return whole ? ((part / whole) * 100).toFixed(0) + '%' : NO_VALUE;
 }

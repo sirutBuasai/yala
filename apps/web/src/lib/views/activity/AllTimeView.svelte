@@ -48,10 +48,10 @@
 			h: 13,
 			content: 'scale',
 			figure: {
-				figure: 'overview.income_spent_saved',
+				figure: 'overview.cash_flow_bars',
 				scope: all,
 				chart: 'bar',
-				title: words('Income vs spending vs saved'),
+				title: words('Net income vs take-home vs spending vs saved'),
 				caption: words('per year')
 			}
 		},

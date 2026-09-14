@@ -40,8 +40,8 @@ interface AdaptOpts {
 	log?: boolean;
 	/** Label each line at its right edge instead of drawing a legend. */
 	endLabels?: boolean;
-	/** Heatmap scaling: per row (default) or one scale for the whole grid. */
-	normalize?: 'row' | 'global';
+	/** Heatmap scaling: per band along the named axis ('row' by default), or one scale for the grid. */
+	normalize?: 'row' | 'col' | 'global';
 	/** Series names to draw as a dotted line. */
 	dashed?: string[];
 }
@@ -84,6 +84,7 @@ const SERIES_ROLE: Record<string, string> = {
 	// KEPT, and it reads beside `Saved` on the same boards.
 	'Savings rate': 'var(--role-saving)',
 	'Spending rate': 'var(--role-spending)',
+	'Deduction rate': 'var(--role-deduction)',
 	// The gross → net chain, one hue per term: no two sides of a subtraction share one.
 	Gross: 'var(--role-income)',
 	Deductions: 'var(--role-deduction)',
@@ -306,7 +307,17 @@ export const CHARTS: ChartDef[] = [
 		component: Heatmap,
 		adapt(p, opts = {}) {
 			const m = p as Matrix;
-			return { rows: m.rows, cols: m.cols, values: m.values, normalize: opts.normalize };
+			const normalize = opts.normalize ?? 'row';
+			// The band members are what have identity — the categories, whichever axis they sit on — so they
+			// carry the hue. `global` has no bands, and so nothing to colour by.
+			const band = normalize === 'row' ? m.rows : m.cols;
+			return {
+				rows: m.rows,
+				cols: m.cols,
+				values: m.values,
+				normalize,
+				colors: normalize === 'global' ? undefined : band.map((key) => keyColor(key, opts.colorBy))
+			};
 		}
 	}),
 	def({

@@ -8,8 +8,8 @@ import { MONEY } from './primitives';
 import { categorical, categoryDeviation, whereItWent } from './categorical';
 import {
 	accumulate,
+	cashFlowBars,
 	categorySpendByYear,
-	incomeSpentSaved,
 	measureActive,
 	measureByMonth,
 	measureByYear,
@@ -156,14 +156,12 @@ const CHART_DEFS: DataDef[] = [
 		}
 	},
 	{
-		id: 'overview.income_spent_saved',
-		label: 'Income vs spending vs saved',
+		id: 'overview.cash_flow_bars',
+		label: 'Net income vs take-home vs spending vs saved',
 		kind: 'multiseries',
 		scopes: ['all', 'year'],
 		build: (data, scope) =>
-			scope.level === 'year'
-				? incomeSpentSaved(data, scopeYear(data, scope))
-				: incomeSpentSaved(data)
+			scope.level === 'year' ? cashFlowBars(data, scopeYear(data, scope)) : cashFlowBars(data)
 	},
 	{
 		id: 'overview.savings_rate',
@@ -280,7 +278,7 @@ const CHART_DEFS: DataDef[] = [
 const TRENDS: Field[] = ['income', 'spending', 'saved'];
 
 /** Measures with a running total — the shape of an accumulation, not a level. */
-const RUNNING: Field[] = ['gross', 'deductions', 'contributions', 'net', 'saved'];
+const RUNNING: Field[] = ['gross', 'deductions', 'contributions', 'net', 'takehome', 'saved'];
 
 // Two windows, because they answer different questions. `running.*` spans the months the measure MOVED
 // in, so a year-to-date accumulation fills its chart instead of flatlining after the last active month.

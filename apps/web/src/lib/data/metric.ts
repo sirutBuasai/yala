@@ -239,6 +239,34 @@ export function amount(data: DashboardData, scope: Scope, m: Measure, opts: Opts
 }
 
 /**
+ * The badge a figure carries beside its value. Absent when the base is 0 — there is no percentage to
+ * report against nothing, and an untracked earlier period reads as 0.
+ */
+function deltaOf(m: Measure, now: number, before: number, note: string): Scalar['delta'] {
+	// Divided by the MAGNITUDE of the base: `saved` can be negative, and dividing by a negative base
+	// flips the percentage's sign away from the direction the figure actually moved.
+	if (!before) return undefined;
+	return {
+		value: ((now - before) / Math.abs(before)) * 100,
+		unit: PERCENT,
+		tone: toneOf(m, now - before),
+		note
+	};
+}
+
+/** A year's run-rate for a measure, and the ACTIVE months it divided by. */
+function perMonth(
+	data: DashboardData,
+	m: Measure,
+	year: number
+): { rate: number; divisor: number } {
+	const active = activeMonths(data, year);
+	const divisor =
+		(m === 'spending' ? active.spend : m === 'income' ? active.income : active.any) || 1;
+	return { rate: measureValue(data, { level: 'year', year }, m) / divisor, divisor };
+}
+
+/**
  * Average of a measure. `per: 'year'` divides the lifetime total by the number of tracked years;
  * `per: 'month'` divides a year's total by that year's ACTIVE months — never a flat 12, so a partial
  * year isn't understated.
@@ -265,15 +293,16 @@ export function average(
 	}
 
 	const y = year ?? latestYear(data);
-	const active = activeMonths(data, y);
-	const divisor =
-		(m === 'spending' ? active.spend : m === 'income' ? active.income : active.any) || 1;
+	const now = perMonth(data, m, y);
 	return {
 		kind: 'scalar',
 		unit,
 		label: opts.label ?? words(`Avg ${name} / month`),
-		value: measureValue(data, { level: 'year', year: y }, m) / divisor,
-		note: opts.note ?? live(`${divisor} active months`)
+		value: now.rate,
+		// Rate against rate, never this year's rate against last year's total: the two divide by their
+		// own active-month counts, and only the rates say whether the pace itself moved.
+		delta: deltaOf(m, now.rate, perMonth(data, m, y - 1).rate, 'YoY'),
+		note: opts.note ?? live(`${now.divisor} active months`)
 	};
 }
 
@@ -486,25 +515,18 @@ export function change(
 	}
 
 	const now = measureValue(data, cur, m);
-	const before = measureValue(data, prev, m);
-	// Divided by the MAGNITUDE of the base: `saved` can be negative, and dividing by a negative base
-	// flips the percentage's sign away from the direction the figure actually moved.
-	const pct = before ? ((now - before) / Math.abs(before)) * 100 : null;
 
 	return {
 		kind: 'scalar',
 		unit: MONEY(data.currency),
 		label: opts.label ?? words(measureLabel(m)),
 		value: now,
-		delta:
-			pct === null
-				? undefined
-				: {
-						value: pct,
-						unit: PERCENT,
-						tone: toneOf(m, now - before),
-						// Flattened: a delta's note rides with the badge, which is never renamed.
-						note: opts.note ? labelText(opts.note) : period === 'year' ? 'YoY' : 'MoM'
-					}
+		// Flattened: a delta's note rides with the badge, which is never renamed.
+		delta: deltaOf(
+			m,
+			now,
+			measureValue(data, prev, m),
+			opts.note ? labelText(opts.note) : period === 'year' ? 'YoY' : 'MoM'
+		)
 	};
 }

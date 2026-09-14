@@ -20,9 +20,13 @@
 
 	const yr = $derived<Scope>({ level: 'year', year });
 
-	// The gross → net chain, each with its own accumulation behind it: an area running up to the year's
-	// total says how evenly it arrived, which the total alone cannot. No badges — these four subtract
-	// from each other, and a change against last year belongs to the cash-flow matrix below.
+	// The gross → take-home chain, each with its own accumulation behind it: an area running up to the
+	// year's total says how evenly it arrived, which the total alone cannot. No badges — these terms
+	// subtract from each other, and a change against last year belongs to the cash-flow matrix below.
+	//
+	// Then the three rates, as rings: the chain says how much, a share of a whole says how it was run.
+	// Savings and spending rate divide net income, so they read beside the matrix above them; the
+	// deduction rate is of gross, and goes last on its own denominator.
 	const KPIS = $derived<KpiBoardDefs>({
 		gross: {
 			rect: { x: 0, y: 0, w: 10, h: 6 },
@@ -44,12 +48,29 @@
 		net: {
 			rect: { x: 0, y: 18, w: 10, h: 5 },
 			spec: { figure: 'income.net', scope: yr, chart: 'area', series: 'running.net' }
+		},
+		takehome: {
+			rect: { x: 0, y: 23, w: 10, h: 5 },
+			spec: { figure: 'income.takehome', scope: yr, chart: 'area', series: 'running.takehome' }
+		},
+		savingsRate: {
+			rect: { x: 10, y: 9, w: 13, h: 5 },
+			spec: { figure: 'ratio.savings_rate', scope: yr, chart: 'ring' }
+		},
+		spendingRate: {
+			rect: { x: 23, y: 9, w: 13, h: 5 },
+			spec: { figure: 'ratio.spending_rate', scope: yr, chart: 'ring' }
+		},
+		deductionRate: {
+			rect: { x: 36, y: 9, w: 12, h: 5 },
+			spec: { figure: 'ratio.deduction_rate', scope: yr, chart: 'ring' }
 		}
 	});
 
-	// One column of the whole chain, beside the figures it explains.
+	// One column of the whole chain, beside the figures it explains, and one row of the rates under them.
 	const kpis = useKpiBoard('activity:year', () => KPIS, [
-		{ ids: ['gross', 'contributions', 'deductions', 'net'], axis: 'column' }
+		{ ids: ['gross', 'contributions', 'deductions', 'net', 'takehome'], axis: 'column' },
+		{ ids: ['savingsRate', 'spendingRate', 'deductionRate'], axis: 'row' }
 	]);
 
 	// The cash-flow pane fits its content, being a block of figures whose height follows its rows.
@@ -61,21 +82,21 @@
 			cashflow: { x: 10, y: 0, w: 38, h: 9, content: 'scale' },
 			trend: {
 				x: 10,
-				y: 9,
+				y: 14,
 				w: 38,
 				h: 14,
 				content: 'scale',
 				figure: {
-					figure: 'overview.income_spent_saved',
+					figure: 'overview.cash_flow_bars',
 					scope: yr,
 					chart: 'bar',
-					title: words('Income vs spending vs saved'),
+					title: words('Net income vs take-home vs spending vs saved'),
 					caption: { context: String(year), text: 'per month' }
 				}
 			},
 			flow: {
 				x: 0,
-				y: 41,
+				y: 46,
 				w: 48,
 				h: 26,
 				content: 'scale',
@@ -90,11 +111,12 @@
 					}
 				}
 			},
-			// Rows arrive ordered biggest-first, so the ranking is implicit; it defaults to the full width,
-			// where a column per month plus the category gutter have room.
+			// A row per month, reading down the year; categories arrive ordered biggest-first, so the
+			// ranking is implicit left to right. Scaled per COLUMN, since it is the categories that span
+			// orders of magnitude — down a column is where the intensity means something.
 			heatmap: {
 				x: 0,
-				y: 23,
+				y: 28,
 				w: 48,
 				h: 18,
 				content: 'scale',
@@ -102,6 +124,7 @@
 					figure: 'spending.category_by_month',
 					scope: yr,
 					chart: 'heatmap',
+					normalize: 'col',
 					title: words('Category by month'),
 					caption: words('category spending split per month')
 				}
@@ -110,8 +133,8 @@
 	);
 
 	// Totals and their monthly run-rate over the same measures: a grid says that relationship, loose
-	// cards don't. The year's row carries how each figure moved against last year; the run-rate row is
-	// a rate, which has no year to compare against.
+	// cards don't. Both rows carry how they moved against last year — the run-rate against last year's
+	// OWN run-rate, so a part-finished year is not read as a collapse.
 	const columns = ['Income', 'Spent', 'Saved'];
 	const cashflow = $derived([
 		{

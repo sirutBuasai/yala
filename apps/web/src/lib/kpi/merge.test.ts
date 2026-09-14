@@ -5,11 +5,13 @@ import {
 	groupsFor,
 	mergeAxis,
 	mergeGroups,
+	sectionSpans,
 	splitGroup,
 	splitRects,
 	unionRect,
 	type KpiGroup
 } from '$lib/kpi/merge';
+import { sum } from '$lib/utils/num';
 import { MIN_H, MIN_W } from '$lib/layout/grid/units';
 import type { Rect } from '$lib/layout/grid/types';
 
@@ -197,20 +199,64 @@ describe('splitRects', () => {
 		expect(bottom.y).toBe(MIN_H);
 	});
 
-	it('gives a half the span its content needs, not the share its weight asks for', () => {
-		const group: KpiGroup = { ids: ['a', 'b'], axis: 'row', weights: [4, 20] };
-		const [left, right] = splitRects(group, rect(0, 0, 24, 7), 1, [10, 8]);
-		expect(left.w).toBe(10);
-		expect(right).toEqual(rect(10, 0, 14, 7));
+	// The ratchet: a measured floor prices in a card's padding the merged card was already paying, so
+	// obeying it on a plain unmerge widened the pair every cycle and shoved whatever sat below down.
+	it('restores the spans the sections came in at, over a floor that asks for more', () => {
+		const group: KpiGroup = { ids: ['a', 'b'], axis: 'row', weights: [10, 10] };
+		const [left, right] = splitRects(group, rect(0, 0, 20, 7), 1, [12, 12]);
+		expect(left).toEqual(rect(0, 0, 10, 7));
+		expect(right).toEqual(rect(10, 0, 10, 7));
 	});
 
-	it('overlaps the second half when the card cannot fit both, rather than clipping either', () => {
-		// The state a merged card left at its own minimum is in: splitting it costs a card's worth of
-		// padding twice over, so the halves need more room than the card has.
-		const group: KpiGroup = { ids: ['a', 'b'], axis: 'row', weights: [10, 10] };
+	it('gives a half the span its content needs once the card no longer spans its weights', () => {
+		// Dragged narrower than its sections came in at, so the weights no longer say where anything
+		// sits and the measured floors are all there is to go on.
+		const group: KpiGroup = { ids: ['a', 'b'], axis: 'row', weights: [4, 20] };
+		const [left, right] = splitRects(group, rect(0, 0, 20, 7), 1, [10, 8]);
+		expect(left.w).toBe(10);
+		expect(right).toEqual(rect(10, 0, 10, 7));
+	});
+
+	it('overlaps the second half when a resized card cannot fit both, rather than clipping either', () => {
+		const group: KpiGroup = { ids: ['a', 'b'], axis: 'row', weights: [12, 12] };
 		const [left, right] = splitRects(group, rect(0, 0, 20, 7), 1, [12, 12]);
 		expect(left.w).toBe(12);
 		expect(right).toEqual(rect(12, 0, 12, 7));
+	});
+
+	// A resized card no longer spans what its weights add up to. Splitting one used to round each
+	// half's share on its own, so a row appeared out of nowhere or vanished, and the column crept.
+	it('hands out the whole card and no more, whatever the card was resized to', () => {
+		const group: KpiGroup = {
+			ids: ['a', 'b', 'c', 'd', 'e'],
+			axis: 'column',
+			weights: [6, 6, 6, 5, 5]
+		};
+		for (let span = 15; span <= 40; span++) {
+			for (let index = 1; index < 5; index++) {
+				const [top, bottom] = splitRects(group, rect(0, 0, 10, span), index, roomy);
+				expect(top.h + bottom.h).toBe(span);
+				expect(bottom.y).toBe(top.h);
+			}
+		}
+	});
+});
+
+describe('sectionSpans', () => {
+	it('gives each section its own weight when the card spans what they add up to', () => {
+		expect(sectionSpans([6, 6, 6, 5, 5], 28)).toEqual([6, 6, 6, 5, 5]);
+	});
+
+	it('adds up to the card exactly, at every size a card can be dragged to', () => {
+		for (let span = 5; span <= 48; span++) {
+			expect(sum(sectionSpans([6, 6, 6, 5, 5], span))).toBe(span);
+			expect(sum(sectionSpans([13, 13, 12], span))).toBe(span);
+		}
+	});
+
+	it('spends the remainder on the largest shares first', () => {
+		expect(sectionSpans([1, 1, 1], 5)).toEqual([2, 2, 1]);
+		expect(sectionSpans([10, 1], 12)).toEqual([11, 1]);
 	});
 });
 

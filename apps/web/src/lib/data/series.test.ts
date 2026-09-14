@@ -123,7 +123,7 @@ describe('catalog series over measures', () => {
 	// the document for the paycheck measures, so this is the invariant that keeps them agreeing.
 	it('a running total ends on the figure it is drawn behind', () => {
 		const d = makeData();
-		for (const f of ['gross', 'deductions', 'contributions', 'net', 'saved'] as const) {
+		for (const f of ['gross', 'deductions', 'contributions', 'net', 'takehome', 'saved'] as const) {
 			const p = build(d, `running.${f}`, { level: 'year', year: 2025 });
 			if (p.kind !== 'series') throw new Error('expected series');
 			expect(p.points.at(-1)!.value).toBeCloseTo(

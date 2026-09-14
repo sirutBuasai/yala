@@ -34,7 +34,8 @@
 	let field = $state<HTMLInputElement>();
 
 	/** The field is as wide as whatever it is SHOWING: sized from the draft alone, an emptied label clipped
-	    the placeholder that was telling you what it used to say. */
+	    the placeholder that was telling you what it used to say. Capped at the card in the style below,
+	    since the card cannot grow to meet it. */
 	const width = $derived(Math.max(6, (draft || placeholder || '').length + 1));
 
 	function open(): void {
@@ -65,7 +66,7 @@
 		aria-label={`Rename ${what}`}
 		{placeholder}
 		bind:value={draft}
-		style:width="{width}ch"
+		style:width="min({width}ch, 100%)"
 		onblur={commit}
 		onkeydown={(e) => {
 			if (e.key === 'Enter') commit();
@@ -116,13 +117,17 @@
 	/* No box and no rule: the label is edited as the label, so nothing about it moves or restyles on the
 	   way into edit. Inherits the type it stands in for. NOT `.field`, which is the app's form-field
 	   wrapper and lays its contents out as a flex column — the field took its own line. */
+	/* `min-width: 0`, with the `ch` floor left to the inline width: an input's own min-content width is
+	   the width it was given, and `.kpi` is sized `min-content` — so a field wide enough for a long
+	   caption widened the whole card, and the underlay chart, positioned out of flow across it, painted
+	   over the board. A percentage cap alone doesn't help: percentages don't apply while the ancestor is
+	   being sized intrinsically, which is exactly when the damage was done. */
 	.name {
 		display: inline-block;
 		vertical-align: baseline;
 		font: inherit;
 		color: inherit;
-		min-width: 6ch;
-		max-width: 100%;
+		min-width: 0;
 		padding: 0;
 		border: 0;
 		border-radius: 0;

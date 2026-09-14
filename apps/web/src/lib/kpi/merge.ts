@@ -155,13 +155,42 @@ export function splitGroup(groups: KpiGroup[], leader: string, index: number): K
 }
 
 /**
- * How a split divides the card's rectangle: each half takes the share its sections held, floored at
- * `floors` — the span its own content needs once it is a card of its own (measured: see `measure.ts`).
- * Splitting costs a card's padding twice over, so a share alone can be less than a half can hold.
+ * Each section's whole-unit span inside a card of `span`, apportioned by weight. Largest remainder,
+ * because the parts MUST add up to the card: rounding each share on its own loses or invents a unit,
+ * and a split banks that error into the halves' rectangles — so every merge-and-split cycle moved a
+ * row between the halves and grew the column, pushing whatever sat below it further down.
+ *
+ * Ties go to the earlier section, which is the order the card draws them in.
+ */
+export function sectionSpans(weights: number[], span: number): number[] {
+	const total = sum(weights) || 1;
+	const exact = weights.map((w) => (w / total) * span);
+	const spans = exact.map(Math.floor);
+	const order = exact
+		.map((v, i) => ({ i, remainder: v - Math.floor(v) }))
+		.sort((a, b) => b.remainder - a.remainder || a.i - b.i);
+
+	let left = span - sum(spans);
+	for (const { i } of order) {
+		if (left <= 0) break;
+		spans[i]! += 1;
+		left--;
+	}
+	return spans;
+}
+
+/**
+ * How a split divides the card's rectangle: each half takes the span its own sections occupy.
+ *
+ * While the weights still add up to the card, they ARE the spans the sections came in at, and restoring
+ * one needs no measuring: the half gets back the chrome its card had then, so what fitted before the
+ * merge fits again. `floors` (measured: see `measure.ts`) speaks only for a card resized since, where the
+ * weights no longer say where anything sits. Consulting it either way ratcheted the board a row wider on
+ * every merge-and-split cycle, because it prices in a card's padding the merged card was already paying.
  *
  * Too small for both floors and there is no legal split: both keep their floor and the second overlaps,
  * for the push rule to send below. An overlapping half can be dragged anywhere; a clipped one cannot be
- * made to fit at all.
+ * made to fit at all. That is the ONLY case where the halves may exceed the card.
  */
 export function splitRects(
 	group: KpiGroup,
@@ -169,14 +198,16 @@ export function splitRects(
 	index: number,
 	floors: [number, number]
 ): [Rect, Rect] {
-	const total = sum(group.weights) || 1;
-	const before = sum(group.weights.slice(0, index));
 	const axis = group.axis;
 	const span = spanOf(rect, axis);
+	const min = floorOf(axis);
+	const before = sum(sectionSpans(group.weights, span).slice(0, index));
 
-	const [first, second] = floors.map((f) => Math.max(floorOf(axis), f)) as [number, number];
-	const kept = Math.max(first, Math.min(span - second, Math.round((before / total) * span)));
-	const rest = Math.max(second, span - kept);
+	const [first, second] = floors.map((f) => Math.max(min, f)) as [number, number];
+	const restoring = span === sum(group.weights);
+	const [low, high] = restoring ? [min, span - min] : [first, span - second];
+	const kept = Math.max(low, Math.min(high, before));
+	const rest = Math.max(restoring ? min : second, span - kept);
 
 	return along<[Rect, Rect]>(
 		axis,

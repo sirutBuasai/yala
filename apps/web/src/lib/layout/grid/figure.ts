@@ -27,7 +27,7 @@ export interface FigureSpec {
 	/** Series names to draw dotted. */
 	dashed?: string[];
 	/** Heatmap scaling: per row (default) or one scale for the whole grid. */
-	normalize?: 'row' | 'global';
+	normalize?: 'row' | 'col' | 'global';
 }
 
 /**

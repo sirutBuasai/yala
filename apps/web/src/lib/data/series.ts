@@ -98,11 +98,14 @@ export function accumulate(s: Series): Series {
 // --- composite ---
 
 /**
- * Income / Spent / Saved as one MultiSeries. Lifetime (`year` omitted) plots per tracked year; a
- * specific `year` plots its twelve months.
+ * Net income / Take-home / Spent / Saved as one MultiSeries. Lifetime (`year` omitted) plots per
+ * tracked year; a specific `year` plots its twelve months.
+ *
+ * `net` rather than `income`: the two are the same figure, but net reads from the paycheck rows the
+ * take-home beside it comes from, so the pair cannot disagree.
  */
-export function incomeSpentSaved(data: DashboardData, year?: number): MultiSeries {
-	const parts: Field[] = ['income', 'spending', 'saved'];
+export function cashFlowBars(data: DashboardData, year?: number): MultiSeries {
+	const parts: Field[] = ['net', 'takehome', 'spending', 'saved'];
 	const list = parts.map((f) =>
 		year == null ? measureByYear(data, f) : measureByMonth(data, f, year)
 	);

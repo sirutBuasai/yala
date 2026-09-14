@@ -268,7 +268,7 @@
 		{ figure: 'ratio.savings_rate', scope: all, chart: 'ring' }
 	];
 	const donut = build(data, 'spending.where_it_went', all);
-	const bars = build(data, 'overview.income_spent_saved', all);
+	const bars = build(data, 'overview.cash_flow_bars', all);
 	const cumulative = build(data, 'running.saved', all);
 	const table = build(data, 'income.paychecks', all);
 </script>

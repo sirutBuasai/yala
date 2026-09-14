@@ -58,7 +58,9 @@
 	--role-income: var(--lav); /* what came in */
 	--role-deduction: var(--orange); /* taken out before you saw it */
 	--role-net: var(--blue); /* what was left after the deductions */
-	--role-takehome: var(--teal); /* the part of that which reached your hands */
+	/* Aqua, not the teal it reads next to on the palette: net and take-home are adjacent bars on the
+	   cash-flow chart, and blue beside a light blue read as one measure at a wash's opacity. */
+	--role-takehome: var(--aqua); /* the part of that which reached your hands */
 	--role-market: var(--gold); /* movement you never logged */
 	/* Allocation buckets are slices of one whole, so they share a blue→green family. */
 	--role-liquid: var(--teal);
@@ -71,6 +73,13 @@
 	--mark-line: 32%; /* hairline over it */
 	--mark-area: 0.28; /* gradient under a line */
 	--mark-flow: 0.32; /* a flow diagram's links */
+	/* The heaviest tile on a heatmap. The HUE is a shared `--cat-*` token either way; only how much of it a
+	   tile carries is per theme, as with the washes above.
+	   A tile may carry ANY category hue and every hue is read against the SAME ink, so this is pitched at
+	   whichever hue composites closest to that ink — over the dark card that is the near-white
+	   `--cat-subscription`, the first to swallow `--ink`. 35% is the most that keeps all of them at 4.5:1
+	   (36% already drops that column to 4.44); at 55% it measured 2.65:1. Re-measure before raising it. */
+	--mark-tile: 35%;
 	/* Entry-type accents for the Add overlay's band and switcher. A separate axis from the roles
 	   above, so the two may share hues and re-theming the overlay can't recolour a chart. */
 	--entry-transaction: var(--salmon);
@@ -295,6 +304,9 @@
 	--mark-line: 52%;
 	--mark-area: 0.45;
 	--mark-flow: 0.5;
+	/* Higher than dark mode's, the reverse of the washes above: over the light card a hue can only make a
+	   tile DARKER, which moves it AWAY from `--ink` instead of into it. Worst hue here measures 7.9:1. */
+	--mark-tile: 48%;
 }
 
 * {
