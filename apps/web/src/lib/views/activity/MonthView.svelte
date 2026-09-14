@@ -101,7 +101,7 @@
 
 	// Deviation needs prior months to average against, so the first tracked month has no norm.
 	const deviation = $derived(build(data, 'spending.vs_average', mo));
-	const hasDeviation = $derived(deviation.kind === 'categorical' && deviation.points.length > 0);
+	const hasDeviation = $derived(deviation.kind === 'deviation' && deviation.rows.length > 0);
 
 	const paychecks = $derived(
 		md ? [...md.paychecks].sort((a, b) => a.date.localeCompare(b.date)) : []
@@ -139,7 +139,7 @@
 		caption={words('deviation from monthly averages')}
 	>
 		{#if hasDeviation}
-			<Figure primitive={deviation} chart="diverging-bars" />
+			<Figure primitive={deviation} chart="dumbbell" />
 		{:else}
 			<Empty>Not enough history yet to know what's normal.</Empty>
 		{/if}

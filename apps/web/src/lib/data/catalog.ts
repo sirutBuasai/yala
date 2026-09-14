@@ -5,7 +5,8 @@
 import type { DashboardData } from '$lib/data/types';
 import type { Primitive, PrimitiveKind } from './primitives';
 import { MONEY } from './primitives';
-import { categorical, categoryDeviation, whereItWent } from './categorical';
+import { categorical, whereItWent } from './categorical';
+import { categoryDeviation } from './deviation';
 import {
 	accumulate,
 	cashFlowBars,
@@ -137,12 +138,12 @@ const CHART_DEFS: DataDef[] = [
 	{
 		id: 'spending.vs_average',
 		label: 'Unusual this month',
-		kind: 'categorical',
+		kind: 'deviation',
 		scopes: ['month'],
 		build: (data, scope) =>
 			scope.monthKey
 				? categoryDeviation(data, scope.monthKey)
-				: { kind: 'categorical', unit: MONEY(data.currency), points: [] }
+				: { kind: 'deviation', unit: MONEY(data.currency), rows: [] }
 	},
 	{
 		id: 'income.paychecks',

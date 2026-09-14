@@ -1,42 +1,56 @@
 import { describe, expect, it } from 'vitest';
-import { categoryDeviation } from '$lib/data/categorical';
+import { categoryDeviation } from '$lib/data/deviation';
 import { vsTypical } from '$lib/data/metric';
 import { categorySpendByYear } from '$lib/data/series';
 import { makeData } from '$lib/data/__fixtures__/dashboard';
 
 describe('categoryDeviation', () => {
-	it('signs each category against the average of the prior months', () => {
-		const data = makeData();
-		const p = categoryDeviation(data, '2025-01');
+	const rowFor = (data: ReturnType<typeof makeData>, month: string, cat: string) =>
+		categoryDeviation(data, month).rows.find((r) => r.label === cat);
 
-		const by = Object.fromEntries(p.points.map((pt) => [pt.key, pt.value]));
-		expect(by['Grocery']).toBeCloseTo(30 - 70);
-		expect(by['Takeouts']).toBeCloseTo(15.5 - 50);
+	it('measures each category against the average of the prior months', () => {
+		const grocery = rowFor(makeData(), '2025-01', 'Grocery');
+
+		expect(grocery?.value).toBeCloseTo(30);
+		expect(grocery?.base).toBeCloseTo(70);
+	});
+
+	it('carries the range those prior months spanned, so a row can be judged against itself', () => {
+		const data = makeData();
+		data.meta.month_keys = ['2024-11', '2024-12', '2025-01'];
+		data.months['2024-11'] = {
+			...data.months['2024-12']!,
+			by_category: [{ category: 'Grocery', amount: 10 }]
+		};
+
+		const grocery = rowFor(data, '2025-01', 'Grocery');
+		expect(grocery?.lo).toBeCloseTo(10);
+		expect(grocery?.hi).toBeCloseTo(70);
+		expect(grocery?.base).toBeCloseTo(40);
 	});
 
 	it('ranks by distance from normal in either direction', () => {
-		const p = categoryDeviation(makeData(), '2025-01');
-		const mags = p.points.map((pt) => Math.abs(pt.value));
+		const rows = categoryDeviation(makeData(), '2025-01').rows;
+		const mags = rows.map((r) => Math.abs(r.value - r.base));
 		expect(mags).toEqual([...mags].sort((a, b) => b - a));
 	});
 
 	it('returns nothing for the first tracked month — there is no norm yet', () => {
-		const p = categoryDeviation(makeData(), '2024-12');
-		expect(p.points).toEqual([]);
+		expect(categoryDeviation(makeData(), '2024-12').rows).toEqual([]);
 	});
 
-	it('reports a category that stopped entirely as a negative deviation', () => {
+	it('reports a category that stopped entirely as a zero against its old normal', () => {
 		const data = makeData();
-		// Drop Takeouts from the later month; it should still appear, fully negative.
+		// Drop Takeouts from the later month; it should still appear, at nothing against its average.
 		data.months['2025-01']!.by_category = [{ category: 'Grocery', amount: 30 }];
 
-		const p = categoryDeviation(data, '2025-01');
-		const takeouts = p.points.find((pt) => pt.key === 'Takeouts');
-		expect(takeouts?.value).toBeCloseTo(-50);
+		const takeouts = rowFor(data, '2025-01', 'Takeouts');
+		expect(takeouts?.value).toBe(0);
+		expect(takeouts?.base).toBeCloseTo(50);
 	});
 
 	it('is empty for an unknown month', () => {
-		expect(categoryDeviation(makeData(), '1999-01').points).toEqual([]);
+		expect(categoryDeviation(makeData(), '1999-01').rows).toEqual([]);
 	});
 });
 

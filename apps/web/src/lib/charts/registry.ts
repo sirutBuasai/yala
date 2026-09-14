@@ -5,6 +5,7 @@ import type { Component } from 'svelte';
 import type {
 	Bullet,
 	Categorical,
+	Deviation,
 	Flow,
 	Matrix,
 	MultiSeries,
@@ -20,7 +21,7 @@ import HBarChart from '$lib/charts/HBarChart.svelte';
 import LineChart from '$lib/charts/LineChart.svelte';
 import BarChart from '$lib/charts/BarChart.svelte';
 import Sankey from '$lib/charts/Sankey.svelte';
-import DivergingBars from '$lib/charts/DivergingBars.svelte';
+import Dumbbell from '$lib/charts/Dumbbell.svelte';
 import StackedArea from '$lib/charts/StackedArea.svelte';
 import BulletChart from '$lib/charts/BulletChart.svelte';
 import Heatmap from './Heatmap.svelte';
@@ -248,13 +249,16 @@ export const CHARTS: ChartDef[] = [
 		}
 	}),
 	def({
-		id: 'diverging-bars',
-		label: 'Diverging bars',
-		accepts: ['categorical'],
-		component: DivergingBars,
-		adapt(p) {
-			const c = p as Categorical;
-			return { items: c.points.map((pt) => ({ label: pt.key, value: pt.value })) };
+		id: 'dumbbell',
+		label: 'Range dumbbell',
+		accepts: ['deviation'],
+		component: Dumbbell,
+		adapt(p, opts = {}) {
+			const d = p as Deviation;
+			return {
+				rows: d.rows.map((r) => ({ ...r, color: keyColor(r.label, opts.colorBy) })),
+				unit: d.unit
+			};
 		}
 	}),
 	def({

@@ -51,7 +51,15 @@ export function deltaLabel(delta: NonNullable<Scalar['delta']>): string {
 // --- primitive kinds ---
 
 export type PrimitiveKind =
-	'scalar' | 'categorical' | 'series' | 'multiseries' | 'flow' | 'matrix' | 'table' | 'bullet';
+	| 'scalar'
+	| 'categorical'
+	| 'series'
+	| 'multiseries'
+	| 'flow'
+	| 'matrix'
+	| 'table'
+	| 'bullet'
+	| 'deviation';
 
 export type Axis = 'time' | 'ordinal';
 
@@ -185,5 +193,25 @@ export interface Bullet {
 	rows: BulletRow[];
 }
 
+/**
+ * One row's latest figure against the range it usually falls in: `base` is the typical level it is
+ * judged against, `lo`/`hi` the extremes of the window that typical came from. A value outside
+ * `lo`–`hi` is the claim worth making, so both edges travel with the row.
+ */
+export interface DeviationRow {
+	label: string;
+	value: number;
+	base: number;
+	lo: number;
+	hi: number;
+}
+
+/** Rows judged each against its OWN range, so one row's size can't crush another's. */
+export interface Deviation {
+	kind: 'deviation';
+	unit: Unit;
+	rows: DeviationRow[];
+}
+
 export type Primitive =
-	Scalar | Categorical | Series | MultiSeries | Flow | Matrix | Table | Bullet;
+	Scalar | Categorical | Series | MultiSeries | Flow | Matrix | Table | Bullet | Deviation;
