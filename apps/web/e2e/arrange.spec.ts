@@ -168,6 +168,25 @@ test.describe("a merged card's sections", () => {
 		expectClean('after a refused resize', await audit(page));
 	});
 
+	// Growth is bounded by the grid, not by a pass count. Budgeted, only the leftmost section reached the
+	// edge — its overrun propagates across the whole card and so reports the full shortfall at once, while
+	// its neighbours, which receive a share of each pass, ran out of passes part way.
+	test('reach the same limit whichever section is being typed into', async ({ page }) => {
+		const reached: number[] = [];
+		for (const nth of [0, 1, 2]) {
+			await openApp(page);
+			const cell = await strip(page);
+			await cell.locator('.editable[aria-label*="rename title"]').nth(nth).click();
+			await page.locator('[aria-label="Rename title"]').pressSequentially('W'.repeat(40));
+			await page.keyboard.press('Enter');
+			await settle(page, 24);
+			reached.push((await cell.locator('.kpi h2').nth(nth).innerText()).length);
+			expectClean(`after filling section ${nth}`, await audit(page));
+		}
+		// Within a character or two of each other; a section that stopped early would be far short.
+		expect(Math.max(...reached) - Math.min(...reached)).toBeLessThanOrEqual(3);
+	});
+
 	test('carry a long title through a split and back through a merge', async ({ page }) => {
 		const cell = await strip(page);
 		await cell.locator('.editable[aria-label*="rename title"]').nth(1).click();

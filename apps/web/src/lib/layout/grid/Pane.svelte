@@ -24,10 +24,7 @@
 	import { foldSpan } from './fold';
 	import { EDGES, type Edge } from './resize';
 	import { PaneGesture } from './gesture.svelte';
-	import { UNIT } from './units';
-
-	/** How many times a pane re-measures itself before accepting that its content will not fit. */
-	const FIT_PASSES = 4;
+	import { COLS, UNIT } from './units';
 
 	interface Props {
 		/** Pane id — a key of the board's layout. */
@@ -90,18 +87,26 @@
 	});
 
 	/**
-	 * Measure, apply, and measure again until the content fits. One pass is not enough: the room a card is
-	 * given changes how its own text wraps, so a title that wanted two more rows can want a third once it
-	 * has them — which is how a pane grew and left its title still hanging out of the card. Bounded,
-	 * because content that will not fit at any size must not spin here.
+	 * Measure, apply, and measure again until the content fits or the pane can grow no further. One pass is
+	 * never enough, for two reasons: the room a card is given changes how its own text wraps, so a title that
+	 * wanted two more rows can want a third once it has them; and a SECTION of a merged card receives only
+	 * its weighted share of what the card gains, so the shortfall it reports understates the growth needed by
+	 * roughly the number of sections.
+	 *
+	 * Bounded by the grid rather than by a pass count: a pane cannot grow past `COLS`, so a pass that fails
+	 * to change the placed size is against a limit and no further pass can help. A fixed budget instead let
+	 * the leftmost section — whose overrun propagates across the whole card and so reports the full
+	 * shortfall at once — reach the edge of the grid, while its neighbours ran out of passes part way.
 	 */
 	async function growUntilItFits(apply: (w: number, h: number) => void): Promise<void> {
-		for (let pass = 0; pass < FIT_PASSES; pass++) {
+		for (let pass = 0; pass < COLS; pass++) {
 			if (!cardEl) return;
 			const over = overrun(cardEl, bodyEl);
 			if (!over.x && !over.y) return;
-			apply(placed.w + Math.ceil(over.x / UNIT), placed.h + Math.ceil(over.y / UNIT));
+			const [was, wasTall] = [placed.w, placed.h];
+			apply(was + Math.ceil(over.x / UNIT), wasTall + Math.ceil(over.y / UNIT));
 			await tick();
+			if (placed.w === was && placed.h === wasTall) return;
 		}
 	}
 
