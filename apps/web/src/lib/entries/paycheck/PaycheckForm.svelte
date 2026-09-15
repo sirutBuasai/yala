@@ -4,7 +4,7 @@
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data/load';
-	import { deleteTransaction, fetchEntry, postJson } from '$lib/data/load';
+	import { EntryForm } from '$lib/entries/entryForm.svelte';
 	import { formatAccount, money } from '$lib/utils/format';
 	import {
 		lastContributionLabels,
@@ -43,8 +43,7 @@
 	let deductions = $state<AmountRow[]>([]);
 	let contributions = $state<AmountRow[]>([]);
 
-	let msg = $state('');
-	let err = $state(false);
+	const form = new EntryForm('paycheck', () => onsaved());
 
 	// Labels the selected employer offers, plus generic ones (employer === null).
 	const scoped = (kind: 'deduction' | 'contribution'): string[] =>
@@ -79,7 +78,7 @@
 			if (!date && presetDate) date = presetDate;
 			if (!employer) employer = seed(get(lastEmployer), accounts.employers);
 			if (!deposit_account) deposit_account = seed(get(lastDepositAccount), accounts.cash_accounts);
-			// The ROWS are seeded once and untracked: `scoped()` reads `employer`, which this effect just
+			// The rows are seeded once and untracked: `scoped()` reads `employer`, which this effect just
 			// wrote, and the rows are its own output — tracking either loops the effect.
 			if (!rowsSeeded && accounts.payroll_options.length) {
 				rowsSeeded = true;
@@ -90,15 +89,7 @@
 			}
 			return;
 		}
-		// Edit mode: prefill from the paycheck addressed by `locator`.
-		const l = locator;
-		(async () => {
-			const { entry: s, error } = await fetchEntry('paycheck', l);
-			if (!s) {
-				msg = error!;
-				err = true;
-				return;
-			}
+		void form.load(locator, (s) => {
 			date = s.date ?? '';
 			employer = s.employer ?? accounts.employers[0] ?? '';
 			gross = s.gross ?? null;
@@ -106,13 +97,13 @@
 			payee = s.payee ?? 'Paycheck';
 			deductions = toRows(s.deductions ?? {});
 			contributions = toRows(s.contributions ?? {});
-		})();
+		});
 	});
 
 	const sum = (rows: AmountRow[]) => rows.reduce((a, r) => a + (r.amount || 0), 0);
 	const takeHome = $derived((gross || 0) - sum(deductions) - sum(contributions));
 
-	async function submit() {
+	function submit() {
 		const problem = problems()
 			.positive(gross, 'Gross')
 			.require(employer, 'Employer')
@@ -121,11 +112,6 @@
 			.add(validateRows(contributions, 'contribution'))
 			.add(takeHome < 0 ? 'Deductions and contributions exceed gross pay.' : null)
 			.message();
-		if (problem) {
-			msg = problem;
-			err = true;
-			return;
-		}
 		const body = {
 			locator,
 			date: date || undefined,
@@ -136,31 +122,14 @@
 			deposit_account,
 			payee: payee.trim() || 'Paycheck'
 		};
-		const { ok, error } = await postJson(editing ? '/api/paycheck/update' : '/api/paycheck', body);
-		if (!ok) {
-			msg = error ?? 'save failed';
-			err = true;
-			return;
-		}
-		if (!editing) {
+		void form.save(problem, body, () => {
 			lastDepositAccount.set(deposit_account);
 			lastEntryDate.set(date);
 			lastEmployer.set(employer);
 			// Only rows that carried a figure: an untouched row is one you didn't want.
 			lastDeductionLabels.set(Object.keys(toMap(deductions)));
 			lastContributionLabels.set(Object.keys(toMap(contributions)));
-		}
-		onsaved();
-	}
-
-	async function del() {
-		const problem = await deleteTransaction(locator!);
-		if (problem) {
-			msg = problem;
-			err = true;
-			return;
-		}
-		onsaved();
+		});
 	}
 </script>
 
@@ -225,13 +194,12 @@
 
 <EntryFooter
 	{editing}
-	bind:msg
-	bind:err
+	message={form}
 	addLabel="+ Add"
 	deleteLabel="Delete paycheck"
 	deleteQuestion="Delete this paycheck?"
 	onsubmit={submit}
-	ondelete={del}
+	ondelete={() => form.remove(locator!)}
 >
 	{#snippet summary()}
 		<span class="takehome">Take-home: <b>{money(takeHome)}</b></span>

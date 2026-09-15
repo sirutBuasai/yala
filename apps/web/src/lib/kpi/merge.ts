@@ -1,7 +1,7 @@
 // Merging KPI cards: which pair may join, and the groups that result. Pure — no DOM, no storage.
 //
-// A group's FIRST id is also the board's pane id for the whole card, so merging edits a pane the
-// board already has a stored rectangle for and the merged card keeps the size the user gave it.
+// A group's first id is also the board's pane id for the whole card, so merging edits a pane the board
+// already has a stored rectangle for and the merged card keeps the size the user gave it.
 
 import { MIN_H, MIN_W } from '$lib/layout/grid/units';
 import type { Rect } from '$lib/layout/grid/types';
@@ -10,8 +10,8 @@ import { sum } from '$lib/utils/num';
 /** Which way a merged card runs. Always flat, never a grid. */
 export type MergeAxis = 'row' | 'column';
 
-/** Pick whichever of a pair belongs to the axis — the one primitive every axis-dependent read goes
-    through, so none of them can disagree about which way `column` runs. */
+/** Pick whichever of a pair belongs to the axis. Every axis-dependent read goes through here, so none
+    of them can disagree about which way `column` runs. */
 export function along<T>(axis: MergeAxis, row: T, column: T): T {
 	return axis === 'row' ? row : column;
 }
@@ -124,8 +124,8 @@ export function mergeGroups(
 	const second = groups.find((g) => g.ids[0] === b);
 	if (!first || !second) return groups;
 
-	// A group of one has no axis, and either side may be merged the other way: only weights from a group
-	// running the SAME way carry over.
+	// A group of one has no axis, and either side may run the other way, so only weights from a group
+	// already running along `axis` carry over.
 	const ids = [...first.ids, ...second.ids];
 	const weights = ids.map(
 		(id) =>
@@ -155,12 +155,10 @@ export function splitGroup(groups: KpiGroup[], leader: string, index: number): K
 }
 
 /**
- * Each section's whole-unit span inside a card of `span`, apportioned by weight. Largest remainder,
- * because the parts MUST add up to the card: rounding each share on its own loses or invents a unit,
- * and a split banks that error into the halves' rectangles — so every merge-and-split cycle moved a
- * row between the halves and grew the column, pushing whatever sat below it further down.
- *
- * Ties go to the earlier section, which is the order the card draws them in.
+ * Each section's whole-unit span inside a card of `span`, apportioned by weight. Largest remainder, since
+ * the parts must add up to the card: rounding each share alone loses or invents a unit, and a split banks
+ * that error into the halves, so every merge-and-split cycle grew the card. Ties go to the earlier
+ * section, which is the order the card draws them in.
  */
 export function sectionSpans(weights: number[], span: number): number[] {
 	const total = sum(weights) || 1;
@@ -182,15 +180,13 @@ export function sectionSpans(weights: number[], span: number): number[] {
 /**
  * How a split divides the card's rectangle: each half takes the span its own sections occupy.
  *
- * While the weights still add up to the card, they ARE the spans the sections came in at, and restoring
- * one needs no measuring: the half gets back the chrome its card had then, so what fitted before the
- * merge fits again. `floors` (measured: see `measure.ts`) speaks only for a card resized since, where the
- * weights no longer say where anything sits. Consulting it either way ratcheted the board a row wider on
- * every merge-and-split cycle, because it prices in a card's padding the merged card was already paying.
+ * While the weights still add up to the card they are the spans the sections came in at, so restoring one
+ * needs no measuring and what fitted before the merge fits again. `floors` (measured; see `measure.ts`)
+ * speaks only for a card resized since. Consulting it either way ratcheted the board wider on every
+ * merge-and-split cycle, since it prices in padding the merged card was already paying.
  *
- * Too small for both floors and there is no legal split: both keep their floor and the second overlaps,
- * for the push rule to send below. An overlapping half can be dragged anywhere; a clipped one cannot be
- * made to fit at all. That is the ONLY case where the halves may exceed the card.
+ * Too small for both floors there is no legal split: both keep their floor and the second overlaps, for
+ * the push rule to send below. That is the only case where the halves may exceed the card.
  */
 export function splitRects(
 	group: KpiGroup,

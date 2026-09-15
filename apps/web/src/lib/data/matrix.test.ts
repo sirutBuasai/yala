@@ -37,8 +37,7 @@ describe('categoryByMonth', () => {
 		expect(m.cols).toEqual(['Grocery']);
 	});
 
-	// A month with nothing logged is a blank row saying what the missing row already says — and a
-	// part-finished year would otherwise end in a run of them.
+	// A part-finished year would otherwise end in a run of blank rows.
 	it('keeps only the months with a category logged, in calendar order', () => {
 		const data = makeData();
 		const y = data.years['2025']!;
@@ -52,8 +51,7 @@ describe('categoryByMonth', () => {
 		expect(m.values).toEqual([[10], [20]]);
 	});
 
-	// A row of zeroes is not the same as a row of nothing: a month whose categories net to zero was
-	// still logged, and dropping it would lose the credit that cancelled the spend.
+	// A row of zeroes is not a row of nothing: dropping it loses the credit that cancelled the spend.
 	it('keeps a month whose logged categories happen to net to zero', () => {
 		const data = makeData();
 		const y = data.years['2025']!;

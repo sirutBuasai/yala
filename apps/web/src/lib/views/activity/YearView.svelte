@@ -11,6 +11,8 @@
 	import { useKpiBoard } from '$lib/kpi/context';
 	import KpiCards from '$lib/kpi/KpiCards.svelte';
 	import StatMatrix from '$lib/charts/StatMatrix.svelte';
+	import { cashFlowChain, cashFlowChanges, cashFlowHeading } from '$lib/data/catalog';
+	import { statCells } from '$lib/charts/statMatrix';
 
 	interface Props {
 		data: DashboardData;
@@ -20,14 +22,12 @@
 
 	const yr = $derived<Scope>({ level: 'year', year });
 
-	// Two columns, each read top to bottom. The chain first: gross, then what came out of it, then what
-	// reached the account, each with its own accumulation behind it — an area running up to the year's
-	// total says how evenly it arrived, which the total alone cannot. No badges on these; they subtract
-	// from each other, and a change against last year belongs to the cash-flow matrix.
+	// Two columns, each read top to bottom. The chain first, each term with its own accumulation behind
+	// it — an area running up to the year's total says how evenly it arrived. No badges: the terms
+	// subtract from each other, and a change against last year belongs to the cash-flow matrix.
 	//
-	// Then net income and the three rates it is the base of: the chain says how much, a share of a whole
-	// says how the year was run. Net leads because the two rates under it divide it; the deduction rate
-	// is of gross, so it takes the column's own top slot beneath net rather than claiming the chain's.
+	// Then net income and the three rates it is the base of. Net leads because the two rates under it
+	// divide it; the deduction rate is of gross, so it sits beneath net rather than atop the chain.
 	const KPIS = $derived<KpiBoardDefs>({
 		gross: {
 			rect: { x: 0, y: 0, w: 8, h: 6 },
@@ -48,8 +48,8 @@
 		},
 		takehome: {
 			rect: { x: 0, y: 16, w: 8, h: 5 },
-			// "Direct deposit" over the figure's own note: it is the name of the thing that arrives, where
-			// the catalog's caption describes what the measure means.
+			// Overrides the catalog's caption: this one names the thing that arrives rather than describing
+			// what the measure means.
 			spec: {
 				figure: 'income.takehome',
 				scope: yr,
@@ -81,12 +81,9 @@
 		{ ids: ['net', 'deductionRate', 'spendingRate', 'savingsRate'], axis: 'column' }
 	]);
 
-	// The cash-flow pane fits its content, being a block of figures whose height follows its rows.
-	// Everything below it is a chart, so it scales to whatever height the user gives it.
 	const PANES = $derived(
 		kpis.board({
-			// A block of figures, not a list: it scales like the KPI cards above it rather than owning its
-			// own height, so it can be given room or taken down to where its rows would clip.
+			// `scale` so the matrix is given room or taken down to where its rows would clip, like a KPI card.
 			cashflow: { x: 16, y: 0, w: 32, h: 9, content: 'scale' },
 			trend: {
 				x: 16,
@@ -119,9 +116,8 @@
 					}
 				}
 			},
-			// A row per month, reading down the year; categories arrive ordered biggest-first, so the
-			// ranking is implicit left to right. Scaled per COLUMN, since it is the categories that span
-			// orders of magnitude — down a column is where the intensity means something.
+			// Categories arrive biggest-first, so the ranking is implicit left to right. Scaled per column,
+			// since it is the categories that span orders of magnitude.
 			heatmap: {
 				x: 0,
 				y: 21,
@@ -140,29 +136,26 @@
 		})
 	);
 
-	// Totals and their monthly run-rate over the same measures: a grid says that relationship, loose
-	// cards don't. Both rows carry how they moved against last year — the run-rate against last year's
-	// OWN run-rate, so a part-finished year is not read as a collapse.
-	const columns = ['Income', 'Spent', 'Saved'];
+	// Totals and their monthly run-rate over the same measures, so a glance down a column relates the
+	// two. Both rows compare against last year — the run-rate against last year's own run-rate, so a
+	// part-finished year is not read as a collapse.
+	const CHAIN = cashFlowChain(['income', 'spending', 'saved']);
+	const columns = CHAIN.map(cashFlowHeading);
+
+	// The run-rate row carries no caption: its divisor is each measure's own active months, which the
+	// figures state per cell.
 	const cashflow = $derived([
 		{
 			label: live(`Total ${year}`),
 			caption: words('across the year, against last'),
-			cells: [
-				{ id: 'change.income_yoy', scope: yr },
-				{ id: 'change.spending_yoy', scope: yr },
-				{ id: 'change.saved_yoy', scope: yr }
-			]
+			cells: statCells(cashFlowChanges(CHAIN), yr)
 		},
 		{
-			// No caption: the divisor is each measure's OWN active months, so the figures state it per
-			// cell rather than one line claiming a count only some of them used.
 			label: words('Avg / month'),
-			cells: [
-				{ id: 'avg.income_per_month', scope: yr },
-				{ id: 'avg.spending_per_month', scope: yr },
-				{ id: 'avg.saved_per_month', scope: yr }
-			]
+			cells: statCells(
+				CHAIN.map((c) => c.perMonth),
+				yr
+			)
 		}
 	]);
 </script>

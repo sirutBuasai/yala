@@ -1,6 +1,6 @@
 <script lang="ts">
-	// Activity · Month — the working view: this month's shape on top, its raw records below. The table
-	// below is only the DEFAULT; what the user rearranges is stored under this view and range's key.
+	// Activity · Month — the working view: this month's shape on top, its raw records below. The layout
+	// here is only the default; what the user rearranges is stored under this view and range's key.
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
 	import type { Scope } from '$lib/data/scope';
@@ -36,9 +36,9 @@
 	const label = $derived(monthLabel(monthKey));
 	const mo = $derived<Scope>({ level: 'month', monthKey });
 
-	// Two rows of KPIs: the month's three levels with how they moved and the shape of the year behind
-	// each, then the three rates that say how the month was run. A ring on the two that are shares of
-	// income; "vs average" is already a signed deviation, so a chart would only restate it.
+	// Two rows: the month's three levels with how they moved and the year's shape behind each, then the
+	// three rates that say how it was run. A ring on the two that are shares of income; "vs average" is
+	// already a signed deviation, so a chart would only restate it.
 	const KPIS = $derived<KpiBoardDefs>({
 		income: {
 			rect: { x: 0, y: 0, w: 8, h: 5 },
@@ -66,15 +66,14 @@
 		}
 	});
 
-	// Two stacks beside the month's shape: the three levels, then the three rates that judge them.
+	// Two stacks beside the month's shape: the three levels, then the rates that judge them.
 	const kpis = useKpiBoard('activity:month', () => KPIS, [
 		{ ids: ['income', 'spent', 'saved'], axis: 'column' },
 		{ ids: ['typical', 'spendingRate', 'savingsRate'], axis: 'column' }
 	]);
 
-	// The KPIs, then the month's shape, then its records. A list sitting beside a neighbour takes a SET
-	// height, so the row keeps its line and scrolls once the month is busy; the history below has
-	// nothing to line up with, so it fits its content.
+	// A list beside a neighbour takes a set height, so the row keeps its line and scrolls once the month
+	// is busy; the history below has nothing to line up with, so it fits its content.
 	const PANES = $derived(
 		kpis.board({
 			donut: {
@@ -108,8 +107,7 @@
 	);
 	const pending = $derived(pendingRows(data, monthKey));
 
-	// Validated against the sort fields that actually exist, so a renamed field falls back to date
-	// order rather than leaving the list unsorted.
+	// Validated against the sort fields that exist, so a renamed one falls back to date order.
 	const sort = new Pref<TxnSort>('txn-sort', 'date', oneOf(TXN_SORTS.map((s) => s.key)));
 	const sortDir = new Pref<'asc' | 'desc'>('txn-sort-dir', 'desc', oneOf(['asc', 'desc'] as const));
 

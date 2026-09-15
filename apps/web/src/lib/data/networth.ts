@@ -1,5 +1,5 @@
-// Net-worth primitives over the `networth` section: the snapshot trend, where the money sits, the
-// growth decomposition, and the targets derived from your own spending.
+// Net-worth primitives over the `networth` section: the snapshot trend, allocation, the growth
+// decomposition, and the targets derived from logged spending.
 
 import type { DashboardData, NetWorthSnapshot } from '$lib/data/types';
 import type {
@@ -21,6 +21,9 @@ import { money } from '$lib/utils/format';
 import { yearOf } from '$lib/utils/period';
 import { live, words, type Label } from '$lib/ui/label';
 
+/** The three figures every snapshot carries. */
+export type SnapshotField = 'net_worth' | 'assets' | 'liabilities';
+
 /** Allocation buckets in display order (mirrors the backend `BUCKETS`). */
 const BUCKETS = ['Liquid', 'Taxable', 'Tax-advantaged'];
 
@@ -29,6 +32,11 @@ const WINDOW_YEARS = 10;
 
 function snapshots(data: DashboardData): NetWorthSnapshot[] {
 	return data.networth?.series ?? [];
+}
+
+/** Today's live total, or null before anything is snapshotted. */
+function currentNetWorth(data: DashboardData): number | null {
+	return data.networth?.current?.net_worth ?? null;
 }
 
 /** Every year a snapshot falls in, ascending. */
@@ -49,7 +57,7 @@ function assetAccounts(data: DashboardData) {
 function snapshotSeries(
 	data: DashboardData,
 	name: string,
-	field: 'net_worth' | 'assets' | 'liabilities',
+	field: SnapshotField,
 	year?: number
 ): Series {
 	const points = year == null ? snapshots(data) : forYear(data, year);
@@ -61,25 +69,20 @@ function snapshotSeries(
 	);
 }
 
-/** These figures are signed decompositions, so their sign IS their meaning. */
+/** For signed decompositions, where the sign is the figure's meaning. */
 function bySign(value: number): Tone {
 	return value >= 0 ? 'good' : 'bad';
 }
 
 /** A current-value scalar; net worth also carries its change since the previous snapshot. */
-export function netWorthScalar(
-	data: DashboardData,
-	field: 'net_worth' | 'assets' | 'liabilities',
-	label: Label
-): Scalar {
+export function netWorthScalar(data: DashboardData, field: SnapshotField, label: Label): Scalar {
 	const unit = MONEY(data.currency);
 	const current = data.networth?.current ?? null;
 	const value = current ? current[field] : null;
 
 	const s: Scalar = { kind: 'scalar', unit, label, value };
 
-	// `current` is today's live total, whose date may already be the last logged series point — skip
-	// that point when it is, so the delta never compares a snapshot against itself.
+	// `current` may share its date with the last series point; skip it so the delta isn't self-vs-self.
 	const points = snapshots(data);
 	const last = points[points.length - 1];
 	const prev = last && current && last.date === current.date ? points[points.length - 2] : last;
@@ -95,10 +98,7 @@ export function netWorthByMonth(data: DashboardData, year?: number): Series {
 	return snapshotSeries(data, 'Net worth', 'net_worth', year);
 }
 
-/**
- * Net worth and assets over time. The *gap* between them is what is owed, so the page draws assets
- * dashed to keep net worth the primary line.
- */
+/** Net worth and assets over time; the gap between them is what is owed. */
 export function netWorthVsAssets(data: DashboardData): MultiSeries {
 	const unit = MONEY(data.currency);
 	const points = snapshots(data);
@@ -127,15 +127,10 @@ export function netWorthVsAssets(data: DashboardData): MultiSeries {
 }
 
 /**
- * A snapshot field at the close of each logged year, most recent `WINDOW_YEARS` only. A KPI's underlay is
- * read as a shape rather than a scale, and past a decade of bars the recent years are too thin to tell
- * apart; a shorter history plots whatever it has.
+ * A snapshot field at the close of each logged year, most recent `WINDOW_YEARS` only — past that the
+ * recent years are too thin to tell apart in a KPI underlay.
  */
-export function netWorthByYear(
-	data: DashboardData,
-	field: 'net_worth' | 'assets' | 'liabilities',
-	name: string
-): Series {
+export function netWorthByYear(data: DashboardData, field: SnapshotField, name: string): Series {
 	const years = snapshotYears(data).slice(-WINDOW_YEARS);
 	return series(
 		name,
@@ -145,7 +140,7 @@ export function netWorthByYear(
 	);
 }
 
-/** Liabilities over time on their own — illegible as a third line against a net-worth axis. */
+/** Liabilities over time on their own; illegible as a third line against a net-worth axis. */
 export function netWorthLiabilities(data: DashboardData, year?: number): Series {
 	return snapshotSeries(data, 'Liabilities', 'liabilities', year);
 }
@@ -175,7 +170,7 @@ export function netWorthMonthlyTable(data: DashboardData, year: number): Table {
 	};
 }
 
-/** Each bucket's share of assets over time — shares, since the dollar level is the trend's job. */
+/** Each bucket's share of assets over time. */
 export function netWorthAllocationShare(data: DashboardData, year?: number): MultiSeries {
 	const points = year == null ? snapshots(data) : forYear(data, year);
 	const labels = points.map((p) => p.date);
@@ -196,10 +191,7 @@ export function netWorthAllocationShare(data: DashboardData, year?: number): Mul
 	};
 }
 
-/**
- * Every asset account by value, largest first. Assets only: this is a parts-of-a-whole ranking, and
- * a negative bar has no share of a total.
- */
+/** Every asset account by value, largest first. Liabilities excluded: a negative bar has no share. */
 export function netWorthAccounts(data: DashboardData): Categorical {
 	return categorical(
 		assetAccounts(data).map((a) => ({ category: a.label, amount: a.value })),
@@ -212,8 +204,8 @@ export function netWorthAccounts(data: DashboardData): Categorical {
 //
 //     ΔNetWorth = saved + everything-else,  saved = logged income − logged spending
 //
-// The remainder stays one term: an investment account is snapshotted as a single currency figure whose
-// pad absorbs both market growth and unlogged flow, so splitting them would be a guess.
+// The remainder stays one term: an investment snapshot's pad absorbs both market growth and unlogged
+// flow, so splitting them would be a guess.
 
 /** The snapshots bounding a scope: the balance it started from, and the last one within it. */
 function bounds(
@@ -241,14 +233,12 @@ function changeOver(data: DashboardData, scope: Scope): number {
 	return open && close ? close.net_worth - open.net_worth : 0;
 }
 
-/** A decomposition term's share of the period's change, as its note. The share is read off the data, so
-    it is the derived half; the fallback is prose and stays renameable. */
+/** A decomposition term's share of the period's change, as its note. */
 function shareNote(part: number, change: number, fallback: string): Label {
 	return change ? live(`${Math.round((part / change) * 100)}% of the change`) : words(fallback);
 }
 
-/** Net worth at the end of a scope, with its change over that scope as a delta. The level itself is
-    untoned — it is a position, not a verdict; the delta carries the news. */
+/** Net worth at the end of a scope, with its change over that scope as a delta. */
 export function netWorthChange(data: DashboardData, scope: Scope): Scalar {
 	const unit = MONEY(data.currency);
 	const { open, close } = bounds(data, scope);
@@ -307,7 +297,7 @@ export function netWorthOther(data: DashboardData, scope: Scope): Scalar {
 	};
 }
 
-/** Saved vs everything-else per year — which force did the work. */
+/** Saved vs everything-else per year. */
 export function savedVsOther(data: DashboardData): MultiSeries {
 	const unit = MONEY(data.currency);
 	const years = snapshotYears(data);
@@ -364,7 +354,7 @@ export function netWorthYearTable(data: DashboardData): Table {
 
 // --- targets, derived from your own spending and the settings you state ---
 
-/** Annualized spending over the trailing year of months with data — the lifestyle to size against. */
+/** Annualized spending over the trailing year of months with data. */
 function trailingAnnualSpend(data: DashboardData): number {
 	const keys = data.meta.month_keys.filter((k) => data.months[k]).slice(-12);
 	if (!keys.length) return 0;
@@ -373,7 +363,7 @@ function trailingAnnualSpend(data: DashboardData): number {
 		(sum, k) => sum + measureValue(data, { level: 'month', monthKey: k }, 'spending'),
 		0
 	);
-	// Scale by months present, not a flat year, so an early ledger isn't flattered.
+	// Scale by months present, not a flat year, so a short ledger isn't flattered.
 	return (total / keys.length) * 12;
 }
 
@@ -395,7 +385,7 @@ export function fiNumber(data: DashboardData): Scalar {
 
 export function fiProgress(data: DashboardData): Scalar {
 	const target = fiNumber(data).value;
-	const current = data.networth?.current?.net_worth ?? null;
+	const current = currentNetWorth(data);
 
 	return {
 		kind: 'scalar',
@@ -409,7 +399,7 @@ export function fiProgress(data: DashboardData): Scalar {
 /** Years your net worth would cover at your current spending. */
 export function yearsOfFreedom(data: DashboardData): Scalar {
 	const annual = trailingAnnualSpend(data);
-	const current = data.networth?.current?.net_worth ?? null;
+	const current = currentNetWorth(data);
 
 	return {
 		kind: 'scalar',
@@ -442,7 +432,7 @@ export function coastFi(data: DashboardData): Scalar {
 	const unit = PERCENT;
 	const birthYear = data.settings?.birth_year ?? null;
 	const target = fiNumber(data).value;
-	const current = data.networth?.current?.net_worth ?? null;
+	const current = currentNetWorth(data);
 
 	if (birthYear === null || !target || current === null) {
 		return {
@@ -471,9 +461,8 @@ export function coastFi(data: DashboardData): Scalar {
 // --- rates and risk ---
 
 /**
- * Compound annual growth of the balance, as a percentage. Not a return: contributions are included,
- * so it overstates investment performance. Null under half a year of history, where annualizing is
- * meaningless.
+ * Compound annual growth of the balance, as a percentage. Not a return: contributions are included, so
+ * it overstates investment performance. Null under half a year of history.
  */
 export function balanceGrowth(data: DashboardData): Scalar {
 	const all = snapshots(data);
@@ -495,7 +484,7 @@ export function balanceGrowth(data: DashboardData): Scalar {
 	};
 }
 
-/** The largest single account as a share of assets — concentration risk, and where it sits. */
+/** The largest single account as a share of assets. */
 export function topAccountShare(data: DashboardData): Scalar {
 	const assets = assetAccounts(data);
 	const total = assets.reduce((sum, a) => sum + a.value, 0);
@@ -514,9 +503,8 @@ export function topAccountShare(data: DashboardData): Scalar {
 }
 
 /**
- * Cash runway, the FI number and Coast FI as one bullet set. Each row reuses the scalar that already
- * computes it, so a gauge can't disagree with the tile beside it; rows with no value are dropped
- * rather than drawn empty.
+ * Cash runway, the FI number and Coast FI as one bullet set, each reusing the scalar that computes it.
+ * Rows with no value are dropped rather than drawn empty.
  */
 export function netWorthThresholds(data: DashboardData): Bullet {
 	const runway = liquidRunway(data);
@@ -530,7 +518,7 @@ export function netWorthThresholds(data: DashboardData): Bullet {
 			unit: MONTHS,
 			value: runway.value,
 			target,
-			// Bands are relative to the target, so changing the setting moves the shading with it.
+			// Relative to the target, so changing the setting moves the shading with it.
 			bands: [target / 2, target],
 			note: runway.note
 		},

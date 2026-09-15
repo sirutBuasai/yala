@@ -6,6 +6,7 @@
 	import { clamp } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Legend from '$lib/charts/Legend.svelte';
+	import { chartLabel } from '$lib/charts/aria';
 
 	interface Series {
 		name: string;
@@ -33,8 +34,7 @@
 	const box = new ChartBox();
 	const W = $derived(box.w);
 	const H = $derived(box.h);
-	// The end-label gutter is a share of the box, not a constant, so a narrow card doesn't hand most
-	// of its plot to labels.
+	// A share of the box, not a constant, so a narrow card doesn't hand most of its plot to labels.
 	const m = $derived({ t: 16, r: endLabels ? clamp(W * 0.2, 96, 170) : 16, b: 28, l: 60 });
 	const plot = $derived(plotSize(W, H, m));
 	const iw = $derived(plot.iw);
@@ -52,7 +52,7 @@
 	const plottable = (v: number | null): v is number => v != null && (!log || v > 0);
 
 	const fmt = (v: number) => (percent ? `${Math.round(v)}%` : money(v));
-	// See BarChart: the hover carries the cents the end label rounds away.
+	// The hover carries the cents the end label rounds away.
 	const tipFmt = (v: number) => (percent ? `${Math.round(v)}%` : moneyExact(v));
 	const tickFmt = (v: number) => (percent ? `${v}%` : money(v));
 
@@ -74,9 +74,8 @@
 	const shown = $derived(new Set(labelIndices(n, iw, labels)));
 
 	/**
-	 * Right-edge labels, nudged apart so many lines stay readable without a legend: push each down to
-	 * clear its predecessor, then if the stack overruns the plot, pin the last and push back up — so
-	 * every label lands on canvas whatever the data does.
+	 * Right-edge labels nudged apart: push each down to clear its predecessor, then if the stack overruns
+	 * the plot, pin the last and push back up, so every label lands on canvas.
 	 */
 	const GAP = 14;
 	const ends = $derived.by(() => {
@@ -100,10 +99,12 @@
 		return list;
 	});
 
-	// An unlabelled role="img" announces only "image".
 	const label = $derived(
-		`Line chart: ${series.map((sr) => sr.name).join(', ')}` +
-			(labels.length ? ` from ${labels[0]} to ${labels[labels.length - 1]}` : '')
+		chartLabel(
+			'Line chart',
+			series.map((sr) => sr.name),
+			labels.length ? ` from ${labels[0]} to ${labels[labels.length - 1]}` : ''
+		)
 	);
 
 	let hover = $state<number | null>(null);

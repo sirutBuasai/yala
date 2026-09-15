@@ -1,6 +1,5 @@
-// Data primitives — the vocabulary of shapes the dashboard can compute, decoupled from how they're
-// drawn. A primitive is numbers + structure + a `unit`, and carries no colours or chart config. The
-// `unit` names the measurement scale, which is what lets one formatter render every figure.
+// Data primitives: the shapes the dashboard can compute, decoupled from how they're drawn. Numbers +
+// structure + a `unit`, never colours or chart config.
 
 import { money, moneyExact } from '$lib/utils/format';
 import type { Label } from '$lib/ui/label';
@@ -19,7 +18,7 @@ export const COUNT: Unit = { kind: 'count' };
 export const MONTHS: Unit = { kind: 'duration', period: 'month' };
 export const YEARS: Unit = { kind: 'duration', period: 'year' };
 
-/** Render a raw value in its unit. Formatting lives here so every visual agrees. */
+/** Render a raw value in its unit. Shared so every visual formats the same figure the same way. */
 export function formatUnit(value: number, unit: Unit): string {
 	switch (unit.kind) {
 		case 'money':
@@ -28,25 +27,18 @@ export function formatUnit(value: number, unit: Unit): string {
 			return `${Math.round(value)}%`;
 		case 'count':
 			return Math.round(value).toLocaleString();
-		// Durations keep a decimal: they are small numbers where rounding changes the answer.
+		// Durations keep a decimal: they are small enough that rounding changes the answer.
 		case 'duration':
 			return `${value.toFixed(1)} ${unit.period === 'month' ? 'mo' : 'yr'}`;
 	}
 }
 
-/**
- * The same for a tooltip, which is where a reader goes for the figure ITSELF: money keeps its cents,
- * since a chart's own label is the rounded one and hovering it to see the same rounding answers nothing.
- */
+/** For a tooltip, where a reader goes for the exact figure: money keeps its cents. */
 export function formatUnitExact(value: number, unit: Unit): string {
 	return unit.kind === 'money' ? moneyExact(value) : formatUnit(value, unit);
 }
 
-/**
- * The same, for a figure whose SIGN is its meaning — a change, a deviation from an average. The
- * formatters only ever show a minus, so without this a rise and a fall read identically apart from
- * their colour, and colour alone is not a reading.
- */
+/** For a figure whose sign is its meaning. The unit formatters only ever show a minus. */
 export function formatDelta(value: number, unit: Unit): string {
 	return (value > 0 ? '+' : '') + formatUnit(value, unit);
 }
@@ -71,25 +63,19 @@ export type PrimitiveKind =
 
 export type Axis = 'time' | 'ordinal';
 
-/**
- * Whether a figure reads as good or bad news. NOT its sign: spending going up is bad news and
- * spending going down is good, so the sign alone can't pick the colour.
- */
+/** Whether a figure reads as good or bad news. Not its sign; which way is good depends on the measure. */
 export type Tone = 'good' | 'bad';
 
 /** A single number in context. `null` means "not applicable" and renders as an em dash. */
 export interface Scalar {
 	kind: 'scalar';
 	unit: Unit;
-	/** What a card titles itself with. A `Label`, not a string, because a KPI's title and caption are
-	    renameable: anything interpolated must arrive as the derived half or a rename would freeze it. */
+	/** A `Label`, not a string: titles are renameable, so interpolated text must arrive as the derived half. */
 	label: Label;
 	value: number | null;
-	/** Colour for the value. Set only where the SIGN is the figure's meaning — a balance that can go
-	    negative, a deviation from an average. A plain level is never toned. */
+	/** Set only where the sign is the figure's meaning. A plain level is never toned. */
 	tone?: Tone;
-	/** A secondary figure — a change or a rate — shown beside the value. Its note rides with the badge
-	    rather than the card header, so it is never renamed and stays a plain string. */
+	/** A change or rate shown beside the value. Its note rides with the badge, so it is never renamed. */
 	delta?: { value: number; unit: Unit; tone?: Tone; note?: string };
 	/** What a card captions itself with (already localized). */
 	note?: Label;
@@ -119,8 +105,7 @@ export interface Series {
 	axis: Axis;
 	name: string;
 	points: SeriesPoint[];
-	/** A level the whole series is judged against, drawn behind it — the lifetime rate behind each
-	    year's, say. `label` names it in the chart's own small print, so it is a plain string. */
+	/** A level the whole series is judged against, drawn behind it. Named in the chart's small print. */
 	reference?: { value: number; label: string };
 }
 
@@ -181,11 +166,7 @@ export interface Table {
 	rows: (string | number)[][];
 }
 
-/**
- * One measured value against the threshold it's being judged by. Each row carries its own unit and
- * is scaled independently, since rows in one bullet set answer the same question in different
- * measures.
- */
+/** One value against its threshold. Each row carries its own unit and is scaled independently. */
 export interface BulletRow {
 	label: string;
 	unit: Unit;
@@ -194,8 +175,7 @@ export interface BulletRow {
 	target: number;
 	/** Ascending cut-points along the scale, shaded from weakest to strongest. */
 	bands?: number[];
-	/** Footnote under the row (already localized). Takes a scalar's note as it comes, so it carries the
-	    same type. */
+	/** Footnote under the row (already localized). */
 	note?: Label;
 }
 
@@ -205,9 +185,8 @@ export interface Bullet {
 }
 
 /**
- * One row's latest figure against the range it usually falls in: `base` is the typical level it is
- * judged against, `lo`/`hi` the extremes of the window that typical came from. A value outside
- * `lo`–`hi` is the claim worth making, so both edges travel with the row.
+ * One row's latest figure against the range it usually falls in: `base` is the typical level, `lo`/`hi`
+ * the extremes of the window that typical came from.
  */
 export interface DeviationRow {
 	label: string;
@@ -217,7 +196,7 @@ export interface DeviationRow {
 	hi: number;
 }
 
-/** Rows judged each against its OWN range, so one row's size can't crush another's. */
+/** Rows judged each against its own range, so one row's size can't crush another's. */
 export interface Deviation {
 	kind: 'deviation';
 	unit: Unit;

@@ -1,9 +1,9 @@
 // What a drag does to the board, beyond what the push rule can say on its own. Pure, no DOM.
 //
-// The dragged pane is a piston: it travels a row at a time, taking whatever it TOUCHES in the direction
-// of travel. Pushing is the ONLY thing that moves another pane — nothing is towed — so a pane the piston
-// leaves behind keeps the position the user gave it, gap and all. Everything re-derives from the board as
-// the PRESS found it, never from the board the gesture is already editing.
+// The dragged pane is a piston: it travels a row at a time, taking whatever it touches in the direction
+// of travel. Pushing is the only thing that moves another pane — nothing is towed — so a pane the piston
+// leaves behind keeps the position the user gave it. Everything re-derives from the board as the press
+// found it, never from the board the gesture is already editing.
 
 import { clampRect, sharesColumns } from './resolve';
 import type { AuthoredPane, PlacedPane } from './types';
@@ -94,11 +94,10 @@ export function lift(id: string, x: number, y: number, origin: DragOrigin): Auth
 	let moved = 0;
 	while (moved < Math.abs(travel) && step(id, up, board)) moved++;
 
-	// A pane the piston moved is authored where it came to REST, displacement and all: travel the rows
+	// A pane the piston moved is authored where it came to rest, displacement and all: travel the rows
 	// instead and a push it was carrying stays latent in the gap above it, springing back the moment the
-	// pusher leaves. The cost is deliberate — a push the DATA made is banked as the user's once a drag
-	// moves that pane. Panes the piston never reached keep their authored top, so displacement elsewhere
-	// stays transient.
+	// pusher leaves. The cost is that a push the data made is banked as the user's. Panes the piston never
+	// reached keep their authored top, so displacement elsewhere stays transient.
 	const resting = (p: AuthoredPane) =>
 		board.get(p.id)!.y === press.get(p.id)! ? p.y : board.get(p.id)!.y;
 

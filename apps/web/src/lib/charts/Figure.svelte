@@ -1,7 +1,6 @@
 <script lang="ts">
-	// Bind a data primitive to a chart: ask the registry to adapt it into props, then render the
-	// matching chart. Views bind data here rather than importing charts and hand-shaping props, so the
-	// data→visual coupling lives entirely in the registry.
+	// Bind a data primitive to a chart: ask the registry to adapt it into props, then render the matching
+	// chart. Views bind data here so the data→visual coupling lives entirely in the registry.
 	import type { Primitive } from '$lib/data/primitives';
 	import { CHARTS_BY_ID, defaultChart, type ColorBy } from './registry';
 	import Empty from '$lib/ui/Empty.svelte';

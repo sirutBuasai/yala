@@ -1,6 +1,5 @@
-// The data catalog: named, bindable data instances. Each entry declares what primitive kind it
-// produces and at which scopes, and builds it from the dashboard document. The chart registry then
-// answers which charts can draw that kind.
+// The data catalog: named, bindable data instances. Each entry declares the primitive kind it produces
+// and the scopes it supports; the chart registry answers which charts can draw that kind.
 
 import type { DashboardData } from '$lib/data/types';
 import type { Primitive, PrimitiveKind } from './primitives';
@@ -67,6 +66,14 @@ import {
 
 export type { Scope, ScopeLevel } from './scope';
 
+const LIFETIME: ScopeLevel[] = ['all'];
+const YEARLY: ScopeLevel[] = ['all', 'year'];
+const ALL_SCOPES: ScopeLevel[] = ['all', 'year', 'month'];
+
+/** The scope's year, or undefined at lifetime scope — what a builder that spans both takes. */
+const optionalYear = (data: DashboardData, scope: Scope) =>
+	scope.level === 'year' ? scopeYear(data, scope) : undefined;
+
 interface DataDef {
 	id: string;
 	label: string;
@@ -76,6 +83,15 @@ interface DataDef {
 	build(data: DashboardData, scope: Scope): Primitive;
 }
 
+function scalarDef(
+	id: string,
+	label: string,
+	scopes: ScopeLevel[],
+	build: (data: DashboardData, scope: Scope) => Primitive
+): DataDef {
+	return { id, label, kind: 'scalar', scopes, build };
+}
+
 // --- multi-value data (categorical, series, flow, matrix, table) ---
 
 const CHART_DEFS: DataDef[] = [
@@ -83,7 +99,7 @@ const CHART_DEFS: DataDef[] = [
 		id: 'spending.by_category',
 		label: 'Spending by category',
 		kind: 'categorical',
-		scopes: ['all', 'year', 'month'],
+		scopes: ALL_SCOPES,
 		build(data, scope) {
 			const unit = MONEY(data.currency);
 			if (scope.level === 'month' && scope.monthKey) {
@@ -132,7 +148,7 @@ const CHART_DEFS: DataDef[] = [
 		id: 'spending.category_by_year',
 		label: 'Category by year',
 		kind: 'multiseries',
-		scopes: ['all'],
+		scopes: LIFETIME,
 		build: (data) => categorySpendByYear(data)
 	},
 	{
@@ -149,7 +165,7 @@ const CHART_DEFS: DataDef[] = [
 		id: 'income.paychecks',
 		label: 'Paychecks',
 		kind: 'table',
-		scopes: ['all', 'year', 'month'],
+		scopes: ALL_SCOPES,
 		build(data, scope) {
 			if (scope.level === 'month' && scope.monthKey) return paychecks(data, scope.monthKey);
 			if (scope.level === 'year') return paychecks(data, String(scopeYear(data, scope)));
@@ -160,32 +176,29 @@ const CHART_DEFS: DataDef[] = [
 		id: 'overview.cash_flow_bars',
 		label: 'Net income vs take-home vs spending vs saved',
 		kind: 'multiseries',
-		scopes: ['all', 'year'],
-		build: (data, scope) =>
-			scope.level === 'year' ? cashFlowBars(data, scopeYear(data, scope)) : cashFlowBars(data)
+		scopes: YEARLY,
+		build: (data, scope) => cashFlowBars(data, optionalYear(data, scope))
 	},
 	{
 		id: 'overview.savings_rate',
 		label: 'Savings rate',
 		kind: 'series',
-		scopes: ['all'],
+		scopes: LIFETIME,
 		build: (data) => savingsRate(data)
 	},
 	{
 		id: 'money.flow',
 		label: 'Money flow',
 		kind: 'flow',
-		scopes: ['all', 'year'],
-		build: (data, scope) =>
-			moneyFlow(data, scope.level === 'year' ? scopeYear(data, scope) : undefined)
+		scopes: YEARLY,
+		build: (data, scope) => moneyFlow(data, optionalYear(data, scope))
 	},
 	{
 		id: 'networth.by_month',
 		label: 'Net worth by month',
 		kind: 'series',
-		scopes: ['all', 'year'],
-		build: (data, scope) =>
-			netWorthByMonth(data, scope.level === 'year' ? scopeYear(data, scope) : undefined)
+		scopes: YEARLY,
+		build: (data, scope) => netWorthByMonth(data, optionalYear(data, scope))
 	},
 	{
 		id: 'networth.monthly_table',
@@ -198,108 +211,103 @@ const CHART_DEFS: DataDef[] = [
 		id: 'networth.vs_assets',
 		label: 'Net worth & assets over time',
 		kind: 'multiseries',
-		scopes: ['all'],
+		scopes: LIFETIME,
 		build: (data) => netWorthVsAssets(data)
 	},
 	{
 		id: 'networth.thresholds',
 		label: 'Progress to thresholds',
 		kind: 'bullet',
-		scopes: ['all'],
+		scopes: LIFETIME,
 		build: (data) => netWorthThresholds(data)
 	},
 	{
 		id: 'networth.liabilities_trend',
 		label: 'Liabilities over time',
 		kind: 'series',
-		scopes: ['all', 'year'],
-		build: (data, scope) =>
-			netWorthLiabilities(data, scope.level === 'year' ? scopeYear(data, scope) : undefined)
+		scopes: YEARLY,
+		build: (data, scope) => netWorthLiabilities(data, optionalYear(data, scope))
 	},
 	{
 		id: 'networth.allocation_share',
 		label: 'Allocation mix over time',
 		kind: 'multiseries',
-		scopes: ['all', 'year'],
-		build: (data, scope) =>
-			netWorthAllocationShare(data, scope.level === 'year' ? scopeYear(data, scope) : undefined)
+		scopes: YEARLY,
+		build: (data, scope) => netWorthAllocationShare(data, optionalYear(data, scope))
 	},
 	{
 		id: 'networth.accounts',
 		label: 'Where the money sits',
 		kind: 'categorical',
-		scopes: ['all'],
+		scopes: LIFETIME,
 		build: (data) => netWorthAccounts(data)
 	},
 	{
 		id: 'networth.saved_vs_other',
 		label: 'You vs the market, by year',
 		kind: 'multiseries',
-		scopes: ['all'],
+		scopes: LIFETIME,
 		build: (data) => savedVsOther(data)
 	},
 	{
 		id: 'networth.year_table',
 		label: 'Year by year',
 		kind: 'table',
-		scopes: ['all'],
+		scopes: LIFETIME,
 		build: (data) => netWorthYearTable(data)
 	},
-	// Year-end levels, for the underlay behind the position KPIs. One per field rather than one
-	// parameterized entry, because a KPI names its series by id.
+	// One entry per field rather than one parameterized entry: a KPI names its series by id.
 	{
 		id: 'networth.by_year',
 		label: 'Net worth',
 		kind: 'series',
-		scopes: ['all'],
+		scopes: LIFETIME,
 		build: (data) => netWorthByYear(data, 'net_worth', 'Net worth')
 	},
 	{
 		id: 'networth.assets_by_year',
 		label: 'Assets',
 		kind: 'series',
-		scopes: ['all'],
+		scopes: LIFETIME,
 		build: (data) => netWorthByYear(data, 'assets', 'Assets')
 	},
 	{
 		id: 'networth.liabilities_by_year',
 		label: 'Liabilities',
 		kind: 'series',
-		scopes: ['all'],
+		scopes: LIFETIME,
 		build: (data) => netWorthByYear(data, 'liabilities', 'Liabilities')
 	}
 ];
 
 // --- one measure over time ---
 //
-// Generated from two small tables over the SAME measures the scalars use, so a KPI's chart and its
-// number can never be built from different definitions of the figure.
+// Generated over the same measures the scalars use, so a KPI's chart and its number agree.
 
 /** Measures with a period-by-period trend. Month scope reads as the trailing twelve. */
 const TRENDS: Field[] = ['income', 'spending', 'saved'];
 
-/** Measures with a running total — the shape of an accumulation, not a level. */
+/** Measures with a running total. */
 const RUNNING: Field[] = ['gross', 'deductions', 'contributions', 'net', 'takehome', 'saved'];
 
-// Two windows, because they answer different questions. `running.*` spans the months the measure MOVED
-// in, so a year-to-date accumulation fills its chart instead of flatlining after the last active month.
-// `revolving.*` spans the trailing twelve months, which keeps its meaning across a year boundary.
+// `running.*` spans the months the measure moved in, so a year-to-date accumulation fills its chart
+// rather than flatlining; `revolving.*` spans the trailing twelve, which survives a year boundary.
 const SERIES_DEFS: DataDef[] = [
 	...TRENDS.map((f): DataDef => ({
 		id: `trend.${f}`,
 		label: `${measureLabel(f)} over time`,
 		kind: 'series',
-		scopes: ['all', 'year', 'month'],
+		scopes: ALL_SCOPES,
 		build: (data, scope) =>
 			scope.level === 'month'
 				? measureTrailing(data, f, scope.monthKey || latestMonthKey(data))
-				: measureByMonth(data, f, scope.level === 'year' ? scopeYear(data, scope) : undefined)
+				: measureByMonth(data, f, optionalYear(data, scope))
 	})),
 	...RUNNING.map((f): DataDef => ({
 		id: `running.${f}`,
 		label: `${measureLabel(f)}, running total`,
 		kind: 'series',
-		scopes: ['all', 'year'],
+		scopes: YEARLY,
 		build: (data, scope) =>
 			accumulate(
 				scope.level === 'year'
@@ -311,115 +319,45 @@ const SERIES_DEFS: DataDef[] = [
 		id: `revolving.${f}`,
 		label: `${measureLabel(f)}, running total over 12 months`,
 		kind: 'series',
-		scopes: ['all', 'year', 'month'],
+		scopes: ALL_SCOPES,
 		build: (data, scope) =>
 			accumulate(measureTrailing(data, f, scope.monthKey || latestMonthKey(data)))
 	}))
 ];
 
 const NETWORTH_STATS: DataDef[] = [
-	...[
-		{ id: 'networth.current', label: 'Net worth', field: 'net_worth' as const },
-		{ id: 'networth.assets', label: 'Assets', field: 'assets' as const },
-		{ id: 'networth.liabilities', label: 'Liabilities', field: 'liabilities' as const }
-	].map((s) => ({
-		id: s.id,
-		label: s.label,
-		kind: 'scalar' as const,
-		scopes: ['all'] as ScopeLevel[],
-		build: (data: DashboardData) => netWorthScalar(data, s.field, words(s.label))
-	})),
-	// Scope-aware, so a page passes its range rather than there being two sets of ids.
-	{
-		id: 'networth.change',
-		label: 'Net worth',
-		kind: 'scalar',
-		scopes: ['all', 'year'],
-		build: (data, scope) => netWorthChange(data, scope)
-	},
-	{
-		id: 'networth.saved',
-		label: 'You saved',
-		kind: 'scalar',
-		scopes: ['all', 'year'],
-		build: (data, scope) => netWorthSaved(data, scope)
-	},
-	{
-		id: 'networth.other',
-		label: 'Market & other',
-		kind: 'scalar',
-		scopes: ['all', 'year'],
-		build: (data, scope) => netWorthOther(data, scope)
-	},
-	{
-		id: 'networth.fi_number',
-		label: 'FI number',
-		kind: 'scalar',
-		scopes: ['all'],
-		build: (data) => fiNumber(data)
-	},
-	{
-		id: 'networth.fi_progress',
-		label: 'FI progress',
-		kind: 'scalar',
-		scopes: ['all'],
-		build: (data) => fiProgress(data)
-	},
-	{
-		id: 'networth.coast_fi',
-		label: 'Coast FI',
-		kind: 'scalar',
-		scopes: ['all'],
-		build: (data) => coastFi(data)
-	},
-	{
-		id: 'networth.years_of_freedom',
-		label: 'Years of freedom',
-		kind: 'scalar',
-		scopes: ['all'],
-		build: (data) => yearsOfFreedom(data)
-	},
-	{
-		id: 'networth.runway',
-		label: 'Liquid runway',
-		kind: 'scalar',
-		scopes: ['all'],
-		build: (data) => liquidRunway(data)
-	},
-	{
-		id: 'networth.balance_growth',
-		label: 'Balance growth',
-		kind: 'scalar',
-		scopes: ['all'],
-		build: (data) => balanceGrowth(data)
-	},
-	{
-		id: 'networth.top_account',
-		label: 'Top account',
-		kind: 'scalar',
-		scopes: ['all'],
-		build: (data) => topAccountShare(data)
-	}
+	...(
+		[
+			['networth.current', 'Net worth', 'net_worth'],
+			['networth.assets', 'Assets', 'assets'],
+			['networth.liabilities', 'Liabilities', 'liabilities']
+		] as const
+	).map(([id, label, field]) =>
+		scalarDef(id, label, LIFETIME, (data) => netWorthScalar(data, field, words(label)))
+	),
+	...(
+		[
+			['networth.change', 'Net worth', netWorthChange],
+			['networth.saved', 'You saved', netWorthSaved],
+			['networth.other', 'Market & other', netWorthOther]
+		] as const
+	).map(([id, label, build]) => scalarDef(id, label, YEARLY, build)),
+	...(
+		[
+			['networth.fi_number', 'FI number', fiNumber],
+			['networth.fi_progress', 'FI progress', fiProgress],
+			['networth.coast_fi', 'Coast FI', coastFi],
+			['networth.years_of_freedom', 'Years of freedom', yearsOfFreedom],
+			['networth.runway', 'Liquid runway', liquidRunway],
+			['networth.balance_growth', 'Balance growth', balanceGrowth],
+			['networth.top_account', 'Top account', topAccountShare]
+		] as const
+	).map(([id, label, build]) => scalarDef(id, label, LIFETIME, build))
 ];
 
 // --- single-figure data (scalar metrics) ---
-//
-// Named instances of the metric builders, generated from small tables rather than hand-written one
-// entry per metric.
 
-const ALL_SCOPES: ScopeLevel[] = ['all', 'year', 'month'];
-
-function scalarDef(
-	id: string,
-	label: string,
-	scopes: ScopeLevel[],
-	build: (data: DashboardData, scope: Scope) => Primitive
-): DataDef {
-	return { id, label, kind: 'scalar', scopes, build };
-}
-
-// `note` is the figure's CAPTION. It lives here because a caption is part of what a figure means; a
-// view that wrote its own would be a second, drift-prone answer to "what is this number".
+// `note` is the figure's caption; it lives with the definition so a view can't answer differently.
 const AMOUNTS: { id: string; label: string; field: Measure; signed?: boolean; note?: string }[] = [
 	{ id: 'income.total', label: 'Income', field: 'income', note: 'take-home + saved' },
 	{ id: 'spending.total', label: 'Spent', field: 'spending' },
@@ -430,7 +368,7 @@ const AMOUNTS: { id: string; label: string; field: Measure; signed?: boolean; no
 		id: 'income.contributions',
 		label: 'Contributions',
 		field: 'contributions',
-		note: 'HSA + 401k'
+		note: 'saved before take-home'
 	},
 	{ id: 'income.net', label: 'Net income', field: 'net', note: 'take-home + saved' },
 	{
@@ -465,11 +403,8 @@ const RATIOS: { id: string; label: string; num: Measure; den: Measure; note: str
 	}
 ];
 
-// The measures that carry a run-rate, in the order money moves through them: gross splits into what was
-// withheld, what was put away and what reached the account, and income is then what got spent or kept.
-// One table for both periods, so a measure can't end up named two ways; `slug` is the id's, which is why
-// it says `spending` while the label says spent. `total` is where the same measure's LEVEL lives, so a
-// column of the chain can be built from one ordered list rather than three hand-aligned ones.
+// The measures carrying a run-rate, ordered the way money moves through them. `slug` names the id,
+// `label` the display text, and `total` the id of the same measure's level.
 const RUN_RATES: {
 	slug: string;
 	label: string;
@@ -491,19 +426,31 @@ const RUN_RATES: {
 	{ slug: 'saved', label: 'saved', field: 'saved', total: 'saved.total', signed: true }
 ];
 
-/**
- * The cash-flow chain as a matrix reads it: a column per measure, each with the ids for its level and
- * its two run-rates. One ordered list, because three parallel arrays of ids and headings put a figure
- * under the wrong column the moment one of them is reordered.
- */
+/** The measures whose year-over-year and month-over-month change is worth a card of its own. */
+const CHANGE_FIELDS: Field[] = ['income', 'spending', 'saved'];
+
+/** A column per measure: the ids for its level, its two run-rates, and its change where one exists. */
 export const CASH_FLOW_COLUMNS = RUN_RATES.map((r) => ({
+	slug: r.slug,
 	total: r.total,
 	perYear: `avg.${r.slug}_per_year`,
-	perMonth: `avg.${r.slug}_per_month`
+	perMonth: `avg.${r.slug}_per_month`,
+	yoy: CHANGE_FIELDS.includes(r.field as Field) ? `change.${r.slug}_yoy` : undefined
 }));
 
-/** `avg.<measure>_per_<period>` over the run-rate table. A yearly average only means anything over the
-    whole history; a monthly one also reads within a single year. */
+export type CashFlowColumn = (typeof CASH_FLOW_COLUMNS)[number];
+
+/** The chain restricted to `slugs`, in the order asked for. Throws on a slug the chain has no column
+    for, so a view can't silently render a short table. */
+export function cashFlowChain(slugs: string[]): CashFlowColumn[] {
+	return slugs.map((slug) => {
+		const col = CASH_FLOW_COLUMNS.find((c) => c.slug === slug);
+		if (!col) throw new Error(`unknown cash-flow column: ${slug}`);
+		return col;
+	});
+}
+
+/** `avg.<measure>_per_<period>`. A yearly average only means anything over the whole history. */
 function runRateDefs(per: 'month' | 'year'): DataDef[] {
 	const scopes: ScopeLevel[] = per === 'month' ? ['all', 'year'] : ['all'];
 	return RUN_RATES.map((r) => {
@@ -528,16 +475,10 @@ const EXTREMA: { id: string; of: ExtremumOf; scopes: ScopeLevel[] }[] = [
 	{ id: 'max.month', of: 'month', scopes: ['all', 'year'] }
 ];
 
-// A level plus its period-over-period badge. Labelled by the measure alone — the badge's own note
-// says which period it compares against, so the title doesn't have to.
-const CHANGES: { field: Field; period: 'year' | 'month' }[] = [
-	{ field: 'income', period: 'year' },
-	{ field: 'spending', period: 'year' },
-	{ field: 'saved', period: 'year' },
-	{ field: 'income', period: 'month' },
-	{ field: 'spending', period: 'month' },
-	{ field: 'saved', period: 'month' }
-];
+// Labelled by the measure alone: the badge's own note says which period it compares against.
+const CHANGES: { field: Field; period: 'year' | 'month' }[] = (['year', 'month'] as const).flatMap(
+	(period) => CHANGE_FIELDS.map((field) => ({ field, period }))
+);
 
 const VS_TYPICAL: DataDef[] = [
 	scalarDef('spending.vs_typical', 'vs your average', ['month'], (data, scope) =>
@@ -600,6 +541,17 @@ export const CATALOG_BY_ID: Record<string, DataDef> = Object.fromEntries(
 	CATALOG.map((d) => [d.id, d])
 );
 
+/** The year-over-year change ids for `cols`, in order. Throws where the chain has no change column. */
+export function cashFlowChanges(cols: CashFlowColumn[]): string[] {
+	return cols.map((c) => {
+		if (!c.yoy) throw new Error(`no year-over-year column for ${c.slug}`);
+		return c.yoy;
+	});
+}
+
+/** A cash-flow column's heading: the catalog's own name for the measure's level. */
+export const cashFlowHeading = (c: CashFlowColumn) => CATALOG_BY_ID[c.total]!.label;
+
 /** Catalog entries producing a given primitive kind — powers "pick data for this chart". */
 export function dataOfKind(kind: PrimitiveKind): DataDef[] {
 	return CATALOG.filter((d) => d.kind === kind);
@@ -613,8 +565,7 @@ export function build(data: DashboardData, id: string, scope: Scope): Primitive 
 }
 
 // --- data-dependent metric defs ---
-// These can't be static: their instances come from the loaded document, so a picker enumerates them
-// per document and scope.
+// Instances come from the loaded document, so a picker enumerates them per document and scope.
 
 /** Per-category scalar metrics (spend + share of spending) over the tracked categories. */
 export function categoryMetricDefs(data: DashboardData): DataDef[] {

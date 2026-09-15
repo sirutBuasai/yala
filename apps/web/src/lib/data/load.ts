@@ -1,19 +1,18 @@
 // Data loading, liveness, and the schema-version guard.
 //
-// ONE read path, tried in order: the local API, else the static `data.json` the builder wrote. Both
-// carry the same account lists, so every form renders either way, and whether a write can land is
-// answered in one place (`postJson`). Liveness is a fact about the environment, not a mode to switch.
+// One read path, tried in order: the local API, else the static `data.json` the builder wrote. Both
+// carry the same account lists, so every form renders either way; whether a write can land is answered
+// only in `postJson`.
 
 import { get, writable } from 'svelte/store';
 import { asset } from '$app/paths';
 import { setAccountDirectory } from '$lib/data/directory.svelte';
 import type { AccountLists, DashboardData, SchemaVersion, SettingField } from '$lib/data/types';
 
-// Typed as the contract's own version (types.ts is generated from schema.py), so bumping the schema
-// makes this line a compile error rather than a stale runtime comparison.
+// Typed as the contract's own version, so bumping the schema breaks this line at compile time.
 const EXPECTED_SCHEMA: SchemaVersion = 1;
 
-/** The pickable account sets. Contract-generated, so it can't drift from what the backend sends. */
+/** The pickable account sets, as the contract generates them. */
 export type AccountsInfo = AccountLists;
 export type PayrollOption = AccountLists['payroll_options'][number];
 
@@ -31,8 +30,7 @@ export const accounts = writable<AccountsInfo | null>(null);
 export const live = writable(false);
 export const loadState = writable<LoadState>({ status: 'loading' });
 
-// Display names and institutions live in the document but are read by pure helpers with no access to a
-// store. Synced here rather than at each `data.set`, so no loader can forget to.
+// Synced from a subscriber rather than at each `data.set`, so no loader can forget to.
 data.subscribe((doc) => setAccountDirectory(doc?.meta.accounts));
 
 function checkSchema(doc: DashboardData): string | null {
@@ -60,14 +58,12 @@ export interface PostResult<T> {
 	data: T;
 	/** A user-facing message on failure (API detail, status, or a network error), else null. */
 	error: string | null;
-	/** HTTP status, or 0 when the request never reached the API. Lets a caller tell a missing
-	    endpoint (a stale server) from a rejected request or an unreachable one. */
+	/** HTTP status, or 0 when the request never reached the API. */
 	status: number;
 }
 
-/** A readable error message from a failed response. FastAPI's own default handler returns a list of
-    error objects rather than our flattened string `detail`, and that must not surface as
-    "[object Object]". */
+/** A readable message from a failed response. FastAPI's validation handler puts a list of error
+    objects in `detail` rather than a string, which would otherwise surface as "[object Object]". */
 function errorMessage(data: { detail?: unknown }, status: number): string {
 	const d = data.detail;
 	if (typeof d === 'string' && d) return d;
@@ -79,10 +75,10 @@ function errorMessage(data: { detail?: unknown }, status: number): string {
 	return `error ${status}`;
 }
 
-/** GET + parse JSON, normalizing errors into a `PostResult` (used to prefill edit forms). */
-export async function getJson<T = Record<string, unknown>>(url: string): Promise<PostResult<T>> {
+/** Fetch + parse JSON, normalizing every failure mode into a `PostResult`. */
+async function request<T>(url: string, init?: RequestInit): Promise<PostResult<T>> {
 	try {
-		const res = await fetch(url, { cache: 'no-store' });
+		const res = await fetch(url, { cache: 'no-store', ...init });
 		const data = (await res.json().catch(() => ({}))) as T & { detail?: unknown };
 
 		return res.ok
@@ -98,43 +94,33 @@ export async function getJson<T = Record<string, unknown>>(url: string): Promise
 	}
 }
 
-/** POST a JSON body and parse the response, normalizing errors into a `PostResult`. */
+/** GET + parse JSON (used to prefill edit forms). */
+export function getJson<T = Record<string, unknown>>(url: string): Promise<PostResult<T>> {
+	return request<T>(url);
+}
+
+/** POST a JSON body. The one write choke point: the guard below is the only one in the app. */
 export async function postJson<T = Record<string, unknown>>(
 	url: string,
 	body: unknown
 ): Promise<PostResult<T>> {
-	// THE write guard, and the only one: every mutation is a POST through here. `status: 0` is the
-	// same shape a network failure produces, so callers need no new branch.
+	// `status: 0` is the shape a network failure produces, so callers need no new branch.
 	if (!get(live)) {
 		return { ok: false, data: {} as T, error: API_UNAVAILABLE, status: 0 };
 	}
 
-	try {
-		const res = await fetch(url, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(body)
-		});
-		const data = (await res.json().catch(() => ({}))) as T & { detail?: unknown };
+	const result = await request<T>(url, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(body)
+	});
+	// Every write can move a derived balance, so the cache is dropped here, not in each caller.
+	if (result.ok) invalidateDerivedCache();
 
-		// Every write can move a derived balance, so the cache is dropped here, not in each caller.
-		if (res.ok) invalidateDerivedCache();
-
-		return res.ok
-			? { ok: true, data, error: null, status: res.status }
-			: { ok: false, data, error: errorMessage(data, res.status), status: res.status };
-	} catch (e) {
-		return {
-			ok: false,
-			data: {} as T,
-			error: 'API unreachable: ' + (e as Error).message,
-			status: 0
-		};
-	}
+	return result;
 }
 
-/** Cache for reads the ledger derives rather than stores: paging months back and forth otherwise
-    re-walks the ledger for figures that cannot have changed. */
+/** Cache for reads the ledger derives rather than stores; cleared on every write. */
 const derivedCache = new Map<string, unknown>();
 
 /** Drop every cached derived read. Called from the write path; exported for tests. */
@@ -152,8 +138,7 @@ function publish(doc: DashboardData, fromApi: boolean, lists: AccountsInfo | nul
 
 /**
  * Load the dashboard: the local API first, the built snapshot second. Liveness is re-established every
- * load, never remembered — persisting it made a transient failure permanent, since falling back once
- * while the API restarted meant no later load retried it.
+ * load, never persisted — remembering a fallback made a transient failure permanent.
  */
 export async function loadData(): Promise<void> {
 	loadState.set({ status: 'loading' });
@@ -165,14 +150,13 @@ export async function loadData(): Promise<void> {
 			try {
 				lists = await fetchJson<AccountsInfo>('/api/accounts');
 			} catch {
-				// The API answered for the document but not for the lists (an older build). Its
-				// snapshot of them is the next best thing.
+				// An older API answers for the document but not the lists; its snapshot of them will do.
 			}
 			publish(doc, true, lists);
 			return;
 		}
 	} catch {
-		// No API on this port. Expected on a hosted copy; the snapshot is the answer.
+		// No API on this port. Expected on a hosted copy, where the snapshot is the answer.
 	}
 
 	try {
@@ -207,8 +191,8 @@ export async function deleteTransaction(locator: string): Promise<string | null>
 	return (await postJson('/api/entry/delete', { locator })).error;
 }
 
-/** Re-pull the document and then the account lists, in that order: the lists put a new row on
-    screen, so refreshing them first would flash its raw leaf before the directory knew its name. */
+/** Re-pull the document, then the lists. Order matters: a list refreshed first flashes a raw leaf
+    name, since the directory does not yet know the new account. */
 async function refreshAccounts(): Promise<void> {
 	await refreshData();
 	if (!get(live)) return;
@@ -224,13 +208,13 @@ async function refreshAccounts(): Promise<void> {
 export type CreatableAccountKind =
 	'category' | 'bank' | 'card' | 'investment' | 'employer' | 'deduction';
 
-/** An investment's tax tier. It is a path segment, so changing it is a move, not a metadata edit. */
+/** An investment's tax tier. A path segment, so changing it is a move, not a metadata edit. */
 export type AccountTier = 'Taxable' | 'TaxAdvantaged';
 
 /**
- * How an account is to be named: the whole name in one field, or the two halves the API joins.
- * Either way the words are sent as typed and the API composes the account's leaf, so a space is
- * accepted anywhere. Aliases are short forms, used only when the rendered name overruns.
+ * How an account is to be named: the whole name in one field, or the two halves the API joins. Words
+ * are sent as typed and the API composes the leaf. Aliases are short forms, used only when a rendered
+ * name overruns.
  */
 export interface AccountNaming {
 	name?: string;
@@ -240,19 +224,14 @@ export interface AccountNaming {
 	account_alias?: string;
 }
 
-/** What opening an account returns. `name` is the display name the API resolved, which is the only
-    authority on it: the naming rule lives server-side. */
+/** What opening an account returns. `name` is the API's resolved display name; the rule is server-side. */
 export interface OpenedAccount {
 	account: string | null;
 	name: string | null;
 	error: string | null;
 }
 
-/**
- * What an account may carry beyond its name, each accepted only by the kinds it applies to: a tier
- * for an investment, an employer scope for an investment or a deduction, contribution labels for an
- * investment. The API rejects one sent to a kind that has no room for it.
- */
+/** Optional fields beyond a name. The API rejects one sent to a kind that has no room for it. */
 export interface AccountExtras {
 	date?: string;
 	tier?: AccountTier;
@@ -260,10 +239,7 @@ export interface AccountExtras {
 	labels?: string[];
 }
 
-/**
- * Open a ledger account of any kind and refresh the account lists so the new one appears
- * everywhere. A bare string is the name as typed; `extra` carries the per-kind fields.
- */
+/** Open an account and refresh the lists. A bare string is the name as typed. */
 export async function openAccount(
 	kind: CreatableAccountKind,
 	naming: string | AccountNaming,
@@ -293,14 +269,13 @@ export interface DrainLeg {
 	amount: number;
 }
 
-/** What a close takes beyond the account, decided by the account itself: a money account may drain
-    to a `destination`, an investment splits its value across `legs`, and either may be dated. */
+/** A money account may drain to a `destination`, an investment splits its value across `legs`. */
 export interface CloseOptions {
 	destination?: string;
 	legs?: DrainLeg[];
 	date?: string;
-	/** Which of an employer's linked accounts close with it. Sent even when empty — the ones left out
-	    are unlinked from it, so the API refuses to guess. */
+	/** Which of an employer's linked accounts close with it. Sent even when empty: the omitted ones are
+	    unlinked, so the API refuses to guess. */
 	close_with?: string[];
 }
 
@@ -318,11 +293,9 @@ export async function setSweep(account: string, dest: string | null): Promise<st
 }
 
 /**
- * Rename an account, move an investment to another tax tier, or both. Not a metadata edit: this
- * rewrites the account's name in every posting, assertion and quoted value across the ledger.
- *
- * `account` in the result is where it now lives, which the API is the only authority on — the path is
- * composed from the parts server-side, so a caller must never try to spell it.
+ * Rename an account, move an investment to another tax tier, or both. Not a metadata edit: this rewrites
+ * the name in every posting, assertion and quoted value across the ledger. `account` in the result is
+ * the new path, which only the API can spell.
  */
 export async function renameAccount(
 	account: string,
@@ -342,15 +315,14 @@ export async function renameAccount(
 	return { account: data.account ?? null, error: null };
 }
 
-/** Undo a close — a mis-click, or a rehire. Returns an error message, or null. */
+/** Undo a close. Returns an error message, or null. */
 export async function reopenAccount(account: string): Promise<string | null> {
 	return writeAccounts('/api/account/reopen', { account }, 'reopen failed');
 }
 
 /**
- * What an account is called and what it offers. Only the keys present are changed; an explicit null
- * clears one. Editing a short form shortens the displayed name — it does not rename the account. The
- * two name halves are absent on purpose: they name the account, so they are renamed, not edited.
+ * Only the keys present are changed; an explicit null clears one. The two name halves are absent on
+ * purpose: they name the account, so they go through `renameAccount`.
  */
 export interface AccountMeta {
 	institution_alias?: string | null;
@@ -382,8 +354,7 @@ export async function investmentValue(
 	return ok ? { value: data.value ?? 0, error: null } : { value: null, error: error ?? 'failed' };
 }
 
-/** Log a USD balance snapshot for a cash or investment account (pad + balance); share lots are
-    reclassified to USD first. */
+/** Log a USD balance snapshot (pad + balance). Share lots are reclassified to USD first. */
 export async function logBalance(
 	account: string,
 	amount: number,
@@ -399,8 +370,8 @@ export async function logBalance(
 		: { locator: null, error: error ?? 'log failed' };
 }
 
-/** Edit a balance snapshot in place. Returns the (possibly upgraded) locator: editing a migrated
-    assertion stamps an id on it, replacing its line handle. */
+/** Edit a balance snapshot in place. The returned locator may differ: editing a migrated assertion
+    stamps an id on it, replacing its line handle. */
 export async function updateBalance(
 	locator: string,
 	amount: number
@@ -435,8 +406,7 @@ export async function networthAt(date: string): Promise<NetWorthAt | null> {
 
 // --- settings ---
 
-/** One settable figure, as the backend describes it. Contract-generated, so the form renders from
-    the labels, bounds and help text the backend already owns rather than restating them. */
+/** One settable figure, as the backend describes it — labels, bounds and help text included. */
 export type SettingSpec = SettingField;
 
 export interface SettingsInfo {
@@ -445,9 +415,8 @@ export interface SettingsInfo {
 }
 
 /**
- * The settings the snapshot carries, in the shape the API serves. The re-keying is the reason this needs
- * a function: a setting's real key is hyphenated, which is not a legal field name, so the contract
- * spells the same keys with underscores and reading them straight through blanks every hyphenated one.
+ * The settings the snapshot carries, in the shape the API serves. Needs re-keying: a setting's real key
+ * is hyphenated, which is not a legal field name, so the contract spells it with underscores.
  */
 function snapshotSettings(): SettingsInfo | null {
 	const doc = get(data);
@@ -461,11 +430,9 @@ function snapshotSettings(): SettingsInfo | null {
 	return { values, specs: doc.setting_specs };
 }
 
-/** Effective settings plus their specs. Reports *why* it failed, because the reasons need different
-    actions: a 404 from a live API means the running API predates this page and needs a restart. */
+/** Effective settings plus their specs. A 404 from a live API means the API predates this page. */
 export async function getSettings(): Promise<{ info: SettingsInfo | null; error: string | null }> {
-	// Checked before any request: a static host answers 404 for every path, which would otherwise read as
-	// a stale API and tell the user to restart something that isn't running.
+	// Checked before requesting: a static host 404s every path, which would read as a stale API.
 	if (!get(live)) {
 		const info = snapshotSettings();
 		return info
@@ -486,10 +453,7 @@ export async function getSettings(): Promise<{ info: SettingsInfo | null; error:
 	return { info: null, error: hint };
 }
 
-/**
- * The entry a locator names, for an edit form to prefill from. `entry` is undefined on failure, so a
- * caller checks it rather than the flag, and the message is the one every form reports.
- */
+/** The entry a locator names, for an edit form to prefill from. `entry` is undefined on failure. */
 export async function fetchEntry(
 	kind: 'transaction' | 'transfer' | 'paycheck',
 	locator: string

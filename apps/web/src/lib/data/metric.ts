@@ -1,7 +1,5 @@
-// Scalar metrics: parameterized builders that turn the dashboard document into single-figure
-// `Scalar` primitives (amounts, averages, ratios, counts, extrema, period-over-period change).
-// Per-scope aggregates are memoized per DashboardData so many metrics over one document don't
-// recompute the same sums.
+// Scalar metrics: builders that reduce the dashboard document to single-figure `Scalar` primitives.
+// Per-scope aggregates are memoized per document so many metrics over one document share the sums.
 
 import type { DashboardData, MonthPage, PaycheckOut, Txn } from '$lib/data/types';
 import type { Scalar, Tone } from './primitives';
@@ -37,12 +35,12 @@ const FIELD_LABEL: Record<Field, string> = {
 	takehome: 'Take-home'
 };
 
-/** A measure's display name. Exported so a series built from a measure is named the same thing. */
+/** A measure's display name. Shared so a series over a measure is named the same as its figure. */
 export function measureLabel(m: Measure): string {
 	return typeof m === 'string' ? FIELD_LABEL[m] : m.key;
 }
 
-/** Does a bigger number read as good news? Only spending and deductions go the other way. */
+/** Does a bigger number read as good news? */
 const GOOD_UP: Record<Field, boolean> = {
 	income: true,
 	spending: false,
@@ -58,8 +56,7 @@ function goodUp(m: Measure): boolean {
 	return typeof m === 'string' ? GOOD_UP[m] : m.group === 'contributions';
 }
 
-/** Good or bad NEWS, never merely positive. Standing still is neither: a figure that did not move has
-    no verdict to report. */
+/** News, not sign: which direction is good depends on the measure. A flat figure has no tone. */
 export function toneOf(m: Measure, delta: number): Tone | undefined {
 	if (delta === 0) return undefined;
 	return delta > 0 === goodUp(m) ? 'good' : 'bad';
@@ -158,8 +155,7 @@ function totals(data: DashboardData, scope: Scope): Totals {
 	});
 }
 
-/** Active-month counts: months with income, with spending, or either — in one year, or over all of
-    them when no year is given. */
+/** Months with income, with spending, or either — in one year, or over every tracked year. */
 function activeMonths(
 	data: DashboardData,
 	year?: number
@@ -191,10 +187,7 @@ function categorySpend(data: DashboardData, scope: Scope, category: string): num
 		.reduce((a, c) => a + c.amount, 0);
 }
 
-/**
- * Resolve any measure to a raw number at a scope. Exported so the net-worth metrics can read the
- * same aggregates rather than recomputing them and losing this module's memoization.
- */
+/** Resolve any measure to a raw number at a scope. Shared so callers reuse the memoized aggregates. */
 export function measureValue(data: DashboardData, scope: Scope, m: Measure): number {
 	if (typeof m === 'string') return totals(data, scope)[m];
 	return scopePaychecks(data, scope).reduce(
@@ -222,8 +215,7 @@ interface Opts {
 	note?: Label;
 }
 
-/** Tone a figure whose SIGN is its meaning: a balance that went negative is bad news, and one that
-    came out at exactly zero is neither. */
+/** Tone a figure whose sign is its meaning. Zero has no tone. */
 export function signed(s: Scalar): Scalar {
 	const v = s.value ?? 0;
 	return { ...s, tone: v === 0 ? undefined : v > 0 ? 'good' : 'bad' };
@@ -231,7 +223,6 @@ export function signed(s: Scalar): Scalar {
 
 // --- builders ---
 
-/** A money figure for a measure at a scope. */
 export function amount(data: DashboardData, scope: Scope, m: Measure, opts: Opts = {}): Scalar {
 	return {
 		kind: 'scalar',
@@ -242,14 +233,10 @@ export function amount(data: DashboardData, scope: Scope, m: Measure, opts: Opts
 	};
 }
 
-/**
- * The badge a figure carries beside its value. Absent when the base is 0 — there is no percentage to
- * report against nothing, and an untracked earlier period reads as 0.
- */
+/** Period-over-period badge. Undefined when the base is 0, which an untracked period also reads as. */
 function deltaOf(m: Measure, now: number, before: number, note: string): Scalar['delta'] {
-	// Divided by the MAGNITUDE of the base: `saved` can be negative, and dividing by a negative base
-	// flips the percentage's sign away from the direction the figure actually moved.
 	if (!before) return undefined;
+	// Magnitude, not the signed base: a negative base flips the sign away from the actual movement.
 	return {
 		value: ((now - before) / Math.abs(before)) * 100,
 		unit: PERCENT,
@@ -258,7 +245,7 @@ function deltaOf(m: Measure, now: number, before: number, note: string): Scalar[
 	};
 }
 
-/** A year's run-rate for a measure, and the ACTIVE months it divided by. */
+/** A year's run-rate for a measure, and the active months it divided by. */
 function perMonth(
 	data: DashboardData,
 	m: Measure,
@@ -271,9 +258,8 @@ function perMonth(
 }
 
 /**
- * Average of a measure. `per: 'year'` divides the lifetime total by the number of tracked years;
- * `per: 'month'` divides by ACTIVE months — never a flat 12, so a partial year isn't understated —
- * either the scope's year's, or every tracked year's at lifetime scope.
+ * Average of a measure. `per: 'year'` divides the lifetime total by tracked years; `per: 'month'`
+ * divides by active months, never a flat 12, so a partial year isn't understated.
  */
 export function average(
 	data: DashboardData,
@@ -296,10 +282,8 @@ export function average(
 		};
 	}
 
-	// Lifetime divides every measure by the same months — the ones that saw ANY activity — so a row of
-	// these still adds up (saved / mo = income / mo - spent / mo), and there is no prior lifetime to
-	// carry a change against. Per year, each measure keeps its own active count, which is the more
-	// useful denominator when a single figure is being read.
+	// Lifetime shares one divisor across measures so a row of these still adds up; per-year each
+	// measure keeps its own active count.
 	if (scope.level === 'all') {
 		const months = activeMonths(data).any || 1;
 		return {
@@ -318,8 +302,7 @@ export function average(
 		unit,
 		label: opts.label ?? words(`Avg ${name} / month`),
 		value: now.rate,
-		// Rate against rate, never this year's rate against last year's total: the two divide by their
-		// own active-month counts, and only the rates say whether the pace itself moved.
+		// Rate against rate: the levels divide by different active-month counts.
 		delta: deltaOf(m, now.rate, perMonth(data, m, y - 1).rate, 'YoY'),
 		note: opts.note ?? live(`${now.divisor} active months`)
 	};
@@ -359,7 +342,6 @@ export function categoryAmount(
 	};
 }
 
-/** A category's share of spending or income at a scope, as a percentage. */
 export function categoryShare(
 	data: DashboardData,
 	scope: Scope,
@@ -418,12 +400,11 @@ export function count(data: DashboardData, scope: Scope, of: Countable, opts: Op
 
 export type ExtremumOf = 'transaction' | 'category' | 'month';
 
-/** How an extremum names itself, shared with the catalog so the two can't drift. */
+/** Shared with the catalog so the two can't name an extremum differently. */
 export const extremumLabel = (mode: 'max' | 'min', of: ExtremumOf) =>
 	`${mode === 'max' ? 'Largest' : 'Smallest'} ${of}`;
 
-/** The largest or smallest transaction, category spend, or month spend in a scope; the winner's
- *  name lands in the note. */
+/** The largest or smallest transaction, category spend, or month spend in a scope. */
 export function extremum(
 	data: DashboardData,
 	scope: Scope,
@@ -469,16 +450,13 @@ export function extremum(
 		unit: MONEY(data.currency),
 		label: opts.label ?? words(extremumLabel(mode, of)),
 		value,
-		// Read off the data: a rename must not be able to freeze the winner's name.
 		note: opts.note ?? live(name)
 	};
 }
 
 /**
- * How far a month sits from its own recent norm: this month minus the average of the prior `window`
- * months with data — a trailing average, since one noisy month makes a single comparison meaningless.
- * `null` without the history to form a norm. The figure IS a deviation, so it carries a tone, and which
- * way is good comes from the measure.
+ * A month against its own recent norm: the month minus the trailing average of the prior `window`
+ * months with data. `null` without the history to form a norm.
  */
 export function vsTypical(
 	data: DashboardData,
@@ -508,9 +486,8 @@ export function vsTypical(
 }
 
 /**
- * A measure with its period-over-period change as a `delta`: against the prior year (`at` = a year,
- * default latest) or the prior month (`at` = a month key). The delta is a percentage, omitted when the
- * prior period is 0. The value is a plain level; only the delta carries whether the move was good news.
+ * A measure's level plus its change as a `delta`, against the prior year (`at` = a year, default
+ * latest) or the prior month (`at` = a month key). Only the delta carries tone.
  */
 export function change(
 	data: DashboardData,
@@ -539,7 +516,6 @@ export function change(
 		unit: MONEY(data.currency),
 		label: opts.label ?? words(measureLabel(m)),
 		value: now,
-		// Flattened: a delta's note rides with the badge, which is never renamed.
 		delta: deltaOf(
 			m,
 			now,

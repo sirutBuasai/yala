@@ -12,7 +12,7 @@ export const UNIT = 28;
 export const CONTENT = COLS * UNIT;
 
 /**
- * Deliberately NOT a grid gap: each pane insets itself by half of this instead, which keeps one unit a
+ * Deliberately not a grid gap: each pane insets itself by half of this instead, which keeps one unit a
  * whole number of pixels. A track boundary then lands on every multiple of the unit and the dot underlay
  * can be one repeating gradient; put the gap on the grid and no repeating background can follow it.
  */

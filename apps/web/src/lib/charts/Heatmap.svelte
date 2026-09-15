@@ -1,26 +1,18 @@
 <script lang="ts">
-	// Heatmap over a Matrix: rounded tiles carrying their own figure, with a total per row and per
-	// column. A real table, not a picture of one — the axes are headers a screen reader can announce, and
-	// `border-spacing` is what sets the tiles apart, so the gaps are the table's own and never drift from
-	// the cells.
+	// Heatmap over a Matrix: a real table, so the axes are headers a screen reader can announce. It scales
+	// rather than scrolls — columns divide the pane's width and type is sized off the row height.
 	//
-	// It SCALES rather than scrolls, like every other figure: the columns divide the pane's width and the
-	// type is sized off the row height the pane leaves, so the whole grid is always in view.
-	//
-	// A band scales to its own max by default, since categories span orders of magnitude and one
-	// grid-wide scale leaves the median cell near-blank; intensity is therefore NOT comparable between
-	// bands. `normalize` names which axis the band runs along, so the scale follows the categories
-	// whichever way the grid is turned.
-	//
-	// A band may carry its own hue (`colors`), which only reads because the scale is per band: the palette
-	// isn't luminance-matched, so two hues at equal depth do NOT look equally deep, and only a comparison
-	// DOWN one band is being invited. One ink over every hue, and a tint strength pitched so the palest
-	// and the deepest hue both clear it — a per-hue flip would need a per-hue threshold.
+	// Each band scales to its own max, since categories span orders of magnitude and one grid-wide scale
+	// leaves the median cell near-blank. Intensity is therefore not comparable between bands, only down
+	// one. `normalize` names the axis a band runs along, so the scale follows the categories whichever way
+	// the grid is turned. A band may carry its own hue; the palette isn't luminance-matched, so equal
+	// depths across hues do not look equally deep.
 	import { numCompact, esc } from '$lib/utils/format';
 	import { formatUnitExact, type Unit } from '$lib/data/primitives';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
+	import { chartLabel } from '$lib/charts/aria';
 
-	/** For a band with no colour of its own — the same neutral accent the whole grid used to carry. */
+	/** For a band with no colour of its own. */
 	const FALLBACK = 'var(--lav)';
 
 	interface Props {
@@ -34,8 +26,7 @@
 		unit: Unit;
 		/** Which axis a band runs along: 'row' (default) or 'col'; 'global' uses one scale for the grid. */
 		normalize?: 'row' | 'col' | 'global';
-		/** One colour per band, along `normalize`'s axis — a band's members are what have identity. Short
-		    or absent, the rest of the grid falls back to the neutral accent. */
+		/** One colour per band, along `normalize`'s axis. Short or absent, bands fall back to `FALLBACK`. */
 		colors?: string[];
 	}
 	let { rows, cols, values, unit, normalize = 'row', colors }: Props = $props();
@@ -55,19 +46,18 @@
 	/** Header row, body rows and the totals row — what the pane's height is divided between. */
 	const tracks = $derived(rows.length + 2);
 
-	/** A cell against the heaviest of its band, 0..1. At or below zero it carries no heat: a credit is
-	    not a small amount of spending, and shading it as one would rank it among them. */
+	/** A cell against the heaviest of its band, 0..1. A credit carries no heat: it is not small spending. */
 	function share(v: number, i: number, j: number): number {
 		return v <= 0 ? 0 : Math.min(1, v / scaleOf(i, j));
 	}
 
-	/** The hue a cell's band carries. `global` has no bands, so nothing there has identity to colour. */
+	/** The hue a cell's band carries. `global` has no bands to colour. */
 	function tile(i: number, j: number): string {
 		if (normalize === 'global') return FALLBACK;
 		return colors?.[normalize === 'row' ? i : j] ?? FALLBACK;
 	}
 
-	const label = $derived(`Heatmap: ${rows.join(', ')} by ${cols.join(', ')}`);
+	const label = $derived(chartLabel('Heatmap', rows, ` by ${cols.join(', ')}`));
 </script>
 
 <div class="sizebox">
@@ -118,28 +108,23 @@
 </div>
 
 <style>
-	/* The grid's own proportions, named here rather than spelled into a dozen rules. */
 	table {
-		/* One row's share of the pane, which every size below is pitched against: the pane decides how
-		   big this figure is, exactly as it does for a chart with a viewBox. */
+		/* One row's share of the pane, which every size below is pitched against. */
 		--row: calc(100cqh / var(--tracks));
 		--tile-radius: var(--radius-md);
-		/* The month gutter and the totals column, in figures rather than a fixed width, so both hold their
-		   content at whatever size the type has scaled to. */
+		/* In `ch` rather than a fixed width, so both hold their content at whatever size type scaled to.
+		   `--totals` is wide enough for the letterspaced uppercase header, which outruns any figure. */
 		--gutter: 4ch;
-		/* Wide enough for the word TOTAL over its own column: letterspaced uppercase runs wider than any
-		   figure under it, and `ch` here is measured at the HEADER's smaller size. */
 		--totals: 9ch;
 
 		width: 100%;
 		height: 100%;
 		table-layout: fixed;
 		border-collapse: separate;
-		/* The gaps BETWEEN tiles, which is what sets them apart as tiles. */
+		/* What sets the tiles apart, so the gaps are the table's own and can't drift from the cells. */
 		border-spacing: var(--space-1);
 		font-variant-numeric: tabular-nums;
-		/* Scaled off the row, floored so it never becomes unreadable and capped so a tall pane doesn't
-		   inflate a table into a headline. */
+		/* Floored so it stays readable, capped so a tall pane doesn't inflate a table into a headline. */
 		font-size: clamp(var(--fs-100), calc(var(--row) * 0.4), var(--text-secondary));
 	}
 	th[scope='row'],
@@ -161,8 +146,8 @@
 		text-transform: uppercase;
 		text-align: right;
 		padding: 0 var(--space-2) var(--space-1);
-		/* Ellipsis rather than a shrink-to-fit: past a dozen categories no type size makes every name fit,
-		   and the tooltip carries the whole of it. */
+		/* Ellipsis rather than shrink-to-fit: past a dozen categories no type size fits, and the tooltip
+		   carries the whole name. */
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -177,10 +162,9 @@
 		text-align: right;
 		padding-inline: var(--space-2);
 		border-radius: var(--tile-radius);
-		/* Mixed INTO the card rather than laid over it, so a tile reads as the surface tinted and one ramp
-		   works over either theme's card. */
+		/* Mixed into the card rather than laid over it, so one ramp works over either theme. */
 		background: color-mix(in srgb, var(--tile) calc(var(--a, 0) * var(--mark-tile)), transparent);
-		/* One ink at every depth over every hue. `--mark-tile` is what keeps that true: see app.css. */
+		/* One ink at every depth over every hue; `--mark-tile` is pitched to keep that true. See app.css. */
 		color: var(--ink);
 	}
 	.sum {
@@ -193,8 +177,7 @@
 		color: var(--ink-3);
 		font-weight: var(--fw-regular);
 	}
-	/* The one rule in the table: a total is a different KIND of row, and space alone left it reading as
-	   one more month. */
+	/* The only rule in the table: space alone left the totals row reading as one more month. */
 	tfoot th,
 	tfoot .sum {
 		border-block-start: 1px solid var(--border);
@@ -203,8 +186,7 @@
 		color: var(--ink-2);
 		font-weight: var(--fw-semibold);
 	}
-	/* Only the month label answers the hover. A wash behind the row's total read as a value of its own,
-	   in a grid where every other shaded box means an amount. */
+	/* Label only. A wash behind the row total read as an amount, in a grid where every shaded box is one. */
 	tbody tr:hover th[scope='row'] {
 		color: var(--ink);
 	}

@@ -8,7 +8,7 @@
 	import type { BoardLayout } from './types';
 
 	interface Props {
-		/** Storage key for this board. Every view AND RANGE is its own board, since they hold different
+		/** Storage key for this board. Every view and range is its own board, since they hold different
 		    figures. */
 		key: string;
 		layout: BoardLayout;

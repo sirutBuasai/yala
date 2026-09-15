@@ -3,7 +3,7 @@
 	// with one it prefills that entry and saves an update or deletes it.
 	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data/load';
-	import { deleteTransaction, fetchEntry, postJson } from '$lib/data/load';
+	import { EntryForm } from '$lib/entries/entryForm.svelte';
 	import { formatAccount, money } from '$lib/utils/format';
 	import { lastEntryDate, lastTransferFrom, lastTransferTo, seed } from '$lib/utils/editPrefs';
 	import { problems, TEXT_MAX } from '$lib/forms/validate';
@@ -33,8 +33,7 @@
 	let amount = $state<number | null>(null);
 	let pending = $state(false);
 
-	let msg = $state('');
-	let err = $state(false);
+	const form = new EntryForm('transfer', () => onsaved());
 
 	// A bill pay can target any money-in account except the one being paid from.
 	const toAccounts = $derived(accounts.funding_accounts.filter((a) => a !== from_account));
@@ -46,35 +45,23 @@
 			if (!to_account) to_account = seed(get(lastTransferTo), toAccounts);
 			return;
 		}
-		const l = locator;
-		(async () => {
-			const { entry: s, error } = await fetchEntry('transfer', l);
-			if (!s) {
-				msg = error!;
-				err = true;
-				return;
-			}
+		void form.load(locator, (s) => {
 			date = s.date ?? '';
 			payee = s.payee ?? 'payment';
 			from_account = s.from_account ?? '';
 			to_account = s.to_account ?? '';
 			amount = s.amount ?? null;
 			pending = !!s.pending;
-		})();
+		});
 	});
 
-	async function submit() {
+	function submit() {
 		const problem = problems()
 			.positive(amount, 'Amount')
 			.require(from_account, 'Pay-from account')
 			.require(to_account, 'Pay-toward account')
 			.add(from_account === to_account ? 'Pick two different accounts.' : null)
 			.message();
-		if (problem) {
-			msg = problem;
-			err = true;
-			return;
-		}
 		const body = {
 			locator,
 			date: date || undefined,
@@ -84,28 +71,11 @@
 			amount,
 			pending
 		};
-		const { ok, error } = await postJson(editing ? '/api/transfer/update' : '/api/transfer', body);
-		if (!ok) {
-			msg = error ?? 'save failed';
-			err = true;
-			return;
-		}
-		if (!editing) {
+		void form.save(problem, body, () => {
 			lastTransferFrom.set(from_account);
 			lastTransferTo.set(to_account);
 			lastEntryDate.set(date);
-		}
-		onsaved();
-	}
-
-	async function del() {
-		const problem = await deleteTransaction(locator!);
-		if (problem) {
-			msg = problem;
-			err = true;
-			return;
-		}
-		onsaved();
+		});
 	}
 </script>
 
@@ -162,13 +132,12 @@
 
 <EntryFooter
 	{editing}
-	bind:msg
-	bind:err
+	message={form}
 	addLabel="+ Add"
 	deleteLabel="Delete bill pay"
 	deleteQuestion="Delete this bill payment?"
 	onsubmit={submit}
-	ondelete={del}
+	ondelete={() => form.remove(locator!)}
 >
 	{#snippet summary()}
 		<span class="moves">Moves <b>{money(amount || 0)}</b></span>

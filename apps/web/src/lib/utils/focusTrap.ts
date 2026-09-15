@@ -1,6 +1,6 @@
 // Svelte action: trap Tab focus within a node, focus into it on mount, and restore focus on destroy.
 //
-// Where focus LANDS matters as much as trapping it: the first focusable is the header's dismiss button,
+// Where focus lands matters as much as trapping it: the first focusable is the header's dismiss button,
 // so taking it blindly made opening a form announce "close".
 
 const FOCUSABLE =

@@ -25,7 +25,7 @@
 </svg>
 
 <style>
-	/* Sized off the STAT rather than in `em`: the ring is a SIBLING of the number, so `em` would resolve
+	/* Sized off the stat rather than in `em`: the ring is a sibling of the number, so `em` would resolve
 	   against the row's font size and draw it half the height of the figure.
 	   Kept to the digits' height, not the whole line box: at the full size it overhung a baseline-aligned
 	   row by a pixel or two, which put the card's content permanently over its own height and had the

@@ -1,7 +1,7 @@
 <script lang="ts">
-	// Activity — spending and income at three ranges. Range is a control here rather than three tabs,
-	// but each range is still its own BOARD with its own stored arrangement. Only Month can edit, since
-	// entries are logged at day/month level.
+	// Activity — spending and income at three ranges. Range is a control rather than three tabs, but each
+	// range is still its own board with its own stored arrangement. Only Month can edit, since entries are
+	// logged at day/month level.
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
 	import { latestMonthKey, latestYear } from '$lib/data/scope';
@@ -29,7 +29,7 @@
 		{ id: 'year', label: 'Year' },
 		{ id: 'all', label: 'All time' }
 	];
-	// All three under this view's OWN keys: the period you review at is rarely the one you log into.
+	// Under this view's own keys: the period you review at is rarely the one you log into.
 	const range = new Pref<Range>('activity-range', 'month', oneOf(RANGES.map((r) => r.id)));
 	const month = new Pref('activity-month', '', matching(/^\d{4}-\d{2}$/));
 	const yearPref = new Pref('activity-year', 0, number(0, 9999));
@@ -42,8 +42,7 @@
 	const monthKey = $derived(month.value);
 	const year = $derived(yearPref.value);
 
-	// The tracked years, one past the latest, and wherever we've navigated — so stepping into an
-	// unpopulated year still shows a valid selection.
+	// Tracked years, one past the latest, plus wherever we navigated, so an empty year still selects.
 	const years = $derived.by(() => {
 		const ys = data.meta.years;
 		const latest = ys[ys.length - 1] ?? year;

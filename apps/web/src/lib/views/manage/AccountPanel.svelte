@@ -205,10 +205,8 @@
 	}
 
 	/**
-	 * One Save for everything on this panel, in the only order that works: a relabel and a meta edit
-	 * both address the account by its CURRENT path, so the rename — which changes that path — goes
-	 * last. The first failure stops there rather than leaving the rest to report a state nobody asked
-	 * for.
+	 * One Save for everything on this panel, in the only order that works: a relabel and a meta edit both
+	 * address the account by its current path, so the rename goes last. The first failure stops there.
 	 */
 	async function submit() {
 		const invalid = problem();

@@ -22,8 +22,7 @@ export function categoryDeviation(data: DashboardData, monthKey: string, window 
 	const spendOf = (key: string, cat: string) =>
 		(data.months[key]?.by_category ?? []).find((b) => b.category === cat)?.amount ?? 0;
 
-	// Union of categories active this month or in the baseline, so one that stopped entirely still
-	// shows as a negative deviation.
+	// Union with the baseline, so a category that stopped entirely still shows as a negative deviation.
 	const cats = new Set<string>(md.by_category.map((b) => b.category));
 	for (const k of prior) for (const b of data.months[k]?.by_category ?? []) cats.add(b.category);
 
@@ -38,7 +37,7 @@ export function categoryDeviation(data: DashboardData, monthKey: string, window 
 				hi: Math.max(...history)
 			};
 		})
-		// Ranked by distance from normal in either direction, so the biggest surprises lead.
+		// Distance from normal in either direction, so the biggest surprises lead.
 		.sort((a, b) => Math.abs(b.value - b.base) - Math.abs(a.value - a.base));
 
 	return { kind: 'deviation', unit, rows };

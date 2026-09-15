@@ -96,7 +96,7 @@
 		min-width: 8.5rem;
 		max-width: 15rem;
 	}
-	/* A column WIDTH, not a column count: the browser fits as many columns as the legend's actual box
+	/* A column width, not a column count: the browser fits as many columns as the legend's actual box
 	   allows, so the keys reflow continuously instead of stepping at hardcoded breakpoints. */
 	.legend-list {
 		list-style: none;

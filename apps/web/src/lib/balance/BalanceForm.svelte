@@ -7,6 +7,7 @@
 	import { problems } from '$lib/forms/validate';
 	import DatePicker from '$lib/forms/fields/DatePicker.svelte';
 	import EntryFooter from '$lib/entries/EntryFooter.svelte';
+	import { EntryMessage } from '$lib/entries/entryForm.svelte';
 	import FormSection from '$lib/forms/fields/FormSection.svelte';
 	import AmountInput from '$lib/ui/AmountInput.svelte';
 	import Select from '$lib/forms/fields/Select.svelte';
@@ -24,8 +25,7 @@
 	let account = $state('');
 	let amount = $state<number | null>(null);
 
-	let msg = $state('');
-	let err = $state(false);
+	const message = new EntryMessage();
 
 	$effect(() => {
 		if (!date && presetDate) date = presetDate;
@@ -35,14 +35,12 @@
 	async function submit() {
 		const problem = problems().require(account, 'Account').nonNegative(amount, 'Balance').message();
 		if (problem) {
-			msg = problem;
-			err = true;
+			message.fail(problem);
 			return;
 		}
 		const { error } = await logBalance(account, amount!, date || undefined);
 		if (error) {
-			msg = error;
-			err = true;
+			message.fail(error);
 			return;
 		}
 		onsaved();
@@ -75,16 +73,7 @@
 	</div>
 </FormSection>
 
-<EntryFooter
-	editing={false}
-	bind:msg
-	bind:err
-	addLabel="+ Log balance"
-	deleteLabel=""
-	deleteQuestion=""
-	onsubmit={submit}
-	ondelete={() => {}}
->
+<EntryFooter editing={false} {message} addLabel="+ Log balance" onsubmit={submit}>
 	{#snippet summary()}
 		<span class="sets">Sets balance to <b>{money(amount || 0)}</b></span>
 	{/snippet}

@@ -37,7 +37,7 @@ export function firstWeekdayOf(monthKey: string): number {
 	return new Date(y ?? 1970, (m ?? 1) - 1, 1).getDay();
 }
 
-/** Day 0 of the NEXT month is the last day of this one. */
+/** Day 0 of the next month is the last day of this one. */
 export function daysInMonthOf(monthKey: string): number {
 	const [y, m] = monthKey.split('-').map(Number);
 	return new Date(y ?? 1970, m ?? 1, 0).getDate();

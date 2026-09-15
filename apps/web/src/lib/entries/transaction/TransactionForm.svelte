@@ -3,7 +3,7 @@
 	// saves an update or deletes it.
 	import { get } from 'svelte/store';
 	import type { AccountsInfo } from '$lib/data/load';
-	import { deleteTransaction, fetchEntry, postJson } from '$lib/data/load';
+	import { EntryForm } from '$lib/entries/entryForm.svelte';
 	import { formatAccount, money } from '$lib/utils/format';
 	import { lastCategory, lastEntryDate, lastFundingAccount, seed } from '$lib/utils/editPrefs';
 	import { problems, TEXT_MAX, validateRows } from '$lib/forms/validate';
@@ -35,8 +35,7 @@
 	let pending = $state(false);
 	let credits = $state<Credit[]>([]);
 
-	let msg = $state('');
-	let err = $state(false);
+	const form = new EntryForm('transaction', () => onsaved());
 
 	$effect(() => {
 		if (locator == null) {
@@ -48,15 +47,8 @@
 				funding_account = seed(get(lastFundingAccount), accounts.funding_accounts);
 			return;
 		}
-		// Edit mode: prefill from the ledger entry (its `amount` is the total bill).
-		const l = locator;
-		(async () => {
-			const { entry: s, error } = await fetchEntry('transaction', l);
-			if (!s) {
-				msg = error!;
-				err = true;
-				return;
-			}
+		// The entry's `amount` is the total bill.
+		void form.load(locator, (s) => {
 			date = s.date ?? '';
 			payee = s.payee ?? '';
 			total = s.amount ?? null;
@@ -67,14 +59,14 @@
 				value: x.account,
 				amount: x.amount
 			}));
-		})();
+		});
 	});
 
 	// Your share = total bill − everything reimbursed on the credits.
 	const paybacks = $derived(credits.reduce((a, s) => a + (s.amount || 0), 0));
 	const yourShare = $derived((total || 0) - paybacks);
 
-	async function submit() {
+	function submit() {
 		// A net share below zero is a valid net refund, not an error; the summary flags it anyway.
 		const problem = problems()
 			.require(payee, 'Title')
@@ -83,11 +75,6 @@
 			.require(funding_account, 'Account')
 			.add(validateRows(credits, 'reimbursement'))
 			.message();
-		if (problem) {
-			msg = problem;
-			err = true;
-			return;
-		}
 		const body = {
 			locator,
 			date: date || undefined,
@@ -100,31 +87,11 @@
 				.filter((s) => s.value && s.amount != null)
 				.map((s) => ({ account: s.value, amount: s.amount as number }))
 		};
-		const { ok, error } = await postJson(
-			editing ? '/api/transaction/update' : '/api/transaction',
-			body
-		);
-		if (!ok) {
-			msg = error ?? 'save failed';
-			err = true;
-			return;
-		}
-		if (!editing) {
+		void form.save(problem, body, () => {
 			lastCategory.set(category);
 			lastFundingAccount.set(funding_account);
 			lastEntryDate.set(date);
-		}
-		onsaved();
-	}
-
-	async function del() {
-		const problem = await deleteTransaction(locator!);
-		if (problem) {
-			msg = problem;
-			err = true;
-			return;
-		}
-		onsaved();
+		});
 	}
 </script>
 
@@ -180,13 +147,12 @@
 
 <EntryFooter
 	{editing}
-	bind:msg
-	bind:err
+	message={form}
 	addLabel="+ Add"
 	deleteLabel="Delete transaction"
 	deleteQuestion="Delete this transaction?"
 	onsubmit={submit}
-	ondelete={del}
+	ondelete={() => form.remove(locator!)}
 >
 	{#snippet summary()}
 		<span class="share">Your share: <b>{money(yourShare)}</b></span>

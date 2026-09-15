@@ -1,7 +1,7 @@
 // Money-flow primitive: gross → deductions / contributions + take-home → spending categories + savings.
-// Totals come from the yearly rollup, but their split into named buckets exists only per-paycheck, so
-// paycheck proportions are scaled onto the rollup totals. That keeps the diagram reconciled with the
-// KPIs even when paychecks are sparse.
+// Totals come from the yearly rollup, but the split into named buckets exists only per-paycheck, so
+// paycheck proportions are scaled onto the rollup totals — keeping the diagram reconciled with the KPIs
+// even when paychecks are sparse.
 
 import type { DashboardData } from '$lib/data/types';
 import type { Flow, FlowLink, FlowNode } from './primitives';
@@ -59,8 +59,7 @@ export function moneyFlow(data: DashboardData, year?: number): Flow {
 		if (prefix && !key.startsWith(prefix)) continue;
 		for (const p of month.paychecks) {
 			for (const [k, v] of Object.entries(p.deductions)) dedShares[k] = (dedShares[k] ?? 0) + v;
-			// Each contribution label is its own bucket, so a label absent from every paycheck never
-			// draws a zero-width leg.
+			// One bucket per label, so a label absent from every paycheck draws no zero-width leg.
 			for (const [k, v] of Object.entries(p.contributions)) conShares[k] = (conShares[k] ?? 0) + v;
 		}
 	}
@@ -77,12 +76,11 @@ export function moneyFlow(data: DashboardData, year?: number): Flow {
 	const nodes: FlowNode[] = [{ id: 'Gross', label: 'Gross', value: gross, col: 0, role: 'gross' }];
 	const links: FlowLink[] = [];
 
-	// Deductions leave the flow entirely.
 	for (const [k, v] of Object.entries(ded)) {
 		nodes.push({ id: k, label: k, value: v, col: 1, role: 'deduction' });
 		links.push({ source: 'Gross', target: k, value: v });
 	}
-	// Contributions are savings parked before take-home — they route onward into Saved.
+	// Contributions are savings parked before take-home, so they route onward into Saved.
 	for (const [k, v] of Object.entries(con)) {
 		nodes.push({ id: k, label: k, value: v, col: 1, role: 'saving' });
 		links.push({ source: 'Gross', target: k, value: v });
@@ -90,8 +88,7 @@ export function moneyFlow(data: DashboardData, year?: number): Flow {
 	nodes.push({ id: 'Take-home', label: 'Take-home', value: takeHome, col: 1, role: 'takehome' });
 	links.push({ source: 'Gross', target: 'Take-home', value: takeHome });
 
-	// Saved sits atop the last column, aligned with the contribution nodes feeding it, so those
-	// ribbons don't cross the spending fan.
+	// Saved sits atop the last column, aligned with its feeders, so those ribbons miss the spending fan.
 	nodes.push({
 		id: 'Saved',
 		label: 'Saved',
@@ -103,8 +100,8 @@ export function moneyFlow(data: DashboardData, year?: number): Flow {
 		nodes.push({ id: c.category, label: c.category, value: c.amount, col: 2, role: 'category' });
 	}
 
-	// Link order is load-bearing: the chart stacks each source's outgoing fan in it, so Saved's
-	// incoming links must precede the category links to stay at the top.
+	// Link order is load-bearing: the chart stacks each source's outgoing fan in it, so Saved's incoming
+	// links must precede the category links to stay at the top.
 	for (const [k, v] of Object.entries(con)) links.push({ source: k, target: 'Saved', value: v });
 	links.push({ source: 'Take-home', target: 'Saved', value: cashSavings });
 	for (const c of cats) links.push({ source: 'Take-home', target: c.category, value: c.amount });

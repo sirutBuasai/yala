@@ -1,6 +1,6 @@
 // One board's state: the authored panes, the measurements a fitted pane needs, and the resolved
 // placement derived from both. Runes only, no DOM. What persists is the authored pane plus the array's
-// ORDER, which is the priority order the resolver breaks ties with; displacement is never written.
+// order, which is the priority order the resolver breaks ties with; displacement is never written.
 
 import { Pref, listOf, type Revive } from '$lib/utils/persist.svelte';
 import { assertNoOverlap, clampRect, resolve, boardRows } from './resolve';
@@ -177,7 +177,7 @@ export class Arrangement {
 
 	/**
 	 * Force rectangles onto panes, adding any this board's storage predates. Merging changes which panes a
-	 * board HAS, so both halves of a split need a rectangle written before the board is rebuilt around the
+	 * board has, so both halves of a split need a rectangle written before the board is rebuilt around the
 	 * new set — otherwise the half that is new to storage falls back to its declared default and lands on
 	 * top of the other.
 	 */

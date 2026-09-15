@@ -1,7 +1,7 @@
 // One board's KPI grouping: which cards are merged, and the pane table that follows.
 //
 // Persisted separately from the arrangement because it is a different decision: which panes the board
-// HAS, rather than where they sit.
+// has, rather than where they sit.
 
 import { listOf, oneOf, Pref, type Revive } from '$lib/utils/persist.svelte';
 import type { BoardLayout, PaneSpec, Rect } from '$lib/layout/grid/types';
@@ -85,7 +85,7 @@ export class KpiBoard {
 	 * The whole pane table: KPI cards first so they lead the priority order, then the view's own. Refuses a
 	 * duplicate id, which would shadow one entry and drop that pane silently.
 	 *
-	 * MUST be called inside a `$derived`: merging changes which panes this returns, and a table computed
+	 * Must be called inside a `$derived`: merging changes which panes this returns, and a table computed
 	 * once leaves the board reserving rows for a pane nothing renders.
 	 */
 	board<T extends BoardLayout>(panes: T): T & BoardLayout {

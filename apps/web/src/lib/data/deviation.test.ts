@@ -80,8 +80,7 @@ describe('vsTypical', () => {
 		expect(s.value).toBeCloseTo(45.5 - 120);
 	});
 
-	// Aggregates are memoized per DashboardData, so each case needs its own fixture rather than
-	// mutating one that has already been read.
+	// Aggregates are memoized per document, so each case needs its own fixture.
 	function overspending() {
 		const data = makeData();
 		data.months['2025-01']!.total_spent = 500;
@@ -96,7 +95,7 @@ describe('vsTypical', () => {
 		expect(vsTypical(overspending(), '2025-01', 'spending').tone).toBe('bad');
 	});
 
-	// Polarity comes from the MEASURE, so the same overshoot reads the other way for income.
+	// Polarity comes from the measure, so the same overshoot reads the other way for income.
 	it('marks income over the norm as good', () => {
 		const data = makeData();
 		data.months['2025-01']!.total_income = 9000;

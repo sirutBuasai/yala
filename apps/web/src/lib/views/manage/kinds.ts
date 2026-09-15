@@ -1,4 +1,4 @@
-// What the app CALLS each kind of account, and what it says about one. Capabilities — which fields a
+// What the app calls each kind of account, and what it says about one. Capabilities — which fields a
 // kind carries — come from the API's kind table; only wording lives here, so a kind gains a control
 // server-side and gains a heading here.
 

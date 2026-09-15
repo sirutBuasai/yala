@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
 	build,
+	CASH_FLOW_COLUMNS,
+	cashFlowChain,
+	cashFlowChanges,
+	cashFlowHeading,
 	categoryMetricDefs,
 	componentMetricDefs,
 	CATALOG,
@@ -108,8 +112,7 @@ describe('overview.cash_flow_bars', () => {
 		expect(p.labels).toEqual(['2024', '2025']);
 	});
 
-	// The bars sit side by side, so two sharing a role token would read as one measure. Whether two
-	// DIFFERENT tokens resolve to distinguishable hues is app.css's to keep.
+	// The bars sit side by side, so two sharing a role token would read as one measure.
 	it('gives every bar its own role token', () => {
 		const p = build(makeData(), 'overview.cash_flow_bars', { level: 'all' });
 		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
@@ -164,8 +167,7 @@ describe('data-dependent metric defs', () => {
 });
 
 describe('catalog integrity', () => {
-	// Ids are GENERATED from small tables, so one repeated row would shadow a def in `CATALOG_BY_ID`
-	// and make a figure vanish with nothing to say it went.
+	// Ids are generated from tables, so a repeated row would silently shadow a def in `CATALOG_BY_ID`.
 	it('has no duplicate ids', () => {
 		const ids = CATALOG.map((d) => d.id);
 		expect([...new Set(ids)]).toHaveLength(ids.length);
@@ -179,5 +181,49 @@ describe('catalog integrity', () => {
 				expect(() => def.build(d, scope)).not.toThrow();
 			}
 		}
+	});
+});
+
+// A view takes its column headings and its cell ids from the same ordered chain, so a heading cannot end
+// up over another measure's figure. These pin what the views used to spell out by hand.
+describe('the cash-flow chain', () => {
+	it('heads each column with the name the catalog gives the measure', () => {
+		expect(CASH_FLOW_COLUMNS.map(cashFlowHeading)).toEqual([
+			'Gross',
+			'Deductions',
+			'Contributions',
+			'Take-home',
+			'Income',
+			'Spent',
+			'Saved'
+		]);
+	});
+
+	it('narrows to the measures asked for, in that order', () => {
+		expect(cashFlowChain(['saved', 'income']).map(cashFlowHeading)).toEqual(['Saved', 'Income']);
+	});
+
+	it('refuses a measure the chain has no column for', () => {
+		expect(() => cashFlowChain(['rent'])).toThrow(/unknown cash-flow column/);
+	});
+
+	it('names every id it hands out, so no view can render an unknown figure', () => {
+		for (const c of CASH_FLOW_COLUMNS) {
+			for (const id of [c.total, c.perYear, c.perMonth, c.yoy]) {
+				if (id) expect(CATALOG_BY_ID[id], id).toBeDefined();
+			}
+		}
+	});
+
+	it('gives the year-over-year ids for the measures that carry one', () => {
+		expect(cashFlowChanges(cashFlowChain(['income', 'spending', 'saved']))).toEqual([
+			'change.income_yoy',
+			'change.spending_yoy',
+			'change.saved_yoy'
+		]);
+	});
+
+	it('refuses a change id for a measure with no year-over-year column', () => {
+		expect(() => cashFlowChanges(cashFlowChain(['gross']))).toThrow(/no year-over-year column/);
 	});
 });

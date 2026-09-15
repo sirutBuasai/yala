@@ -28,7 +28,7 @@
 	let gridEl = $state<HTMLDivElement>();
 
 	// Roving tabindex, so the whole month is one tab stop. Selection follows focus, since the day panel
-	// beside the grid IS the detail view for the focused cell.
+	// beside the grid is the detail view for the focused cell.
 	function onkeydown(e: KeyboardEvent) {
 		const next = dayForKey(e.key, selectedDay ?? 1, monthKey, firstWeekday);
 		if (next === null) return;

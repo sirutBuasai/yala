@@ -1,6 +1,6 @@
 <script lang="ts">
 	// The calendar and the selected day as two panes on the board; this file owns only which day is
-	// selected. TWO cells at its root and NO wrapper: a grid item must be a direct child of its grid, so
+	// selected. Two cells at its root and no wrapper: a grid item must be a direct child of its grid, so
 	// wrapping them would pin the pair together.
 	import type { DashboardData } from '$lib/data/types';
 	import {

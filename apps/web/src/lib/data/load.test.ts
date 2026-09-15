@@ -265,7 +265,7 @@ describe('opening and closing accounts', () => {
 		});
 	});
 
-	// One route now answers for three operations, so its rejection has to stay the API's own words.
+	// One route answers for three operations, so its rejection has to stay the API's own words.
 	const rejected: CloseOptions[] = [
 		{},
 		{ destination: 'Assets:Cash:BankB' },
@@ -342,8 +342,7 @@ describe('networthAt caching', () => {
 
 describe('getSettings', () => {
 	it('reads the SNAPSHOT when there is no API, so the form still renders', async () => {
-		// The rule for every form: it renders either way, and only the write is refused. The specs come
-		// from the same builder function the API serves, so the form cannot tell the two apart.
+		// Every form renders either way; only the write is refused.
 		const doc = makeData();
 		doc.settings = { swr: 4, real_return: 5, retire_age: 60, runway_target: 6, birth_year: null };
 		doc.setting_specs = [
@@ -356,9 +355,8 @@ describe('getSettings', () => {
 				default: 4,
 				help: 'h'
 			},
-			// A HYPHENATED key, which is the case that matters: the contract has to spell the same key
-			// with an underscore (a hyphen is not a legal field name), so reading `settings` straight
-			// through populates only `swr` and leaves every other field blank.
+			// A hyphenated key: the contract spells it with an underscore, so reading `settings` straight
+			// through would leave this one blank.
 			{
 				key: 'real-return',
 				label: 'Expected real return',

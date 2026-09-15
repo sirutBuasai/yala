@@ -2,7 +2,7 @@
 	// Closing an account, asked as questions. What it asks comes from the kind, so an account with
 	// nothing to place asks nothing at all and opens straight on the review.
 	//
-	// The review IS the confirmation: a close moves a whole balance and only a reopen undoes it, so it is
+	// The review is the confirmation: a close moves a whole balance and only a reopen undoes it, so it is
 	// stated in full before the button that does it, and there is no second prompt.
 	import { SvelteSet } from 'svelte/reactivity';
 	import { closeAccount, investmentValue, type CloseOptions, type DrainLeg } from '$lib/data/load';

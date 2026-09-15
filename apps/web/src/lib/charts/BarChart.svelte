@@ -1,12 +1,13 @@
 <script lang="ts">
-	// One bar chart for 1..n series: a single series renders as plain columns with value labels, two
-	// or more as grouped bars with a legend. Callers pick "Bar", never "column" vs "grouped bars".
+	// One bar chart for 1..n series: one renders as plain columns with value labels, more as grouped bars
+	// with a legend. Callers pick "Bar", never "column" vs "grouped bars".
 	import { scaleBand } from 'd3-scale';
 	import { moneyYScale, signedYScale, plotSize } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import { money, moneyExact, moneyK, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Legend from '$lib/charts/Legend.svelte';
+	import { chartLabel } from '$lib/charts/aria';
 
 	interface Series {
 		name: string;
@@ -41,8 +42,8 @@
 			.range([0, outer.bandwidth()])
 			.padding(0.12)
 	);
-	// Straddling zero makes the axis's POSITION a reading — how much of the plot is deficit — so those
-	// bounds are left unrounded. One-signed data keeps the rounder `nice` axis.
+	// Straddling zero makes the axis's position a reading, so those bounds are left unrounded; one-signed
+	// data keeps the rounder `nice` axis.
 	const straddles = $derived(Math.min(...flat, 0) < 0 && Math.max(...flat, 0) > 0);
 	const axis = $derived(straddles ? signedYScale(flat, ih) : moneyYScale(flat, ih));
 	const y = $derived(axis.y);
@@ -50,17 +51,19 @@
 	const base = $derived(y(0));
 
 	const fmt = (v: number) => (percent ? `${Math.round(v)}%` : money(v));
-	// A tooltip is asked for the figure ITSELF, so money keeps its cents there; the bar's own label is
-	// the rounded reading and repeating it on hover answers nothing.
+	// A tooltip is asked for the exact figure, so money keeps its cents there.
 	const tipFmt = (v: number) => (percent ? `${Math.round(v)}%` : moneyExact(v));
 	const tickFmt = (v: number) => (percent ? `${v}%` : moneyK(v));
-	// A value label rides above a rising bar and below a falling one, so it never sits on the axis.
+	// Above a rising bar and below a falling one, so a label never sits on the axis.
 	const labelY = (v: number, yv: number) =>
 		v < 0 ? Math.max(yv, base) + 14 : Math.min(yv, base) - 6;
 
-	// An unlabelled role="img" announces only "image".
 	const label = $derived(
-		`Bar chart: ${series.map((sr) => sr.name).join(', ')} across ${labels.length} periods`
+		chartLabel(
+			'Bar chart',
+			series.map((sr) => sr.name),
+			` across ${labels.length} periods`
+		)
 	);
 </script>
 
@@ -121,7 +124,7 @@
 </div>
 
 <style>
-	/* Zero is where the bars turn around, so it reads as an axis rather than as one more gridline. */
+	/* Zero is where the bars turn around, so it reads as an axis rather than one more gridline. */
 	.zero {
 		stroke: var(--ink-3);
 		stroke-width: 1;

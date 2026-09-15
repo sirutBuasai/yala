@@ -113,11 +113,18 @@ describe('growth decomposition', () => {
 
 // --- targets derived from spending ---
 
+// The fixture's logged spending, annualized and per month, plus the balances the targets divide it
+// into. Named so a fixture edit lands in one place rather than across every expectation.
+const ANNUAL_SPEND = 993;
+const MONTHLY_SPEND = ANNUAL_SPEND / 12;
+const NET_WORTH = 6000;
+const LIQUID = 1300;
+const DEFAULT_SWR = 0.04;
+
 describe('targets', () => {
-	// The fixture's two months of spending annualize to 993/yr.
 	it('sizes the FI number from trailing spending at the stated rate', () => {
 		const s = scalar('networth.fi_number');
-		expect(s.value).toBeCloseTo(993 / 0.04, 5);
+		expect(s.value).toBeCloseTo(ANNUAL_SPEND / DEFAULT_SWR, 5);
 		expect(s.note?.context).toContain('at 4%');
 	});
 
@@ -125,7 +132,7 @@ describe('targets', () => {
 		const data = makeNetWorthData();
 		data.settings!.swr = 5;
 		expect((build(data, 'networth.fi_number', { level: 'all' }) as Scalar).value).toBeCloseTo(
-			993 / 0.05,
+			ANNUAL_SPEND / 0.05,
 			5
 		);
 	});
@@ -134,7 +141,7 @@ describe('targets', () => {
 		const data = makeNetWorthData();
 		data.settings = null;
 		expect((build(data, 'networth.fi_number', { level: 'all' }) as Scalar).value).toBeCloseTo(
-			993 / 0.04,
+			ANNUAL_SPEND / DEFAULT_SWR,
 			5
 		);
 	});
@@ -142,17 +149,16 @@ describe('targets', () => {
 	it('reports FI progress as a percentage of that number', () => {
 		const s = scalar('networth.fi_progress');
 		expect(s.unit).toEqual(PERCENT);
-		expect(s.value).toBeCloseTo((6000 / (993 / 0.04)) * 100, 5);
+		expect(s.value).toBeCloseTo((NET_WORTH / (ANNUAL_SPEND / DEFAULT_SWR)) * 100, 5);
 	});
 
 	it('measures years of freedom against annual spending', () => {
 		const s = scalar('networth.years_of_freedom');
 		expect(s.unit).toEqual(YEARS);
-		expect(s.value).toBeCloseTo(6000 / 993, 5);
+		expect(s.value).toBeCloseTo(NET_WORTH / ANNUAL_SPEND, 5);
 	});
 
-	// The figure is a KPI on the net-worth board, and the lifestyle it measures against is the RECENT
-	// one: spending more over the trailing window has to shorten it, not leave it alone.
+	// The lifestyle it measures against is the recent one, so more spending has to shorten it.
 	it('shortens years of freedom when recent spending rises', () => {
 		const before = scalar('networth.years_of_freedom').value!;
 		const data = makeNetWorthData();
@@ -164,7 +170,7 @@ describe('targets', () => {
 	it('measures runway from liquid cash against monthly spending', () => {
 		const s = scalar('networth.runway');
 		expect(s.unit).toEqual(MONTHS);
-		expect(s.value).toBeCloseTo(1300 / (993 / 12), 5);
+		expect(s.value).toBeCloseTo(LIQUID / MONTHLY_SPEND, 5);
 	});
 
 	it('hides Coast FI until a birth year is set, and says why', () => {
@@ -308,7 +314,7 @@ describe('year-end levels behind a KPI', () => {
 		if (p.kind !== 'series') throw new Error('expected series');
 
 		expect(p.points.map((pt) => pt.label)).toEqual(['2024', '2025']);
-		// A year closes on its LAST snapshot, not its first.
+		// A year closes on its last snapshot, not its first.
 		expect(p.points.map((pt) => pt.value)).toEqual([3000, 6000]);
 	});
 

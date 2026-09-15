@@ -9,7 +9,7 @@ export class GridEnv {
 	width = $state(0);
 
 	/**
-	 * Whether the user has ASKED for the arrange affordances; `arranging` is whether they show. Held
+	 * Whether the user has asked for the arrange affordances; `arranging` is whether they show. Held
 	 * page-level so it survives a tab switch, since laying the app out is one job spanning several
 	 * boards, and not persisted, so a new session does not open wearing drag grips.
 	 */
@@ -23,6 +23,6 @@ export class GridEnv {
 	/** Arranging is only offered when the full content column fits (see `foldMode`). */
 	readonly canArrange = $derived(this.foldMode === 'full');
 
-	/** Requested AND possible — the one every component reads. */
+	/** Requested and possible — the one every component reads. */
 	readonly arranging = $derived(this.arrangeRequested && this.canArrange);
 }

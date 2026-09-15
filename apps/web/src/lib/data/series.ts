@@ -22,8 +22,7 @@ export function series(
 
 // --- one measure over time ---
 //
-// All three read the SAME aggregates the scalar metrics do (`measureValue`): a per-measure builder would
-// be a second definition of the measure, free to disagree with the figure beside it.
+// All read through `measureValue`, so a chart cannot disagree with the figure beside it.
 
 /** The month keys a monthly series spans, with the labels to plot them under. */
 function monthAxis(data: DashboardData, year?: number): { keys: string[]; labels: string[] } {
@@ -49,11 +48,7 @@ export function measureByMonth(data: DashboardData, m: Measure, year?: number): 
 	return overMonths(data, m, keys, labels);
 }
 
-/**
- * Only the months a measure actually moved in, first through last: a quiet month in the middle still
- * plots, a run of empty ones at either end does not. The window a running total wants, which otherwise
- * flatlines to the year's edge.
- */
+/** The months a measure moved in, first through last. A running total otherwise flatlines to the edge. */
 export function measureActive(data: DashboardData, m: Measure, year: number): Series {
 	const { keys } = monthAxis(data, year);
 	const moved = keys.map((k) => measureValue(data, { level: 'month', monthKey: k }, m) !== 0);
@@ -86,10 +81,7 @@ export function measureByYear(data: DashboardData, m: Measure): Series {
 	);
 }
 
-/**
- * A series' running total. A transform over any of the above rather than a builder of its own, so
- * which months an accumulation spans is the caller's choice and not baked in here.
- */
+/** A series' running total. A transform, so the caller chooses which months the accumulation spans. */
 export function accumulate(s: Series): Series {
 	let run = 0;
 	return { ...s, points: s.points.map((p) => ({ ...p, value: (run += p.value ?? 0) })) };
@@ -98,11 +90,9 @@ export function accumulate(s: Series): Series {
 // --- composite ---
 
 /**
- * Net income / Take-home / Spent / Saved as one MultiSeries. Lifetime (`year` omitted) plots per
- * tracked year; a specific `year` plots its twelve months.
- *
- * `net` rather than `income`: the two are the same figure, but net reads from the paycheck rows the
- * take-home beside it comes from, so the pair cannot disagree.
+ * The cash-flow measures as one MultiSeries. Lifetime (`year` omitted) plots per tracked year; a
+ * specific `year` plots its twelve months. `net` rather than `income` so it reads from the same
+ * paycheck rows take-home does.
  */
 export function cashFlowBars(data: DashboardData, year?: number): MultiSeries {
 	const parts: Field[] = ['net', 'takehome', 'spending', 'saved'];
@@ -115,15 +105,13 @@ export function cashFlowBars(data: DashboardData, year?: number): MultiSeries {
 		unit: MONEY(data.currency),
 		axis: 'ordinal',
 		labels: list[0]?.points.map((p) => p.label) ?? [],
-		// Built as time series above; overlaid on one categorical axis here.
 		series: list.map((s) => ({ ...s, axis: 'ordinal' as const }))
 	};
 }
 
 /**
- * One series per spending category across the tracked years, ordered by lifetime total so the
- * right-edge labels and tooltip read by magnitude. Categories span orders of magnitude, so this is
- * drawn on a log axis — see `logYScale`.
+ * One series per spending category across the tracked years, ordered by lifetime total. Categories span
+ * orders of magnitude, so this wants a log axis — see `logYScale`.
  */
 export function categorySpendByYear(data: DashboardData): MultiSeries {
 	const unit = MONEY(data.currency);
@@ -133,8 +121,7 @@ export function categorySpendByYear(data: DashboardData): MultiSeries {
 	const totalFor = (year: number, cat: string) =>
 		(data.years[String(year)]?.matrix ?? []).reduce((s, row) => s + (row.spent[cat] ?? 0), 0);
 
-	// Only categories with spend somewhere in the range: a closed category still shows its history,
-	// and one that never had spend never draws a flat line along the axis.
+	// Spend somewhere in the range, so a closed category keeps its history and an unused one is dropped.
 	const cats = data.meta.categories
 		.map((c) => ({ c, values: years.map((y) => totalFor(y, c)) }))
 		.map((e) => ({ ...e, lifetime: e.values.reduce((a, b) => a + b, 0) }))
@@ -150,11 +137,7 @@ export function categorySpendByYear(data: DashboardData): MultiSeries {
 	};
 }
 
-/**
- * Savings-to-income ratio per year, as a percentage. Divided out of the two measures rather than
- * from the yearly rows directly, so the line and the savings-rate figure beside it are the same
- * definition of the ratio.
- */
+/** Savings-to-income ratio per year, as a percentage. */
 export function savingsRate(data: DashboardData): Series {
 	const saved = measureByYear(data, 'saved');
 	const income = measureByYear(data, 'income');
@@ -168,8 +151,7 @@ export function savingsRate(data: DashboardData): Series {
 			const base = income.points[i]?.value ?? 0;
 			return { ...p, value: base ? ((p.value ?? 0) / base) * 100 : 0 };
 		}),
-		// The lifetime rate, not the mean of the yearly ones: a year that earned twice as much has twice
-		// the say in what "usual" is. Without it a reader has no idea which years beat their own record.
+		// The lifetime rate, not the mean of the yearly ones: a bigger year has more say in "usual".
 		reference: lifetimeIncome
 			? { value: (total(saved) / lifetimeIncome) * 100, label: 'lifetime' }
 			: undefined

@@ -2,6 +2,7 @@
 	import { money, moneyExact, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import { sumBy } from '$lib/utils/num';
+	import { chartLabel } from '$lib/charts/aria';
 	// The registry adapts a Flow primitive into these, adding a colour per node role.
 	interface SankeyNode {
 		id: string;
@@ -22,8 +23,12 @@
 	}
 	let { nodes, links }: Props = $props();
 
-	// An unlabelled role="img" announces only "image".
-	const label = $derived(`Money flow: ${nodes.map((n) => n.label).join(', ')}`);
+	const label = $derived(
+		chartLabel(
+			'Money flow',
+			nodes.map((n) => n.label)
+		)
+	);
 
 	const W = 1000;
 	const H = 540;
@@ -31,7 +36,7 @@
 	const GAP = 20; // minimum vertical gap between nodes within a column
 	/** Second line of a right label, below its first. */
 	const LABEL_LINE = 12;
-	/** A right label is TWO lines, so its anchors must clear the whole block: at 15 the smallest
+	/** A right label is two lines, so its anchors must clear the whole block: at 15 the smallest
 	    categories' labels sat on top of one another. */
 	const LABEL_MIN_GAP = LABEL_LINE + 16;
 	// The top margin holds the middle columns' above-labels, the right margin the last column's
@@ -92,8 +97,7 @@
 			}
 		}
 
-		// Constant-width bands, stacked in link order at both ends — so the caller controls which
-		// ribbon sits at the top of each fan.
+		// Stacked in link order at both ends, so the caller controls which ribbon tops each fan.
 		const outOff = new Map<string, number>();
 		const inOff = new Map<string, number>();
 		const ribbons = links
@@ -121,22 +125,19 @@
 		const maxCol = cols[cols.length - 1];
 		const minCol = cols[0];
 
-		// Label side follows column position — first on the left, last on the right, middle columns
-		// above their ribbon — which keeps interior labels off the ribbons as columns get denser.
+		// First column labels left, last right, middle above — which keeps interior labels off the ribbons.
 		const nodeViews = [...placed.values()].map((p) => {
 			const { node } = p;
 			const side: 'left' | 'right' | 'above' =
 				node.col === minCol ? 'left' : node.col === maxCol ? 'right' : 'above';
-			// Each node's share of its own column's throughput; skipped for the root column, which is
-			// trivially 100%.
+			// Share of its own column's throughput; skipped for the root column, trivially 100%.
 			const colTot = colTotal(node.col);
 			const pct =
 				node.col !== minCol && colTot > 0 ? Math.round((node.value / colTot) * 100) : null;
 			return { ...p, side, pct, cy: p.y + p.h / 2 };
 		});
 
-		// De-collide the last column's labels: spread their anchor y apart, then a leader line
-		// reconnects each to its node.
+		// Spread the last column's anchors apart; a leader line reconnects each to its node.
 		const rightViews = nodeViews.filter((v) => v.side === 'right');
 		const lys = declutter(
 			rightViews.map((v) => ({ cy: v.cy })),

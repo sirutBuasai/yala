@@ -12,7 +12,7 @@
 
 <script lang="ts">
 	// One pane on the board: the grid item, the arrange affordances, and the two measurements the pure
-	// layer cannot make for itself. It COMPOSES `Card` rather than being one, so the card stays
+	// layer cannot make for itself. It composes `Card` rather than being one, so the card stays
 	// grid-agnostic and the folded layout reuses it untouched.
 	import { tick, type Snippet } from 'svelte';
 	import Card from '$lib/ui/Card.svelte';
@@ -54,7 +54,7 @@
 	const arranging = $derived(env.arranging);
 	const capped = $derived(mode === 'cap');
 	const span = $derived(foldSpan(placed.w, env.columns));
-	// A declared TITLE is what makes a card one we name; its caption may then be ADDED where the view wrote
+	// A declared title is what makes a card one we name; its caption may then be added where the view wrote
 	// none. A KPI card declares neither, and its pane id is also its leader section's id — look the store
 	// up regardless and a renamed section came back as a heading on the card around it, one it never had.
 	const shownTitle = $derived(title && labels.label(id, 'title', title));
@@ -65,8 +65,8 @@
 	let cardEl = $state<HTMLElement>();
 	let bodyEl = $state<HTMLElement>();
 
-	// Fitted panes report their CARD's height — never the cell's — so the pure layer can turn it into
-	// rows. Only while unfolded: a folded pane hugs its content and reserves nothing.
+	// Fitted panes report their card's height, never the cell's, so the pure layer can turn it into rows.
+	// Only while unfolded: a folded pane hugs its content and reserves nothing.
 	$effect(() => {
 		const el = cardEl;
 		if (!hug || !el) return;
@@ -78,8 +78,8 @@
 		return () => observer.disconnect();
 	});
 
-	// The spill check is asked for the card and its body BY REFERENCE (see `spill.ts`), and `tick` is
-	// what makes a candidate size real before it is measured.
+	// The spill check is asked for the card and its body by reference (see `spill.ts`), and `tick` is what
+	// makes a candidate size real before it is measured.
 	const gesture = new PaneGesture(() => id, arrangement, {
 		spills: () => !!cardEl && spills(cardEl, bodyEl),
 		settle: tick
@@ -247,7 +247,7 @@
 	.cell.folded :global(.sizebox) {
 		container-type: normal;
 	}
-	/* A FIXED-viewBox chart (sankey, heatmap) takes its height from its WIDTH, so widening a pane made
+	/* A fixed-viewBox chart (sankey, heatmap) takes its height from its width, so widening a pane made
 	   it taller and it spilled out of the card. Given the full height it letterboxes instead. */
 	.cell:not(.folded) :global(.body > svg.chart) {
 		height: 100%;

@@ -36,8 +36,8 @@
 
 	const clickable = $derived(!!onedit);
 
-	// The amount track is a FLOOR, not a width: a fixed width clipped large totals, so `max-content`
-	// lets the amount take what it needs and the payee column gives it up.
+	// The amount track is a floor, not a width: a fixed width clipped large totals, so `max-content` lets
+	// the amount take what it needs and the payee column gives it up.
 	const template = $derived(
 		[
 			dateOf ? 'var(--col-date)' : '',

@@ -74,15 +74,14 @@ function def<C extends Component<any, any, any>>(d: {
 // --- colour assignment ---
 
 /** Role token per well-known series, keyed by the label the data layer gives it, so the data stays
-    colour-blind and a series carries one hue everywhere. Anything unnamed cycles the fallback palette. */
+    colour-blind. Anything unnamed cycles the fallback palette. */
 const SERIES_ROLE: Record<string, string> = {
 	// Flows.
 	Income: 'var(--role-income)',
 	Spent: 'var(--role-spending)',
 	Spending: 'var(--role-spending)',
 	Saved: 'var(--role-saving)',
-	// Green with the rest of saving, not the rate hue: the figure people read here is how much they
-	// KEPT, and it reads beside `Saved` on the same boards.
+	// Saving's hue, not a rate hue: it reads beside `Saved` on the same boards.
 	'Savings rate': 'var(--role-saving)',
 	'Spending rate': 'var(--role-spending)',
 	'Deduction rate': 'var(--role-deduction)',
@@ -105,7 +104,7 @@ const SERIES_ROLE: Record<string, string> = {
 	'Market & other': 'var(--role-market)'
 };
 
-/** For series with no role and no category — kept clear of the role hues where possible. */
+/** For series with no role and no category. */
 const PALETTE = [
 	'var(--lav)',
 	'var(--teal)',
@@ -118,8 +117,7 @@ const PALETTE = [
 	'var(--berry)'
 ];
 
-/** A series' colour from its NAME, so one measure carries one hue wherever it is drawn. Exported
-    because a KPI's sparkline and ring are marks too. */
+/** A series' colour from its name, so one measure carries one hue wherever it is drawn. */
 export function seriesColor(name: string, index = 0): string {
 	return (
 		SERIES_ROLE[name] ??
@@ -133,8 +131,8 @@ export function seriesColor(name: string, index = 0): string {
 export type ColorBy = 'category' | 'account' | 'role';
 
 function keyColor(key: string, mode: ColorBy = 'category'): string {
-	// `Saved` (the synthetic residual) and `Other` (the rolled-up tail) are not members of the set
-	// being coloured, so they outrank every mode.
+	// Neither the synthetic residual nor the rolled-up tail is a member of the set being coloured, so
+	// both outrank every mode.
 	if (key === 'Saved') return 'var(--role-saving)';
 	if (key === 'Other') return 'var(--ink-3)';
 	if (mode === 'account') return accountVar(key);
@@ -142,8 +140,7 @@ function keyColor(key: string, mode: ColorBy = 'category'): string {
 	return categoryVar(key);
 }
 
-/** A flow node's role names the term a series would, so its hue comes from the table above rather than
-    a second copy that could disagree with the card beside it. */
+/** A flow node's role names the term a series would, so its hue comes from `SERIES_ROLE`. */
 const FLOW_ROLE_SERIES = {
 	gross: 'Gross',
 	takehome: 'Take-home',
@@ -161,13 +158,23 @@ function seriesOf(p: Series | MultiSeries): { labels: string[]; list: Series[] }
 	return { labels: base.points.map((pt) => pt.label), list };
 }
 
-/** A lone series may be given an explicit fill; anything plotted alongside others takes its role
-    colour, since an override could only speak for one of them. */
+/** A lone series may be given an explicit fill; an override can't speak for a set of them. */
 function fillOf(list: Series[], s: Series, i: number, opts: AdaptOpts): string {
 	return list.length === 1 && opts.color ? opts.color : seriesColor(s.name, i);
 }
 
-function toChartSeries(list: Series[], opts: AdaptOpts) {
+/** Name, values and colour — what every multi-series chart takes. Nulls become 0, since only a line
+    can leave a gap. */
+function toPlainSeries(list: Series[], opts: AdaptOpts) {
+	return list.map((s, i) => ({
+		name: s.name,
+		values: s.points.map((pt) => pt.value ?? 0),
+		color: fillOf(list, s, i, opts)
+	}));
+}
+
+/** The above plus the line-only treatments, which keep nulls as gaps. */
+function toLineSeries(list: Series[], opts: AdaptOpts) {
 	return list.map((s, i) => ({
 		name: s.name,
 		values: s.points.map((pt) => pt.value),
@@ -224,13 +231,9 @@ export const CHARTS: ChartDef[] = [
 			const { labels, list } = seriesOf(sm);
 			return {
 				labels,
-				series: list.map((s, i) => ({
-					name: s.name,
-					values: s.points.map((pt) => pt.value ?? 0),
-					color: fillOf(list, s, i, opts)
-				})),
+				series: toPlainSeries(list, opts),
 				percent: sm.unit.kind === 'percent',
-				// A reference belongs to ONE series, so it only travels when there is only one.
+				// A reference belongs to one series, so it only travels when there is only one.
 				reference: list.length === 1 ? list[0]!.reference : undefined
 			};
 		}
@@ -245,7 +248,7 @@ export const CHARTS: ChartDef[] = [
 			const percent = (p as Series | MultiSeries).unit.kind === 'percent';
 			return {
 				labels,
-				series: toChartSeries(list, opts),
+				series: toLineSeries(list, opts),
 				percent,
 				log: opts.log,
 				endLabels: opts.endLabels
@@ -274,11 +277,7 @@ export const CHARTS: ChartDef[] = [
 			const m = p as MultiSeries;
 			return {
 				labels: m.labels,
-				series: m.series.map((s, i) => ({
-					name: s.name,
-					values: s.points.map((pt) => pt.value ?? 0),
-					color: seriesColor(s.name, i)
-				})),
+				series: toPlainSeries(m.series, opts),
 				unit: m.unit
 			};
 		}
@@ -316,8 +315,7 @@ export const CHARTS: ChartDef[] = [
 		adapt(p, opts = {}) {
 			const m = p as Matrix;
 			const normalize = opts.normalize ?? 'row';
-			// The band members are what have identity — the categories, whichever axis they sit on — so they
-			// carry the hue. `global` has no bands, and so nothing to colour by.
+			// Band members carry the hue, whichever axis they sit on. `global` has no bands to colour by.
 			const band = normalize === 'row' ? m.rows : m.cols;
 			return {
 				rows: m.rows,

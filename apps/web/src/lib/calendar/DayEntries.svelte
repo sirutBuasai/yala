@@ -1,6 +1,6 @@
 <script lang="ts">
 	// The selected day's entries, one section per kind. Content only: the name, totals and add button
-	// are the PANE's header (see `CalendarPanes`), and the pane owns the height, so nothing here sizes.
+	// are the pane's header (see `CalendarPanes`), and the pane owns the height, so nothing here sizes.
 	import type { DayCell } from '$lib/calendar/days';
 	import Empty from '$lib/ui/Empty.svelte';
 	import PaycheckList from '$lib/lists/PaycheckList.svelte';

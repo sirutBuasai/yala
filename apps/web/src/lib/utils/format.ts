@@ -81,7 +81,7 @@ export function accountLeaf(name: string | null | undefined): string {
 	return name ? (String(name).split(':').pop() ?? '') : '';
 }
 
-/** An account's display name — a LOOKUP, not a computation: the API has applied the naming rule, and
+/** An account's display name. A lookup, not a computation: the API has applied the naming rule, and
     deriving it here would put that rule in two languages. Falls back to the raw leaf. */
 export function formatAccount(name: string | null | undefined): string {
 	if (!name) return '';

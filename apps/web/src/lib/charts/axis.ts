@@ -1,16 +1,12 @@
 import { scaleLinear, scaleLog, type ScaleLinear, type ScaleLogarithmic } from 'd3-scale';
 
-/**
- * A value→pixel mapping plus the ticks to label it with. Generic in the scale so each builder keeps its
- * full d3 surface while callers that only plot can accept either.
- */
+/** A value→pixel mapping plus the ticks to label it with. Generic so a builder keeps its d3 surface. */
 export interface ValueScale<S extends (v: number) => number = (v: number) => number> {
 	y: S;
 	ticks: number[];
 }
 
-/** What to draw at before the box has been measured, which only keeps a container measuring zero from
-    producing a degenerate viewBox. One value, so no two charts appear to disagree about the box. */
+/** What to draw at before the box is measured: a container reporting zero yields a degenerate viewBox. */
 export const UNMEASURED = { w: 900, h: 300 };
 
 /** A chart's margins: top, right, bottom, left. */
@@ -22,9 +18,8 @@ export interface Margins {
 }
 
 /**
- * The plot area inside a measured box, floored at zero on both axes. The floor is the point: a pane can
- * be shorter than a chart's own margins, and a negative height makes the browser reject the `<rect>` and
- * inverts every d3 scale built on that range.
+ * The plot area inside a measured box, floored at zero on both axes. A pane can be shorter than a chart's
+ * margins, and a negative height makes the browser reject the `<rect>` and inverts every d3 scale on it.
  */
 export function plotSize(w: number, h: number, m: Margins): { iw: number; ih: number } {
 	return { iw: Math.max(0, w - m.l - m.r), ih: Math.max(0, h - m.t - m.b) };
@@ -41,10 +36,8 @@ export function moneyYScale(values: number[], ih: number): ValueScale<ScaleLinea
 }
 
 /**
- * Linear Y scale for values that straddle zero. The domain runs from the lowest value to the highest
- * with a little headroom on each populated end and NO outward rounding, so zero sits exactly where the
- * data puts it: mostly-positive readings push it toward the bottom, a deep deficit lifts it. Rounding
- * the bounds (`moneyYScale`) would inflate a small deficit into a large band.
+ * Linear Y scale for values that straddle zero. Headroom on each populated end but no outward rounding,
+ * so zero sits where the data puts it — `moneyYScale`'s rounding inflates a small deficit into a band.
  */
 export function signedYScale(
 	values: number[],
@@ -62,9 +55,8 @@ export function signedYScale(
 }
 
 /**
- * Log10 value→pixel Y scale for series spanning orders of magnitude, which a linear scale crushes
- * against the axis. Domain snaps outward to whole decades so gridlines land on round numbers;
- * non-positive values can't be plotted on a log axis and are dropped by the caller (`defined`).
+ * Log10 value→pixel Y scale for series spanning orders of magnitude. The domain snaps outward to whole
+ * decades; non-positive values can't be plotted and are dropped by the caller (`defined`).
  */
 export function logYScale(
 	values: number[],
@@ -89,9 +81,8 @@ export function logYScale(
 }
 
 /**
- * Average glyph width as a fraction of font size, for the app's sans at chart sizes. Approximate on
- * purpose: measuring properly needs a canvas or a layout pass, and erring small only ever means
- * slightly smaller type, never a clipped label.
+ * Average glyph width as a fraction of font size. Approximate on purpose: measuring needs a canvas or a
+ * layout pass, and erring small only means slightly smaller type, never a clipped label.
  */
 const GLYPH_RATIO = 0.55;
 
@@ -103,9 +94,8 @@ export function fitFontSize(gutter: number, labels: string[], min = 8, max = 12)
 }
 
 /**
- * Which x-label indices to draw, given how much room there is: budget each label the width of the
- * longest one, keep every nth, and always keep the last — the one readers look for. The neighbour
- * before the last is dropped when the two would otherwise overlap, which they did on screen.
+ * Which x-label indices to draw: budget each the width of the longest, keep every nth, and always keep
+ * the last. Its neighbour is dropped when the two would overlap.
  */
 export function labelIndices(count: number, innerWidth: number, labels: string[]): number[] {
 	if (count <= 1) return count === 1 ? [0] : [];

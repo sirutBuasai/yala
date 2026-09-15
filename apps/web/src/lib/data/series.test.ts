@@ -1,5 +1,5 @@
-// One builder per SHAPE, any measure. These read the same aggregates the scalar metrics do, so what
-// matters is that a series over a measure agrees with the figure for that measure at that scope.
+// One builder per shape, any measure. What matters is that a series agrees with the scalar figure for
+// the same measure at the same scope.
 
 import { describe, expect, it } from 'vitest';
 import {
@@ -118,9 +118,8 @@ describe('catalog series over measures', () => {
 		expect(p.points[0]!.value).toBe(2300);
 	});
 
-	// The whole point of building the chart from the same aggregates: a running total drawn behind a
-	// KPI has to ARRIVE at the number in front of it. Month and year scope read different sections of
-	// the document for the paycheck measures, so this is the invariant that keeps them agreeing.
+	// A running total drawn behind a KPI has to arrive at the number in front of it. Month and year
+	// scope read different sections of the document, so this is the invariant that keeps them agreeing.
 	it('a running total ends on the figure it is drawn behind', () => {
 		const d = makeData();
 		for (const f of ['gross', 'deductions', 'contributions', 'net', 'takehome', 'saved'] as const) {
@@ -161,8 +160,8 @@ describe('savingsRate', () => {
 
 	it('weights each year by its income, so the bigger year has more say than the mean would give it', () => {
 		const d = makeData();
-		// A tiny year that saved nothing beside a big one that saved half: the simple mean of the two
-		// rates is 25%, the lifetime rate is 45%.
+		// A small year that saved nothing beside a big one that saved half: the lifetime rate weights by
+		// income, so it sits far above the mean of the two yearly rates.
 		d.overview.by_year = [
 			{ year: 2024, spent: 100, income: 100, saved: 0 },
 			{ year: 2025, spent: 450, income: 900, saved: 450 }

@@ -94,7 +94,7 @@ describe('drag', () => {
 		press(node, 'pointermove', 90, 100);
 		press(node, 'pointermove', 160, 100);
 
-		// Each delta is measured from the ORIGIN. Summed incrementally these would read 10/30, then
+		// Each delta is measured from the press origin. Summed incrementally these would read 10/30, then
 		// -20/-30, then 70/0 — and every clamp the board applied on the way would be baked in.
 		expect(moves).toEqual([
 			{ dx: 10, dy: 30 },

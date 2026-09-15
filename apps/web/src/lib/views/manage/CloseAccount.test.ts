@@ -1,7 +1,6 @@
 // A close moves a whole balance and only a reopen undoes it, so the cases worth pinning are the ones a
-// wrong guess would send to the API as a rejected — or worse, accepted — request: a split that doesn't
-// add up, an employer's linked accounts closed when nobody said to, and the review that stands between
-// the button and the write.
+// wrong guess would send to the API: a split that doesn't add up, an employer's linked accounts closed
+// when nobody said to, and the review that stands between the button and the write.
 //
 // The flow is a question at a time, so most cases walk it: `Next` until the review, then Close account.
 

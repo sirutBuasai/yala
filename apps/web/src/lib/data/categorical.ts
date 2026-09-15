@@ -1,5 +1,4 @@
-// Categorical primitives: named parts of a whole, over plain `{category, amount}` inputs so both the
-// catalog and views can reuse them.
+// Categorical primitives: named parts of a whole, over plain `{category, amount}` inputs.
 
 import type { Categorical, CategoricalPoint, Unit } from './primitives';
 import { MONEY } from './primitives';

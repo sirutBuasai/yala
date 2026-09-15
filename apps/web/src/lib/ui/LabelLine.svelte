@@ -1,15 +1,15 @@
 <script lang="ts">
 	// One card label, and the pencil that renames it in place. Inline content only, so the field inherits
-	// exactly the type it replaces. Only the words are editable: a label's derived half sits in front of
-	// the field as ghost text, which is what keeps the period or count from being typed over.
+	// the type it replaces. Only the words are editable: a label's derived half sits in front of the field
+	// as ghost text, so the period or count can't be typed over.
 	import type { Snippet } from 'svelte';
 	import Pencil from '$lib/icons/Pencil.svelte';
 	import { labelGhost, labelText, type Label } from './label';
 
 	interface Props {
 		label: Label;
-		/** Absent when this label is the app's to name. Empty hides this half, leaving whatever the app
-		    derives — a caption cleared to nothing under a period still reads as the period. */
+		/** Absent when this label is the app's to name. Empty text hides this half, leaving what the app
+		    derives. */
 		onrename?: (text: string) => void;
 		/** What the pencil and the field announce themselves as renaming. */
 		what: string;
@@ -17,9 +17,8 @@
 		after?: Snippet;
 		/** What this slot's two halves read with, unless the label names its own. */
 		join?: string;
-		/** This label as the app itself declares it — the value a reset goes back to. Its words stand in the
-		    empty field, so a half you hid still says what it would have said, and typing them back is the
-		    undo. Passed whole rather than pre-read, so nothing else has to know which half that is. */
+		/** This label as the app declares it — what a reset goes back to. Its words stand in the empty field,
+		    so typing them back is the undo. Passed whole, so no caller needs to know which half that is. */
 		shipped?: Label;
 	}
 	let { label, onrename, what, after, join = ' ', shipped }: Props = $props();
@@ -33,9 +32,8 @@
 	let draft = $state('');
 	let field = $state<HTMLInputElement>();
 
-	/** The field is as wide as whatever it is SHOWING: sized from the draft alone, an emptied label clipped
-	    the placeholder that was telling you what it used to say. Capped at the card in the style below,
-	    since the card cannot grow to meet it. */
+	/** As wide as whatever is showing: sized from the draft alone, an emptied label clipped the placeholder
+	    telling you what it used to say. Capped at the card below, since the card cannot grow to meet it. */
 	const width = $derived(Math.max(6, (draft || placeholder || '').length + 1));
 
 	function open(): void {
@@ -50,8 +48,8 @@
 		if (next !== (label.text ?? '')) onrename?.(next);
 	}
 
-	// Selected, not just focused: renaming usually means replacing the name, and the caret at the end
-	// makes you clear it first.
+	// Selected, not just focused: renaming usually replaces the name, and a caret at the end makes you
+	// clear it first.
 	$effect(() => {
 		if (editing) field?.select();
 	});
@@ -85,9 +83,9 @@
 {/if}
 
 <style>
-	/* Both the pencil and the field are LIFTED, because in edit mode a drag surface covers the whole card
-	   (see `grid/Pane`): without this the press that should put a caret in a label starts moving the pane
-	   instead. The rest of the header is left under it, so a card can still be dragged by its title. */
+	/* Lifted over the edit-mode drag surface that covers the card (see `grid/Pane`), or the press meant to
+	   put a caret in a label starts moving the pane. The rest of the header stays under it, so a card can
+	   still be dragged by its title. */
 	.pencil,
 	.name {
 		position: relative;
@@ -110,18 +108,17 @@
 		color: var(--ink-3);
 		white-space: pre;
 	}
-	/* Not italic and not faded further: it stands exactly where the words would, saying what they were. */
+	/* Not italic and not faded further: it stands where the words would, saying what they were. */
 	.name::placeholder {
 		opacity: 1;
 	}
-	/* No box and no rule: the label is edited as the label, so nothing about it moves or restyles on the
-	   way into edit. Inherits the type it stands in for. NOT `.field`, which is the app's form-field
-	   wrapper and lays its contents out as a flex column — the field took its own line. */
-	/* `min-width: 0`, with the `ch` floor left to the inline width: an input's own min-content width is
-	   the width it was given, and `.kpi` is sized `min-content` — so a field wide enough for a long
-	   caption widened the whole card, and the underlay chart, positioned out of flow across it, painted
-	   over the board. A percentage cap alone doesn't help: percentages don't apply while the ancestor is
-	   being sized intrinsically, which is exactly when the damage was done. */
+	/* No box and no rule, so nothing moves or restyles on the way into edit. Deliberately not `.field`,
+	   the app's form-field wrapper, which lays its contents out as a flex column.
+
+	   `min-width: 0` with the `ch` floor left to the inline width: an input's min-content width is the
+	   width it was given, and `.kpi` is sized `min-content`, so a field wide enough for a long caption
+	   widened the card and the out-of-flow underlay chart painted over the board. A percentage cap alone
+	   won't do — percentages don't apply while an ancestor is being sized intrinsically. */
 	.name {
 		display: inline-block;
 		vertical-align: baseline;
@@ -133,8 +130,8 @@
 		border-radius: 0;
 		background: none;
 	}
-	/* The selection and the caret say where you are; a ring would draw the box this deliberately has not
-	   got. Focus is always deliberate here — the field exists only once its pencil is pressed. */
+	/* The selection and caret say where you are; a ring would draw the box this deliberately has not got.
+	   Focus is always deliberate: the field exists only once its pencil is pressed. */
 	.name:focus-visible {
 		outline: none;
 	}

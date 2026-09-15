@@ -1,6 +1,6 @@
 // One board's renamed labels: the `text` half of any title or caption the user has rewritten. Its own
 // storage key rather than a field on the arrangement, since which panes a board HAS and what they are
-// CALLED are separate decisions. Only `text` is stored — `context` is rebuilt every render, so a renamed
+// called are separate decisions. Only `text` is stored — `context` is rebuilt every render, so a renamed
 // pane still says which period or slice it is showing.
 
 import { Pref, record, shape, text } from '$lib/utils/persist.svelte';

@@ -1,7 +1,7 @@
 <script module lang="ts">
 	import type { Tone as Verdict } from '$lib/data/primitives';
 
-	/** Named by MEANING, not colour, so a tone can be re-themed without renaming call sites. */
+	/** Named by meaning, not colour, so a tone can be re-themed without renaming call sites. */
 	export type Tone = 'neutral' | 'good' | 'warn' | 'crit' | 'accent';
 
 	/** A figure's good-or-bad-news as a badge tone. No verdict means no colour, not good news. */

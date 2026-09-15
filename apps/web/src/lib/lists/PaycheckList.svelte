@@ -51,7 +51,7 @@
 		}
 	}
 
-	// The breakout figures share ONE grid cell so they collapse as a unit. RowList drops the cell at
+	// The breakout figures share one grid cell so they collapse as a unit. RowList drops the cell at
 	// its own threshold; this list thins them earlier, since they need more room than one column.
 </script>
 

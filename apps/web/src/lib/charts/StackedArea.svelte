@@ -8,6 +8,7 @@
 	import { labelIndices, plotSize } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import Legend from '$lib/charts/Legend.svelte';
+	import { chartLabel } from '$lib/charts/aria';
 
 	interface Band {
 		name: string;
@@ -32,8 +33,12 @@
 
 	const xPos = (i: number) => (n > 1 ? (iw * i) / (n - 1) : iw / 2);
 
-	// An unlabelled role="img" announces only "image".
-	const label = $derived(`Stacked area: ${series.map((s) => s.name).join(', ')}`);
+	const label = $derived(
+		chartLabel(
+			'Stacked area',
+			series.map((s) => s.name)
+		)
+	);
 
 	/** Running totals per point, so each band sits on the one below it. */
 	const stacks = $derived.by(() => {

@@ -31,7 +31,7 @@
 	/** The sections box, which both a split and the fit measure before they change the card. */
 	let sectionsEl = $state<HTMLElement>();
 
-	// Where a card SITS is placed; where a merged card STARTS is authored. A merge is not a drag, so the
+	// Where a card sits is placed; where a merged card starts is authored. A merge is not a drag, so the
 	// leader keeps the top the user gave it rather than banking whatever the push rule had added.
 	const placed = $derived(arrangement.placed(id));
 
@@ -91,10 +91,10 @@
 	}
 
 	/**
-	 * Grow the card until no section is squeezed. A merge shares the space it inherits out by WEIGHT, so a
-	 * section can be handed less than the content in it — the merged card carries one card's padding where
-	 * the two carried two, and a section's share of that saving need not be the slack it had. Measured
-	 * once the card is real rather than predicted, for the reason every minimum here is (see `spill.ts`).
+	 * Grow the card until no section is squeezed. A merge shares its inherited space out by weight, so a
+	 * section can be handed less than the content in it: the merged card carries one card's padding where
+	 * the two carried two, and a section's share of that saving need not be the slack it had. Measured once
+	 * the card is real rather than predicted, as every minimum here is (see `spill.ts`).
 	 */
 	async function grow(axis: MergeAxis): Promise<void> {
 		for (let room = COLS; room > 0 && squeezed(axis); room--) {
@@ -261,7 +261,7 @@
 		background: var(--arrange-line);
 	}
 
-	/* Half of it lies over the NEIGHBOUR, whose drag layer sits at `z-index: auto` and would otherwise
+	/* Half of it lies over the neighbour, whose drag layer sits at `z-index: auto` and would otherwise
 	   swallow the click by being later in the DOM. */
 	.join {
 		position: absolute;

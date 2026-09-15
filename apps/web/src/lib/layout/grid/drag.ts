@@ -1,5 +1,5 @@
 // One pointer-drag action, shared by moving and resizing. It knows the DOM and nothing about the board.
-// Deltas are CUMULATIVE from the press, so clamping re-derives from a fixed origin rather than
+// Deltas are cumulative from the press, so clamping re-derives from a fixed origin rather than
 // accumulating: dragging a pane into a wall and back out again is exact.
 //
 // A press is not yet a drag — the gesture stays pending until the pointer has travelled `THRESHOLD`.

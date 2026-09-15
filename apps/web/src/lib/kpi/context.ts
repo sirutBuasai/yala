@@ -1,5 +1,5 @@
 // A board's KPI grouping, in context: a card is rendered per group leader, but the merge control it
-// draws is about its NEIGHBOUR, so every KPI card needs the whole board's grouping, not a prop.
+// draws is about its neighbour, so every KPI card needs the whole board's grouping, not a prop.
 
 import { getContext, setContext } from 'svelte';
 import { KpiBoard } from './board.svelte';

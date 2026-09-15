@@ -1,34 +1,23 @@
 <script lang="ts">
 	// A grid of figures where rows and columns both carry meaning. As loose tiles that structure is
 	// invisible and costs a row of height; as a matrix the layout says it and a glance down a column
-	// compares. Cells are catalog ids, so a new row or column is data rather than markup.
+	// compares.
 	//
 	// A cell's number is a plain level and never coloured; a period-over-period change rides along as a
-	// badge, which is where the colour goes. A caption the whole row shares is said under the row label
-	// rather than repeated in every cell.
+	// badge, which is where the colour goes.
 	import type { DashboardData } from '$lib/data/types';
 	import { NO_VALUE } from '$lib/copy';
-	import type { Scope } from '$lib/data/scope';
+	import type { StatRow } from '$lib/charts/statMatrix';
 	import { build } from '$lib/data/catalog';
 	import { deltaLabel, formatUnit, type Scalar } from '$lib/data/primitives';
 	import Badge, { badgeTone } from '$lib/ui/Badge.svelte';
-	import { DOT, labelText, type Label } from '$lib/ui/label';
+	import { DOT, labelText } from '$lib/ui/label';
 
-	interface Cell {
-		id: string;
-		scope: Scope;
-	}
-	interface Row {
-		label: Label;
-		/** Small print under the row label. */
-		caption?: Label;
-		cells: Cell[];
-	}
 	interface Props {
 		data: DashboardData;
 		/** Column headers, in the same order as each row's cells. */
 		columns: string[];
-		rows: Row[];
+		rows: StatRow[];
 	}
 	let { data, columns, rows }: Props = $props();
 
@@ -40,15 +29,14 @@
 				return {
 					key: c.id,
 					text: s.value === null ? NO_VALUE : formatUnit(s.value, s.unit),
-					// Read to text here: a row's cells are compared for agreement below, and two notes that say
+					// Read to text here: the row's cells are compared for agreement below, and two notes saying
 					// the same thing arrive as two objects.
 					note: labelText(s.note),
 					badge: d ? { text: deltaLabel(d), tone: badgeTone(d.tone) } : null
 				};
 			});
-			// A note must hold for the whole row: said once under the row label when every cell agrees, per
-			// cell when they differ, and dropped when only some carry one — under a single column it reads
-			// as an anomaly rather than as a fact about the row.
+			// A note must hold for the whole row: once under the label when every cell agrees, per cell when
+			// they differ, dropped when only some carry one.
 			const notes = values.map((v) => v.note);
 			const everyCell = notes.every(Boolean);
 			const shared = everyCell && new Set(notes).size === 1;
@@ -128,8 +116,8 @@
 		color: var(--ink-3);
 		font-size: var(--text-caption);
 	}
-	/* Never wrapped: a cell that reflowed would let the pane go on narrowing while the table quietly
-	   degraded. Overflowing instead is what makes the grid refuse the resize. */
+	/* Never wrapped: overflowing is what makes the grid refuse the resize, where reflowing would let the
+	   pane go on narrowing while the table quietly degraded. */
 	.figure {
 		display: inline-flex;
 		align-items: baseline;

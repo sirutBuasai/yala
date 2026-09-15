@@ -146,7 +146,7 @@
 					figure: 'networth.accounts',
 					scope: all,
 					chart: 'ranked-bars',
-					// Keyed by ACCOUNT, so each bar takes its institution's hue rather than the category
+					// Keyed by account, so each bar takes its institution's hue rather than the category
 					// fallback, which gave every bar the same colour.
 					colorBy: 'account',
 					title: words('Where the money sits'),

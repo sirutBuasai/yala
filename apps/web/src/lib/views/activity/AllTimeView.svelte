@@ -7,7 +7,8 @@
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import { figurePanes } from '$lib/layout/grid/figure';
 	import { live, words } from '$lib/ui/label';
-	import { CASH_FLOW_COLUMNS, CATALOG_BY_ID } from '$lib/data/catalog';
+	import { CASH_FLOW_COLUMNS, cashFlowHeading } from '$lib/data/catalog';
+	import { statCells } from '$lib/charts/statMatrix';
 	import FigurePane from '$lib/layout/grid/FigurePane.svelte';
 	import StatMatrix from '$lib/charts/StatMatrix.svelte';
 	import { yearSpan } from '$lib/utils/format';
@@ -22,8 +23,7 @@
 	const span = $derived(yearSpan(years, 'no tracked years'));
 
 	const PANES = $derived({
-		// A block of figures, not a list: it scales like the KPI cards above it rather than owning its
-		// own height, so it can be given room or taken down to where its rows would clip.
+		// `scale` so the matrix is given room or taken down to where its rows would clip, like a KPI card.
 		cashflow: { x: 0, y: 0, w: 48, h: 11, content: 'scale' },
 		// Levels beside rate: how big, versus how efficient, which the bars alone can't say.
 		levels: {
@@ -54,8 +54,8 @@
 				caption: words('of net income')
 			}
 		},
-		// The full-width charts here are taller than the tops below them leave room for. The push rule
-		// closes each overlap downwards, so the heights are authored and the tops are only floors.
+		// Taller than the tops below leave room for. The push rule closes each overlap downwards, so the
+		// heights are authored and the tops are only floors.
 		flow: {
 			x: 0,
 			y: 9,
@@ -70,8 +70,7 @@
 				caption: { context: 'Lifetime', text: 'gross income to each spending category' }
 			}
 		},
-		// Log scale, because a linear axis crushes the small categories under the biggest ones. End
-		// labels replace a legend with one swatch per category.
+		// Log scale, since a linear axis crushes the small categories under the biggest ones.
 		categories: {
 			x: 0,
 			y: 47,
@@ -90,28 +89,17 @@
 		}
 	} satisfies BoardLayout);
 
-	// The chain's order, its headings and its ids all come from the catalog's one ordered list, so a
-	// column heading cannot end up over another measure's figure.
-	const columns = CASH_FLOW_COLUMNS.map((c) => CATALOG_BY_ID[c.total]!.label);
+	// Headings and ids both come from the catalog's one ordered chain, so a heading cannot end up over
+	// another measure's figure.
+	const columns = CASH_FLOW_COLUMNS.map(cashFlowHeading);
 	const cellsOf = (pick: (c: (typeof CASH_FLOW_COLUMNS)[number]) => string) =>
-		CASH_FLOW_COLUMNS.map((c) => ({ id: pick(c), scope: all }));
+		statCells(CASH_FLOW_COLUMNS.map(pick), all);
 
+	// The averages carry no caption: their divisor is each figure's own footnote.
 	const rows = $derived([
-		{
-			label: words('Lifetime total'),
-			caption: live(span),
-			cells: cellsOf((c) => c.total)
-		},
-		{
-			// No caption: how many years divide into it is each average's own footnote.
-			label: words('Avg / year'),
-			cells: cellsOf((c) => c.perYear)
-		},
-		{
-			// Likewise the active-month count these divide by, which every column shares at this scope.
-			label: words('Avg / month'),
-			cells: cellsOf((c) => c.perMonth)
-		}
+		{ label: words('Lifetime total'), caption: live(span), cells: cellsOf((c) => c.total) },
+		{ label: words('Avg / year'), cells: cellsOf((c) => c.perYear) },
+		{ label: words('Avg / month'), cells: cellsOf((c) => c.perMonth) }
 	]);
 </script>
 

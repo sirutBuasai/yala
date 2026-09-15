@@ -149,7 +149,7 @@ describe('change', () => {
 		expect(change(d, 'income', 'year', 2024).delta).toBeUndefined();
 	});
 
-	// The point of the tone: the SAME movement is good news for one measure and bad for another.
+	// The same movement is good news for one measure and bad for another.
 	it('tones a rise by whether it is good news, not by its sign', () => {
 		const spent = makeData();
 		spent.overview.by_year[1]!.spent = 500;
@@ -164,8 +164,8 @@ describe('change', () => {
 		expect(change(makeData(), 'spending', 'year', 2025).tone).toBeUndefined();
 	});
 
-	// Bug: dividing by a negative base flipped the percentage's sign away from the direction the
-	// figure had actually moved, so a loss that shrank read as a fall.
+	// Bug: dividing by a negative base flipped the percentage's sign away from the actual movement, so
+	// a loss that shrank read as a fall.
 	it('signs the percentage by the movement even when the base is negative', () => {
 		const d = makeData();
 		d.overview.by_year[0]!.saved = -100;

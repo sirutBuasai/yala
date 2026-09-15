@@ -1,4 +1,4 @@
-// What a KPI IS, declared as data. A view names the figure, the scope, the badge and the chart; it
+// What a KPI is, declared as data. A view names the figure, the scope, the badge and the chart; it
 // never writes the markup, so swapping a stat is a change of identifier.
 
 import type { Rect } from '$lib/layout/grid/types';

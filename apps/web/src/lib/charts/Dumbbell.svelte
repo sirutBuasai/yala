@@ -1,7 +1,6 @@
 <script lang="ts">
-	// A row's typical level and its latest one, joined — read against the range it usually falls in.
-	// Each lane is scaled to its OWN range, so a category ten times another's size still shows its move;
-	// nothing here is comparable ACROSS rows, which is the trade that makes the small rows legible.
+	// A row's typical level and its latest one, joined, against the range it usually falls in. Each lane is
+	// scaled to its own range, so nothing is comparable across rows — the trade that keeps small rows legible.
 	import { formatDelta, formatUnitExact, type Unit } from '$lib/data/primitives';
 	import { esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
@@ -20,8 +19,8 @@
 	}
 	let { rows, unit }: Props = $props();
 
-	/** A row's lane: its own range, widened to take in a value that broke out of it, and never
-	    zero-width — a category that spent the same every month would otherwise divide by zero. */
+	/** A row's range, widened to take in a breakout value. Never zero-width: a category that spent the
+	    same every month would divide by zero. */
 	function lane(r: Row) {
 		const lo = Math.min(r.lo, r.value);
 		const hi = Math.max(r.hi, r.value);
@@ -71,8 +70,7 @@
 </div>
 
 <style>
-	/* Rows spread through whatever height the pane has, rather than stacking at the top and leaving an
-	   empty band under the last one. */
+	/* Rows spread through the pane's height rather than stacking at the top. */
 	.dumb {
 		display: flex;
 		flex: 1 1 auto;
@@ -80,8 +78,7 @@
 		justify-content: space-evenly;
 		gap: var(--gap-row);
 	}
-	/* The row's own proportions, named once: two gutters that hold their text, the lane taking the rest,
-	   and a marker geometry every layer below is positioned against. */
+	/* Two gutters that hold their text, the lane taking the rest, and the marker geometry below. */
 	.row {
 		--name-col: 4.5rem;
 		--delta-col: 3.6rem;
@@ -106,7 +103,7 @@
 		position: relative;
 		height: var(--lane-h);
 	}
-	/* Every layer is centred on the lane, so each one's offset is half the difference in their heights. */
+	/* Every layer is centred on the lane, so each offset is half the difference in heights. */
 	.range {
 		position: absolute;
 		top: calc((var(--lane-h) - var(--track-h)) / 2);
@@ -140,7 +137,7 @@
 		margin-left: calc(var(--now-size) / -2);
 		background: var(--fill);
 	}
-	/* Outside its own range — the one row-level claim this chart makes, so it is the one ring. */
+	/* Outside its own range: the one claim this chart makes per row. */
 	.now.out {
 		box-shadow:
 			0 0 0 1.5px var(--surface),

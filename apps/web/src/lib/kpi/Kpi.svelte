@@ -151,10 +151,10 @@
 		min-width: var(--chart-min, 0);
 	}
 	/**
-	 * Floored at the figure's own height, NOT `--figure-h-floor`, which is sized for a plot area with axes
-	 * and exceeds a whole stat row — with it, a card carrying a chart would not resize at all. Floored from
-	 * the TOP so the excess overflows downward: scrollable overflow is measured from a box's top-left, so a
-	 * chart growing upward would be invisible to the probe and would paint over the title.
+	 * Floored at the figure's own height rather than `--figure-h-floor`, which is sized for a plot area with
+	 * axes and exceeds a whole stat row, so a card carrying a chart would not resize at all. Floored from the
+	 * top so the excess overflows downward: scrollable overflow is measured from a box's top-left, so a chart
+	 * growing upward would be invisible to the probe and would paint over the title.
 	 */
 	.behind {
 		position: absolute;
