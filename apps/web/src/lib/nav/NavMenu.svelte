@@ -3,9 +3,8 @@
 	// `position: fixed` in the page's left gutter it forced an asymmetric `padding-left` on the column
 	// at narrower widths, which pulled the pane grid off its own dot lattice.
 	import { page } from '$app/stores';
-	import { fly, fade } from 'svelte/transition';
 	import { CLOSE_MENU } from '$lib/copy';
-	import { focusTrap } from '$lib/utils/focusTrap';
+	import { modal } from '$lib/overlay/modal';
 	import { dur } from '$lib/utils/motion';
 	import Close from '$lib/icons/Close.svelte';
 
@@ -21,12 +20,6 @@
 	}
 </script>
 
-<svelte:window
-	onkeydown={(e) => {
-		if (e.key === 'Escape') close();
-	}}
-/>
-
 <button class="burger" aria-label="Open menu" aria-expanded={open} onclick={() => (open = true)}>
 	<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
 		<line x1="3" y1="6.5" x2="19" y2="6.5" />
@@ -36,36 +29,26 @@
 </button>
 
 {#if open}
-	<button
-		class="backdrop"
-		aria-label={CLOSE_MENU}
-		transition:fade={{ duration: dur(150) }}
-		onclick={close}
-	></button>
-	<div
-		class="sidebar"
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="sidebar-title"
-		tabindex="-1"
-		use:focusTrap
-		transition:fly={{ x: -300, duration: dur(220) }}
-	>
-		<div class="head">
-			<span id="sidebar-title" class="serif title">Yala</span>
-			<!-- data-dismiss so the focus trap opens the sidebar on its first LINK, not on close. -->
-			<button class="close iconbtn" data-dismiss aria-label={CLOSE_MENU} onclick={close}>
-				<Close size={16} />
-			</button>
+	<!-- Esc, the scrim, focus restoration and making the page behind inert are all the dialog's own (see
+	     overlay/modal), so this no longer listens on the window or renders a backdrop element. -->
+	<dialog class="sheet" aria-label={CLOSE_MENU} use:modal={{ onclose: close, closeMs: dur(220) }}>
+		<div class="sidebar">
+			<div class="head">
+				<span class="serif title">Yala</span>
+				<!-- data-dismiss so the sidebar opens focused on its first LINK, not on close. -->
+				<button class="close iconbtn" data-dismiss aria-label={CLOSE_MENU} onclick={close}>
+					<Close size={16} />
+				</button>
+			</div>
+			<nav class="links">
+				{#each links as link (link.href)}
+					<a href={link.href} class:active={$page.url.pathname === link.href} onclick={close}
+						>{link.label}</a
+					>
+				{/each}
+			</nav>
 		</div>
-		<nav class="links">
-			{#each links as link (link.href)}
-				<a href={link.href} class:active={$page.url.pathname === link.href} onclick={close}
-					>{link.label}</a
-				>
-			{/each}
-		</nav>
-	</div>
+	</dialog>
 {/if}
 
 <style>
@@ -88,25 +71,19 @@
 		stroke-width: 2;
 		stroke-linecap: round;
 	}
-	.backdrop {
-		position: fixed;
-		inset: 0;
-		z-index: 40;
-		width: 100%;
-		height: 100%;
-		margin: 0;
-		padding: 0;
-		border: 0;
-		background: var(--scrim);
+	/* The whole sheet dismisses on a press, so it carries the pointer; the sidebar takes it back below.
+	   Its reset and scrim are the shared `.sheet` (app.css). */
+	.sheet {
 		cursor: pointer;
 	}
 	.sidebar {
 		position: fixed;
 		top: 0;
 		left: 0;
-		z-index: 41;
 		height: 100%;
 		width: 264px;
+		cursor: auto;
+		transition: translate 220ms;
 		display: flex;
 		flex-direction: column;
 		gap: var(--gap-row);
@@ -115,6 +92,14 @@
 		background: var(--surface);
 		border-right: 1px solid var(--border);
 		box-shadow: var(--shadow);
+	}
+	@starting-style {
+		.sheet[open] .sidebar {
+			translate: -300px 0;
+		}
+	}
+	.sheet:global(.closing) .sidebar {
+		translate: -300px 0;
 	}
 	.head {
 		display: flex;

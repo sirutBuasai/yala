@@ -1,4 +1,5 @@
 import { sveltekit } from '@sveltejs/kit/vite';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig(({ mode }) => ({
@@ -6,7 +7,19 @@ export default defineConfig(({ mode }) => ({
 	// Svelte 5's client component runtime is published under the "browser" export
 	// condition; resolve it during tests so @testing-library/svelte can mount
 	// components in jsdom. Vitest resolves this config with mode "test".
-	resolve: mode === 'test' ? { conditions: ['browser'] } : undefined,
+	//
+	// Floating UI is aliased to a stub in the same breath; that file says why.
+	resolve:
+		mode === 'test'
+			? {
+					conditions: ['browser'],
+					alias: {
+						'@floating-ui/dom': fileURLToPath(
+							new URL('./src/lib/overlay/__stubs__/floating-ui.ts', import.meta.url)
+						)
+					}
+				}
+			: undefined,
 	test: {
 		environment: 'jsdom',
 		globals: true,

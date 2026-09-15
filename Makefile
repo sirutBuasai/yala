@@ -1,14 +1,15 @@
 # Yala — single entrypoint. Recipes live in scripts/; this file just dispatches.
-.PHONY: help bootstrap gen serve serve-api test test-api test-web clean
+.PHONY: help bootstrap gen serve serve-api test test-api test-web test-e2e clean
 
 help:
 	@echo "make bootstrap   install backend + frontend deps (first run)"
 	@echo "make gen         regenerate contract: data.schema.json + types.ts"
 	@echo "make serve       clean, generate data.json, build, serve the snapshot alone (PORT=/WORKTREE= to override)"
 	@echo "make serve-api   clean, generate data.json, build, serve site + edit API (PORT=/WORKTREE= to override)"
-	@echo "make test        run backend + frontend test suites"
+	@echo "make test        run backend + frontend + browser test suites"
 	@echo "make test-api    run backend tests"
 	@echo "make test-web    run frontend tests"
+	@echo "make test-e2e    run browser tests (playwright + axe)"
 	@echo "make clean       remove build artifacts"
 
 bootstrap:
@@ -31,6 +32,9 @@ test-api:
 
 test-web:
 	python3 scripts/test.py web
+
+test-e2e:
+	python3 scripts/test.py e2e
 
 clean:
 	rm -rf apps/web/build apps/web/.svelte-kit apps/api/build

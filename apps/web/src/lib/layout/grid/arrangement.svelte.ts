@@ -186,24 +186,30 @@ export class Arrangement {
 		this.#draft = { id, base: { w, h }, floor: { w, h } };
 	}
 
+	/** One pane holds the draft at a time, and a measurement that arrives late must not land on whichever
+	    pane has it now: label edits overlap, since opening one closes the last. */
+	#drafts(id: string): boolean {
+		return this.#draft?.id === id;
+	}
+
 	/** Back to the size the edit opened at, so the next measurement can discover it needs less. */
-	relaxDraft(): void {
-		if (this.#draft) this.#draft = { ...this.#draft, floor: this.#draft.base };
+	relaxDraft(id: string): void {
+		if (this.#drafts(id)) this.#draft = { ...this.#draft!, floor: this.#draft!.base };
 	}
 
 	/** The size the drafting pane's content needs now, floored at what it opened with. */
-	setDraft(w: number, h: number): void {
-		const d = this.#draft;
-		if (!d) return;
+	setDraft(id: string, w: number, h: number): void {
+		if (!this.#drafts(id)) return;
+		const d = this.#draft!;
 		const floor = { w: Math.max(d.base.w, w), h: Math.max(d.base.h, h) };
 		if (d.floor.w === floor.w && d.floor.h === floor.h) return;
 		this.#draft = { ...d, floor };
 	}
 
 	/** The edit is over: keep whatever it settled on, and stop following the text. */
-	endDraft(): void {
-		const d = this.#draft;
-		if (!d) return;
+	endDraft(id: string): void {
+		if (!this.#drafts(id)) return;
+		const d = this.#draft!;
 		this.#draft = null;
 		this.grow(d.id, d.floor.w, d.floor.h);
 	}

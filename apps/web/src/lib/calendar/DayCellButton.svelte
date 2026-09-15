@@ -130,4 +130,19 @@
 	.inc {
 		color: var(--good-text);
 	}
+	/* Too narrow for a figure: seven columns leave a cell smaller than one, and both of these are out of
+	   flow, so they overrun rather than reporting a shortfall. The dots alone carry "something happened
+	   here" and the figures are a tap away in the day panel. Scoped to the width at which the grid drops
+	   its week gutter (see CalendarGrid), so the cell changes shape once. */
+	@container (max-width: 30rem) {
+		.camounts {
+			display: none;
+		}
+		.cdots {
+			inset: auto 4px 5px 4px;
+			max-width: none;
+			justify-content: center;
+			overflow: hidden;
+		}
+	}
 </style>

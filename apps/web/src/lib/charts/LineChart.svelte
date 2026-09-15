@@ -3,6 +3,7 @@
 	import {
 		moneyYScale,
 		logYScale,
+		labelAnchor,
 		labelIndices,
 		moneyAxisFormat,
 		plotSize
@@ -201,7 +202,7 @@
 			<!-- Keyed by slot, not by text: two points can share a label, and a duplicate key is fatal. -->
 			{#each labels as lb, i (i)}
 				{#if shown.has(i)}
-					<text x={xPos(i)} y={ih + 20} text-anchor="middle">{lb}</text>
+					<text x={xPos(i)} y={ih + 20} text-anchor={labelAnchor(i, n)}>{lb}</text>
 				{/if}
 			{/each}
 

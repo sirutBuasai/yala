@@ -10,10 +10,13 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"test": "vitest run",
 		"test:watch": "vitest",
+		"test:e2e": "playwright test",
 		"format": "prettier --write .",
 		"gen:types": "json2ts -i ../../packages/contract/data.schema.json -o src/lib/data/types.ts --no-additionalProperties --unreachableDefinitions"
 	},
 	"devDependencies": {
+		"@axe-core/playwright": "^4.13.0",
+		"@playwright/test": "^1.63.0",
 		"@sveltejs/adapter-static": "^3.0.6",
 		"@sveltejs/kit": "^2.8.0",
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
@@ -22,6 +25,7 @@
 		"@testing-library/user-event": "^14.6.5",
 		"@types/d3-scale": "^4.0.8",
 		"@types/d3-shape": "^3.1.6",
+		"@types/node": "^26.6.0",
 		"@vitest/coverage-v8": "^3.2.7",
 		"jsdom": "^25.0.1",
 		"json-schema-to-typescript": "^15.0.3",
@@ -34,6 +38,7 @@
 		"vitest": "^3.2.7"
 	},
 	"dependencies": {
+		"@floating-ui/dom": "^1.8.0",
 		"d3-scale": "^4.0.2",
 		"d3-shape": "^3.2.0"
 	},

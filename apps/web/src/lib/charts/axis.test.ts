@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { fitFontSize, labelIndices, moneyAxisFormat, moneyYScale, signedYScale } from './axis';
+import {
+	fitFontSize,
+	labelAnchor,
+	labelIndices,
+	moneyAxisFormat,
+	moneyYScale,
+	signedYScale
+} from './axis';
 
 describe('moneyAxisFormat', () => {
 	it('abbreviates once every tick worth abbreviating clears a thousand', () => {
@@ -171,6 +178,21 @@ describe('labelIndices', () => {
 	it('handles degenerate series', () => {
 		expect(labelIndices(0, 500, [])).toEqual([]);
 		expect(labelIndices(1, 500, ['2026-01-01'])).toEqual([0]);
+	});
+});
+
+describe('labelAnchor', () => {
+	it('anchors the ends inward, so no label hangs outside the plot', () => {
+		expect(labelAnchor(0, 5)).toBe('start');
+		expect(labelAnchor(4, 5)).toBe('end');
+	});
+
+	it('centres everything in between', () => {
+		expect(labelAnchor(2, 5)).toBe('middle');
+	});
+
+	it('centres a lone label, which is not against either edge', () => {
+		expect(labelAnchor(0, 1)).toBe('middle');
 	});
 });
 

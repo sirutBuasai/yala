@@ -120,6 +120,20 @@ export function fitFontSize(gutter: number, labels: string[], min = 8, max = 12)
 	return Math.max(min, Math.min(max, gutter / (GLYPH_RATIO * longest)));
 }
 
+/** Width one character of axis type takes, near enough to budget with. */
+const AXIS_GLYPH_W = 6.2;
+
+/**
+ * How an x-label at `i` aligns to its point: centred, except at the ends, where it anchors inward to read
+ * flush with the plot's edge. The last tick sits ON that edge and a chart's right margin is narrower than
+ * half a label; `svg.chart` does not clip, so centred there it paints outside the card.
+ */
+export function labelAnchor(i: number, count: number): 'start' | 'middle' | 'end' {
+	if (count <= 1) return 'middle';
+	if (i === 0) return 'start';
+	return i === count - 1 ? 'end' : 'middle';
+}
+
 /**
  * Which x-label indices to draw: budget each the width of the longest, keep every nth, and always keep
  * the last. Its neighbour is dropped when the two would overlap.
@@ -127,7 +141,7 @@ export function fitFontSize(gutter: number, labels: string[], min = 8, max = 12)
 export function labelIndices(count: number, innerWidth: number, labels: string[]): number[] {
 	if (count <= 1) return count === 1 ? [0] : [];
 
-	const room = Math.max(...labels.map((l) => l.length), 1) * 6.2 + 12;
+	const room = Math.max(...labels.map((l) => l.length), 1) * AXIS_GLYPH_W + 12;
 	const fits = Math.max(2, Math.min(12, Math.floor(innerWidth / room)));
 	const stride = Math.max(1, Math.ceil(count / fits));
 

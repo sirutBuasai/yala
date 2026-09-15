@@ -431,30 +431,30 @@ describe('a label being typed into', () => {
 	it('grows the pane as the words stop fitting', () => {
 		const { arrangement: b } = arrangement();
 		b.startDraft('top', 24, 6);
-		b.setDraft(24, 9);
+		b.setDraft('top', 24, 9);
 		expect(b.placed('top').h).toBe(9);
 	});
 
 	it('gives the room back as they are deleted', () => {
 		const { arrangement: b } = arrangement();
 		b.startDraft('top', 24, 6);
-		b.setDraft(24, 9);
-		b.relaxDraft();
+		b.setDraft('top', 24, 9);
+		b.relaxDraft('top');
 		expect(b.placed('top').h).toBe(6);
 	});
 
 	it('never goes below the size the edit opened at', () => {
 		const { arrangement: b } = arrangement();
 		b.startDraft('top', 24, 6);
-		b.setDraft(12, 3);
+		b.setDraft('top', 12, 3);
 		expect(b.placed('top')).toMatchObject({ w: 24, h: 6 });
 	});
 
 	it('keeps what the edit settled on once it ends', () => {
 		const { arrangement: b } = arrangement();
 		b.startDraft('top', 24, 6);
-		b.setDraft(24, 9);
-		b.endDraft();
+		b.setDraft('top', 24, 9);
+		b.endDraft('top');
 		expect(b.drafting).toBeNull();
 		expect(b.placed('top').h).toBe(9);
 	});
@@ -462,10 +462,10 @@ describe('a label being typed into', () => {
 	it('stops following the words after that, so a later trim keeps the room', () => {
 		const { arrangement: b } = arrangement();
 		b.startDraft('top', 24, 6);
-		b.setDraft(24, 9);
-		b.endDraft();
+		b.setDraft('top', 24, 9);
+		b.endDraft('top');
 		b.startDraft('top', 24, 9);
-		b.relaxDraft();
+		b.relaxDraft('top');
 		expect(b.placed('top').h).toBe(9);
 	});
 
@@ -480,7 +480,37 @@ describe('a label being typed into', () => {
 		const { arrangement: b } = arrangement();
 		b.grow('tall', 24, 14);
 		b.startDraft('top', 24, 6);
-		b.setDraft(24, 9);
+		b.setDraft('top', 24, 9);
 		expect(b.placed('tall').h).toBe(14);
+	});
+
+	// Clicking one card's label straight to another's: the first pane's measurement is still resolving
+	// when the second opens, and it must not land on the pane that now holds the draft.
+	describe('once another pane has taken the draft', () => {
+		it('ignores the pane it replaced', () => {
+			const { arrangement: b } = arrangement();
+			b.startDraft('top', 24, 6);
+			b.startDraft('tall', 24, 12);
+			b.setDraft('top', 24, 20);
+			expect(b.placed('top').h).toBe(6);
+			expect(b.placed('tall').h).toBe(12);
+		});
+
+		it('keeps the new draft open when the old one closes', () => {
+			const { arrangement: b } = arrangement();
+			b.startDraft('top', 24, 6);
+			b.startDraft('tall', 24, 12);
+			b.endDraft('top');
+			expect(b.drafting).toBe('tall');
+		});
+
+		it('is not relaxed by the pane it replaced', () => {
+			const { arrangement: b } = arrangement();
+			b.startDraft('top', 24, 6);
+			b.startDraft('tall', 24, 12);
+			b.setDraft('tall', 24, 16);
+			b.relaxDraft('top');
+			expect(b.placed('tall').h).toBe(16);
+		});
 	});
 });

@@ -26,7 +26,7 @@
 	   themes, since the accent fills don't change between light and dark. */
 	--on-accent: #1a1522;
 	--on-accent-light: #f4efe4;
-	/* The dimming behind a modal or a drawer. One value, so every overlay dims by the same amount. */
+	/* The dimming behind a modal. One value, so every overlay dims by the same amount. */
 	--scrim: rgba(0, 0, 0, 0.5);
 	/* The arrange chrome's accent. The one accent that swaps with the theme, so arranging never
 	   reads as the hue the data itself uses (see the light block). */
@@ -84,9 +84,8 @@
 	/* The heaviest tile on a heatmap. The HUE is a shared `--cat-*` token either way; only how much of it a
 	   tile carries is per theme, as with the washes above.
 	   A tile may carry ANY category hue and every hue is read against the SAME ink, so this is pitched at
-	   whichever hue composites closest to that ink — over the dark card that is the near-white
-	   `--cat-subscription`, the first to swallow `--ink`. 35% is the most that keeps all of them at 4.5:1
-	   (36% already drops that column to 4.44); at 55% it measured 2.65:1. Re-measure before raising it. */
+	   whichever hue composites closest to that ink — the lightest one, over the dark card. This is the most
+	   it can carry with every hue still clearing AA against `--ink`; re-measure before raising it. */
 	--mark-tile: 35%;
 	/* Entry-type accents for the Add overlay's band and switcher. A separate axis from the roles
 	   above, so the two may share hues and re-theming the overlay can't recolour a chart. */
@@ -244,7 +243,6 @@
 	   Every raised surface takes its shadow from here, so a theme can retint all of them at once. */
 	--shadow-pop: 0 10px 30px -10px rgba(0, 0, 0, 0.75); /* tooltips / popovers */
 	--shadow-modal: 0 24px 60px -20px rgba(0, 0, 0, 0.6);
-	--shadow-drawer: -18px 0 40px -20px rgba(0, 0, 0, 0.7);
 
 	/* ── Focus ────────────────────────────────────────────────────────────────
 	   One ring for everything focusable (see the global :focus-visible rule below). An outline, not
@@ -311,7 +309,6 @@
 	/* Retinted with the rest: a black shadow over a warm surface reads as grime, not elevation. */
 	--shadow-pop: 0 10px 30px -10px rgba(120, 90, 40, 0.45);
 	--shadow-modal: 0 24px 60px -20px rgba(120, 90, 40, 0.35);
-	--shadow-drawer: -18px 0 40px -20px rgba(120, 90, 40, 0.4);
 	/* Stronger than dark mode's for the same read; past roughly a fifth, a wash stops being a background
 	   and starts competing with the figure in front of it. */
 	--mark-wash: 16%;
@@ -435,6 +432,46 @@ a {
    used as body copy keeps margin: 0. */
 .head .cap {
 	margin-bottom: var(--space-7);
+}
+
+/* Every modal `<dialog>` (see overlay/modal): the element itself fills the viewport and lays its panel
+   out, so a press anywhere it shows through lands on the dialog and counts as the backdrop. A `<dialog>`
+   ships a border, a background and an auto width/height, all of which would draw around the panel.
+   The scrim is `::backdrop`, and `.closing` is the window the action holds the dialog open in so the fade
+   has something to run on — a `::backdrop` belongs to an OPEN dialog. Panels add their own entry and exit
+   offsets against the same class. */
+.sheet {
+	position: fixed;
+	inset: 0;
+	width: 100%;
+	max-width: none;
+	height: 100%;
+	max-height: none;
+	margin: 0;
+	border: 0;
+	padding: 0;
+	background: none;
+	overflow: visible;
+}
+.sheet::backdrop {
+	background: var(--scrim);
+	opacity: 1;
+	transition: opacity 150ms;
+}
+@starting-style {
+	.sheet[open]::backdrop {
+		opacity: 0;
+	}
+}
+.sheet.closing::backdrop {
+	opacity: 0;
+}
+
+/* A popup's panel, capped to the room Floating UI measured on the side it opened (see overlay/Popup):
+   the panel is `position: fixed`, so anything past the viewport edge is out of reach of every scroll. A
+   panel with a ceiling of its own sets `--panel-max`; scrolling the remainder is the panel's business. */
+.popup-panel {
+	max-height: min(var(--panel-max, 100vh), var(--popup-room, 100vh));
 }
 
 /* Regions that scroll INSIDE the page, split by AXIS. Bug: `overflow-y: auto` on a box that only
@@ -934,10 +971,12 @@ svg.chart {
 	color: var(--ink);
 }
 
+/* `::backdrop` is listed because a modal's scrim transitions on it and `*` does not reach it. */
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,
-	*::after {
+	*::after,
+	*::backdrop {
 		animation-duration: 0.01ms !important;
 		animation-iteration-count: 1 !important;
 		transition-duration: 0.01ms !important;
@@ -947,8 +986,15 @@ svg.chart {
 
 /* A label may wrap to the lines its host allows and no further. Clipped as well as measured: text can
    arrive from storage or a migration without passing through the editor, and a card must not be able to
-   grow past this however its label got there. */
+   grow past this however its label got there.
+
+   `anywhere` is what makes the editor honest (see ui/LabelLine, whose premise is that the field wraps
+   where the finished words will): a browser breaks a long unbreakable word inside an editing host but not
+   in ordinary text, so such a run fitted while it was typed and overran once the field closed. It also
+   keeps that word out of a card's min-content width, so it cannot pin the pane. No effect on a `nowrap`
+   label, which cannot wrap at all and is bounded by width instead. */
 [data-label-line] {
 	max-height: calc(var(--label-lines) * 1lh);
 	overflow: hidden;
+	overflow-wrap: anywhere;
 }

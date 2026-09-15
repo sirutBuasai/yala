@@ -1,0 +1,1116 @@
+{
+	"schema_version": 1,
+	"generated_at": "2026-09-15T17:05:03Z",
+	"currency": "USD",
+	"meta": {
+		"years": [2025, 2026],
+		"month_keys": ["2025-08", "2025-09", "2026-01"],
+		"transaction_count": 5,
+		"date_range": {
+			"start": "2025-08-02",
+			"end": "2026-01-04"
+		},
+		"categories": ["Grocery", "Subscription", "Takeouts"],
+		"accounts": {
+			"Assets:Cash:BankA": {
+				"name": "Bank A",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "bank",
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Assets:Cash:BankB": {
+				"name": "Bank B",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "bank",
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Assets:Cash:Passthrough": {
+				"name": "Passthrough",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "bank",
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": "Assets:Cash:Savings"
+			},
+			"Assets:Cash:Savings": {
+				"name": "Savings",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "bank",
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Assets:Cash:Wallet": {
+				"name": "Wallet",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "bank",
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Assets:Investments:TaxAdvantaged:Broker1HSA": {
+				"name": "Broker 1 HSA",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "investment",
+				"tier": "TaxAdvantaged",
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": "Employer1",
+				"labels": ["HSA"],
+				"sweep_to": null
+			},
+			"Assets:Investments:TaxAdvantaged:Employer401k": {
+				"name": "Employer 401k",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "investment",
+				"tier": "TaxAdvantaged",
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": "Employer1",
+				"labels": ["Roth401k", "Trad401k", "AfterTax401k"],
+				"sweep_to": null
+			},
+			"Assets:Investments:TaxAdvantaged:LegacyPlan": {
+				"name": "Legacy Plan",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "investment",
+				"tier": "TaxAdvantaged",
+				"closed": true,
+				"opened": "2020-01-01",
+				"employer": "Employer1",
+				"labels": ["LegacyPlan"],
+				"sweep_to": null
+			},
+			"Assets:Receivable:Friends": {
+				"name": "Friends",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": null,
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Equity:Adjustments:BankA": {
+				"name": "Bank A",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": null,
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Equity:Adjustments:BankB": {
+				"name": "Bank B",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": null,
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Equity:Adjustments:Investments:TaxAdvantaged:Broker1HSA": {
+				"name": "Broker 1 HSA",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": null,
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Equity:Adjustments:Investments:TaxAdvantaged:Employer401k": {
+				"name": "Employer 401k",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": null,
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Equity:Adjustments:Savings": {
+				"name": "Savings",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": null,
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Equity:Adjustments:Wallet": {
+				"name": "Wallet",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": null,
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Equity:Opening-Balances": {
+				"name": "Opening-Balances",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": null,
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Expenses:Deductions:Employer1Benefit": {
+				"name": "Employer 1 Benefit",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "deduction",
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": "Employer1",
+				"labels": [],
+				"sweep_to": null
+			},
+			"Expenses:Deductions:Insurance": {
+				"name": "Insurance",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "deduction",
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Expenses:Deductions:Tax": {
+				"name": "Tax",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "deduction",
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Expenses:Grocery": {
+				"name": "Grocery",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "category",
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Expenses:Subscription": {
+				"name": "Subscription",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "category",
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Expenses:Takeouts": {
+				"name": "Takeouts",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "category",
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Income:Salary:Employer1": {
+				"name": "Employer 1",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "employer",
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Income:Salary:Employer2": {
+				"name": "Employer 2",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "employer",
+				"tier": null,
+				"closed": true,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Liabilities:CC:CardA": {
+				"name": "Card A",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "card",
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Liabilities:CC:CardB": {
+				"name": "Card B",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "card",
+				"tier": null,
+				"closed": false,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Liabilities:CC:CardC": {
+				"name": "Card C",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "card",
+				"tier": null,
+				"closed": false,
+				"opened": "2026-08-14",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			},
+			"Liabilities:CC:CardD": {
+				"name": "Card D",
+				"institution_name": null,
+				"account_name": null,
+				"institution_alias": null,
+				"account_alias": null,
+				"color": null,
+				"kind": "card",
+				"tier": null,
+				"closed": true,
+				"opened": "2020-01-01",
+				"employer": null,
+				"labels": [],
+				"sweep_to": null
+			}
+		},
+		"domains": {
+			"spending": true,
+			"income": true,
+			"networth": false
+		}
+	},
+	"overview": {
+		"by_year": [
+			{
+				"year": 2025,
+				"spent": 75.22,
+				"income": 2300.0,
+				"saved": 2224.78
+			},
+			{
+				"year": 2026,
+				"spent": 107.93,
+				"income": 4750.0,
+				"saved": 4642.07
+			}
+		],
+		"all_time_by_category": [
+			{
+				"category": "Subscription",
+				"amount": 99.95
+			},
+			{
+				"category": "Grocery",
+				"amount": 50.0
+			},
+			{
+				"category": "Takeouts",
+				"amount": 33.2
+			}
+		]
+	},
+	"years": {
+		"2025": {
+			"total_spent": 75.22,
+			"total_income": 2300.0,
+			"matrix": [
+				{
+					"month": 1,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 2,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 3,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 4,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 5,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 6,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 7,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 8,
+					"spent": {
+						"Takeouts": 18.72,
+						"Grocery": 50.0
+					},
+					"income": 2300.0
+				},
+				{
+					"month": 9,
+					"spent": {
+						"Takeouts": 6.5
+					},
+					"income": 0.0
+				},
+				{
+					"month": 10,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 11,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 12,
+					"spent": {},
+					"income": 0.0
+				}
+			]
+		},
+		"2026": {
+			"total_spent": 107.93,
+			"total_income": 4750.0,
+			"matrix": [
+				{
+					"month": 1,
+					"spent": {
+						"Subscription": 99.95,
+						"Takeouts": 7.98
+					},
+					"income": 4750.0
+				},
+				{
+					"month": 2,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 3,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 4,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 5,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 6,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 7,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 8,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 9,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 10,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 11,
+					"spent": {},
+					"income": 0.0
+				},
+				{
+					"month": 12,
+					"spent": {},
+					"income": 0.0
+				}
+			]
+		}
+	},
+	"months": {
+		"2025-08": {
+			"total_spent": 68.72,
+			"total_income": 2300.0,
+			"by_category": [
+				{
+					"category": "Grocery",
+					"amount": 50.0
+				},
+				{
+					"category": "Takeouts",
+					"amount": 18.72
+				}
+			],
+			"transactions": [
+				{
+					"date": "2025-08-02",
+					"payee": "Example Cafe",
+					"amount": 18.72,
+					"category": "Takeouts",
+					"source": "Liabilities:CC:CardA",
+					"pending": false,
+					"locator": "line:spending/2025.beancount:3",
+					"bill": null
+				},
+				{
+					"date": "2025-08-10",
+					"payee": "Example Grocery",
+					"amount": 50.0,
+					"category": "Grocery",
+					"source": "Liabilities:CC:CardA",
+					"pending": false,
+					"locator": "line:spending/2025.beancount:8",
+					"bill": null
+				}
+			],
+			"paychecks": [
+				{
+					"date": "2025-08-15",
+					"payee": "paycheck",
+					"employer": "Employer1",
+					"gross": 3000.0,
+					"deductions": {
+						"Tax": 600.0,
+						"Insurance": 100.0
+					},
+					"contributions": {
+						"HSA": 150.0,
+						"Trad401k": 600.0
+					},
+					"net": 2300.0,
+					"take_home": 1550.0,
+					"locator": "line:income/2025.beancount:3"
+				}
+			],
+			"transfers": []
+		},
+		"2025-09": {
+			"total_spent": 6.5,
+			"total_income": 0.0,
+			"by_category": [
+				{
+					"category": "Takeouts",
+					"amount": 6.5
+				}
+			],
+			"transactions": [
+				{
+					"date": "2025-09-05",
+					"payee": "boba",
+					"amount": 6.5,
+					"category": "Takeouts",
+					"source": "Liabilities:CC:CardA",
+					"pending": true,
+					"locator": "line:spending/2025.beancount:12",
+					"bill": null
+				}
+			],
+			"paychecks": [],
+			"transfers": []
+		},
+		"2026-01": {
+			"total_spent": 107.93,
+			"total_income": 4750.0,
+			"by_category": [
+				{
+					"category": "Subscription",
+					"amount": 99.95
+				},
+				{
+					"category": "Takeouts",
+					"amount": 7.98
+				}
+			],
+			"transactions": [
+				{
+					"date": "2026-01-03",
+					"payee": "Example Gym",
+					"amount": 99.95,
+					"category": "Subscription",
+					"source": "Liabilities:CC:CardB",
+					"pending": false,
+					"locator": "line:spending/2026.beancount:3",
+					"bill": null
+				},
+				{
+					"date": "2026-01-04",
+					"payee": "boba",
+					"amount": 7.98,
+					"category": "Takeouts",
+					"source": "Liabilities:CC:CardA",
+					"pending": false,
+					"locator": "line:spending/2026.beancount:8",
+					"bill": null
+				}
+			],
+			"paychecks": [
+				{
+					"date": "2026-01-02",
+					"payee": "paycheck",
+					"employer": "Employer1",
+					"gross": 6000.0,
+					"deductions": {
+						"Tax": 1200.0,
+						"Insurance": 50.0
+					},
+					"contributions": {
+						"HSA": 150.0,
+						"Roth401k": 1600.0
+					},
+					"net": 4750.0,
+					"take_home": 3000.0,
+					"locator": "line:income/2026.beancount:3"
+				}
+			],
+			"transfers": []
+		}
+	},
+	"income": {
+		"by_year": [
+			{
+				"year": 2025,
+				"gross": 3000.0,
+				"net": 2300.0,
+				"take_home": 1550.0,
+				"deductions": 700.0,
+				"contributions": 750.0
+			},
+			{
+				"year": 2026,
+				"gross": 6000.0,
+				"net": 4750.0,
+				"take_home": 3000.0,
+				"deductions": 1250.0,
+				"contributions": 1750.0
+			}
+		],
+		"by_month": {
+			"2025": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2300.0, 0.0, 0.0, 0.0, 0.0],
+			"2026": [4750.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+		},
+		"recent_paychecks": [
+			{
+				"date": "2026-01-02",
+				"payee": "paycheck",
+				"employer": "Employer1",
+				"gross": 6000.0,
+				"deductions": {
+					"Tax": 1200.0,
+					"Insurance": 50.0
+				},
+				"contributions": {
+					"HSA": 150.0,
+					"Roth401k": 1600.0
+				},
+				"net": 4750.0,
+				"take_home": 3000.0,
+				"locator": "line:income/2026.beancount:3"
+			},
+			{
+				"date": "2025-08-15",
+				"payee": "paycheck",
+				"employer": "Employer1",
+				"gross": 3000.0,
+				"deductions": {
+					"Tax": 600.0,
+					"Insurance": 100.0
+				},
+				"contributions": {
+					"HSA": 150.0,
+					"Trad401k": 600.0
+				},
+				"net": 2300.0,
+				"take_home": 1550.0,
+				"locator": "line:income/2025.beancount:3"
+			}
+		]
+	},
+	"networth": {
+		"current": null,
+		"series": [],
+		"accounts": [
+			{
+				"account": "Assets:Cash:BankB",
+				"label": "Bank B",
+				"group": "cash",
+				"bucket": "Liquid",
+				"value": 4550.0
+			},
+			{
+				"account": "Assets:Investments:TaxAdvantaged:Employer401k",
+				"label": "Employer 401k",
+				"group": "investment",
+				"bucket": "Tax-advantaged",
+				"value": 2200.0
+			},
+			{
+				"account": "Assets:Investments:TaxAdvantaged:Broker1HSA",
+				"label": "Broker 1 HSA",
+				"group": "investment",
+				"bucket": "Tax-advantaged",
+				"value": 300.0
+			},
+			{
+				"account": "Assets:Cash:BankA",
+				"label": "Bank A",
+				"group": "cash",
+				"bucket": "Liquid",
+				"value": 0.0
+			},
+			{
+				"account": "Assets:Cash:Passthrough",
+				"label": "Passthrough",
+				"group": "cash",
+				"bucket": "Liquid",
+				"value": 0.0
+			},
+			{
+				"account": "Assets:Cash:Savings",
+				"label": "Savings",
+				"group": "cash",
+				"bucket": "Liquid",
+				"value": 0.0
+			},
+			{
+				"account": "Assets:Cash:Wallet",
+				"label": "Wallet",
+				"group": "cash",
+				"bucket": "Liquid",
+				"value": 0.0
+			},
+			{
+				"account": "Liabilities:CC:CardC",
+				"label": "Card C",
+				"group": "liability",
+				"bucket": "liability",
+				"value": 0.0
+			},
+			{
+				"account": "Liabilities:CC:CardA",
+				"label": "Card A",
+				"group": "liability",
+				"bucket": "liability",
+				"value": -83.2
+			},
+			{
+				"account": "Liabilities:CC:CardB",
+				"label": "Card B",
+				"group": "liability",
+				"bucket": "liability",
+				"value": -99.95
+			}
+		],
+		"adjustments": []
+	},
+	"settings": {
+		"swr": 4.0,
+		"real_return": 5.0,
+		"retire_age": 60.0,
+		"runway_target": 6.0,
+		"birth_year": null
+	},
+	"setting_specs": [
+		{
+			"key": "swr",
+			"label": "Withdrawal rate",
+			"kind": "percent",
+			"min": 0.1,
+			"max": 20.0,
+			"default": 4.0,
+			"help": "Share of the portfolio you plan to withdraw each year at retirement."
+		},
+		{
+			"key": "real-return",
+			"label": "Expected real return",
+			"kind": "percent",
+			"min": 0.0,
+			"max": 20.0,
+			"default": 5.0,
+			"help": "Investment annual returns, used for balance growth projections without further contributions."
+		},
+		{
+			"key": "retire-age",
+			"label": "Target retirement age",
+			"kind": "age",
+			"min": 18.0,
+			"max": 100.0,
+			"default": 60.0,
+			"help": "The age the balance growth projection ends."
+		},
+		{
+			"key": "runway-target",
+			"label": "Target cash runway",
+			"kind": "months",
+			"min": 1.0,
+			"max": 120.0,
+			"default": 6.0,
+			"help": "Number of months in spending you want held in liquid assets."
+		},
+		{
+			"key": "birth-year",
+			"label": "Birth year",
+			"kind": "year",
+			"min": 1900.0,
+			"max": 2100.0,
+			"default": null,
+			"help": "Your birth year, used with your target retirement age for the balance growth projection."
+		}
+	],
+	"account_lists": {
+		"kinds": [
+			{
+				"name": "deduction",
+				"prefix": "Expenses:Deductions:",
+				"tiered": false,
+				"plugged": false,
+				"named": false,
+				"product": false,
+				"scopable": true,
+				"labelled": false,
+				"drains": false,
+				"splits": false,
+				"sweeps": false,
+				"sweep_target": false
+			},
+			{
+				"name": "employer",
+				"prefix": "Income:Salary:",
+				"tiered": false,
+				"plugged": false,
+				"named": false,
+				"product": false,
+				"scopable": false,
+				"labelled": false,
+				"drains": false,
+				"splits": false,
+				"sweeps": false,
+				"sweep_target": false
+			},
+			{
+				"name": "card",
+				"prefix": "Liabilities:CC:",
+				"tiered": false,
+				"plugged": false,
+				"named": true,
+				"product": true,
+				"scopable": false,
+				"labelled": false,
+				"drains": false,
+				"splits": false,
+				"sweeps": false,
+				"sweep_target": false
+			},
+			{
+				"name": "investment",
+				"prefix": "Assets:Investments:",
+				"tiered": true,
+				"plugged": true,
+				"named": true,
+				"product": true,
+				"scopable": true,
+				"labelled": true,
+				"drains": false,
+				"splits": true,
+				"sweeps": false,
+				"sweep_target": true
+			},
+			{
+				"name": "bank",
+				"prefix": "Assets:Cash:",
+				"tiered": false,
+				"plugged": true,
+				"named": true,
+				"product": false,
+				"scopable": false,
+				"labelled": false,
+				"drains": true,
+				"splits": true,
+				"sweeps": true,
+				"sweep_target": true
+			},
+			{
+				"name": "category",
+				"prefix": "Expenses:",
+				"tiered": false,
+				"plugged": false,
+				"named": false,
+				"product": false,
+				"scopable": false,
+				"labelled": false,
+				"drains": false,
+				"splits": false,
+				"sweeps": false,
+				"sweep_target": false
+			}
+		],
+		"spending_categories": ["Grocery", "Subscription", "Takeouts"],
+		"funding_accounts": [
+			"Assets:Cash:BankA",
+			"Assets:Cash:BankB",
+			"Assets:Cash:Passthrough",
+			"Assets:Cash:Savings",
+			"Assets:Cash:Wallet",
+			"Liabilities:CC:CardA",
+			"Liabilities:CC:CardB",
+			"Liabilities:CC:CardC"
+		],
+		"cash_accounts": [
+			"Assets:Cash:BankA",
+			"Assets:Cash:BankB",
+			"Assets:Cash:Passthrough",
+			"Assets:Cash:Savings",
+			"Assets:Cash:Wallet"
+		],
+		"card_accounts": ["Liabilities:CC:CardA", "Liabilities:CC:CardB", "Liabilities:CC:CardC"],
+		"investment_accounts": [
+			"Assets:Investments:TaxAdvantaged:Broker1HSA",
+			"Assets:Investments:TaxAdvantaged:Employer401k"
+		],
+		"employers": ["Employer1"],
+		"deduction_accounts": [
+			"Expenses:Deductions:Employer1Benefit",
+			"Expenses:Deductions:Insurance",
+			"Expenses:Deductions:Tax"
+		],
+		"payroll_options": [
+			{
+				"kind": "contribution",
+				"label": "HSA",
+				"employer": "Employer1",
+				"account": "Assets:Investments:TaxAdvantaged:Broker1HSA"
+			},
+			{
+				"kind": "contribution",
+				"label": "Roth401k",
+				"employer": "Employer1",
+				"account": "Assets:Investments:TaxAdvantaged:Employer401k"
+			},
+			{
+				"kind": "contribution",
+				"label": "Trad401k",
+				"employer": "Employer1",
+				"account": "Assets:Investments:TaxAdvantaged:Employer401k"
+			},
+			{
+				"kind": "contribution",
+				"label": "AfterTax401k",
+				"employer": "Employer1",
+				"account": "Assets:Investments:TaxAdvantaged:Employer401k"
+			},
+			{
+				"kind": "deduction",
+				"label": "Employer1Benefit",
+				"employer": "Employer1",
+				"account": "Expenses:Deductions:Employer1Benefit"
+			},
+			{
+				"kind": "deduction",
+				"label": "Insurance",
+				"employer": null,
+				"account": "Expenses:Deductions:Insurance"
+			},
+			{
+				"kind": "deduction",
+				"label": "Tax",
+				"employer": null,
+				"account": "Expenses:Deductions:Tax"
+			}
+		],
+		"balance_accounts": [
+			"Assets:Cash:BankA",
+			"Assets:Cash:BankB",
+			"Assets:Cash:Savings",
+			"Assets:Cash:Wallet",
+			"Assets:Investments:TaxAdvantaged:Broker1HSA",
+			"Assets:Investments:TaxAdvantaged:Employer401k"
+		],
+		"liability_accounts": ["Liabilities:CC:CardA", "Liabilities:CC:CardB", "Liabilities:CC:CardC"],
+		"sweeps": {
+			"Assets:Cash:Passthrough": "Assets:Cash:Savings"
+		}
+	}
+}

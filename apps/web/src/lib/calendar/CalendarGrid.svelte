@@ -142,5 +142,10 @@
 		.wdshort {
 			display: inline;
 		}
+		/* The gutter's cells go with its column: left behind, each total takes the first slot of the next
+		   implicit row and shifts every week after it one column along. */
+		.cal :global(.wkcell) {
+			display: none;
+		}
 	}
 </style>

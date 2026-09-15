@@ -130,7 +130,6 @@
 	{id}
 	{ariaLabel}
 	popupRole="dialog"
-	estHeight={320}
 	controls={gridId}
 	activeDescendant={active ? dayId(active) : undefined}
 	onopen={seedView}
@@ -154,7 +153,7 @@
 	{/snippet}
 
 	{#snippet children()}
-		<div class="cal-pop" role="dialog" aria-label="Choose date" tabindex="-1">
+		<div class="cal-pop popup-panel" role="dialog" aria-label="Choose date" tabindex="-1">
 			<div class="cal-head">
 				<button type="button" class="nav" aria-label="Previous month" onclick={prevMonth}>
 					<Chevron dir="left" size={13} />
@@ -200,6 +199,7 @@
 	}
 	.cal-pop {
 		width: 248px;
+		overflow-y: auto;
 		padding: var(--space-6);
 		background: var(--surface-2);
 		border: 1px solid var(--border);

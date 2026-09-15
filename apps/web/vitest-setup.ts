@@ -14,6 +14,30 @@ class NoopResizeObserver implements ResizeObserver {
 }
 globalThis.ResizeObserver ??= NoopResizeObserver;
 
+// Likewise absent, and Floating UI's `autoUpdate` watches for layout shift with one.
+class NoopIntersectionObserver implements IntersectionObserver {
+	readonly root = null;
+	readonly rootMargin = '';
+	readonly thresholds: readonly number[] = [];
+	observe() {}
+	unobserve() {}
+	disconnect() {}
+	takeRecords(): IntersectionObserverEntry[] {
+		return [];
+	}
+}
+globalThis.IntersectionObserver ??= NoopIntersectionObserver;
+
+// jsdom parses `<dialog>` but implements none of its methods. Only what a component test can observe is
+// stubbed: the top layer, the backdrop and focus restoration have nothing in jsdom to act on.
+HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
+	this.open = true;
+};
+HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) {
+	this.open = false;
+	this.dispatchEvent(new Event('close'));
+};
+
 // jsdom implements no Web Animations API, and Svelte drives every transition through
 // `element.animate` — without this, rendering anything that transitions in (an overlay) throws. The
 // stub reports itself already finished: a test asserts what a panel shows, never how it arrived.

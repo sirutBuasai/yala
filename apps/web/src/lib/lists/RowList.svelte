@@ -45,7 +45,7 @@
 		[
 			dateOf ? 'var(--col-date)' : '',
 			'var(--col-dot)',
-			'minmax(min-content, 1fr)',
+			'minmax(var(--col-main-floor, min-content), 1fr)',
 			columnTracks ?? '',
 			'minmax(var(--col-amount), max-content)'
 		]
@@ -101,6 +101,14 @@
 	@container (max-width: 26rem) {
 		.cols {
 			display: none;
+		}
+	}
+	/* Narrower than the row's own min-content, where the pane cannot grow to make the shortfall up: the
+	   main column gives up its floor and the payee (already ellipsised) truncates instead of pushing the
+	   amount out of the card. A custom property, since the template is an inline style. */
+	@container (max-width: 20rem) {
+		.row {
+			--col-main-floor: 0;
 		}
 	}
 	.row {

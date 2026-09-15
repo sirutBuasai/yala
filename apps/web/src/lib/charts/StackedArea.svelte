@@ -5,7 +5,7 @@
 	import { esc } from '$lib/utils/format';
 	import { formatUnit, formatUnitExact, type Unit } from '$lib/data/primitives';
 	import { showTip, hideTip, withAlt } from '$lib/utils/tooltip';
-	import { labelIndices, moneyAxisFormat, plotSize } from '$lib/charts/axis';
+	import { labelAnchor, labelIndices, moneyAxisFormat, plotSize } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import Legend from '$lib/charts/Legend.svelte';
 	import { chartLabel } from '$lib/charts/aria';
@@ -119,7 +119,7 @@
 
 			{#each labels as lb, i (lb + i)}
 				{#if shown.has(i)}
-					<text x={xPos(i)} y={ih + 19} text-anchor="middle">{lb}</text>
+					<text x={xPos(i)} y={ih + 19} text-anchor={labelAnchor(i, n)}>{lb}</text>
 				{/if}
 			{/each}
 
@@ -147,12 +147,16 @@
 				{/each}
 			{/if}
 
-			<!-- One hit target per point, so a hover reports the whole mix at that date. -->
+			<!-- One hit target per point, so a hover reports the whole mix at that date. Clipped to the plot:
+			     the end targets are centred on the edge, so half of each would reach outside it. -->
+
 			{#each labels as lb, i (lb + i)}
+				{@const half = iw / Math.max(1, n * 2)}
+				{@const from = Math.max(0, xPos(i) - half)}
 				<rect
-					x={xPos(i) - iw / Math.max(1, n * 2)}
+					x={from}
 					y="0"
-					width={iw / Math.max(1, n)}
+					width={Math.min(iw, xPos(i) + half) - from}
 					height={ih}
 					fill="transparent"
 					onmousemove={(e) => onMove(e, i)}

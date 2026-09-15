@@ -112,7 +112,7 @@
 	{/snippet}
 
 	{#snippet children()}
-		<ul id={listboxId} class="listbox scroller trap" role="listbox" tabindex="-1">
+		<ul id={listboxId} class="listbox popup-panel scroller trap" role="listbox" tabindex="-1">
 			{#each options as opt, i (opt)}
 				<!-- Keyboard selection is handled on the trigger, which keeps focus. -->
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -143,7 +143,7 @@
 		margin: 0;
 		padding: var(--space-2);
 		list-style: none;
-		max-height: 248px;
+		--panel-max: 248px;
 		background: var(--surface-2);
 		border: 1px solid var(--border);
 		border-radius: var(--radius-md);

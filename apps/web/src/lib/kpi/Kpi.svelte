@@ -143,6 +143,14 @@
 		flex: 1 1 auto;
 		min-width: min-content;
 	}
+	/* One line each, and neither may be shrunk: `[data-label-line]` clips to `--label-lines`, so a host
+	   that leaves it unset bounds nothing, and the column is then free to squeeze a line under its own
+	   box and clip the glyphs. */
+	.kpi h2,
+	.cap {
+		--label-lines: 1;
+		flex: none;
+	}
 	.kpi h2 {
 		white-space: nowrap;
 	}

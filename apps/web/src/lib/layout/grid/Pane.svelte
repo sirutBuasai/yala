@@ -20,7 +20,7 @@
 	import SizeMode from '$lib/icons/SizeMode.svelte';
 	import { getArrangement, getGridEnv, getLabels } from './context';
 	import { drag, type DragParams } from './drag';
-	import { overrun, spills } from './spill';
+	import { overrun } from './spill';
 	import { foldSpan } from './fold';
 	import { EDGES, type Edge } from './resize';
 	import { PaneGesture } from './gesture.svelte';
@@ -81,10 +81,11 @@
 		return () => observer.disconnect();
 	});
 
-	// The spill check is asked for the card and its body by reference (see `spill.ts`), and `tick` is what
-	// makes a candidate size real before it is measured.
+	// One rule for both gestures and the label editor (`everythingFits`), labels included: a resize that
+	// clipped a card's own caption left it in a state no rename could recover from. `tick` is what makes a
+	// candidate size real before it is measured.
 	const gesture = new PaneGesture(() => id, arrangement, {
-		spills: () => !!cardEl && spills(cardEl, bodyEl),
+		spills: () => !!cardEl && !everythingFits(cardEl),
 		settle: tick
 	});
 
@@ -149,9 +150,13 @@
 	 * A label with more words than its line budget allows. Its own `overflow: hidden` is what bounds the
 	 * card (see `--label-lines` in app.css), and that same hidden overflow is why the card's spill probe
 	 * cannot see it — so it is asked for separately.
+	 *
+	 * Both axes: a wrapping label runs out of LINES, one that cannot wrap runs out of WIDTH.
 	 */
 	const labelClipped = (el: HTMLElement) =>
-		[...el.querySelectorAll('[data-label-line]')].some((l) => l.scrollHeight > l.clientHeight + 1);
+		[...el.querySelectorAll('[data-label-line]')].some(
+			(l) => l.scrollHeight > l.clientHeight + 1 || l.scrollWidth > l.clientWidth + 1
+		);
 
 	/** Everything this pane holds fits the room it is allowed. */
 	function everythingFits(el: HTMLElement): boolean {
@@ -163,6 +168,9 @@
 	    read as one more edit. */
 	let fitting = '';
 	let reverting = false;
+	/** Which run of `trackLabel` owns the measurement: keystrokes can arrive inside the frames a previous
+	    run is awaiting, and only the latest may decide what fitted. */
+	let tracking = 0;
 
 	function caretToEnd(el: HTMLElement): void {
 		const range = document.createRange();
@@ -185,10 +193,11 @@
 	 */
 	async function trackLabel(field: HTMLElement): Promise<void> {
 		if (!cardEl || reverting) return;
-		arrangement.relaxDraft();
+		const run = ++tracking;
+		arrangement.relaxDraft(id);
 		await tick();
-		await growUntilItFits((w, h) => arrangement.setDraft(w, h));
-		if (!cardEl) return;
+		await growUntilItFits((w, h) => arrangement.setDraft(id, w, h));
+		if (!cardEl || run !== tracking) return;
 
 		if (everythingFits(cardEl)) {
 			fitting = field.textContent ?? '';
@@ -201,9 +210,9 @@
 		field.textContent = fitting;
 		field.dispatchEvent(new Event('input', { bubbles: true }));
 		caretToEnd(field);
-		arrangement.relaxDraft();
+		arrangement.relaxDraft(id);
 		await tick();
-		await growUntilItFits((w, h) => arrangement.setDraft(w, h));
+		await growUntilItFits((w, h) => arrangement.setDraft(id, w, h));
 		reverting = false;
 	}
 
@@ -252,7 +261,7 @@
 	oninput={(e) => isLabelField(e.target) && void trackLabel(e.target as HTMLElement)}
 	onfocusout={(e) =>
 		isLabelField(e.target) &&
-		void trackLabel(e.target as HTMLElement).then(() => arrangement.endDraft())}
+		void trackLabel(e.target as HTMLElement).then(() => arrangement.endDraft(id))}
 >
 	<Card
 		bind:card={cardEl}
@@ -284,35 +293,30 @@
 				onend: ({ dx, dy }) => gesture.endMove(dx, dy),
 				oncancel: () => gesture.abandon()
 			}}
-		>
-			<!-- Only where there is something to put in it: with the grip gone, a chart pane has no height
-			     mode to choose and the bar would be an empty pill sitting on the card.
+		></div>
 
-			     data-no-drag: stopping propagation here cannot work, because Svelte delegates the event
-			     (see drag.ts). -->
-			{#if arrangement.canSetHeight(id)}
-				<div
-					class="tools modes"
-					role="group"
-					aria-label={`Height of ${name}`}
-					tabindex="-1"
-					data-no-drag
-				>
-					{#each MODE_ORDER as m (m)}
-						<button
-							type="button"
-							class="modebtn"
-							class:active={mode === m}
-							aria-pressed={mode === m}
-							title={MODE_LABELS[m]}
-							onclick={() => arrangement.setMode(id, m)}
-						>
-							<SizeMode mode={m} />
-						</button>
-					{/each}
-				</div>
-			{/if}
-		</div>
+		<!-- A SIBLING of the drag surface, not a child: `.grab` is itself a `role="button"`, and buttons
+		     inside it made every pane a nested interactive control. Being no longer a descendant is also what
+		     lets `data-no-drag` go — a press here can no longer reach the drag listener at all.
+
+		     Rendered only where there is something to choose: with the grip gone, a chart pane has no height
+		     mode and the bar would be an empty pill sitting on the card. -->
+		{#if arrangement.canSetHeight(id)}
+			<div class="tools modes" role="group" aria-label={`Height of ${name}`}>
+				{#each MODE_ORDER as m (m)}
+					<button
+						type="button"
+						class="modebtn"
+						class:active={mode === m}
+						aria-pressed={mode === m}
+						title={MODE_LABELS[m]}
+						onclick={() => arrangement.setMode(id, m)}
+					>
+						<SizeMode mode={m} />
+					</button>
+				{/each}
+			</div>
+		{/if}
 
 		<!-- Resize strips straddling the card's edges. Not focusable and not announced: the card itself is the
 		     keyboard route in, and eight tab stops per pane would bury everything else. -->
@@ -376,11 +380,13 @@
 		min-height: var(--figure-h-floor);
 		max-height: none;
 	}
-	/* Folded, the card hugs its content, so a size container inside it has no height to take and size
-	   containment would collapse it to zero and spill the figure out of the card. The figure sizes
-	   itself here instead. */
+	/* Folded, the card hugs its content, so a size container inside it has no height to take and would
+	   collapse to zero, spilling the figure. The figure sizes itself here instead, and the ceiling goes
+	   with the containment: a figure whose contents REFLOW can need more height than `--figure-h-max`,
+	   and nothing here is aligned against a neighbour for that ceiling to protect. */
 	.cell.folded :global(.sizebox) {
 		container-type: normal;
+		max-height: none;
 	}
 	/* A fixed-viewBox chart (sankey, heatmap) takes its height from its width, so widening a pane made
 	   it taller and it spilled out of the card. Given the full height it letterboxes instead. */
@@ -429,10 +435,13 @@
 		background: color-mix(in srgb, var(--arrange-line) 18%, transparent);
 		pointer-events: none;
 	}
+	/* Positioned from the CELL, so the offsets carry the pane's own inset: these sit over the card but are
+	   a sibling of the drag surface, not a child of it (see the markup). */
 	.tools {
 		position: absolute;
-		top: var(--space-3);
-		right: var(--space-3);
+		z-index: 2;
+		top: calc(var(--pane-inset) + var(--space-3));
+		right: calc(var(--pane-inset) + var(--space-3));
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
