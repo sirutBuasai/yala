@@ -51,35 +51,43 @@
 	);
 </script>
 
-<table class="matrix">
-	<thead>
-		<tr>
-			<th class="rh"><span class="vh">Period</span></th>
-			{#each columns as c (c)}<th>{c}</th>{/each}
-		</tr>
-	</thead>
-	<tbody>
-		{#each body as r (r.label)}
+<!-- Scrolls sideways inside its pane rather than out through the card: a column here is a period and a
+     row a measure, so neither can be dropped or wrapped to make the figures fit (as in `charts/Table`). -->
+<div class="matrixbox scroller-x">
+	<table class="matrix">
+		<thead>
 			<tr>
-				<th class="rl" scope="row">
-					{r.label}
-					{#if r.caption}<small>{r.caption}</small>{/if}
-				</th>
-				{#each r.values as v (v.key)}
-					<td>
-						<span class="figure">
-							{v.text}
-							{#if v.badge}<Badge tone={v.badge.tone}>{v.badge.text}</Badge>{/if}
-						</span>
-						{#if v.note}<small>{v.note}</small>{/if}
-					</td>
-				{/each}
+				<th class="rh"><span class="vh">Period</span></th>
+				{#each columns as c (c)}<th>{c}</th>{/each}
 			</tr>
-		{/each}
-	</tbody>
-</table>
+		</thead>
+		<tbody>
+			{#each body as r (r.label)}
+				<tr>
+					<th class="rl" scope="row">
+						{r.label}
+						{#if r.caption}<small>{r.caption}</small>{/if}
+					</th>
+					{#each r.values as v (v.key)}
+						<td>
+							<span class="figure">
+								{v.text}
+								{#if v.badge}<Badge tone={v.badge.tone}>{v.badge.text}</Badge>{/if}
+							</span>
+							{#if v.note}<small>{v.note}</small>{/if}
+						</td>
+					{/each}
+				</tr>
+			{/each}
+		</tbody>
+	</table>
+</div>
 
 <style>
+	/* Zero, so the table's own min-content cannot widen the card instead of scrolling here. */
+	.matrixbox {
+		min-width: 0;
+	}
 	.matrix {
 		width: 100%;
 		border-collapse: collapse;

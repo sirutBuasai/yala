@@ -380,6 +380,11 @@
 		min-height: var(--figure-h-floor);
 		max-height: none;
 	}
+	/* On the grid a pane can be resized, and this table's overrun is what makes it REFUSE (see
+	   charts/StatMatrix); folded there is no resize and no room to grow, so it scrolls instead. */
+	.cell:not(.folded) :global(.matrixbox) {
+		overflow-x: visible;
+	}
 	/* Folded, the card hugs its content, so a size container inside it has no height to take and would
 	   collapse to zero, spilling the figure. The figure sizes itself here instead, and the ceiling goes
 	   with the containment: a figure whose contents REFLOW can need more height than `--figure-h-max`,
