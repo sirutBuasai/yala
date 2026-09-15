@@ -220,14 +220,18 @@ export const CHARTS: ChartDef[] = [
 		accepts: ['series', 'multiseries'],
 		component: BarChart,
 		adapt(p, opts = {}) {
-			const { labels, list } = seriesOf(p as Series | MultiSeries);
+			const sm = p as Series | MultiSeries;
+			const { labels, list } = seriesOf(sm);
 			return {
 				labels,
 				series: list.map((s, i) => ({
 					name: s.name,
 					values: s.points.map((pt) => pt.value ?? 0),
 					color: fillOf(list, s, i, opts)
-				}))
+				})),
+				percent: sm.unit.kind === 'percent',
+				// A reference belongs to ONE series, so it only travels when there is only one.
+				reference: list.length === 1 ? list[0]!.reference : undefined
 			};
 		}
 	}),

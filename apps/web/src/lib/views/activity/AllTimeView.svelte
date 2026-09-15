@@ -23,7 +23,7 @@
 	const PANES = $derived({
 		// A block of figures, not a list: it scales like the KPI cards above it rather than owning its
 		// own height, so it can be given room or taken down to where its rows would clip.
-		cashflow: { x: 0, y: 0, w: 48, h: 9, content: 'scale' },
+		cashflow: { x: 0, y: 0, w: 48, h: 12, content: 'scale' },
 		// The full-width charts here are taller than the tops below them leave room for. The push rule
 		// closes each overlap downwards, so the heights are authored and the tops are only floors.
 		flow: {
@@ -64,7 +64,7 @@
 			figure: {
 				figure: 'overview.savings_rate',
 				scope: all,
-				chart: 'line',
+				chart: 'bar',
 				title: words('Savings rate by year'),
 				caption: words('of net income')
 			}
@@ -89,25 +89,44 @@
 		}
 	} satisfies BoardLayout);
 
-	const columns = ['Income', 'Spent', 'Saved'];
+	// Left to right is the order the money moves: gross splits into what was withheld, what was put
+	// away and what reached the account, and net income is then what got spent or kept.
+	const columns = ['Gross', 'Deductions', 'Contributions', 'Take-home', 'Income', 'Spent', 'Saved'];
+	const MEASURES = [
+		'gross',
+		'deductions',
+		'contributions',
+		'takehome',
+		'income',
+		'spending',
+		'saved'
+	];
+	const totals = [
+		'income.gross',
+		'income.deductions',
+		'income.contributions',
+		'income.takehome',
+		'income.total',
+		'spending.total',
+		'saved.total'
+	];
+	const cellsOf = (ids: string[]) => ids.map((id) => ({ id, scope: all }));
+
 	const rows = $derived([
 		{
 			label: words('Lifetime total'),
 			caption: live(span),
-			cells: [
-				{ id: 'income.total', scope: all },
-				{ id: 'spending.total', scope: all },
-				{ id: 'saved.total', scope: all }
-			]
+			cells: cellsOf(totals)
 		},
 		{
 			// No caption: how many years divide into it is each average's own footnote.
 			label: words('Avg / year'),
-			cells: [
-				{ id: 'avg.income_per_year', scope: all },
-				{ id: 'avg.spending_per_year', scope: all },
-				{ id: 'avg.saved_per_year', scope: all }
-			]
+			cells: cellsOf(MEASURES.map((m) => `avg.${m}_per_year`))
+		},
+		{
+			// Likewise the active-month count these divide by, which every column shares at this scope.
+			label: words('Avg / month'),
+			cells: cellsOf(MEASURES.map((m) => `avg.${m}_per_month`))
 		}
 	]);
 </script>
@@ -116,7 +135,7 @@
 	<Pane
 		id="cashflow"
 		title={words('Lifetime cash flow')}
-		caption={{ context: span, text: 'totals and their yearly run-rate' }}
+		caption={{ context: span, text: 'totals, yearly, and monthly rates' }}
 	>
 		<StatMatrix {data} {columns} {rows} />
 	</Pane>

@@ -158,6 +158,8 @@ export function categorySpendByYear(data: DashboardData): MultiSeries {
 export function savingsRate(data: DashboardData): Series {
 	const saved = measureByYear(data, 'saved');
 	const income = measureByYear(data, 'income');
+	const total = (s: Series) => s.points.reduce((a, p) => a + (p.value ?? 0), 0);
+	const lifetimeIncome = total(income);
 	return {
 		...saved,
 		name: 'Savings rate',
@@ -165,6 +167,11 @@ export function savingsRate(data: DashboardData): Series {
 		points: saved.points.map((p, i) => {
 			const base = income.points[i]?.value ?? 0;
 			return { ...p, value: base ? ((p.value ?? 0) / base) * 100 : 0 };
-		})
+		}),
+		// The lifetime rate, not the mean of the yearly ones: a year that earned twice as much has twice
+		// the say in what "usual" is. Without it a reader has no idea which years beat their own record.
+		reference: lifetimeIncome
+			? { value: (total(saved) / lifetimeIncome) * 100, label: 'lifetime' }
+			: undefined
 	};
 }

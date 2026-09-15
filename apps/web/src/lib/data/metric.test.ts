@@ -49,7 +49,7 @@ describe('amount', () => {
 describe('average', () => {
 	it('per year divides lifetime by tracked years', () => {
 		const d = makeData();
-		const avg = average(d, 'income', 'year');
+		const avg = average(d, 'income', 'year', { level: 'all' });
 		expect(avg.value).toBe(2300);
 		expect(avg.note).toEqual({ context: '2 tracked years' });
 	});
@@ -57,9 +57,26 @@ describe('average', () => {
 	it('per month divides a year by ACTIVE months, not a flat 12', () => {
 		const d = makeData();
 		// 2024 has a single active month, so its spending is not divided by twelve.
-		const avg = average(d, 'spending', 'month', 2024);
+		const avg = average(d, 'spending', 'month', { level: 'year', year: 2024 });
 		expect(avg.value).toBe(120);
 		expect(avg.note).toEqual({ context: '1 active months' });
+	});
+
+	it('per month at lifetime divides by the active months of every tracked year', () => {
+		const d = makeData();
+		// One active month in 2024, one in 2025.
+		const avg = average(d, 'spending', 'month', { level: 'all' });
+		expect(avg.value).toBeCloseTo((120 + 45.5) / 2);
+		expect(avg.note).toEqual({ context: '2 active months' });
+	});
+
+	// One divisor for the whole row, so a reader can subtract one column from another.
+	it('per month at lifetime divides every measure by the same months', () => {
+		const d = makeData();
+		const income = average(d, 'income', 'month', { level: 'all' }).value ?? 0;
+		const spent = average(d, 'spending', 'month', { level: 'all' }).value ?? 0;
+		const saved = average(d, 'saved', 'month', { level: 'all' }).value ?? 0;
+		expect(saved).toBeCloseTo(income - spent);
 	});
 });
 

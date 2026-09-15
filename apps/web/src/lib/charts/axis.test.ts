@@ -1,5 +1,43 @@
 import { describe, it, expect } from 'vitest';
-import { fitFontSize, labelIndices, moneyYScale } from './axis';
+import { fitFontSize, labelIndices, moneyYScale, signedYScale } from './axis';
+
+describe('signedYScale', () => {
+	it('puts zero where the data does: mostly-positive readings push it toward the bottom', () => {
+		const { y } = signedYScale([-8, 45, 61], 300);
+		// A tenth of the span is deficit, so zero sits in the bottom fifth of the plot.
+		expect(y(0)).toBeGreaterThan(240);
+		expect(y(0)).toBeLessThan(300);
+	});
+
+	it('lifts zero toward the top when the deficits are the big numbers', () => {
+		const { y } = signedYScale([-61, -45, 8], 300);
+		expect(y(0)).toBeGreaterThan(0);
+		expect(y(0)).toBeLessThan(60);
+	});
+
+	it('centres zero when both sides reach equally far', () => {
+		const { y } = signedYScale([-50, 50], 300);
+		expect(y(0)).toBeCloseTo(150, 6);
+	});
+
+	it('leaves headroom past the extremes, so a bar never touches the ceiling', () => {
+		const { y } = signedYScale([-20, 80], 300);
+		expect(y.domain()[0]).toBeLessThan(-20);
+		expect(y.domain()[1]).toBeGreaterThan(80);
+	});
+
+	// The rounding `moneyYScale` applies would turn a 1% dip into a fifth of the plot.
+	it('does not round the bounds outward', () => {
+		const { y } = signedYScale([-1, 60], 300);
+		expect(y.domain()[0]).toBeGreaterThan(-10);
+	});
+
+	it('anchors at zero when nothing is negative', () => {
+		const { y } = signedYScale([10, 40], 300);
+		expect(y.domain()[0]).toBe(0);
+		expect(y(0)).toBe(300);
+	});
+});
 
 describe('moneyYScale', () => {
 	it('anchors the domain at zero for all-positive values', () => {

@@ -29,7 +29,11 @@
 	const H = 540;
 	const NODE_W = 13;
 	const GAP = 20; // minimum vertical gap between nodes within a column
-	const LABEL_MIN_GAP = 15; // minimum spacing between de-collided right labels
+	/** Second line of a right label, below its first. */
+	const LABEL_LINE = 12;
+	/** A right label is TWO lines, so its anchors must clear the whole block: at 15 the smallest
+	    categories' labels sat on top of one another. */
+	const LABEL_MIN_GAP = LABEL_LINE + 16;
 	// The top margin holds the middle columns' above-labels, the right margin the last column's
 	// de-collided labels and their leader lines.
 	const M = { t: 28, b: 12, l: 92, r: 150 };
@@ -138,7 +142,7 @@
 			rightViews.map((v) => ({ cy: v.cy })),
 			LABEL_MIN_GAP,
 			M.t + 6,
-			H - M.b - 6
+			H - M.b - LABEL_LINE
 		);
 		const labelY = new Map<string, number>();
 		rightViews.forEach((v, i) => labelY.set(v.node.id, lys[i]!));
@@ -206,7 +210,7 @@
 			/>
 			<text class="lbl" x={nv.x + NODE_W + 24} y={ly} text-anchor="start">
 				<tspan x={nv.x + NODE_W + 24} dy="-1">{nv.node.label}</tspan>
-				<tspan class="val" x={nv.x + NODE_W + 24} dy="12"
+				<tspan class="val" x={nv.x + NODE_W + 24} dy={LABEL_LINE}
 					>{money(nv.node.value)}{#if nv.pct != null}<tspan class="pct" dx="5">{nv.pct}%</tspan
 						>{/if}</tspan
 				>

@@ -119,6 +119,9 @@ export interface Series {
 	axis: Axis;
 	name: string;
 	points: SeriesPoint[];
+	/** A level the whole series is judged against, drawn behind it — the lifetime rate behind each
+	    year's, say. `label` names it in the chart's own small print, so it is a plain string. */
+	reference?: { value: number; label: string };
 }
 
 /** Several compatible series sharing one axis. */
