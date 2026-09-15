@@ -26,6 +26,17 @@ export function latestMonthKey(data: DashboardData): string {
 }
 
 /**
+ * The tracked months a figure for `monthKey` is judged against: up to `window` months BEFORE it that
+ * have data. Empty means there is no norm yet, and the caller has nothing to compare against.
+ *
+ * One definition, because two figures answering "is this month unusual?" from different windows would
+ * disagree on the same card.
+ */
+export function priorMonths(data: DashboardData, monthKey: string, window = 12): string[] {
+	return data.meta.month_keys.filter((k) => k < monthKey && data.months[k]).slice(-window);
+}
+
+/**
  * The most recent date anything is logged on, as ISO "YYYY-MM-DD", or '' for an empty ledger. This is
  * what a new entry's date defaults to — "today" is nearly always wrong, since a week of spending is
  * logged in one sitting.

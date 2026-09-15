@@ -2,7 +2,7 @@
 	// A row's typical level and its latest one, joined — read against the range it usually falls in.
 	// Each lane is scaled to its OWN range, so a category ten times another's size still shows its move;
 	// nothing here is comparable ACROSS rows, which is the trade that makes the small rows legible.
-	import { formatDelta, formatUnit, type Unit } from '$lib/data/primitives';
+	import { formatDelta, formatUnitExact, type Unit } from '$lib/data/primitives';
 	import { esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 
@@ -31,9 +31,10 @@
 		return (v: number) => `${((v - min) / span) * 100}%`;
 	}
 
+	const fmt = (v: number) => formatUnitExact(v, unit);
 	const tip = (r: Row) =>
-		`<b>${esc(r.label)}</b><br>${formatUnit(r.value, unit)} this month` +
-		`<br>usual ${formatUnit(r.base, unit)} (${formatUnit(r.lo, unit)}–${formatUnit(r.hi, unit)})`;
+		`<b>${esc(r.label)}</b><br>${fmt(r.value)} this month` +
+		`<br>usual ${fmt(r.base)} (${fmt(r.lo)}–${fmt(r.hi)})`;
 </script>
 
 <div class="dumb">
@@ -79,9 +80,18 @@
 		justify-content: space-evenly;
 		gap: var(--gap-row);
 	}
+	/* The row's own proportions, named once: two gutters that hold their text, the lane taking the rest,
+	   and a marker geometry every layer below is positioned against. */
 	.row {
+		--name-col: 4.5rem;
+		--delta-col: 3.6rem;
+		--lane-h: 14px;
+		--now-size: 10px;
+		--base-size: 8px;
+		--track-h: 4px;
+
 		display: grid;
-		grid-template-columns: 4.5rem 1fr 3.6rem;
+		grid-template-columns: var(--name-col) 1fr var(--delta-col);
 		gap: var(--gap-inline);
 		align-items: center;
 		font-size: var(--text-caption);
@@ -94,18 +104,19 @@
 	}
 	.lane {
 		position: relative;
-		height: 14px;
+		height: var(--lane-h);
 	}
+	/* Every layer is centred on the lane, so each one's offset is half the difference in their heights. */
 	.range {
 		position: absolute;
-		top: 5px;
-		height: 4px;
+		top: calc((var(--lane-h) - var(--track-h)) / 2);
+		height: var(--track-h);
 		border-radius: var(--radius-pill);
 		background: color-mix(in srgb, var(--ink-3) 26%, transparent);
 	}
 	.link {
 		position: absolute;
-		top: 6px;
+		top: calc((var(--lane-h) - 2px) / 2);
 		height: 2px;
 		background: color-mix(in srgb, var(--ink-3) 55%, transparent);
 	}
@@ -116,17 +127,17 @@
 		border-radius: var(--radius-pill);
 	}
 	.base {
-		top: 3px;
-		width: 8px;
-		height: 8px;
-		margin-left: -4px;
+		top: calc((var(--lane-h) - var(--base-size)) / 2);
+		width: var(--base-size);
+		height: var(--base-size);
+		margin-left: calc(var(--base-size) / -2);
 		box-shadow: inset 0 0 0 1.5px var(--ink-3);
 	}
 	.now {
-		top: 2px;
-		width: 10px;
-		height: 10px;
-		margin-left: -5px;
+		top: calc((var(--lane-h) - var(--now-size)) / 2);
+		width: var(--now-size);
+		height: var(--now-size);
+		margin-left: calc(var(--now-size) / -2);
 		background: var(--fill);
 	}
 	/* Outside its own range — the one row-level claim this chart makes, so it is the one ring. */

@@ -2,7 +2,7 @@
 // drawn. A primitive is numbers + structure + a `unit`, and carries no colours or chart config. The
 // `unit` names the measurement scale, which is what lets one formatter render every figure.
 
-import { money } from '$lib/utils/format';
+import { money, moneyExact } from '$lib/utils/format';
 import type { Label } from '$lib/ui/label';
 
 // --- units ---
@@ -32,6 +32,14 @@ export function formatUnit(value: number, unit: Unit): string {
 		case 'duration':
 			return `${value.toFixed(1)} ${unit.period === 'month' ? 'mo' : 'yr'}`;
 	}
+}
+
+/**
+ * The same for a tooltip, which is where a reader goes for the figure ITSELF: money keeps its cents,
+ * since a chart's own label is the rounded one and hovering it to see the same rounding answers nothing.
+ */
+export function formatUnitExact(value: number, unit: Unit): string {
+	return unit.kind === 'money' ? moneyExact(value) : formatUnit(value, unit);
 }
 
 /**

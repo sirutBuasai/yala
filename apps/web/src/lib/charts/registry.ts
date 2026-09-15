@@ -319,6 +319,7 @@ export const CHARTS: ChartDef[] = [
 				rows: m.rows,
 				cols: m.cols,
 				values: m.values,
+				unit: m.unit,
 				normalize,
 				colors: normalize === 'global' ? undefined : band.map((key) => keyColor(key, opts.colorBy))
 			};

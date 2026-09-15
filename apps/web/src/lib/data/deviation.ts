@@ -3,6 +3,7 @@
 import type { DashboardData } from '$lib/data/types';
 import type { Deviation, DeviationRow } from './primitives';
 import { MONEY } from './primitives';
+import { priorMonths } from './scope';
 
 /**
  * Per-category spend for one month against the trailing months before it: the average as `base`, the
@@ -12,7 +13,7 @@ import { MONEY } from './primitives';
  */
 export function categoryDeviation(data: DashboardData, monthKey: string, window = 12): Deviation {
 	const unit = MONEY(data.currency);
-	const prior = data.meta.month_keys.filter((k) => k < monthKey && data.months[k]).slice(-window);
+	const prior = priorMonths(data, monthKey, window);
 	if (!prior.length) return { kind: 'deviation', unit, rows: [] };
 
 	const md = data.months[monthKey];

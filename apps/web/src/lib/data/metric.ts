@@ -9,7 +9,7 @@ import { MONEY, PERCENT, COUNT } from './primitives';
 import { money } from '$lib/utils/format';
 import { sumValues } from '$lib/utils/num';
 import { addMonths } from '$lib/utils/period';
-import { type Scope, latestYear, scopeYear, scopeKey } from './scope';
+import { type Scope, latestYear, priorMonths, scopeYear, scopeKey } from './scope';
 import { labelText, live, words, type Label } from '$lib/ui/label';
 
 // --- measures ---
@@ -467,8 +467,7 @@ export function vsTypical(
 	m: Measure,
 	opts: Opts & { window?: number } = {}
 ): Scalar {
-	const window = opts.window ?? 12;
-	const prior = data.meta.month_keys.filter((k) => k < monthKey && data.months[k]).slice(-window);
+	const prior = priorMonths(data, monthKey, opts.window);
 	const label = opts.label ?? words(measureLabel(m));
 	if (!prior.length) {
 		return { kind: 'scalar', unit: MONEY(data.currency), label, value: null, note: opts.note };

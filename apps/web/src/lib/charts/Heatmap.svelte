@@ -16,7 +16,8 @@
 	// isn't luminance-matched, so two hues at equal depth do NOT look equally deep, and only a comparison
 	// DOWN one band is being invited. One ink over every hue, and a tint strength pitched so the palest
 	// and the deepest hue both clear it — a per-hue flip would need a per-hue threshold.
-	import { moneyExact, numCompact, esc } from '$lib/utils/format';
+	import { numCompact, esc } from '$lib/utils/format';
+	import { formatUnitExact, type Unit } from '$lib/data/primitives';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 
 	/** For a band with no colour of its own — the same neutral accent the whole grid used to carry. */
@@ -29,13 +30,15 @@
 		cols: string[];
 		/** Cell values indexed as values[rowIndex][colIndex]. */
 		values: number[][];
+		/** What the cells measure. The tiles abbreviate; the tooltip renders the figure in full. */
+		unit: Unit;
 		/** Which axis a band runs along: 'row' (default) or 'col'; 'global' uses one scale for the grid. */
 		normalize?: 'row' | 'col' | 'global';
 		/** One colour per band, along `normalize`'s axis — a band's members are what have identity. Short
 		    or absent, the rest of the grid falls back to the neutral accent. */
 		colors?: string[];
 	}
-	let { rows, cols, values, normalize = 'row', colors }: Props = $props();
+	let { rows, cols, values, unit, normalize = 'row', colors }: Props = $props();
 
 	const globalMax = $derived(Math.max(1, ...values.flat().map(Math.abs)));
 	const rowMax = $derived(rows.map((_, i) => Math.max(1, ...(values[i] ?? []).map(Math.abs))));
@@ -89,7 +92,8 @@
 							class="cell"
 							style:--a={share(v, i, j).toFixed(3)}
 							style:--tile={tile(i, j)}
-							onmousemove={(e) => showTip(`<b>${esc(r)} · ${esc(c)}</b><br>${moneyExact(v)}`, e)}
+							onmousemove={(e) =>
+								showTip(`<b>${esc(r)} · ${esc(c)}</b><br>${formatUnitExact(v, unit)}`, e)}
 							onmouseleave={hideTip}
 						>
 							{numCompact(v)}
