@@ -20,20 +20,25 @@
 
 	const yr = $derived<Scope>({ level: 'year', year });
 
-	// The gross → take-home chain, each with its own accumulation behind it: an area running up to the
-	// year's total says how evenly it arrived, which the total alone cannot. No badges — these terms
-	// subtract from each other, and a change against last year belongs to the cash-flow matrix below.
+	// Two columns, each read top to bottom. The chain first: gross, then what came out of it, then what
+	// reached the account, each with its own accumulation behind it — an area running up to the year's
+	// total says how evenly it arrived, which the total alone cannot. No badges on these; they subtract
+	// from each other, and a change against last year belongs to the cash-flow matrix.
 	//
-	// Then the three rates, as rings: the chain says how much, a share of a whole says how it was run.
-	// Savings and spending rate divide net income, so they read beside the matrix above them; the
-	// deduction rate is of gross, and goes last on its own denominator.
+	// Then net income and the three rates it is the base of: the chain says how much, a share of a whole
+	// says how the year was run. Net leads because the two rates under it divide it; the deduction rate
+	// is of gross, so it takes the column's own top slot beneath net rather than claiming the chain's.
 	const KPIS = $derived<KpiBoardDefs>({
 		gross: {
-			rect: { x: 0, y: 0, w: 10, h: 6 },
+			rect: { x: 0, y: 0, w: 8, h: 6 },
 			spec: { figure: 'income.gross', scope: yr, chart: 'area', series: 'running.gross' }
 		},
+		deductions: {
+			rect: { x: 0, y: 6, w: 8, h: 5 },
+			spec: { figure: 'income.deductions', scope: yr, chart: 'area', series: 'running.deductions' }
+		},
 		contributions: {
-			rect: { x: 0, y: 6, w: 10, h: 6 },
+			rect: { x: 0, y: 11, w: 8, h: 5 },
 			spec: {
 				figure: 'income.contributions',
 				scope: yr,
@@ -41,36 +46,39 @@
 				series: 'running.contributions'
 			}
 		},
-		deductions: {
-			rect: { x: 0, y: 12, w: 10, h: 6 },
-			spec: { figure: 'income.deductions', scope: yr, chart: 'area', series: 'running.deductions' }
+		takehome: {
+			rect: { x: 0, y: 16, w: 8, h: 5 },
+			// "Direct deposit" over the figure's own note: it is the name of the thing that arrives, where
+			// the catalog's caption describes what the measure means.
+			spec: {
+				figure: 'income.takehome',
+				scope: yr,
+				chart: 'area',
+				series: 'running.takehome',
+				caption: words('direct deposit')
+			}
 		},
 		net: {
-			rect: { x: 0, y: 18, w: 10, h: 5 },
+			rect: { x: 8, y: 0, w: 8, h: 6 },
 			spec: { figure: 'income.net', scope: yr, chart: 'area', series: 'running.net' }
 		},
-		takehome: {
-			rect: { x: 0, y: 23, w: 10, h: 5 },
-			spec: { figure: 'income.takehome', scope: yr, chart: 'area', series: 'running.takehome' }
-		},
-		savingsRate: {
-			rect: { x: 10, y: 9, w: 13, h: 5 },
-			spec: { figure: 'ratio.savings_rate', scope: yr, chart: 'ring' }
+		deductionRate: {
+			rect: { x: 8, y: 6, w: 8, h: 5 },
+			spec: { figure: 'ratio.deduction_rate', scope: yr, chart: 'ring' }
 		},
 		spendingRate: {
-			rect: { x: 23, y: 9, w: 13, h: 5 },
+			rect: { x: 8, y: 11, w: 8, h: 5 },
 			spec: { figure: 'ratio.spending_rate', scope: yr, chart: 'ring' }
 		},
-		deductionRate: {
-			rect: { x: 36, y: 9, w: 12, h: 5 },
-			spec: { figure: 'ratio.deduction_rate', scope: yr, chart: 'ring' }
+		savingsRate: {
+			rect: { x: 8, y: 16, w: 8, h: 5 },
+			spec: { figure: 'ratio.savings_rate', scope: yr, chart: 'ring' }
 		}
 	});
 
-	// One column of the whole chain, beside the figures it explains, and one row of the rates under them.
 	const kpis = useKpiBoard('activity:year', () => KPIS, [
-		{ ids: ['gross', 'contributions', 'deductions', 'net', 'takehome'], axis: 'column' },
-		{ ids: ['savingsRate', 'spendingRate', 'deductionRate'], axis: 'row' }
+		{ ids: ['gross', 'deductions', 'contributions', 'takehome'], axis: 'column' },
+		{ ids: ['net', 'deductionRate', 'spendingRate', 'savingsRate'], axis: 'column' }
 	]);
 
 	// The cash-flow pane fits its content, being a block of figures whose height follows its rows.
@@ -79,12 +87,12 @@
 		kpis.board({
 			// A block of figures, not a list: it scales like the KPI cards above it rather than owning its
 			// own height, so it can be given room or taken down to where its rows would clip.
-			cashflow: { x: 10, y: 0, w: 38, h: 9, content: 'scale' },
+			cashflow: { x: 16, y: 0, w: 32, h: 9, content: 'scale' },
 			trend: {
-				x: 10,
-				y: 14,
-				w: 38,
-				h: 14,
+				x: 16,
+				y: 9,
+				w: 32,
+				h: 12,
 				content: 'scale',
 				figure: {
 					figure: 'overview.cash_flow_bars',
@@ -96,9 +104,9 @@
 			},
 			flow: {
 				x: 0,
-				y: 46,
+				y: 39,
 				w: 48,
-				h: 26,
+				h: 24,
 				content: 'scale',
 				figure: {
 					figure: 'money.flow',
@@ -116,7 +124,7 @@
 			// orders of magnitude — down a column is where the intensity means something.
 			heatmap: {
 				x: 0,
-				y: 28,
+				y: 21,
 				w: 48,
 				h: 18,
 				content: 'scale',

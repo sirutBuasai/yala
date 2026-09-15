@@ -24,27 +24,11 @@
 	const PANES = $derived({
 		// A block of figures, not a list: it scales like the KPI cards above it rather than owning its
 		// own height, so it can be given room or taken down to where its rows would clip.
-		cashflow: { x: 0, y: 0, w: 48, h: 12, content: 'scale' },
-		// The full-width charts here are taller than the tops below them leave room for. The push rule
-		// closes each overlap downwards, so the heights are authored and the tops are only floors.
-		flow: {
-			x: 0,
-			y: 9,
-			w: 48,
-			h: 25,
-			content: 'scale',
-			figure: {
-				figure: 'money.flow',
-				scope: all,
-				chart: 'sankey',
-				title: words('Where it all went'),
-				caption: { context: 'Lifetime', text: 'gross income to each spending category' }
-			}
-		},
+		cashflow: { x: 0, y: 0, w: 48, h: 11, content: 'scale' },
 		// Levels beside rate: how big, versus how efficient, which the bars alone can't say.
 		levels: {
 			x: 0,
-			y: 34,
+			y: 9,
 			w: 24,
 			h: 13,
 			content: 'scale',
@@ -58,7 +42,7 @@
 		},
 		rate: {
 			x: 24,
-			y: 34,
+			y: 9,
 			w: 24,
 			h: 13,
 			content: 'scale',
@@ -70,13 +54,29 @@
 				caption: words('of net income')
 			}
 		},
+		// The full-width charts here are taller than the tops below them leave room for. The push rule
+		// closes each overlap downwards, so the heights are authored and the tops are only floors.
+		flow: {
+			x: 0,
+			y: 9,
+			w: 48,
+			h: 24,
+			content: 'scale',
+			figure: {
+				figure: 'money.flow',
+				scope: all,
+				chart: 'sankey',
+				title: words('Where it all went'),
+				caption: { context: 'Lifetime', text: 'gross income to each spending category' }
+			}
+		},
 		// Log scale, because a linear axis crushes the small categories under the biggest ones. End
 		// labels replace a legend with one swatch per category.
 		categories: {
 			x: 0,
 			y: 47,
 			w: 48,
-			h: 25,
+			h: 18,
 			content: 'scale',
 			figure: {
 				figure: 'spending.category_by_year',

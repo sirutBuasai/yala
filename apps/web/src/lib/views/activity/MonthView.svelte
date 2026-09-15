@@ -80,7 +80,7 @@
 			donut: {
 				x: 16,
 				y: 0,
-				w: 22,
+				w: 21,
 				h: 16,
 				content: 'scale',
 				figure: {
@@ -91,7 +91,7 @@
 					caption: { context: label, text: 'income and spending split' }
 				}
 			},
-			unusual: { x: 38, y: 0, w: 10, h: 16, content: 'scale' },
+			unusual: { x: 37, y: 0, w: 11, h: 16, content: 'scale' },
 			pending: { x: 0, y: 16, w: 48, h: 9, content: 'flow', mode: 'fixed' },
 			paychecks: { x: 0, y: 25, w: 24, h: 10, content: 'flow', mode: 'fixed' },
 			transfers: { x: 24, y: 25, w: 24, h: 10, content: 'flow', mode: 'fixed' },
