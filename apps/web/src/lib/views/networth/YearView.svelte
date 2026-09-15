@@ -10,7 +10,7 @@
 	import { useKpiBoard } from '$lib/kpi/context';
 	import KpiCards from '$lib/kpi/KpiCards.svelte';
 	import StatMatrix from '$lib/charts/StatMatrix.svelte';
-	import { NET_WORTH_FORCES, netWorthForceHeading } from '$lib/data/catalog';
+	import { NET_WORTH_GROWTH, netWorthGrowthHeading } from '$lib/data/catalog';
 	import { statCells } from '$lib/charts/statMatrix';
 	import { live, words } from '$lib/ui/label';
 
@@ -22,10 +22,10 @@
 
 	const yr = $derived<Scope>({ level: 'year', year });
 
-	// Where you ended, the rate that got you there, and the two forces behind the move. Net worth is a
-	// position, so its badge carries the year's move; the two forces are signed, so their own sign carries
+	// Where you ended, the rate that got you there, and the two parts of the move. Net worth is a
+	// position, so its badge carries the year's move; the two parts are signed, so their own sign carries
 	// it. Each of the three money cards draws its own month-by-month shape behind the figure: the position
-	// as a level, the forces as the per-month amounts that accumulate into it.
+	// as a level, the parts as the per-month amounts that accumulate into it.
 	//
 	// Declared in reading order, and the widths are what the two merged cards divide themselves by.
 	const KPIS = $derived<KpiBoardDefs>({
@@ -35,18 +35,18 @@
 				figure: 'networth.change',
 				scope: yr,
 				caption: live(`end of ${year}`),
-				// A line, where the two forces below it take an area: the spark is zero-anchored, and a
+				// A line, where the two parts below it take an area: the spark is zero-anchored, and a
 				// position that never approaches zero fills the whole box as a flat wash.
 				chart: 'line',
 				series: 'networth.by_month'
 			}
 		},
 		rate: {
-			rect: { x: 11, y: 0, w: 6, h: 5 },
+			rect: { x: 11, y: 0, w: 7, h: 5 },
 			spec: { figure: 'ratio.savings_rate', scope: yr, chart: 'ring' }
 		},
 		saved: {
-			rect: { x: 0, y: 5, w: 8, h: 5 },
+			rect: { x: 0, y: 5, w: 9, h: 5 },
 			spec: {
 				figure: 'networth.saved',
 				scope: yr,
@@ -55,7 +55,7 @@
 			}
 		},
 		other: {
-			rect: { x: 8, y: 5, w: 9, h: 5 },
+			rect: { x: 9, y: 5, w: 9, h: 5 },
 			spec: {
 				figure: 'networth.other',
 				scope: yr,
@@ -76,61 +76,45 @@
 		kpis.board({
 			// Beside the KPI column rather than under it: the matrix is the same reading those cards give,
 			// against last year. `scale` so it is given room or taken down to where its rows would clip.
-			growth: { x: 17, y: 0, w: 31, h: 10, content: 'scale' },
-			// The path, beside the two units that path moved in.
+			growth: { x: 18, y: 0, w: 30, h: 10, content: 'scale' },
+			// Assets dashed so net worth stays the primary reading, as on the lifetime board. The gap between
+			// the two lines is what is owed.
 			trend: {
 				x: 0,
 				y: 10,
-				w: 32,
-				h: 17,
+				w: 23,
+				h: 12,
 				content: 'scale',
 				figure: {
-					figure: 'networth.by_month',
+					figure: 'networth.vs_assets',
 					scope: yr,
 					chart: 'line',
 					area: true,
-					title: words('Net worth by month'),
-					caption: { context: String(year), text: 'total net worth MoM' }
+					dashed: ['Assets'],
+					title: words('Net worth & assets'),
+					caption: { context: String(year), text: 'total net worth and assets MoM' }
 				}
 			},
-			// One pane, not two: the dollar and percent shapes are near-identical, because the base barely
-			// moves month to month. The axis is the percentage and the tooltip carries the dollars, which is
-			// also the unit the liabilities pane below plots, so the two can be read against each other.
-			change: {
-				x: 32,
+			// The trend and what is owed stack down the left; the mix takes the taller pane beside them.
+			allocation: {
+				x: 23,
 				y: 10,
-				w: 16,
-				h: 14,
+				w: 25,
+				h: 20,
 				content: 'scale',
 				figure: {
-					figure: 'networth.change_by_month',
+					figure: 'networth.allocation_value',
 					scope: yr,
-					chart: 'bar',
-					title: words('Net worth & assets change'),
-					caption: { context: String(year), text: 'percent gained or lost each month' }
-				}
-			},
-			// What you owe, and how fast it moved. The tops are staggered because the push rule closes each
-			// overlap downwards, so a taller neighbour does not drag this row with it.
-			liabilitiesChange: {
-				x: 32,
-				y: 24,
-				w: 16,
-				h: 13,
-				content: 'scale',
-				figure: {
-					figure: 'networth.liabilities_change',
-					scope: yr,
-					chart: 'bar',
-					title: words('Liabilities change'),
-					caption: { context: String(year), text: 'percent gained or lost each month' }
+					chart: 'stacked-area',
+					title: words('Asset allocations'),
+					caption: words('dollar amount and shares by asset type')
 				}
 			},
 			liabilities: {
 				x: 0,
-				y: 27,
-				w: 32,
-				h: 10,
+				y: 22,
+				w: 23,
+				h: 8,
 				content: 'scale',
 				figure: {
 					figure: 'networth.liabilities_trend',
@@ -141,26 +125,13 @@
 					caption: { context: String(year), text: 'total liabilities MoM' }
 				}
 			},
-			// What it is made of, beside who put it there.
-			allocation: {
-				x: 0,
-				y: 37,
-				w: 24,
-				h: 15,
-				content: 'scale',
-				figure: {
-					figure: 'networth.allocation_value',
-					scope: yr,
-					chart: 'stacked-area',
-					title: words('Asset allocations'),
-					caption: words('dollar amount and shares by asset type')
-				}
-			},
+			// Who added the dollars, beside where they landed. Dollars on both axes, since the asset types are
+			// parts of one total; each move's percentage of its own opening balance rides along on hover.
 			attribution: {
-				x: 24,
-				y: 37,
-				w: 24,
-				h: 15,
+				x: 0,
+				y: 30,
+				w: 20,
+				h: 13,
 				content: 'scale',
 				figure: {
 					figure: 'networth.saved_vs_other_by_month',
@@ -173,9 +144,23 @@
 					}
 				}
 			},
+			buckets: {
+				x: 20,
+				y: 30,
+				w: 28,
+				h: 13,
+				content: 'scale',
+				figure: {
+					figure: 'networth.bucket_change_by_month',
+					scope: yr,
+					chart: 'bar',
+					title: words('Change by asset type'),
+					caption: { context: String(year), text: 'dollars gained or lost each month' }
+				}
+			},
 			table: {
 				x: 0,
-				y: 52,
+				y: 43,
 				w: 48,
 				h: 16,
 				content: 'flow',
@@ -194,9 +179,9 @@
 	// The year's move and the two terms it splits into, each against last year, then the same three as a
 	// monthly rate. Headings and ids both come from the catalog's one ordered set, so a heading cannot end
 	// up over another term's figure.
-	const columns = NET_WORTH_FORCES.map(netWorthForceHeading);
-	const cellsOf = (pick: (c: (typeof NET_WORTH_FORCES)[number]) => string) =>
-		statCells(NET_WORTH_FORCES.map(pick), yr);
+	const columns = NET_WORTH_GROWTH.map(netWorthGrowthHeading);
+	const cellsOf = (pick: (c: (typeof NET_WORTH_GROWTH)[number]) => string) =>
+		statCells(NET_WORTH_GROWTH.map(pick), yr);
 
 	// The run-rate row carries no caption: its divisor is stated by the figures themselves, which agree,
 	// so the matrix hoists it under the label.
@@ -216,7 +201,7 @@
 	<Pane
 		id="growth"
 		title={{ context: String(year), text: 'growth' }}
-		caption={words('totals and yearly rates')}
+		caption={words('year total and monthly rates')}
 	>
 		<StatMatrix {data} {columns} rows={growth} />
 	</Pane>

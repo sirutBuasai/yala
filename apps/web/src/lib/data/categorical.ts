@@ -6,6 +6,8 @@ import { MONEY } from './primitives';
 export interface Amount {
 	category: string;
 	amount: number;
+	/** Passed through as the point's `colorKey` — see `CategoricalPoint`. */
+	colorKey?: string;
 }
 
 /** Sort descending, drop non-positive, and roll the tail beyond `limit` into "Other". */
@@ -23,7 +25,7 @@ export function rollup(points: CategoricalPoint[], limit = 10): CategoricalPoint
 /** Category amounts as a categorical primitive (largest first, capped with "Other"). */
 export function categorical(items: Amount[], unit: Unit = MONEY(), limit = 10): Categorical {
 	const points = rollup(
-		items.map((i) => ({ key: i.category, value: i.amount })),
+		items.map((i) => ({ key: i.category, value: i.amount, colorKey: i.colorKey })),
 		limit
 	);
 

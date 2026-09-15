@@ -100,7 +100,7 @@ describe('growth decomposition', () => {
 		const p = build(makeNetWorthData(), 'networth.saved_vs_other', { level: 'all' });
 		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
 
-		expect(p.series.map((s) => s.name)).toEqual(['You saved', 'Market & other']);
+		expect(p.series.map((s) => s.name)).toEqual(['Saved', 'Market & other']);
 		expect(p.labels).toEqual(['2024', '2025']);
 		expect(p.series[0]!.points[1]!.value).toBe(2254.5);
 		expect(p.series[1]!.points[1]!.value).toBe(745.5);
@@ -189,10 +189,12 @@ describe('targets', () => {
 // --- rates and risk ---
 
 describe('rates and risk', () => {
-	it('labels compound growth as a balance figure, contributions included', () => {
+	it('labels compound growth as a rate, not an average', () => {
 		const s = scalar('networth.balance_growth');
 		expect(s.label).toEqual({ text: 'Balance growth' });
-		expect(s.note?.text).toContain('including contributions');
+		// A compound rate, so the note names it as one: an arithmetic mean of the yearly moves would be a
+		// different and larger figure.
+		expect(s.note).toEqual({ text: 'CAGR' });
 		expect(s.value!).toBeGreaterThan(100);
 	});
 
@@ -201,6 +203,115 @@ describe('rates and risk', () => {
 		// The liability is excluded from the denominator.
 		expect(s.value).toBeCloseTo((3000 / 6500) * 100, 5);
 		expect(s.note?.context).toContain('BrokerageA');
+	});
+});
+
+// --- what a bar is coloured by ---
+
+describe('account colours', () => {
+	// Labelled by display name, coloured by ledger path: the colour map is keyed by path, so keying both
+	// off the label left every bar on the fallback hue.
+	it('carries the ledger path so an account keeps its own colour', () => {
+		const p = build(makeNetWorthData(), 'networth.accounts', { level: 'all' });
+		if (p.kind !== 'categorical') throw new Error('expected categorical');
+
+		expect(p.points.map((pt) => pt.key)).toEqual(['BrokerageA', 'BankA', 'PlanA']);
+		expect(p.points.map((pt) => pt.colorKey)).toEqual([
+			'Assets:Investments:Taxable:BrokerageA',
+			'Assets:Cash:BankA',
+			'Assets:Investments:TaxAdvantaged:PlanA'
+		]);
+	});
+});
+
+// --- the lifetime matrix ---
+
+describe('lifetime growth', () => {
+	it('reads the same three terms over a lifetime, with no badge to compare against', () => {
+		for (const slug of ['change', 'saved', 'other']) {
+			const s = scalar(`networth.growth_${slug}`);
+			expect(s.delta, slug).toBeUndefined();
+		}
+		// The two terms still add to the move, as they do at every other scope.
+		const parts = ['saved', 'other'].map((slug) => scalar(`networth.growth_${slug}`).value ?? 0);
+		expect(parts[0]! + parts[1]!).toBe(scalar('networth.growth_change').value);
+	});
+
+	it('divides the yearly row by the years a snapshot was logged in', () => {
+		const s = scalar('avg.networth_change_per_year');
+		// The fixture logs snapshots in 2024 and 2025.
+		expect(s.note?.context).toBe('2 tracked years');
+		expect(s.value).toBe(5000 / 2);
+	});
+
+	it('divides the monthly row by lifetime active months, not one year’s', () => {
+		const lifetime = scalar('avg.networth_change_per_month');
+		const oneYear = scalar('avg.networth_change_per_month', { level: 'year', year: 2025 });
+
+		// The fixture logs one active month in each of its two years, so the lifetime divisor is 2 and the
+		// single-year one is 1 — the same figure over a different span.
+		expect(lifetime.note?.context).toBe('2 active months');
+		expect(oneYear.note?.context).toBe('1 active months');
+		expect(lifetime.value).toBe(5000 / 2);
+		expect(oneYear.value).toBe(3000);
+	});
+});
+
+describe('change by year', () => {
+	it('plots the two levels as percentages with the dollars on hover', () => {
+		const p = build(makeNetWorthData(), 'networth.change_by_year', { level: 'all' });
+		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
+
+		expect(p.unit).toEqual(PERCENT);
+		expect(p.series.map((s) => s.name)).toEqual(['Net worth', 'Assets']);
+		expect(p.labels).toEqual(['2024', '2025']);
+		expect(p.series.every((s) => s.altUnit?.kind === 'money')).toBe(true);
+		// 2025 opened on December's 3000 and closed on 6000.
+		expect(p.series[0]!.points[1]!.value).toBeCloseTo(100, 5);
+		expect(p.series[0]!.points[1]!.alt).toBe(3000);
+	});
+});
+
+describe('the year table', () => {
+	it('follows every level with its own change, then the decomposition', () => {
+		const p = build(makeNetWorthData(), 'networth.year_table', { level: 'all' });
+		if (p.kind !== 'table') throw new Error('expected table');
+
+		expect(p.columns.map((c) => c.label)).toEqual([
+			'Year',
+			'Net worth',
+			'Change',
+			'Change %',
+			'Assets',
+			'Change',
+			'Change %',
+			'Liabilities',
+			'Change',
+			'Change %',
+			'Saved',
+			'Market & other'
+		]);
+	});
+
+	it('shades a rise in what you owe as bad news, as the monthly table does', () => {
+		const p = build(makeNetWorthData(), 'networth.year_table', { level: 'all' });
+		if (p.kind !== 'table') throw new Error('expected table');
+
+		const at = p.columns.findIndex((c) => c.label === 'Liabilities');
+		expect(p.columns[at + 1]!.tint).toBe('up-bad');
+		expect(p.columns[2]!.tint).toBe('up-good');
+	});
+
+	it('keeps the decomposition adding to the net-worth change beside it', () => {
+		const p = build(makeNetWorthData(), 'networth.year_table', { level: 'all' });
+		if (p.kind !== 'table') throw new Error('expected table');
+
+		// Most recent year first, so 2025 leads.
+		const row = p.rows[0]!;
+		const change = row[2] as number;
+		const saved = row[10] as number;
+		const other = row[11] as number;
+		expect(saved + other).toBeCloseTo(change, 5);
 	});
 });
 
@@ -256,10 +367,9 @@ describe('thresholds bullet', () => {
 		const p = build(data, 'networth.thresholds', { level: 'all' });
 		if (p.kind !== 'bullet') throw new Error('expected bullet');
 
+		// The target is the row's whole scale, so this is what the bar is measured against.
 		const runway = p.rows.find((r) => r.label === 'Cash runway')!;
 		expect(runway.target).toBe(9);
-		// Bands track the target, so changing it moves the shading with it.
-		expect(runway.bands).toEqual([4.5, 9]);
 	});
 
 	it('reuses the same figures as the tiles, so a gauge cannot disagree with them', () => {
@@ -339,16 +449,52 @@ describe('year-end levels behind a KPI', () => {
 
 // --- how a snapshot's date reads on an axis ---
 
-/** The fixture with two balances logged in one month, which is what forces the day into the label. */
+/**
+ * The fixture with balances logged on the 1st of two consecutive months, which is what lets a month's
+ * move be measured at all: the month opens on its own snapshot and closes on the next month's, since a
+ * balance dated the 1st is taken before that month's money has moved.
+ *
+ * January is the month with both a snapshot pair and logged activity in the base fixture.
+ */
+function loggedOnTheFirst() {
+	const data = makeNetWorthData();
+	data.networth!.series = [
+		{
+			date: '2025-01-01',
+			assets: 3000,
+			liabilities: 0,
+			net_worth: 3000,
+			breakdown: { Liquid: 1000, Taxable: 1200, 'Tax-advantaged': 800 }
+		},
+		{
+			date: '2025-02-01',
+			assets: 6500,
+			liabilities: 500,
+			net_worth: 6000,
+			breakdown: { Liquid: 1300, Taxable: 2600, 'Tax-advantaged': 2600 }
+		}
+	];
+	return data;
+}
+
+/** The fixture with two balances logged in one month, which is what forces the day into the label. July
+    is there so August's month-over-month move has a previous month to measure from. */
 function twiceInAugust() {
 	const data = makeNetWorthData();
 	data.networth!.series = [
 		{
-			date: '2025-08-01',
+			date: '2025-07-01',
 			assets: 1000,
 			liabilities: 0,
 			net_worth: 1000,
 			breakdown: { Liquid: 400, Taxable: 600, 'Tax-advantaged': 0 }
+		},
+		{
+			date: '2025-08-01',
+			assets: 1100,
+			liabilities: 0,
+			net_worth: 1100,
+			breakdown: { Liquid: 400, Taxable: 700, 'Tax-advantaged': 0 }
 		},
 		{
 			date: '2025-08-26',
@@ -382,14 +528,14 @@ describe('snapshot date labels', () => {
 
 		// Charts key their axis ticks by slot for exactly this case, but the labels must still differ or
 		// the two points are indistinguishable to a reader.
-		expect(p.points.map((pt) => pt.label)).toEqual(['Aug 1', 'Aug 26']);
+		expect(p.points.map((pt) => pt.label)).toEqual(['Jul 1', 'Aug 1', 'Aug 26']);
 	});
 
 	it('labels the monthly table the same way as the chart beside it', () => {
 		const p = build(twiceInAugust(), 'networth.monthly_table', { level: 'year', year: 2025 });
 		if (p.kind !== 'table') throw new Error('expected table');
 
-		expect(p.rows.map((r) => r[0])).toEqual(['Aug 1', 'Aug 26']);
+		expect(p.rows.map((r) => r[0])).toEqual(['Jul 1', 'Aug 1', 'Aug 26']);
 	});
 });
 
@@ -429,9 +575,11 @@ describe('the monthly table', () => {
 		const p = build(twiceInAugust(), 'networth.monthly_table', { level: 'year', year: 2025 });
 		if (p.kind !== 'table') throw new Error('expected table');
 
-		// Nothing precedes the first snapshot, so it has no move to report.
+		// Nothing precedes the first snapshot, so it has no move to report. Each later row is measured
+		// against the snapshot before it, whichever month that fell in.
 		expect(p.rows[0]!.slice(1, 4)).toEqual([1000, 0, 0]);
-		expect(p.rows[1]!.slice(1, 4)).toEqual([1200, 200, 20]);
+		expect(p.rows[1]!.slice(1, 4)).toEqual([1100, 100, 10]);
+		expect(p.rows[2]!.slice(1, 3)).toEqual([1200, 100]);
 	});
 
 	it('shades the movement columns only, since a balance has no good direction', () => {
@@ -460,19 +608,29 @@ describe('the monthly table', () => {
 describe('change by month', () => {
 	const atYear: Scope = { level: 'year', year: 2025 };
 	const changeOf = (id: string) => {
-		const p = build(makeNetWorthData(), id, atYear);
+		const p = build(loggedOnTheFirst(), id, atYear);
 		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
 		return p;
 	};
 
+	// Month over month, so a bar is measured from the freshest reading in the month before. The fixture's
+	// January has no December snapshot to measure from, which is why the figures land on February — the bar
+	// is labelled one month after the movement it describes. That is the cost of using the newest balance
+	// rather than the one dated at the month's edge.
 	it('plots the two levels that can share one chart, as percentages', () => {
 		const p = changeOf('networth.change_by_month');
 
 		expect(p.unit).toEqual(PERCENT);
 		expect(p.series.map((s) => s.name)).toEqual(['Net worth', 'Assets']);
-		// 3000 → 6000 is +100%; assets 3000 → 6500 is +116.67%.
-		expect(p.series[0]!.points[0]!.value).toBeCloseTo(100, 5);
-		expect(p.series[1]!.points[0]!.value).toBeCloseTo((3500 / 3000) * 100, 5);
+		expect(p.labels).toEqual(['Jan', 'Feb']);
+		// Jan 1 → Feb 1: 3000 → 6000 is +100%; assets 3000 → 6500 is +116.67%.
+		expect(p.series[0]!.points[1]!.value).toBeCloseTo(100, 5);
+		expect(p.series[1]!.points[1]!.value).toBeCloseTo((3500 / 3000) * 100, 5);
+	});
+
+	it('reports nothing for a month with no earlier snapshot to measure from', () => {
+		const p = changeOf('networth.change_by_month');
+		expect(p.series.map((s) => s.points[0]!.value)).toEqual([0, 0]);
 	});
 
 	// One chart, both units: a second chart of the dollars looks the same as the first, because the base
@@ -481,7 +639,7 @@ describe('change by month', () => {
 		const p = changeOf('networth.change_by_month');
 
 		expect(p.series.every((s) => s.altUnit?.kind === 'money')).toBe(true);
-		expect(p.series.map((s) => s.points[0]!.alt)).toEqual([3000, 3500]);
+		expect(p.series.map((s) => s.points[1]!.alt)).toEqual([3000, 3500]);
 	});
 
 	// Both change panes plot percentages, so a glance moves between them without changing units.
@@ -491,12 +649,12 @@ describe('change by month', () => {
 
 		expect(owed.unit).toEqual(pair.unit);
 		expect(owed.series[0]!.altUnit?.kind).toBe('money');
-		expect(owed.series[0]!.points[0]!.alt).toBe(500);
+		expect(owed.series[0]!.points[1]!.alt).toBe(500);
 	});
 
 	it('reports nothing rather than infinity when a level opened at zero', () => {
 		// Liabilities went 0 → 500: a rise off nothing has no percentage, though the dollars still read.
-		expect(changeOf('networth.liabilities_change').series[0]!.points[0]!.value).toBe(0);
+		expect(changeOf('networth.liabilities_change').series[0]!.points[1]!.value).toBe(0);
 	});
 
 	// Liabilities swing by hundreds of percent against net worth's single digits, so sharing one chart
@@ -514,11 +672,11 @@ describe('change by month', () => {
 		const p = build(twiceInAugust(), 'networth.change_by_month', atYear);
 		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
 
-		expect(p.labels).toEqual(['Aug']);
-		// The month opens at the balance it followed and closes at its last, so the two rows in the table
-		// add up to this one bar: 1000 → 1200 is +$200, which is +20%.
-		expect(p.series[0]!.points[0]!.value).toBeCloseTo(20, 5);
-		expect(p.series[0]!.points[0]!.alt).toBe(200);
+		expect(p.labels).toEqual(['Jul', 'Aug']);
+		// August closes on its LAST balance, not its first, so the mid-month reading counts: July's 1000 to
+		// August's 1200 is +$200, which is +20% — the two August rows in the table added together.
+		expect(p.series[0]!.points[1]!.value).toBeCloseTo(20, 5);
+		expect(p.series[0]!.points[1]!.alt).toBe(200);
 	});
 });
 
@@ -576,21 +734,42 @@ describe('monthly attribution', () => {
 		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
 
 		expect(p.labels).toEqual(['Jun']);
-		expect(p.series.map((s) => s.name)).toEqual(['You saved', 'Market & other']);
+		expect(p.series.map((s) => s.name)).toEqual(['Saved', 'Market & other']);
 	});
 
 	it('splits each month’s move the way the year is split', () => {
-		const p = build(makeNetWorthData(), 'networth.saved_vs_other_by_month', {
+		const p = build(loggedOnTheFirst(), 'networth.saved_vs_other_by_month', {
 			level: 'year',
 			year: 2025
 		});
 		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
 
-		// June opens at the December balance it followed, so its move is 6000 − 3000, none of it from
-		// logged saving: the fixture logs nothing in June.
+		// February's bar spans January's snapshot to February's, so it carries January's move (6000 − 3000)
+		// AND January's logged saving. `saved` follows the window, not the calendar month, so the two always
+		// describe the same stretch of time and `other` is a real remainder.
 		const [saved, other] = p.series;
-		expect(saved!.points[0]!.value).toBe(0);
-		expect(other!.points[0]!.value).toBe(3000);
+		expect(saved!.points[1]!.value).toBe(2254.5);
+		expect(other!.points[1]!.value).toBe(745.5);
+	});
+
+	// The bug this pairing fixes: measuring a month against the last snapshot dated INSIDE it put the
+	// balance move of one month against the logged saving of the next.
+	// The window and the saving it is judged against must cover the same days, or `other` is the difference
+	// between two unrelated stretches of time.
+	it('measures saving over the window, not over the calendar month', () => {
+		const p = build(loggedOnTheFirst(), 'networth.saved_vs_other_by_month', {
+			level: 'year',
+			year: 2025
+		});
+		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
+
+		expect(p.labels).toEqual(['Jan', 'Feb']);
+		// January has nothing before it to measure from, so it reports neither a move nor any saving —
+		// rather than reporting February's saving against no move.
+		expect(p.series[0]!.points[0]!.value).toBe(0);
+		expect(p.series[1]!.points[0]!.value).toBe(0);
+		// And the two parts still add to the move they split.
+		expect(p.series[0]!.points[1]!.value! + p.series[1]!.points[1]!.value!).toBe(3000);
 	});
 
 	it('gives a KPI card the same monthly figures its pane draws', () => {
@@ -611,9 +790,9 @@ describe('monthly attribution', () => {
 describe('the year against last year', () => {
 	it('splits the year’s change into the two terms the cards carry', () => {
 		const at: Scope = { level: 'year', year: 2025 };
-		const change = scalar('networth.year_change', at);
-		const saved = scalar('networth.year_saved', at);
-		const other = scalar('networth.year_other', at);
+		const change = scalar('networth.growth_change', at);
+		const saved = scalar('networth.growth_saved', at);
+		const other = scalar('networth.growth_other', at);
 
 		expect(change.value).toBe(3000);
 		expect((saved.value ?? 0) + (other.value ?? 0)).toBe(3000);
@@ -626,17 +805,17 @@ describe('the year against last year', () => {
 		const at: Scope = { level: 'year', year: 2025 };
 
 		// 2024 moved 1000 → 3000; 2025 moved 3000 → 6000.
-		expect(scalar('networth.year_change', at).delta?.value).toBeCloseTo(50, 5);
-		expect(scalar('networth.year_change', at).delta?.note).toBe('YoY');
+		expect(scalar('networth.growth_change', at).delta?.value).toBeCloseTo(50, 5);
+		expect(scalar('networth.growth_change', at).delta?.note).toBe('YoY');
 		// 2024's remainder was negative, so the movement is measured off its magnitude.
-		expect(scalar('networth.year_other', at).delta?.value).toBeCloseTo(
+		expect(scalar('networth.growth_other', at).delta?.value).toBeCloseTo(
 			((745.5 + 180) / 180) * 100,
 			5
 		);
 	});
 
 	it('leaves the badge off a year with nothing before it', () => {
-		expect(scalar('networth.year_change', { level: 'year', year: 2024 }).delta).toBeUndefined();
+		expect(scalar('networth.growth_change', { level: 'year', year: 2024 }).delta).toBeUndefined();
 	});
 
 	it('divides the run-rate by the active months it states', () => {
@@ -649,8 +828,8 @@ describe('the year against last year', () => {
 	});
 
 	it('names its columns the way the cards above them are named', () => {
-		expect(CATALOG_BY_ID['networth.year_change']!.label).toBe('Change');
-		expect(CATALOG_BY_ID['networth.year_saved']!.label).toBe('You saved');
-		expect(CATALOG_BY_ID['networth.year_other']!.label).toBe('Market & other');
+		expect(CATALOG_BY_ID['networth.growth_change']!.label).toBe('Change');
+		expect(CATALOG_BY_ID['networth.growth_saved']!.label).toBe('Saved');
+		expect(CATALOG_BY_ID['networth.growth_other']!.label).toBe('Market & other');
 	});
 });

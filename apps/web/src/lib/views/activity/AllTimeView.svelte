@@ -25,25 +25,12 @@
 	const PANES = $derived({
 		// `scale` so the matrix is given room or taken down to where its rows would clip, like a KPI card.
 		cashflow: { x: 0, y: 0, w: 48, h: 11, content: 'scale' },
-		// Levels beside rate: how big, versus how efficient, which the bars alone can't say.
-		levels: {
-			x: 0,
-			y: 9,
-			w: 24,
-			h: 13,
-			content: 'scale',
-			figure: {
-				figure: 'overview.cash_flow_bars',
-				scope: all,
-				chart: 'bar',
-				title: words('Net income vs take-home vs spending vs saved'),
-				caption: words('per year')
-			}
-		},
+		// Rate beside levels: how efficient, versus how big, which the bars alone can't say. The rate is one
+		// series against a reference line, so it reads in a narrow pane where the four-series levels do not.
 		rate: {
-			x: 24,
-			y: 9,
-			w: 24,
+			x: 0,
+			y: 11,
+			w: 14,
 			h: 13,
 			content: 'scale',
 			figure: {
@@ -54,13 +41,25 @@
 				caption: words('of net income')
 			}
 		},
-		// Taller than the tops below leave room for. The push rule closes each overlap downwards, so the
-		// heights are authored and the tops are only floors.
+		levels: {
+			x: 14,
+			y: 11,
+			w: 34,
+			h: 13,
+			content: 'scale',
+			figure: {
+				figure: 'overview.cash_flow_bars',
+				scope: all,
+				chart: 'bar',
+				title: words('Net income vs take-home vs spending vs saved'),
+				caption: words('per year')
+			}
+		},
 		flow: {
 			x: 0,
-			y: 9,
+			y: 24,
 			w: 48,
-			h: 24,
+			h: 25,
 			content: 'scale',
 			figure: {
 				figure: 'money.flow',
@@ -73,7 +72,7 @@
 		// Log scale, since a linear axis crushes the small categories under the biggest ones.
 		categories: {
 			x: 0,
-			y: 47,
+			y: 49,
 			w: 48,
 			h: 18,
 			content: 'scale',

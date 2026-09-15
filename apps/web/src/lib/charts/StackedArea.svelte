@@ -5,7 +5,7 @@
 	import { esc } from '$lib/utils/format';
 	import { formatUnit, formatUnitExact, type Unit } from '$lib/data/primitives';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
-	import { labelIndices, plotSize } from '$lib/charts/axis';
+	import { labelIndices, moneyAxisFormat, plotSize } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import Legend from '$lib/charts/Legend.svelte';
 	import { chartLabel } from '$lib/charts/aria';
@@ -61,6 +61,11 @@
 	// Quarters of the stacked total, which read cleanly for a share chart and reasonably for absolutes.
 	const ticks = $derived([0, 0.25, 0.5, 0.75, 1].map((f) => peak * f));
 
+	/** Abbreviation decided by the ticks themselves — see `moneyAxisFormat`. The axis only has to give the
+	    scale; the tooltip carries the exact figure. */
+	const moneyTick = $derived(moneyAxisFormat(ticks));
+	const tickFmt = (t: number) => (unit.kind === 'money' ? moneyTick(t) : formatUnit(t, unit));
+
 	const paths = $derived(
 		stacks.map(({ band, lower, upper }) => {
 			const gen = area<number>()
@@ -109,7 +114,7 @@
 		<g class="axis" transform={`translate(${m.l},${m.t})`}>
 			{#each ticks as t (t)}
 				<line class="gridline" x1="0" y1={y(t)} x2={iw} y2={y(t)} />
-				<text x={-8} y={y(t) + 4} text-anchor="end">{formatUnit(t, unit)}</text>
+				<text x={-8} y={y(t) + 4} text-anchor="end">{tickFmt(t)}</text>
 			{/each}
 
 			{#each paths as p (p.band.name)}

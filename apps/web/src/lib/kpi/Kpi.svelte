@@ -19,6 +19,7 @@
 	import { kpiLabels } from './labels';
 	import Spark from './Spark.svelte';
 	import Ring from './Ring.svelte';
+	import Meter from './Meter.svelte';
 	import type { KpiSpec } from './spec';
 
 	interface Props {
@@ -63,10 +64,13 @@
 				: formatUnit(scalar.value, scalar.unit)
 	);
 	const behind = $derived(
-		spec.series && spec.chart && spec.chart !== 'ring'
+		spec.series && spec.chart && spec.chart !== 'ring' && spec.chart !== 'meter'
 			? { series: build(data, spec.series, spec.scope) as Series, shape: spec.chart }
 			: null
 	);
+	// A meter needs the level the figure is judged by, which is the scalar's own; without one there is
+	// nothing to fill towards, so the card falls back to the bare figure.
+	const meter = $derived(spec.chart === 'meter' && scalar.target != null ? scalar.target : null);
 
 	// A chart is named by the series it draws, which is not always the figure in front of it; a ring IS
 	// the figure. Colour is assigned in the registry so a measure keeps one hue everywhere.
@@ -122,6 +126,9 @@
 			{#if delta}
 				<Badge tone={badgeTone(delta.tone)}>{deltaLabel(delta)}</Badge>
 			{/if}
+			{#if meter !== null}
+				<Meter value={scalar.value} target={meter} unit={scalar.unit} color={markColor} />
+			{/if}
 		</div>
 	</div>
 </div>
@@ -170,12 +177,16 @@
 		z-index: 0;
 		pointer-events: none;
 	}
+	/* Spans the stat's width rather than hugging its content, so an inline mark that asks for the leftover
+	   space (see `Meter`) has some to take. The figures inside stay left-aligned either way. */
 	.front {
 		position: relative;
 		z-index: 1;
 		display: flex;
 		align-items: baseline;
 		gap: var(--gap-row);
+		flex: 1 1 auto;
+		min-width: 0;
 	}
 	/* Arranging covers the card with a drag surface, but this layer is z-indexed above it and nothing in
 	   here is interactive, so a press on the figure landed on nothing and the card would not drag. */

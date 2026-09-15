@@ -62,6 +62,9 @@
 	   cash-flow chart, and blue beside a light blue read as one measure at a wash's opacity. */
 	--role-takehome: var(--aqua); /* the part of that which reached your hands */
 	--role-market: var(--gold); /* movement you never logged */
+	/* The balance's own compound rate. Shares orange with deductions, which it never appears beside:
+	   deductions are a cash-flow measure and this is a net-worth one. */
+	--role-growth: var(--orange);
 	/* Allocation buckets are slices of one whole, so they share a blue→green family. */
 	--role-liquid: var(--teal);
 	--role-taxable: var(--blue);
@@ -80,9 +83,6 @@
 	   `--cat-subscription`, the first to swallow `--ink`. 35% is the most that keeps all of them at 4.5:1
 	   (36% already drops that column to 4.44); at 55% it measured 2.65:1. Re-measure before raising it. */
 	--mark-tile: 35%;
-	/* The heaviest shade behind a table cell. Far below `--mark-tile`: a heatmap tile is the whole
-	   reading, where this sits under a figure that has to stay the thing being read. */
-	--mark-cell: 20%;
 	/* Entry-type accents for the Add overlay's band and switcher. A separate axis from the roles
 	   above, so the two may share hues and re-theming the overlay can't recolour a chart. */
 	--entry-transaction: var(--salmon);
@@ -316,7 +316,6 @@
 	/* Higher than dark mode's, the reverse of the washes above: over the light card a hue can only make a
 	   tile DARKER, which moves it AWAY from `--ink` instead of into it. Worst hue here measures 7.9:1. */
 	--mark-tile: 48%;
-	--mark-cell: 30%;
 }
 
 * {

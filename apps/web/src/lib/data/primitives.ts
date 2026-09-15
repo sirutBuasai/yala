@@ -77,6 +77,8 @@ export interface Scalar {
 	tone?: Tone;
 	/** A change or rate shown beside the value. Its note rides with the badge, so it is never renamed. */
 	delta?: { value: number; unit: Unit; tone?: Tone; note?: string };
+	/** A level this figure is judged against, in the figure's own unit — what a `meter` mark fills to. */
+	target?: number;
 	/** What a card captions itself with (already localized). */
 	note?: Label;
 }
@@ -84,6 +86,12 @@ export interface Scalar {
 export interface CategoricalPoint {
 	key: string;
 	value: number;
+	/**
+	 * What this point's colour is looked up by, where that differs from the key it is labelled with — an
+	 * account's ledger path, say, when the label shown is the account's display name. The colour map is
+	 * keyed by path, so without this the lookup misses and every point takes the fallback hue.
+	 */
+	colorKey?: string;
 }
 
 /** Named parts of a whole. */
@@ -182,15 +190,14 @@ export interface Table {
 	rows: (string | number)[][];
 }
 
-/** One value against its threshold. Each row carries its own unit and is scaled independently. */
+/** One value against its threshold. The threshold is the row's full scale, so rows measured in
+    different units still read against each other. */
 export interface BulletRow {
 	label: string;
 	unit: Unit;
 	value: number | null;
-	/** The threshold to compare against; drawn as a marker, and reached at 100%. */
+	/** The threshold to compare against, which the row's track runs to. */
 	target: number;
-	/** Ascending cut-points along the scale, shaded from weakest to strongest. */
-	bands?: number[];
 	/** Footnote under the row (already localized). */
 	note?: Label;
 }

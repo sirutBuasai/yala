@@ -1,5 +1,34 @@
 import { describe, it, expect } from 'vitest';
-import { fitFontSize, labelIndices, moneyYScale, signedYScale } from './axis';
+import { fitFontSize, labelIndices, moneyAxisFormat, moneyYScale, signedYScale } from './axis';
+
+describe('moneyAxisFormat', () => {
+	it('abbreviates once every tick worth abbreviating clears a thousand', () => {
+		const fmt = moneyAxisFormat([0, 100000, 200000, 300000]);
+		expect(fmt(200000)).toBe('$200k');
+	});
+
+	it('stays exact where any tick is under a thousand', () => {
+		const fmt = moneyAxisFormat([0, 250, 500, 750]);
+		expect(fmt(500)).toBe('$500');
+	});
+
+	// Zero sits on almost every money axis, so testing it would keep every axis unabbreviated — and
+	// `moneyK` would render it "$0.0k".
+	it('always renders zero exactly, and lets it off the threshold test', () => {
+		expect(moneyAxisFormat([0, 5000, 10000])(0)).toBe('$0');
+		expect(moneyAxisFormat([0, 5000, 10000])(5000)).toBe('$5.0k');
+	});
+
+	it('handles a negative axis off the magnitude', () => {
+		const fmt = moneyAxisFormat([-4000, -2000, 0, 2000]);
+		expect(fmt(-4000)).toBe('-$4.0k');
+	});
+
+	it('stays exact when it has no ticks to judge by', () => {
+		expect(moneyAxisFormat([])(1500)).toBe('$1,500');
+		expect(moneyAxisFormat([0])(1500)).toBe('$1,500');
+	});
+});
 
 describe('signedYScale', () => {
 	it('puts zero where the data does: mostly-positive readings push it toward the bottom', () => {

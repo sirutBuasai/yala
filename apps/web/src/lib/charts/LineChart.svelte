@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { line, area } from 'd3-shape';
-	import { moneyYScale, logYScale, labelIndices, plotSize } from '$lib/charts/axis';
+	import {
+		moneyYScale,
+		logYScale,
+		labelIndices,
+		moneyAxisFormat,
+		plotSize
+	} from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import { money, moneyExact, esc } from '$lib/utils/format';
 	import { clamp } from '$lib/utils/num';
@@ -54,7 +60,9 @@
 	const fmt = (v: number) => (percent ? `${Math.round(v)}%` : money(v));
 	// The hover carries the cents the end label rounds away.
 	const tipFmt = (v: number) => (percent ? `${Math.round(v)}%` : moneyExact(v));
-	const tickFmt = (v: number) => (percent ? `${v}%` : money(v));
+	// Abbreviation decided by the ticks themselves — see `moneyAxisFormat`.
+	const moneyTick = $derived(moneyAxisFormat(ticks));
+	const tickFmt = (v: number) => (percent ? `${v}%` : moneyTick(v));
 
 	const paths = $derived(
 		series.map((s) => {

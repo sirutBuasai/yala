@@ -1,7 +1,10 @@
 <script lang="ts">
-	// Bullet graphs (Few): a value bar, the threshold it's judged against as a marker, and optional
-	// qualitative bands shaded behind. Every row is scaled to its own maximum, so rows measured
-	// differently sit in one set without one crushing another.
+	// Progress bars against a target. The track IS the target, so a row reading 48% fills 48% of it and
+	// two rows measured in different units are still comparable at a glance.
+	//
+	// Not scaled to the value: a track that stretched to whatever was furthest out drew a row at 250% and
+	// a row at 15-of-6 as the same nearly-full bar, which is the one thing this must not do. Past the
+	// target the bar fills and the overflow is marked instead.
 	import { NO_VALUE } from '$lib/copy';
 	import { formatUnit, type Unit } from '$lib/data/primitives';
 	import { labelText, type Label } from '$lib/ui/label';
@@ -11,7 +14,6 @@
 		unit: Unit;
 		value: number | null;
 		target: number;
-		bands?: number[];
 		/** Comes straight off the scalar behind the row, so it arrives as a label and is read for text. */
 		note?: Label;
 	}
@@ -20,13 +22,12 @@
 	}
 	let { rows }: Props = $props();
 
-	/** Fraction of a row's scale a figure sits at. The scale runs to whatever is furthest out — value,
-	    target, or last band — with headroom, so a bar at the max still reads as a bar and not a
-	    filled track. */
-	function scaled(row: Row) {
-		const max = Math.max(row.value ?? 0, row.target, ...(row.bands ?? [0])) * 1.05 || 1;
-		const pct = (n: number) => `${Math.min(100, Math.max(0, (n / max) * 100))}%`;
-		return { pct, max };
+	/** How far along its target a row sits, capped at the track. Null where there is nothing to draw. */
+	function fill(row: Row): { width: string; over: boolean } | null {
+		if (row.value == null || !row.target) return null;
+
+		const share = (row.value / row.target) * 100;
+		return { width: `${Math.min(100, Math.max(0, share))}%`, over: share > 100 };
 	}
 
 	const reached = (row: Row) => row.value != null && row.value >= row.target;
@@ -34,10 +35,14 @@
 
 <div class="bullets">
 	{#each rows as row (row.label)}
-		{@const s = scaled(row)}
+		{@const f = fill(row)}
 		<div class="bul">
+			<!-- The row's footnote sits on the label line rather than under the bar: it is what the figure is
+			     measured against, and a third line per row cost more height than the bars themselves. -->
 			<div class="head">
-				<span class="name">{row.label}</span>
+				<span class="name">
+					{row.label}{#if row.note}<small>{labelText(row.note)}</small>{/if}
+				</span>
 				<span class="figure" class:reached={reached(row)}>
 					{row.value == null ? NO_VALUE : formatUnit(row.value, row.unit)}
 					<span class="of">/ {formatUnit(row.target, row.unit)}</span>
@@ -55,17 +60,11 @@
 					? 'not available'
 					: `${formatUnit(row.value, row.unit)} of ${formatUnit(row.target, row.unit)}`}
 			>
-				<!-- Bands first, widest last so each shades over the one before it. -->
-				{#each (row.bands ?? []).slice().reverse() as edge, i (edge)}
-					<span class="band" style:width={s.pct(edge)} style:opacity={0.28 - i * 0.08}></span>
-				{/each}
-				{#if row.value != null}
-					<span class="value" class:reached={reached(row)} style:width={s.pct(row.value)}></span>
+				{#if f}
+					<span class="value" class:reached={reached(row)} style:width={f.width}></span>
+					{#if f.over}<span class="over" aria-hidden="true"></span>{/if}
 				{/if}
-				<span class="target" style:left={s.pct(row.target)}></span>
 			</div>
-
-			{#if row.note}<p class="note">{labelText(row.note)}</p>{/if}
 		</div>
 	{/each}
 </div>
@@ -74,9 +73,16 @@
 	.bullets {
 		display: flex;
 		flex-direction: column;
-		gap: var(--gap-section);
+		gap: var(--gap-row);
 		flex: 1 1 auto;
-		justify-content: center;
+	}
+	/* Each row takes an equal share of whatever height the pane has, and its label line is fixed, so the
+	   leftover goes to the bar: shrink the pane and the bars thin, grow it and they thicken. */
+	.bul {
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 0;
+		min-height: 0;
 	}
 	.head {
 		display: flex;
@@ -84,11 +90,22 @@
 		justify-content: space-between;
 		gap: var(--gap-inline);
 		margin-bottom: var(--space-3);
+		flex: none;
 	}
 	.name {
 		font-size: var(--text-control);
 		color: var(--ink-2);
 		min-width: 0;
+		/* Truncated rather than wrapped: a label that took a second line would steal the bar's height, and
+		   the figure to its right is the reading. */
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+	.name small {
+		color: var(--ink-3);
+		font-size: var(--text-caption);
+		margin-left: var(--space-3);
 	}
 	.figure {
 		font-size: var(--text-row);
@@ -103,42 +120,35 @@
 		color: var(--ink-3);
 		font-weight: var(--fw-regular);
 	}
+	/* Floored so a short pane still shows a bar, and capped so a tall one doesn't draw slabs. */
 	.track {
 		position: relative;
-		height: 18px;
+		flex: 1 1 auto;
+		min-height: 10px;
+		max-height: 32px;
 		border-radius: var(--radius-sm);
 		background: var(--inset);
 		overflow: hidden;
 	}
-	.band {
+	/* Fills the track's height: the track's end IS the target, so there is nothing behind the bar left to
+	   see. */
+	.value {
 		position: absolute;
 		inset-block: 0;
 		left: 0;
-		background: var(--ink-2);
-	}
-	/* Inset vertically so the bands stay visible either side of the bar: the bar is the measure, the
-	   bands are context. */
-	.value {
-		position: absolute;
-		top: 4px;
-		bottom: 4px;
-		left: 0;
-		border-radius: var(--radius-xs);
+		border-radius: var(--radius-sm);
 		background: var(--role-balance);
 	}
 	.value.reached {
 		background: var(--role-saving);
 	}
-	.target {
+	/* A notched right edge for a row past its target, so a full bar and an overflowing one are told apart
+	   without stretching the track and making every row look alike. */
+	.over {
 		position: absolute;
-		top: -1px;
-		bottom: -1px;
-		width: 2px;
-		background: var(--ink);
-	}
-	.note {
-		margin: var(--space-3) 0 0;
-		font-size: var(--text-caption);
-		color: var(--ink-3);
+		inset-block: 0;
+		right: 0;
+		width: 10px;
+		background: repeating-linear-gradient(-45deg, var(--surface) 0 2px, transparent 2px 5px);
 	}
 </style>

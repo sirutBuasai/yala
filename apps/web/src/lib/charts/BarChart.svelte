@@ -2,9 +2,9 @@
 	// One bar chart for 1..n series: one renders as plain columns with value labels, more as grouped bars
 	// with a legend. Callers pick "Bar", never "column" vs "grouped bars".
 	import { scaleBand } from 'd3-scale';
-	import { moneyYScale, signedYScale, plotSize } from '$lib/charts/axis';
+	import { moneyAxisFormat, moneyYScale, signedYScale, plotSize } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
-	import { moneyCompact, moneyExact, moneyK, esc } from '$lib/utils/format';
+	import { moneyCompact, moneyExact, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Legend from '$lib/charts/Legend.svelte';
 	import { chartLabel } from '$lib/charts/aria';
@@ -24,10 +24,23 @@
 		percent?: boolean;
 		/** The unit each series' `alt` is in. */
 		altUnit?: Unit;
+		/**
+		 * Print each bar's own figure above it. Off by default: the hover already gives the exact number,
+		 * and a figure per bar is ink the shape does not need. Only a lone series can carry them — over
+		 * several they collide.
+		 */
+		valueLabels?: boolean;
 		/** A level the whole chart is judged against, drawn behind the bars. */
 		reference?: { value: number; label: string };
 	}
-	let { labels, series, percent = false, altUnit, reference }: Props = $props();
+	let {
+		labels,
+		series,
+		percent = false,
+		altUnit,
+		valueLabels = false,
+		reference
+	}: Props = $props();
 
 	const single = $derived(series.length <= 1);
 
@@ -60,7 +73,10 @@
 	const fmt = (v: number) => (percent ? `${Math.round(v)}%` : moneyCompact(v));
 	// A tooltip is asked for the exact figure, so money keeps its cents there.
 	const tipFmt = (v: number) => (percent ? `${Math.round(v)}%` : moneyExact(v));
-	const tickFmt = (v: number) => (percent ? `${v}%` : moneyK(v));
+	// Abbreviation decided by the ticks themselves, so an axis over hundreds and one over hundreds of
+	// thousands each read the way they should without this chart knowing which it is drawing.
+	const moneyTick = $derived(moneyAxisFormat(ticks));
+	const tickFmt = (v: number) => (percent ? `${v}%` : moneyTick(v));
 
 	/** The tooltip's figure: the plotted value, and the same point's other unit where it has one. Both
 	    exact — a tooltip is where the reader comes for the number itself. */
@@ -110,7 +126,7 @@
 						width={bw}
 						height={Math.abs(yv - base)}
 						rx="3"
-						fill={single && v < 0 ? 'var(--role-spending)' : s.color}
+						fill={s.color}
 						role="presentation"
 						onmousemove={(e) =>
 							showTip(
@@ -119,7 +135,7 @@
 							)}
 						onmouseleave={hideTip}
 					/>
-					{#if single && v !== 0}
+					{#if valueLabels && single && v !== 0}
 						<text
 							class="vlabel"
 							class:below={v < 0}

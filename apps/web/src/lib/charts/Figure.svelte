@@ -20,11 +20,24 @@
 		endLabels?: boolean;
 		/** Series names to draw dotted. */
 		dashed?: string[];
+		/** Print each bar's own figure above it (a lone series only). */
+		valueLabels?: boolean;
 		/** Heatmap scaling: per row (default) or one scale for the whole grid. */
 		normalize?: 'row' | 'col' | 'global';
 	}
-	let { primitive, chart, area, color, colorBy, total, log, endLabels, dashed, normalize }: Props =
-		$props();
+	let {
+		primitive,
+		chart,
+		area,
+		color,
+		colorBy,
+		total,
+		log,
+		endLabels,
+		dashed,
+		valueLabels,
+		normalize
+	}: Props = $props();
 
 	const def = $derived(chart ? CHARTS_BY_ID[chart] : defaultChart(primitive.kind));
 	const opts = $derived({
@@ -35,6 +48,7 @@
 		log,
 		endLabels,
 		dashed,
+		valueLabels,
 		normalize
 	});
 	const chartProps = $derived(def ? def.adapt(primitive, opts) : null);

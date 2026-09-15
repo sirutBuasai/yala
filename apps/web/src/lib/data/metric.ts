@@ -173,13 +173,14 @@ function activeMonths(
 	});
 }
 
-/** Months of a year with income or spending — what a run-rate over that year divides by. */
-export function activeMonthsIn(data: DashboardData, year: number): number {
+/** Months with income or spending — what a run-rate divides by. `year` omitted means every tracked one. */
+export function activeMonthsIn(data: DashboardData, year?: number): number {
 	return activeMonths(data, year).any;
 }
 
 /** How a run-rate states its divisor, so every board words it the same. */
 export const activeMonthsNote = (months: number): Label => live(`${months} active months`);
+export const trackedYearsNote = (years: number): Label => live(`${years} tracked years`);
 
 function categorySpend(data: DashboardData, scope: Scope, category: string): number {
 	if (scope.level === 'month') {
@@ -291,7 +292,7 @@ export function average(
 			unit,
 			label: opts.label ?? words(`Avg ${name} / year`),
 			value: measureValue(data, { level: 'all' }, m) / years,
-			note: opts.note ?? live(`${years} tracked years`)
+			note: opts.note ?? trackedYearsNote(years)
 		};
 	}
 

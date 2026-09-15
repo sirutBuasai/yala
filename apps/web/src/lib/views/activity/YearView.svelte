@@ -84,12 +84,12 @@
 	const PANES = $derived(
 		kpis.board({
 			// `scale` so the matrix is given room or taken down to where its rows would clip, like a KPI card.
-			cashflow: { x: 16, y: 0, w: 32, h: 9, content: 'scale' },
+			cashflow: { x: 16, y: 0, w: 32, h: 10, content: 'scale' },
 			trend: {
 				x: 16,
-				y: 9,
+				y: 10,
 				w: 32,
-				h: 12,
+				h: 11,
 				content: 'scale',
 				figure: {
 					figure: 'overview.cash_flow_bars',

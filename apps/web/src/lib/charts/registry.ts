@@ -45,6 +45,8 @@ interface AdaptOpts {
 	normalize?: 'row' | 'col' | 'global';
 	/** Series names to draw as a dotted line. */
 	dashed?: string[];
+	/** Print each bar's own figure above it (a lone series only) — see `BarChart`. */
+	valueLabels?: boolean;
 }
 
 export interface ChartDef<P extends Record<string, unknown> = Record<string, unknown>> {
@@ -99,9 +101,10 @@ const SERIES_ROLE: Record<string, string> = {
 	Liquid: 'var(--role-liquid)',
 	Taxable: 'var(--role-taxable)',
 	'Tax-advantaged': 'var(--role-taxadv)',
-	// Growth decomposition.
-	'You saved': 'var(--role-saving)',
-	'Market & other': 'var(--role-market)'
+	// Growth decomposition. `Saved` is above, shared with the cash-flow boards: one hue per measure.
+	'Market & other': 'var(--role-market)',
+	// A rate on the balance rather than the balance itself, so it takes its own hue and not net worth's.
+	'Balance growth': 'var(--role-growth)'
 };
 
 /** For series with no role and no category. */
@@ -207,7 +210,7 @@ export const CHARTS: ChartDef[] = [
 				slices: c.points.map((pt) => ({
 					name: pt.key,
 					value: pt.value,
-					color: keyColor(pt.key, opts.colorBy)
+					color: keyColor(pt.colorKey ?? pt.key, opts.colorBy)
 				}))
 			};
 		}
@@ -223,7 +226,7 @@ export const CHARTS: ChartDef[] = [
 				items: c.points.map((pt) => ({
 					label: pt.key,
 					value: pt.value,
-					color: keyColor(pt.key, opts.colorBy)
+					color: keyColor(pt.colorKey ?? pt.key, opts.colorBy)
 				})),
 				total: opts.total
 			};
@@ -242,6 +245,7 @@ export const CHARTS: ChartDef[] = [
 				series: toPlainSeries(list, opts),
 				percent: sm.unit.kind === 'percent',
 				altUnit: altUnitOf(list),
+				valueLabels: opts.valueLabels,
 				// A reference belongs to one series, so it only travels when there is only one.
 				reference: list.length === 1 ? list[0]!.reference : undefined
 			};

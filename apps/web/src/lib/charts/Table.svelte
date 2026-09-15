@@ -120,7 +120,8 @@
 		font-variant-numeric: tabular-nums;
 	}
 	/* Inset rather than edge-to-edge, so the shading reads as belonging to the figure instead of redrawing
-	   the table's own grid. Strength is per theme (see app.css), like every other mark. */
+	   the table's own grid. Shares `--mark-tile` with the heatmap: a shaded cell is a shaded cell, and the
+	   two sit on the same boards. Strength is per theme (see app.css). */
 	.tinted {
 		position: relative;
 		isolation: isolate;
@@ -130,7 +131,7 @@
 		position: absolute;
 		inset: 2px;
 		border-radius: var(--radius-sm);
-		background: color-mix(in srgb, var(--tint) calc(var(--a) * var(--mark-cell)), transparent);
+		background: color-mix(in srgb, var(--tint) calc(var(--a) * var(--mark-tile)), transparent);
 		z-index: -1;
 	}
 </style>

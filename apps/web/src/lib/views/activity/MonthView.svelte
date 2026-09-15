@@ -94,7 +94,9 @@
 			pending: { x: 0, y: 16, w: 48, h: 9, content: 'flow', mode: 'fixed' },
 			paychecks: { x: 0, y: 25, w: 24, h: 10, content: 'flow', mode: 'fixed' },
 			transfers: { x: 24, y: 25, w: 24, h: 10, content: 'flow', mode: 'fixed' },
-			history: { x: 0, y: 35, w: 48, h: 20, content: 'flow', mode: 'fit' }
+			// Capped rather than fitted: the list grows with the month's transactions, but a busy month would
+			// otherwise run the board on for screens.
+			history: { x: 0, y: 35, w: 48, h: 20, content: 'flow', mode: 'cap', cap: 39 }
 		})
 	);
 

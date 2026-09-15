@@ -6,8 +6,9 @@ import type { Scope } from '$lib/data/scope';
 import type { Label } from '$lib/ui/label';
 import type { MergeAxis } from './merge';
 
-/** The marks a KPI may carry. A ring sits inline before the number; the rest sit behind it. */
-export type KpiChart = 'bar' | 'line' | 'area' | 'ring';
+/** The marks a KPI may carry. A ring sits inline before the number, a meter under it; the rest sit
+    behind it. */
+export type KpiChart = 'bar' | 'line' | 'area' | 'ring' | 'meter';
 
 export interface KpiSpec {
 	/** Catalog id of the scalar this KPI shows. Its label, note and delta come from there. */
@@ -18,8 +19,8 @@ export interface KpiSpec {
 	/** Caption override. The scalar's own note otherwise. */
 	caption?: Label;
 	/**
-	 * The chart under (or before) the stat. `ring` reads the scalar's own percentage; every other
-	 * shape needs `series` — a catalog series id at the same scope.
+	 * The chart under (or before) the stat. `ring` reads the scalar's own percentage and `meter` its own
+	 * `target`; every other shape needs `series` — a catalog series id at the same scope.
 	 */
 	chart?: KpiChart;
 	/** Catalog id of the series a bar / line / area chart draws. */

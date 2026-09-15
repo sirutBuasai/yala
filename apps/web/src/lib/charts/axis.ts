@@ -1,4 +1,5 @@
 import { scaleLinear, scaleLog, type ScaleLinear, type ScaleLogarithmic } from 'd3-scale';
+import { money, moneyK } from '$lib/utils/format';
 
 /** A value→pixel mapping plus the ticks to label it with. Generic so a builder keeps its d3 surface. */
 export interface ValueScale<S extends (v: number) => number = (v: number) => number> {
@@ -78,6 +79,22 @@ export function logYScale(
 	}
 
 	return { y, ticks: ticks.sort((a, b) => a - b) };
+}
+
+/**
+ * How a money axis labels itself, chosen from the ticks it is about to draw rather than fixed per chart:
+ * abbreviated once every tick worth abbreviating is a thousand or more, exact below that. So an axis over
+ * hundreds reads "$400" and one over hundreds of thousands reads "$400k", without either chart knowing
+ * which case it is in.
+ *
+ * Zero is exempt from the test and always exact — it is on almost every money axis, and requiring it to
+ * clear a thousand would keep every axis unabbreviated. `moneyK(0)` would also render it "$0.0k".
+ */
+export function moneyAxisFormat(ticks: number[]): (v: number) => string {
+	const scaled = ticks.filter((t) => t !== 0);
+	const abbreviate = scaled.length > 0 && scaled.every((t) => Math.abs(t) >= 1000);
+
+	return (v) => (v === 0 ? money(0) : abbreviate ? moneyK(v) : money(v));
 }
 
 /**
