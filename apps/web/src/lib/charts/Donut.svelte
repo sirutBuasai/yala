@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { pie, arc } from 'd3-shape';
-	import { money, esc } from '$lib/utils/format';
+	import { money, moneyExact, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Empty from '$lib/ui/Empty.svelte';
 	import { sumBy } from '$lib/utils/num';
@@ -48,7 +48,7 @@
 							role="presentation"
 							onmousemove={(e) =>
 								showTip(
-									`<b>${esc(a.data.name)}</b><br>${money(a.data.value)} · ${pctOf(a.data.value)}%`,
+									`<b>${esc(a.data.name)}</b><br>${moneyExact(a.data.value)} · ${pctOf(a.data.value)}%`,
 									e
 								)}
 							onmouseleave={hideTip}

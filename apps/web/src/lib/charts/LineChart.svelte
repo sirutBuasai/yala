@@ -2,7 +2,7 @@
 	import { line, area } from 'd3-shape';
 	import { moneyYScale, logYScale, labelIndices, plotSize } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
-	import { money, esc } from '$lib/utils/format';
+	import { money, moneyExact, esc } from '$lib/utils/format';
 	import { clamp } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Legend from '$lib/charts/Legend.svelte';
@@ -52,6 +52,8 @@
 	const plottable = (v: number | null): v is number => v != null && (!log || v > 0);
 
 	const fmt = (v: number) => (percent ? `${Math.round(v)}%` : money(v));
+	// See BarChart: the hover carries the cents the end label rounds away.
+	const tipFmt = (v: number) => (percent ? `${Math.round(v)}%` : moneyExact(v));
 	const tickFmt = (v: number) => (percent ? `${v}%` : money(v));
 
 	const paths = $derived(
@@ -115,7 +117,7 @@
 			.filter((s) => s.values[i] != null)
 			// Largest first, so a many-line tooltip reads top-down by magnitude.
 			.sort((a, b) => (b.values[i] as number) - (a.values[i] as number))
-			.map((s) => `${esc(s.name)}: ${fmt(s.values[i] as number)}`)
+			.map((s) => `${esc(s.name)}: ${tipFmt(s.values[i] as number)}`)
 			.join('<br>');
 		showTip(`<b>${esc(labels[i])}</b><br>${lines}`, e);
 	}

@@ -465,18 +465,42 @@ const RATIOS: { id: string; label: string; num: Measure; den: Measure; note: str
 	}
 ];
 
-// The measures that carry a run-rate, in the order money moves through them. One table for both
-// periods, so a measure can't end up named two ways; `slug` is the id's, which is why it says
-// `spending` while the label says spent.
-const RUN_RATES: { slug: string; label: string; field: Measure; signed?: boolean }[] = [
-	{ slug: 'gross', label: 'gross', field: 'gross' },
-	{ slug: 'deductions', label: 'deductions', field: 'deductions' },
-	{ slug: 'contributions', label: 'contributions', field: 'contributions' },
-	{ slug: 'takehome', label: 'take-home', field: 'takehome' },
-	{ slug: 'income', label: 'income', field: 'income' },
-	{ slug: 'spending', label: 'spent', field: 'spending' },
-	{ slug: 'saved', label: 'saved', field: 'saved', signed: true }
+// The measures that carry a run-rate, in the order money moves through them: gross splits into what was
+// withheld, what was put away and what reached the account, and income is then what got spent or kept.
+// One table for both periods, so a measure can't end up named two ways; `slug` is the id's, which is why
+// it says `spending` while the label says spent. `total` is where the same measure's LEVEL lives, so a
+// column of the chain can be built from one ordered list rather than three hand-aligned ones.
+const RUN_RATES: {
+	slug: string;
+	label: string;
+	field: Measure;
+	total: string;
+	signed?: boolean;
+}[] = [
+	{ slug: 'gross', label: 'gross', field: 'gross', total: 'income.gross' },
+	{ slug: 'deductions', label: 'deductions', field: 'deductions', total: 'income.deductions' },
+	{
+		slug: 'contributions',
+		label: 'contributions',
+		field: 'contributions',
+		total: 'income.contributions'
+	},
+	{ slug: 'takehome', label: 'take-home', field: 'takehome', total: 'income.takehome' },
+	{ slug: 'income', label: 'income', field: 'income', total: 'income.total' },
+	{ slug: 'spending', label: 'spent', field: 'spending', total: 'spending.total' },
+	{ slug: 'saved', label: 'saved', field: 'saved', total: 'saved.total', signed: true }
 ];
+
+/**
+ * The cash-flow chain as a matrix reads it: a column per measure, each with the ids for its level and
+ * its two run-rates. One ordered list, because three parallel arrays of ids and headings put a figure
+ * under the wrong column the moment one of them is reordered.
+ */
+export const CASH_FLOW_COLUMNS = RUN_RATES.map((r) => ({
+	total: r.total,
+	perYear: `avg.${r.slug}_per_year`,
+	perMonth: `avg.${r.slug}_per_month`
+}));
 
 /** `avg.<measure>_per_<period>` over the run-rate table. A yearly average only means anything over the
     whole history; a monthly one also reads within a single year. */

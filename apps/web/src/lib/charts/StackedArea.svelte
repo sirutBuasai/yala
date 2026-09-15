@@ -3,7 +3,7 @@
 	// composition changes. Series stack in the order given, first at the bottom.
 	import { area, line } from 'd3-shape';
 	import { esc } from '$lib/utils/format';
-	import { formatUnit, type Unit } from '$lib/data/primitives';
+	import { formatUnit, formatUnitExact, type Unit } from '$lib/data/primitives';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import { labelIndices, plotSize } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
@@ -70,7 +70,7 @@
 		const lines = stacks
 			.map(
 				({ band }) =>
-					`<span style="color:${band.color}">■</span> ${esc(band.name)} ${formatUnit(band.values[i] ?? 0, unit)}`
+					`<span style="color:${band.color}">■</span> ${esc(band.name)} ${formatUnitExact(band.values[i] ?? 0, unit)}`
 			)
 			.reverse()
 			.join('<br>');

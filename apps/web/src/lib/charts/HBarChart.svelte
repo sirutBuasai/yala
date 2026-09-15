@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { fitFontSize } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
-	import { money, moneyK, esc } from '$lib/utils/format';
+	import { money, moneyExact, moneyK, esc } from '$lib/utils/format';
 	import { clamp, sumBy } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Empty from '$lib/ui/Empty.svelte';
@@ -78,7 +78,7 @@
 					role="presentation"
 					onmousemove={(e) =>
 						showTip(
-							`<b>${esc(d.label)}</b><br>${money(d.value)} · ${sum ? Math.round((d.value / sum) * 100) : 0}%`,
+							`<b>${esc(d.label)}</b><br>${moneyExact(d.value)} · ${sum ? Math.round((d.value / sum) * 100) : 0}%`,
 							e
 						)}
 					onmouseleave={hideTip}

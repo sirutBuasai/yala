@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { money, esc } from '$lib/utils/format';
+	import { money, moneyExact, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import { sumBy } from '$lib/utils/num';
 	// The registry adapts a Flow primitive into these, adding a colour per node role.
@@ -171,7 +171,7 @@
 			stroke-opacity="var(--mark-flow)"
 			role="presentation"
 			onmousemove={(e) =>
-				showTip(`<b>${esc(r.l.source)} → ${esc(r.l.target)}</b><br>${money(r.l.value)}`, e)}
+				showTip(`<b>${esc(r.l.source)} → ${esc(r.l.target)}</b><br>${moneyExact(r.l.value)}`, e)}
 			onmouseleave={hideTip}
 		/>
 	{/each}
@@ -187,7 +187,7 @@
 			role="presentation"
 			onmousemove={(e) =>
 				showTip(
-					`<b>${esc(nv.node.label)}</b><br>${money(nv.node.value)}${nv.pct != null ? ` · ${nv.pct}%` : ''}`,
+					`<b>${esc(nv.node.label)}</b><br>${moneyExact(nv.node.value)}${nv.pct != null ? ` · ${nv.pct}%` : ''}`,
 					e
 				)}
 			onmouseleave={hideTip}

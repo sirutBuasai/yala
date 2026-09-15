@@ -4,7 +4,7 @@
 	import { scaleBand } from 'd3-scale';
 	import { moneyYScale, signedYScale, plotSize } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
-	import { money, moneyK, esc } from '$lib/utils/format';
+	import { money, moneyExact, moneyK, esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Legend from '$lib/charts/Legend.svelte';
 
@@ -50,6 +50,9 @@
 	const base = $derived(y(0));
 
 	const fmt = (v: number) => (percent ? `${Math.round(v)}%` : money(v));
+	// A tooltip is asked for the figure ITSELF, so money keeps its cents there; the bar's own label is
+	// the rounded reading and repeating it on hover answers nothing.
+	const tipFmt = (v: number) => (percent ? `${Math.round(v)}%` : moneyExact(v));
 	const tickFmt = (v: number) => (percent ? `${v}%` : moneyK(v));
 	// A value label rides above a rising bar and below a falling one, so it never sits on the axis.
 	const labelY = (v: number, yv: number) =>
@@ -91,7 +94,7 @@
 						fill={single && v < 0 ? 'var(--role-spending)' : s.color}
 						role="presentation"
 						onmousemove={(e) =>
-							showTip(`<b>${esc(lb)}</b><br>${single ? '' : esc(s.name) + ': '}${fmt(v)}`, e)}
+							showTip(`<b>${esc(lb)}</b><br>${single ? '' : esc(s.name) + ': '}${tipFmt(v)}`, e)}
 						onmouseleave={hideTip}
 					/>
 					{#if single && v !== 0}

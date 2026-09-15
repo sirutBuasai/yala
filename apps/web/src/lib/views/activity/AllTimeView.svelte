@@ -7,6 +7,7 @@
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import { figurePanes } from '$lib/layout/grid/figure';
 	import { live, words } from '$lib/ui/label';
+	import { CASH_FLOW_COLUMNS, CATALOG_BY_ID } from '$lib/data/catalog';
 	import FigurePane from '$lib/layout/grid/FigurePane.svelte';
 	import StatMatrix from '$lib/charts/StatMatrix.svelte';
 	import { yearSpan } from '$lib/utils/format';
@@ -89,44 +90,27 @@
 		}
 	} satisfies BoardLayout);
 
-	// Left to right is the order the money moves: gross splits into what was withheld, what was put
-	// away and what reached the account, and net income is then what got spent or kept.
-	const columns = ['Gross', 'Deductions', 'Contributions', 'Take-home', 'Income', 'Spent', 'Saved'];
-	const MEASURES = [
-		'gross',
-		'deductions',
-		'contributions',
-		'takehome',
-		'income',
-		'spending',
-		'saved'
-	];
-	const totals = [
-		'income.gross',
-		'income.deductions',
-		'income.contributions',
-		'income.takehome',
-		'income.total',
-		'spending.total',
-		'saved.total'
-	];
-	const cellsOf = (ids: string[]) => ids.map((id) => ({ id, scope: all }));
+	// The chain's order, its headings and its ids all come from the catalog's one ordered list, so a
+	// column heading cannot end up over another measure's figure.
+	const columns = CASH_FLOW_COLUMNS.map((c) => CATALOG_BY_ID[c.total]!.label);
+	const cellsOf = (pick: (c: (typeof CASH_FLOW_COLUMNS)[number]) => string) =>
+		CASH_FLOW_COLUMNS.map((c) => ({ id: pick(c), scope: all }));
 
 	const rows = $derived([
 		{
 			label: words('Lifetime total'),
 			caption: live(span),
-			cells: cellsOf(totals)
+			cells: cellsOf((c) => c.total)
 		},
 		{
 			// No caption: how many years divide into it is each average's own footnote.
 			label: words('Avg / year'),
-			cells: cellsOf(MEASURES.map((m) => `avg.${m}_per_year`))
+			cells: cellsOf((c) => c.perYear)
 		},
 		{
 			// Likewise the active-month count these divide by, which every column shares at this scope.
 			label: words('Avg / month'),
-			cells: cellsOf(MEASURES.map((m) => `avg.${m}_per_month`))
+			cells: cellsOf((c) => c.perMonth)
 		}
 	]);
 </script>
