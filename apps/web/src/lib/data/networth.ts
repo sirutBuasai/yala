@@ -273,16 +273,21 @@ export function liabilitiesChange(data: DashboardData, year: number): MultiSerie
 	return changeByMonth(data, year, ['liabilities'], 'percent');
 }
 
-/** One band per allocation bucket over time, `of` deciding whether a band's thickness is a share of
-    assets or the balance itself. */
+/**
+ * One band per allocation bucket over time, `of` deciding whether a band's thickness is a share of assets
+ * or the balance itself. Whichever it is not rides along as the points' alternate reading: a band answers
+ * "how much" and "what fraction" at once, where the chart's axis can only state one.
+ */
 function allocation(data: DashboardData, of: 'share' | 'value', year?: number): MultiSeries {
-	const unit = of === 'share' ? PERCENT : MONEY(data.currency);
+	const money = MONEY(data.currency);
+	const unit = of === 'share' ? PERCENT : money;
+	const altUnit = of === 'share' ? money : PERCENT;
 	const { points, labels } = axisOf(data, year);
-	const read = (p: NetWorthSnapshot, b: string) => {
-		const held = p.breakdown[b] ?? 0;
-		if (of === 'value') return held;
-		return p.assets ? (held / p.assets) * 100 : 0;
-	};
+
+	const held = (p: NetWorthSnapshot, b: string) => p.breakdown[b] ?? 0;
+	const share = (p: NetWorthSnapshot, b: string) => (p.assets ? (held(p, b) / p.assets) * 100 : 0);
+	const read = of === 'share' ? share : held;
+	const other = of === 'share' ? held : share;
 
 	return {
 		kind: 'multiseries',
@@ -294,7 +299,9 @@ function allocation(data: DashboardData, of: 'share' | 'value', year?: number): 
 				b,
 				labels,
 				points.map((p) => read(p, b)),
-				unit
+				unit,
+				'time',
+				{ unit: altUnit, values: points.map((p) => other(p, b)) }
 			)
 		)
 	};

@@ -534,6 +534,25 @@ describe('allocation by value', () => {
 		expect(p.series.map((s) => s.points[2]!.value)).toEqual([1300, 2600, 2600]);
 	});
 
+	// A band answers "how much" and "what fraction" at once; the axis can only state one of them.
+	it('carries each band’s share alongside its balance, and the reverse', () => {
+		const value = build(makeNetWorthData(), 'networth.allocation_value', { level: 'all' });
+		const share = build(makeNetWorthData(), 'networth.allocation_share', { level: 'all' });
+		if (value.kind !== 'multiseries' || share.kind !== 'multiseries') {
+			throw new Error('expected multiseries');
+		}
+
+		expect(value.series.every((s) => s.altUnit === PERCENT)).toBe(true);
+		expect(share.series.every((s) => s.altUnit?.kind === 'money')).toBe(true);
+		// Each view's alternate reading is the other view's plotted value.
+		expect(value.series.map((s) => s.points[2]!.alt)).toEqual(
+			share.series.map((s) => s.points[2]!.value)
+		);
+		expect(share.series.map((s) => s.points[2]!.alt)).toEqual(
+			value.series.map((s) => s.points[2]!.value)
+		);
+	});
+
 	it('draws the same buckets in the same order as the share view', () => {
 		const share = build(makeNetWorthData(), 'networth.allocation_share', { level: 'all' });
 		const value = build(makeNetWorthData(), 'networth.allocation_value', { level: 'all' });

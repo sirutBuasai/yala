@@ -22,25 +22,31 @@
 
 	const yr = $derived<Scope>({ level: 'year', year });
 
-	// Where you ended, the two forces that got you there, and the rate behind one of them. Net worth is
-	// a position, so its badge carries the year's move; the two forces are signed, so their own sign
-	// carries it. Each of the three money cards draws its own month-by-month shape behind the figure:
-	// the position as a level, the forces as the per-month amounts that accumulate into it.
+	// Where you ended, the rate that got you there, and the two forces behind the move. Net worth is a
+	// position, so its badge carries the year's move; the two forces are signed, so their own sign carries
+	// it. Each of the three money cards draws its own month-by-month shape behind the figure: the position
+	// as a level, the forces as the per-month amounts that accumulate into it.
+	//
+	// Declared in reading order, and the widths are what the two merged cards divide themselves by.
 	const KPIS = $derived<KpiBoardDefs>({
 		networth: {
-			rect: { x: 0, y: 0, w: 12, h: 5 },
+			rect: { x: 0, y: 0, w: 11, h: 5 },
 			spec: {
 				figure: 'networth.change',
 				scope: yr,
 				caption: live(`end of ${year}`),
-				// A line, where the two forces beside it take an area: the spark is zero-anchored, and a
+				// A line, where the two forces below it take an area: the spark is zero-anchored, and a
 				// position that never approaches zero fills the whole box as a flat wash.
 				chart: 'line',
 				series: 'networth.by_month'
 			}
 		},
+		rate: {
+			rect: { x: 11, y: 0, w: 6, h: 5 },
+			spec: { figure: 'ratio.savings_rate', scope: yr, chart: 'ring' }
+		},
 		saved: {
-			rect: { x: 12, y: 0, w: 12, h: 5 },
+			rect: { x: 0, y: 5, w: 8, h: 5 },
 			spec: {
 				figure: 'networth.saved',
 				scope: yr,
@@ -49,33 +55,34 @@
 			}
 		},
 		other: {
-			rect: { x: 24, y: 0, w: 12, h: 5 },
+			rect: { x: 8, y: 5, w: 9, h: 5 },
 			spec: {
 				figure: 'networth.other',
 				scope: yr,
 				chart: 'bar',
 				series: 'networth.other_by_month'
 			}
-		},
-		rate: {
-			rect: { x: 36, y: 0, w: 12, h: 5 },
-			spec: { figure: 'ratio.savings_rate', scope: yr, chart: 'ring' }
 		}
 	});
 
-	// The two forces open as one card: they are the halves of the same move, and reading them together is
-	// the point. The position and the rate stand alone.
-	const kpis = useKpiBoard('networth:year', () => KPIS, [{ ids: ['saved', 'other'], axis: 'row' }]);
+	// Two cards, one per row: where you stand and how efficiently you got there, then the two halves of
+	// the same move, which are the point read together.
+	const kpis = useKpiBoard('networth:year', () => KPIS, [
+		{ ids: ['networth', 'rate'], axis: 'row' },
+		{ ids: ['saved', 'other'], axis: 'row' }
+	]);
 
 	const PANES = $derived(
 		kpis.board({
-			// `scale` so the matrix is given room or taken down to where its rows would clip, like a KPI card.
-			growth: { x: 0, y: 5, w: 48, h: 9, content: 'scale' },
+			// Beside the KPI column rather than under it: the matrix is the same reading those cards give,
+			// against last year. `scale` so it is given room or taken down to where its rows would clip.
+			growth: { x: 17, y: 0, w: 31, h: 10, content: 'scale' },
+			// The path, beside the two units that path moved in.
 			trend: {
 				x: 0,
-				y: 14,
-				w: 24,
-				h: 15,
+				y: 10,
+				w: 32,
+				h: 17,
 				content: 'scale',
 				figure: {
 					figure: 'networth.by_month',
@@ -86,11 +93,72 @@
 					caption: { context: String(year), text: 'total net worth MoM' }
 				}
 			},
-			// The path beside what moved it: the same months read as a level, then as the two forces behind
-			// each step.
+			// One pane, not two: the dollar and percent shapes are near-identical, because the base barely
+			// moves month to month. The axis is the percentage and the tooltip carries the dollars, which is
+			// also the unit the liabilities pane below plots, so the two can be read against each other.
+			change: {
+				x: 32,
+				y: 10,
+				w: 16,
+				h: 14,
+				content: 'scale',
+				figure: {
+					figure: 'networth.change_by_month',
+					scope: yr,
+					chart: 'bar',
+					title: words('Net worth & assets change'),
+					caption: { context: String(year), text: 'percent gained or lost each month' }
+				}
+			},
+			// What you owe, and how fast it moved. The tops are staggered because the push rule closes each
+			// overlap downwards, so a taller neighbour does not drag this row with it.
+			liabilitiesChange: {
+				x: 32,
+				y: 24,
+				w: 16,
+				h: 13,
+				content: 'scale',
+				figure: {
+					figure: 'networth.liabilities_change',
+					scope: yr,
+					chart: 'bar',
+					title: words('Liabilities change'),
+					caption: { context: String(year), text: 'percent gained or lost each month' }
+				}
+			},
+			liabilities: {
+				x: 0,
+				y: 27,
+				w: 32,
+				h: 10,
+				content: 'scale',
+				figure: {
+					figure: 'networth.liabilities_trend',
+					scope: yr,
+					chart: 'line',
+					area: true,
+					title: words('Liabilities'),
+					caption: { context: String(year), text: 'total liabilities MoM' }
+				}
+			},
+			// What it is made of, beside who put it there.
+			allocation: {
+				x: 0,
+				y: 37,
+				w: 24,
+				h: 15,
+				content: 'scale',
+				figure: {
+					figure: 'networth.allocation_value',
+					scope: yr,
+					chart: 'stacked-area',
+					title: words('Asset allocations'),
+					caption: words('dollar amount and shares by asset type')
+				}
+			},
 			attribution: {
 				x: 24,
-				y: 14,
+				y: 37,
 				w: 24,
 				h: 15,
 				content: 'scale',
@@ -105,70 +173,9 @@
 					}
 				}
 			},
-			// One pane, not two: the dollar and percent shapes are near-identical, because the base barely
-			// moves month to month. The axis is the percentage and the tooltip carries the dollars, which is
-			// also the unit the liabilities pane below plots, so the two can be read against each other.
-			change: {
-				x: 0,
-				y: 29,
-				w: 24,
-				h: 15,
-				content: 'scale',
-				figure: {
-					figure: 'networth.change_by_month',
-					scope: yr,
-					chart: 'bar',
-					title: words('Net worth & assets change'),
-					caption: { context: String(year), text: 'percent gained or lost each month' }
-				}
-			},
-			allocation: {
-				x: 24,
-				y: 29,
-				w: 24,
-				h: 15,
-				content: 'scale',
-				figure: {
-					figure: 'networth.allocation_value',
-					scope: yr,
-					chart: 'stacked-area',
-					title: words('Allocation by value'),
-					caption: words('dollar balance of each asset type')
-				}
-			},
-			// The level and its movement as one row: what you owe, then how fast it moved.
-			liabilities: {
-				x: 0,
-				y: 44,
-				w: 24,
-				h: 13,
-				content: 'scale',
-				figure: {
-					figure: 'networth.liabilities_trend',
-					scope: yr,
-					chart: 'line',
-					area: true,
-					title: words('Liabilities'),
-					caption: { context: String(year), text: 'what you owe, month by month' }
-				}
-			},
-			liabilitiesChange: {
-				x: 24,
-				y: 44,
-				w: 24,
-				h: 13,
-				content: 'scale',
-				figure: {
-					figure: 'networth.liabilities_change',
-					scope: yr,
-					chart: 'bar',
-					title: words('Liabilities change'),
-					caption: { context: String(year), text: 'percent gained or lost each month' }
-				}
-			},
 			table: {
 				x: 0,
-				y: 57,
+				y: 52,
 				w: 48,
 				h: 16,
 				content: 'flow',
@@ -209,7 +216,7 @@
 	<Pane
 		id="growth"
 		title={{ context: String(year), text: 'growth' }}
-		caption={words("where the year's change came from, against last")}
+		caption={words('totals and yearly rates')}
 	>
 		<StatMatrix {data} {columns} rows={growth} />
 	</Pane>

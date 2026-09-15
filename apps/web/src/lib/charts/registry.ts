@@ -287,7 +287,8 @@ export const CHARTS: ChartDef[] = [
 			return {
 				labels: m.labels,
 				series: toPlainSeries(m.series, opts),
-				unit: m.unit
+				unit: m.unit,
+				altUnit: altUnitOf(m.series)
 			};
 		}
 	}),

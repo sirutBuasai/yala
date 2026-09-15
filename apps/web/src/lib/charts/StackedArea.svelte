@@ -14,13 +14,18 @@
 		name: string;
 		values: number[];
 		color: string;
+		/** The same values in `altUnit`, reported beside them in a tooltip. */
+		alt?: (number | null)[];
 	}
 	interface Props {
 		labels: string[];
 		series: Band[];
 		unit: Unit;
+		/** The unit each band's `alt` is in — a band's other reading, so one hover answers both "how much"
+		    and "what fraction". */
+		altUnit?: Unit;
 	}
-	let { labels, series, unit }: Props = $props();
+	let { labels, series, unit, altUnit }: Props = $props();
 
 	const box = new ChartBox();
 	const W = $derived(box.w);
@@ -71,15 +76,31 @@
 
 	const shown = $derived(new Set(labelIndices(n, iw, labels)));
 
-	function hover(e: MouseEvent, i: number) {
+	/** A band's figure at one point: what the axis states, plus its other reading where it has one. */
+	function bandValue(band: Band, i: number): string {
+		const v = formatUnitExact(band.values[i] ?? 0, unit);
+		const other = altUnit && band.alt ? band.alt[i] : null;
+		return other == null ? v : `${v}<span class="alt">${formatUnitExact(other, altUnit!)}</span>`;
+	}
+
+	/** The point being hovered, which marks each band's boundary as well as filling the tooltip. */
+	let at = $state<number | null>(null);
+
+	function onMove(e: MouseEvent, i: number) {
+		at = i;
 		const lines = stacks
 			.map(
 				({ band }) =>
-					`<span style="color:${band.color}">■</span> ${esc(band.name)} ${formatUnitExact(band.values[i] ?? 0, unit)}`
+					`<span style="color:${band.color}">■</span> ${esc(band.name)} ${bandValue(band, i)}`
 			)
 			.reverse()
 			.join('<br>');
 		showTip(`<b>${esc(labels[i] ?? '')}</b><br>${lines}`, e);
+	}
+
+	function onLeave() {
+		at = null;
+		hideTip();
 	}
 </script>
 
@@ -102,6 +123,30 @@
 				{/if}
 			{/each}
 
+			<!-- Marked on each band's upper boundary, which is the edge the eye follows: a band's own value is
+			     its thickness, and there is no single point on it to mark. -->
+			{#if at !== null}
+				<line
+					class="gridline"
+					x1={xPos(at)}
+					x2={xPos(at)}
+					y1={0}
+					y2={ih}
+					stroke="var(--ink-3)"
+					stroke-dasharray="3 3"
+				/>
+				{#each stacks as s (s.band.name)}
+					<circle
+						cx={xPos(at)}
+						cy={y(s.upper[at] ?? 0)}
+						r="5"
+						fill="var(--surface)"
+						stroke={s.band.color}
+						stroke-width="2"
+					/>
+				{/each}
+			{/if}
+
 			<!-- One hit target per point, so a hover reports the whole mix at that date. -->
 			{#each labels as lb, i (lb + i)}
 				<rect
@@ -110,8 +155,8 @@
 					width={iw / Math.max(1, n)}
 					height={ih}
 					fill="transparent"
-					onmousemove={(e) => hover(e, i)}
-					onmouseleave={hideTip}
+					onmousemove={(e) => onMove(e, i)}
+					onmouseleave={onLeave}
 					role="presentation"
 				/>
 			{/each}
