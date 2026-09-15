@@ -465,17 +465,31 @@ const RATIOS: { id: string; label: string; num: Measure; den: Measure; note: str
 	}
 ];
 
-const PER_MONTH: { id: string; label: string; field: Measure; signed?: boolean }[] = [
-	{ id: 'avg.income_per_month', label: 'Avg income / month', field: 'income' },
-	{ id: 'avg.spending_per_month', label: 'Avg spent / month', field: 'spending' },
-	{ id: 'avg.saved_per_month', label: 'Avg saved / month', field: 'saved', signed: true }
+// The measures that carry a run-rate, in the order money moves through them. One table for both
+// periods, so a measure can't end up named two ways; `slug` is the id's, which is why it says
+// `spending` while the label says spent.
+const RUN_RATES: { slug: string; label: string; field: Measure; signed?: boolean }[] = [
+	{ slug: 'gross', label: 'gross', field: 'gross' },
+	{ slug: 'deductions', label: 'deductions', field: 'deductions' },
+	{ slug: 'contributions', label: 'contributions', field: 'contributions' },
+	{ slug: 'takehome', label: 'take-home', field: 'takehome' },
+	{ slug: 'income', label: 'income', field: 'income' },
+	{ slug: 'spending', label: 'spent', field: 'spending' },
+	{ slug: 'saved', label: 'saved', field: 'saved', signed: true }
 ];
 
-const PER_YEAR: { id: string; label: string; field: Measure; signed?: boolean }[] = [
-	{ id: 'avg.income_per_year', label: 'Avg income / year', field: 'income' },
-	{ id: 'avg.spending_per_year', label: 'Avg spent / year', field: 'spending' },
-	{ id: 'avg.saved_per_year', label: 'Avg saved / year', field: 'saved', signed: true }
-];
+/** `avg.<measure>_per_<period>` over the run-rate table. A yearly average only means anything over the
+    whole history; a monthly one also reads within a single year. */
+function runRateDefs(per: 'month' | 'year'): DataDef[] {
+	const scopes: ScopeLevel[] = per === 'month' ? ['all', 'year'] : ['all'];
+	return RUN_RATES.map((r) => {
+		const label = `Avg ${r.label} / ${per}`;
+		return scalarDef(`avg.${r.slug}_per_${per}`, label, scopes, (data, scope) => {
+			const s = average(data, r.field, per, scope, { label: words(label) });
+			return r.signed ? signed(s) : s;
+		});
+	});
+}
 
 const COUNTS: { id: string; label: string; of: Countable }[] = [
 	{ id: 'count.transactions', label: 'Transactions', of: 'transactions' },
@@ -529,18 +543,8 @@ const STAT_DEFS: DataDef[] = [
 			ratio(data, scope, r.num, r.den, { label: words(r.label), note: words(r.note) })
 		)
 	),
-	...PER_MONTH.map((m) =>
-		scalarDef(m.id, m.label, ['year'], (data, scope) => {
-			const s = average(data, m.field, 'month', scope.year, { label: words(m.label) });
-			return m.signed ? signed(s) : s;
-		})
-	),
-	...PER_YEAR.map((m) =>
-		scalarDef(m.id, m.label, ['all'], (data) => {
-			const s = average(data, m.field, 'year', undefined, { label: words(m.label) });
-			return m.signed ? signed(s) : s;
-		})
-	),
+	...runRateDefs('month'),
+	...runRateDefs('year'),
 	...COUNTS.map((c) =>
 		scalarDef(c.id, c.label, ALL_SCOPES, (data, scope) => count(data, scope, c.of))
 	),

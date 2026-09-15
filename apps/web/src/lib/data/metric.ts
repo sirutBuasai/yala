@@ -158,13 +158,17 @@ function totals(data: DashboardData, scope: Scope): Totals {
 	});
 }
 
-/** Active-month counts within a year: months with income, with spending, or either. */
+/** Active-month counts: months with income, with spending, or either — in one year, or over all of
+    them when no year is given. */
 function activeMonths(
 	data: DashboardData,
-	year: number
+	year?: number
 ): { income: number; spend: number; any: number } {
-	return memo(data, `act:${year}`, () => {
-		const rows = data.years[String(year)]?.matrix ?? [];
+	return memo(data, `act:${year ?? 'all'}`, () => {
+		const rows =
+			year === undefined
+				? Object.values(data.years).flatMap((y) => y.matrix)
+				: (data.years[String(year)]?.matrix ?? []);
 		return {
 			income: rows.filter((r) => r.income > 0).length,
 			spend: rows.filter((r) => sumValues(r.spent) > 0).length,
@@ -268,14 +272,14 @@ function perMonth(
 
 /**
  * Average of a measure. `per: 'year'` divides the lifetime total by the number of tracked years;
- * `per: 'month'` divides a year's total by that year's ACTIVE months — never a flat 12, so a partial
- * year isn't understated.
+ * `per: 'month'` divides by ACTIVE months — never a flat 12, so a partial year isn't understated —
+ * either the scope's year's, or every tracked year's at lifetime scope.
  */
 export function average(
 	data: DashboardData,
 	m: Measure,
 	per: 'year' | 'month',
-	year?: number,
+	scope: Scope,
 	opts: Opts = {}
 ): Scalar {
 	const unit = MONEY(data.currency);
@@ -292,7 +296,22 @@ export function average(
 		};
 	}
 
-	const y = year ?? latestYear(data);
+	// Lifetime divides every measure by the same months — the ones that saw ANY activity — so a row of
+	// these still adds up (saved / mo = income / mo - spent / mo), and there is no prior lifetime to
+	// carry a change against. Per year, each measure keeps its own active count, which is the more
+	// useful denominator when a single figure is being read.
+	if (scope.level === 'all') {
+		const months = activeMonths(data).any || 1;
+		return {
+			kind: 'scalar',
+			unit,
+			label: opts.label ?? words(`Avg ${name} / month`),
+			value: measureValue(data, { level: 'all' }, m) / months,
+			note: opts.note ?? live(`${months} active months`)
+		};
+	}
+
+	const y = scope.year ?? latestYear(data);
 	const now = perMonth(data, m, y);
 	return {
 		kind: 'scalar',

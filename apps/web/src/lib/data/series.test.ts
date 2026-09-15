@@ -147,3 +147,29 @@ describe('catalog series over measures', () => {
 		expect(p.points.at(-1)!.value).toBe(3000);
 	});
 });
+
+describe('savingsRate', () => {
+	it('carries the LIFETIME rate as its reference, not the mean of the yearly rates', () => {
+		const d = makeData();
+		const p = build(d, 'overview.savings_rate', { level: 'all' });
+		if (p.kind !== 'series') throw new Error('expected series');
+
+		const income = measureValue(d, { level: 'all' }, 'income');
+		const saved = measureValue(d, { level: 'all' }, 'saved');
+		expect(p.reference?.value).toBeCloseTo((saved / income) * 100, 6);
+	});
+
+	it('weights each year by its income, so the bigger year has more say than the mean would give it', () => {
+		const d = makeData();
+		// A tiny year that saved nothing beside a big one that saved half: the simple mean of the two
+		// rates is 25%, the lifetime rate is 45%.
+		d.overview.by_year = [
+			{ year: 2024, spent: 100, income: 100, saved: 0 },
+			{ year: 2025, spent: 450, income: 900, saved: 450 }
+		];
+
+		const p = build(d, 'overview.savings_rate', { level: 'all' });
+		if (p.kind !== 'series') throw new Error('expected series');
+		expect(p.reference?.value).toBeCloseTo(45, 6);
+	});
+});

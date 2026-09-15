@@ -41,6 +41,27 @@ export function moneyYScale(values: number[], ih: number): ValueScale<ScaleLinea
 }
 
 /**
+ * Linear Y scale for values that straddle zero. The domain runs from the lowest value to the highest
+ * with a little headroom on each populated end and NO outward rounding, so zero sits exactly where the
+ * data puts it: mostly-positive readings push it toward the bottom, a deep deficit lifts it. Rounding
+ * the bounds (`moneyYScale`) would inflate a small deficit into a large band.
+ */
+export function signedYScale(
+	values: number[],
+	ih: number,
+	pad = 0.08
+): ValueScale<ScaleLinear<number, number>> {
+	const lo = Math.min(0, ...values);
+	const hi = Math.max(0, ...values);
+	const span = hi - lo || 1;
+	const y = scaleLinear()
+		.domain([lo < 0 ? lo - span * pad : 0, hi > 0 ? hi + span * pad : 0])
+		.range([ih, 0]);
+
+	return { y, ticks: y.ticks(4) };
+}
+
+/**
  * Log10 value→pixel Y scale for series spanning orders of magnitude, which a linear scale crushes
  * against the axis. Domain snaps outward to whole decades so gridlines land on round numbers;
  * non-positive values can't be plotted on a log axis and are dropped by the caller (`defined`).
