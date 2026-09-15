@@ -14,6 +14,10 @@
 		/** Hook from whoever stores renames; absent leaves these labels the app's to name. Given only while
 		    the board is being edited. */
 		rename?: (slot: Slot, text: string) => void;
+		/** This card's labels are the user's to name, whether or not one is being edited right now. It holds
+		    both lines open in either mode, so a label emptied on purpose leaves the same slot behind and the
+		    board does not move when the modes are switched. */
+		nameable?: boolean;
 		/** These labels as the app declares them, for the editor to stand in where a rename emptied one. */
 		shipped?: Partial<Record<Slot, Label>>;
 		/** Controls at the top-right of the header, level with the title/caption. */
@@ -42,6 +46,7 @@
 		density = 'figure',
 		scroll = false,
 		frozen = false,
+		nameable = false,
 		card = $bindable(),
 		body = $bindable(),
 		children
@@ -49,9 +54,8 @@
 
 	const heading = $derived(labelText(title));
 	const sub = $derived(labelText(caption, DOT));
-	// A card being renamed offers BOTH lines whatever they currently say: an empty one is where a caption
-	// gets added, and a line the user emptied is how they get it back. Whoever supplies `rename` has
-	// already decided this card is one we name at all.
+	// A nameable card offers both lines whatever they currently say: an empty one is where a caption gets
+	// added, and a line the user emptied is how they get it back.
 	const naming = $derived(!!rename);
 	// A card with no heading of its OWN keeps its labels in its body — a KPI card is sections, each titled.
 	// Freezing that body took the pencils with it and the press fell through to the drag surface beneath,
@@ -66,16 +70,17 @@
 	class:attention={tone === 'attention'}
 	bind:this={card}
 >
-	{#if heading || sub || actions || naming}
-		<header class="head" class:has-cap={!!sub || naming}>
+	{#if heading || sub || actions || nameable}
+		<header class="head" class:has-cap={!!sub || nameable}>
 			<div class="titles">
 				<!-- One level whatever the density: every card is a peer on its board, and picking the
 				     heading level by how the card LOOKS puts two neighbours at different depths. -->
-				{#if heading || naming}
+				{#if heading || nameable}
 					<h2 class:serif={density !== 'panel'}>
 						<LabelLine
 							label={title ?? {}}
 							what="title"
+							{nameable}
 							shipped={shipped?.title}
 							onrename={rename && ((t) => rename('title', t))}
 						>
@@ -84,12 +89,13 @@
 						</LabelLine>
 					</h2>
 				{/if}
-				{#if sub || naming}
+				{#if sub || nameable}
 					<p class="cap">
 						<LabelLine
 							label={caption ?? {}}
 							what="caption"
 							join={DOT}
+							{nameable}
 							shipped={shipped?.caption}
 							onrename={rename && ((t) => rename('caption', t))}
 						/>

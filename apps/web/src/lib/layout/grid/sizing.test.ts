@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { effectiveMode, hugs, reservedRows, scrolls, sizePanes } from '$lib/layout/grid/sizing';
-import { UNIT, GAP, rowsForPx } from '$lib/layout/grid/units';
+import { COLS, UNIT, GAP, rowsForPx } from '$lib/layout/grid/units';
 import type { AuthoredPane, BoardLayout } from '$lib/layout/grid/types';
 
 const authored = (over: Partial<AuthoredPane> = {}): AuthoredPane => ({
@@ -90,17 +90,46 @@ describe('sizePanes', () => {
 		chart: { x: 0, y: 0, w: 24, h: 10, content: 'scale' },
 		list: { x: 24, y: 0, w: 24, h: 6, content: 'flow', mode: 'fit' }
 	};
+	const panes = [
+		authored({ id: 'list', x: 24, mode: 'fit', h: 6 }),
+		authored({ id: 'chart', h: 10 })
+	];
+	const measured = { list: 20 * UNIT - GAP };
+	const size = (floors: Parameters<typeof sizePanes>[3] = {}) =>
+		new Map(sizePanes(panes, specs, measured, floors, false).map((p) => [p.id, p]));
 
 	it('resolves each pane by its own kind and keeps the priority order', () => {
-		const sized = sizePanes(
-			[authored({ id: 'list', mode: 'fit', h: 6 }), authored({ id: 'chart', h: 10 })],
-			specs,
-			{ list: 20 * UNIT - GAP },
-			false
-		);
+		const sized = sizePanes(panes, specs, measured, {}, false);
 		expect(sized.map((s) => [s.id, s.h])).toEqual([
 			['list', 20],
 			['chart', 10]
 		]);
+	});
+
+	it('widens any pane to the columns its content needs', () => {
+		expect(size({ list: { w: 30, h: 0 } }).get('list')!.w).toBe(30);
+		expect(size({ chart: { w: 30, h: 0 } }).get('chart')!.w).toBe(30);
+	});
+
+	it('leaves a pane already wide enough alone', () => {
+		expect(size({ chart: { w: 20, h: 0 } }).get('chart')!.w).toBe(24);
+	});
+
+	it('shifts a widened pane off the right edge rather than overrunning the board', () => {
+		const list = size({ list: { w: 30, h: 0 } }).get('list')!;
+		expect(list.x + list.w).toBeLessThanOrEqual(COLS);
+		expect(list.x).toBe(COLS - 30);
+	});
+
+	it('caps growth at the board width', () => {
+		expect(size({ chart: { w: COLS + 12, h: 0 } }).get('chart')!.w).toBe(COLS);
+	});
+
+	it('grows a chart to the rows its content needs — nothing else owns its height', () => {
+		expect(size({ chart: { w: 0, h: 14 } }).get('chart')!.h).toBe(14);
+	});
+
+	it('leaves a fitted list to its own measurement, which tracks content both ways', () => {
+		expect(size({ list: { w: 0, h: 40 } }).get('list')!.h).toBe(20);
 	});
 });

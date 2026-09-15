@@ -37,12 +37,15 @@
 	const clickable = $derived(!!onedit);
 
 	// The amount track is a floor, not a width: a fixed width clipped large totals, so `max-content` lets
-	// the amount take what it needs and the payee column gives it up.
+	// the amount take what it needs and the payee column gives it up. The payee's own floor is its
+	// min-content, so the row reports a real shortfall once the tracks stop fitting — which is what lets
+	// the pane grow with the data (see `grid/spill.ts`). Crushable to zero, it reported nothing and the
+	// payee silently vanished instead.
 	const template = $derived(
 		[
 			dateOf ? 'var(--col-date)' : '',
 			'var(--col-dot)',
-			'minmax(0, 1fr)',
+			'minmax(min-content, 1fr)',
 			columnTracks ?? '',
 			'minmax(var(--col-amount), max-content)'
 		]
@@ -58,6 +61,7 @@
 			class="row"
 			class:clickable
 			style:grid-template-columns={template}
+			data-measure
 			type={clickable ? 'button' : undefined}
 			role={clickable ? 'button' : undefined}
 			onclick={clickable ? () => onedit?.(item.locator) : undefined}

@@ -6,7 +6,7 @@ import { Pref, listOf, type Revive } from '$lib/utils/persist.svelte';
 import { assertNoOverlap, clampRect, resolve, boardRows } from './resolve';
 import { lift, type DragOrigin } from './lift';
 import { readingOrder } from './fold';
-import { effectiveMode, hugs, scrolls, sizePanes } from './sizing';
+import { effectiveMode, hugs, scrolls, sizePanes, type ContentFloor } from './sizing';
 import { COLS, MIN_H, MIN_W, pxForRows, rowsForPx } from './units';
 import type { GridEnv } from './env.svelte';
 import type { AuthoredPane, BoardLayout, HeightMode, PaneSpec, PlacedPane, Rect } from './types';
@@ -59,6 +59,12 @@ export class Arrangement {
 
 	/** Card heights in px, reported by fitted panes. */
 	#measured = $state<Record<string, number>>({});
+	/** What each pane's content turned out to need, in units. */
+	#floors = $state<Record<string, ContentFloor>>({});
+	/** The pane whose label is being typed into, with the size it had when the edit opened. While this
+	    holds, that pane's floor follows the text BOTH ways but never below `base` — so a title typed too
+	    long and then shortened again leaves the pane exactly where it started. */
+	#draft = $state<{ id: string; base: ContentFloor; floor: ContentFloor } | null>(null);
 	/** Authored panes in priority order. Mutated live during a gesture; flushed on release. */
 	#panes = $state<AuthoredPane[]>([]);
 
@@ -80,9 +86,21 @@ export class Arrangement {
 		];
 	}
 
+	/** Committed floors, with the drafting pane's live one standing in for its own. */
+	readonly #effectiveFloors = $derived.by<Record<string, ContentFloor>>(() => {
+		const d = this.#draft;
+		return d ? { ...this.#floors, [d.id]: d.floor } : this.#floors;
+	});
+
 	readonly #placed = $derived.by<PlacedPane[]>(() => {
 		const placed = resolve(
-			sizePanes(this.#panes, this.#specs, this.#measured, this.#env.arranging)
+			sizePanes(
+				this.#panes,
+				this.#specs,
+				this.#measured,
+				this.#effectiveFloors,
+				this.#env.arranging
+			)
 		);
 		if (import.meta.env.DEV) assertNoOverlap(placed);
 		return placed;
@@ -143,6 +161,56 @@ export class Arrangement {
 		this.#measured = { ...this.#measured, [id]: px };
 	}
 
+	/**
+	 * Report the spans a pane's content needs. Grows only — a floor is released by a hand resize, never by
+	 * the content getting smaller, so a board never reflows behind the user's back.
+	 */
+	setFloor(id: string, w: number, h: number): void {
+		const at = this.#floors[id];
+		const next = { w: Math.max(at?.w ?? 0, w), h: Math.max(at?.h ?? 0, h) };
+		if (at && at.w === next.w && at.h === next.h) return;
+		this.#floors = { ...this.#floors, [id]: next };
+	}
+
+	/** The pane whose label is being typed into, if any. Its floor is the draft's to move, not a probe's. */
+	get drafting(): string | null {
+		return this.#draft?.id ?? null;
+	}
+
+	/** Start following `id`'s label as it is typed. `w`/`h` are the size it may not go below. */
+	startDraft(id: string, w: number, h: number): void {
+		this.#draft = { id, base: { w, h }, floor: { w, h } };
+	}
+
+	/** Back to the size the edit opened at, so the next measurement can discover it needs less. */
+	relaxDraft(): void {
+		if (this.#draft) this.#draft = { ...this.#draft, floor: this.#draft.base };
+	}
+
+	/** The size the drafting pane's content needs now, floored at what it opened with. */
+	setDraft(w: number, h: number): void {
+		const d = this.#draft;
+		if (!d) return;
+		const floor = { w: Math.max(d.base.w, w), h: Math.max(d.base.h, h) };
+		if (d.floor.w === floor.w && d.floor.h === floor.h) return;
+		this.#draft = { ...d, floor };
+	}
+
+	/** The edit is over: keep whatever it settled on, and stop following the text. */
+	endDraft(): void {
+		const d = this.#draft;
+		if (!d) return;
+		this.#draft = null;
+		this.setFloor(d.id, d.floor.w, d.floor.h);
+	}
+
+	/** Re-baseline a pane's floor on the size it was just given by hand. */
+	#releaseFloor(id: string): void {
+		if (!(id in this.#floors)) return;
+		const { [id]: _dropped, ...rest } = this.#floors;
+		this.#floors = rest;
+	}
+
 	#update(id: string, next: (pane: AuthoredPane) => AuthoredPane): void {
 		this.#panes = this.#panes.map((p) => (p.id === id ? next(p) : p));
 	}
@@ -160,6 +228,9 @@ export class Arrangement {
 
 	/** Resize a pane. On a capped pane the bottom edge sets the CEILING, not the height. */
 	resizeTo(id: string, rect: Rect): void {
+		// The gesture's own spill check is what holds the minimum while a resize is in hand, so the floor
+		// stands down and is re-measured from whatever size the pane is released at.
+		this.#releaseFloor(id);
 		const mode = this.mode(id);
 		if (mode === 'cap') {
 			const clamped = clampRect({ ...rect, h: this.authored(id).h });
@@ -232,6 +303,7 @@ export class Arrangement {
 
 	reset(): void {
 		this.#pref.value = [];
+		this.#floors = {};
 		this.#panes = this.#merge([]);
 	}
 

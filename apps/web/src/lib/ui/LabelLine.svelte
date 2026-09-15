@@ -1,9 +1,14 @@
 <script lang="ts">
-	// One card label, and the pencil that renames it in place. Inline content only, so the field inherits
-	// the type it replaces. Only the words are editable: a label's derived half sits in front of the field
-	// as ghost text, so the period or count can't be typed over.
+	// One card label, renamed by clicking the words themselves. The field IS the words: an inline
+	// `contenteditable`, so it wraps exactly where the finished label will and the pane can grow with it as it
+	// is typed. An `<input>` cannot — it scrolls its own overflow, so a title long enough to wrap left the
+	// card reporting that everything still fitted. Only the words are editable: a label's derived half sits in
+	// front of the field as ghost text, so the period or count can't be typed over.
+	//
+	// The words are the control because the pane's own minimum is measured off this content: a pencil beside
+	// them, however it was positioned, either widened the line or overflowed it, and either way a card's
+	// smallest size came to depend on whether the board was being edited.
 	import type { Snippet } from 'svelte';
-	import Pencil from '$lib/icons/Pencil.svelte';
 	import { labelGhost, labelText, type Label } from './label';
 
 	interface Props {
@@ -11,17 +16,21 @@
 		/** Absent when this label is the app's to name. Empty text hides this half, leaving what the app
 		    derives. */
 		onrename?: (text: string) => void;
-		/** What the pencil and the field announce themselves as renaming. */
+		/** What the label and the field announce themselves as renaming. */
 		what: string;
-		/** Rendered between the label and its pencil, so a tally stays part of the phrase. */
+		/** Rendered after the label, so a tally stays part of the phrase but outside what a click edits. */
 		after?: Snippet;
 		/** What this slot's two halves read with, unless the label names its own. */
 		join?: string;
+		/** This slot is one the user names, whether or not it is being edited now. An emptied label then keeps
+		    a small box in both modes: without it there is nothing left to click to get the label back, and
+		    reserving it only while editing would make the card measure wider in one mode than the other. */
+		nameable?: boolean;
 		/** This label as the app declares it — what a reset goes back to. Its words stand in the empty field,
 		    so typing them back is the undo. Passed whole, so no caller needs to know which half that is. */
 		shipped?: Label;
 	}
-	let { label, onrename, what, after, join = ' ', shipped }: Props = $props();
+	let { label, onrename, what, after, join = ' ', shipped, nameable = false }: Props = $props();
 
 	const placeholder = $derived(shipped?.text);
 
@@ -30,109 +39,143 @@
 
 	let editing = $state(false);
 	let draft = $state('');
-	let field = $state<HTMLInputElement>();
-
-	/** As wide as whatever is showing: sized from the draft alone, an emptied label clipped the placeholder
-	    telling you what it used to say. Capped at the card below, since the card cannot grow to meet it. */
-	const width = $derived(Math.max(6, (draft || placeholder || '').length + 1));
+	let field = $state<HTMLElement>();
 
 	function open(): void {
 		draft = label.text ?? '';
 		editing = true;
 	}
 
+	/** One line of plain text, whatever was typed or pasted: the words are a label, not a paragraph. */
+	const clean = (text: string) => text.replace(/\s+/g, ' ').trim();
+
 	function commit(): void {
 		if (!editing) return;
 		editing = false;
-		const next = draft.trim();
+		const next = clean(draft);
 		if (next !== (label.text ?? '')) onrename?.(next);
 	}
 
-	// Selected, not just focused: renaming usually replaces the name, and a caret at the end makes you
-	// clear it first.
+	/** Select the words rather than just focusing them: renaming usually replaces the name, and a caret at the
+	    end makes you clear it first. Focused explicitly, because placing a selection inside a `contenteditable`
+	    does not focus it — and the pane follows this edit by the field's own focus events. */
 	$effect(() => {
-		if (editing) field?.select();
+		if (!editing || !field) return;
+		field.focus();
+		const range = document.createRange();
+		range.selectNodeContents(field);
+		const selection = getSelection();
+		selection?.removeAllRanges();
+		selection?.addRange(range);
 	});
 </script>
 
 {#if editing}
 	{#if ghost}<span class="ghost">{ghost}</span>{/if}
-	<input
+	<span
 		bind:this={field}
+		bind:textContent={draft}
 		class="name"
-		type="text"
+		contenteditable="plaintext-only"
+		role="textbox"
+		tabindex="0"
 		aria-label={`Rename ${what}`}
-		{placeholder}
-		bind:value={draft}
-		style:width="min({width}ch, 100%)"
+		data-placeholder={placeholder}
 		onblur={commit}
 		onkeydown={(e) => {
-			if (e.key === 'Enter') commit();
+			if (e.key === 'Enter') {
+				// Or the browser opens a second line in a field that is one line by definition.
+				e.preventDefault();
+				commit();
+			}
 			if (e.key === 'Escape') editing = false;
 		}}
-	/>
+	></span>
 {:else}
-	{shown}{@render after?.()}{#if onrename}<button
-			type="button"
-			class="pencil"
-			aria-label={`Rename ${what}`}
+	{#if onrename}<span
+			class="editable"
+			role="button"
+			tabindex="0"
+			aria-label={`${shown} — rename ${what}`}
+			title={`Rename ${what}`}
 			onclick={open}
-		>
-			<Pencil />
-		</button>{/if}
+			onkeydown={(e) => {
+				if (e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					open();
+				}
+			}}>{shown}</span
+		>{:else if nameable}<span class="editable slot">{shown}</span
+		>{:else}{shown}{/if}{@render after?.()}
 {/if}
 
 <style>
 	/* Lifted over the edit-mode drag surface that covers the card (see `grid/Pane`), or the press meant to
 	   put a caret in a label starts moving the pane. The rest of the header stays under it, so a card can
 	   still be dragged by its title. */
-	.pencil,
+	.editable,
 	.name {
 		position: relative;
 		z-index: 3;
 	}
-	.pencil {
-		margin-inline-start: 0.35em;
-		padding: 0;
-		border: 0;
-		background: none;
-		color: var(--ink-3);
-		cursor: pointer;
+	/* An underline and a text cursor, which is as much as an editable word needs to say. Both are free: a
+	   decoration draws inside the line box and a cursor is not layout, so an editable label measures exactly
+	   as the same words do when they are not. */
+	.editable {
+		cursor: text;
+		text-decoration: underline dotted var(--ink-3);
+		text-underline-offset: 0.25em;
+		text-decoration-thickness: 1px;
+	}
+	.editable:hover,
+	.editable:focus-visible {
+		text-decoration-color: var(--ink);
+	}
+	/* An emptied label keeps a box to click, held in both modes so neither measures wider than the other.
+	   The height stays inside the line box the slot already occupies, so it costs nothing either. */
+	.editable:empty {
+		display: inline-block;
+		min-width: 4ch;
+		min-height: 1em;
 		vertical-align: baseline;
 	}
-	.pencil:hover {
-		color: var(--ink);
+	/* An underline needs a word to sit under, so an emptied label has to show the box itself or there is
+	   nothing to tell the user the slot is theirs to fill. Drawn as a tint and an inset rule, both of which
+	   paint inside the box the slot already holds — a border would have added a pixel to it. */
+	.editable:empty:not(.slot) {
+		border-radius: var(--radius-sm);
+		background: color-mix(in srgb, var(--ink-3) 12%, transparent);
+		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink-3) 35%, transparent);
+	}
+	.editable:empty:not(.slot):hover,
+	.editable:empty:not(.slot):focus-visible {
+		background: color-mix(in srgb, var(--ink-3) 20%, transparent);
+		box-shadow: inset 0 0 0 1px var(--ink-3);
+	}
+	/* The same box standing empty where the label is not this mode's to edit: reserved, never marked. */
+	.slot {
+		text-decoration: none;
+		cursor: inherit;
+	}
+	.editable:focus-visible {
+		outline: none;
 	}
 	.ghost,
-	.name::placeholder {
+	.name:empty::before {
 		color: var(--ink-3);
 		white-space: pre;
 	}
 	/* Not italic and not faded further: it stands where the words would, saying what they were. */
-	.name::placeholder {
-		opacity: 1;
+	.name:empty::before {
+		content: attr(data-placeholder);
 	}
-	/* No box and no rule, so nothing moves or restyles on the way into edit. Deliberately not `.field`,
-	   the app's form-field wrapper, which lays its contents out as a flex column.
-
-	   `min-width: 0` with the `ch` floor left to the inline width: an input's min-content width is the
-	   width it was given, and `.kpi` is sized `min-content`, so a field wide enough for a long caption
-	   widened the card and the out-of-flow underlay chart painted over the board. A percentage cap alone
-	   won't do — percentages don't apply while an ancestor is being sized intrinsically. */
+	/* Inline and unstyled, so nothing moves or restyles on the way into edit and the words wrap where they
+	   always did. Deliberately not `.field`, the app's form-field wrapper, which lays its contents out as a
+	   flex column. Nothing sets a width: the field is text, so it takes the width text takes — which is also
+	   why it can no longer widen the card the way a sized input once did. */
 	.name {
-		display: inline-block;
-		vertical-align: baseline;
 		font: inherit;
 		color: inherit;
-		min-width: 0;
-		padding: 0;
-		border: 0;
-		border-radius: 0;
-		background: none;
-	}
-	/* The selection and caret say where you are; a ring would draw the box this deliberately has not got.
-	   Focus is always deliberate: the field exists only once its pencil is pressed. */
-	.name:focus-visible {
 		outline: none;
 	}
 </style>

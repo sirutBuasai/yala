@@ -33,7 +33,10 @@
 	let { id, data, spec, editing = false }: Props = $props();
 
 	const labels = tryLabels();
-	const naming = $derived(editing && !!id && !!labels);
+	/** These labels are the user's to name, whether or not the board is being edited: it is what holds the
+	    title line open in both modes, so emptying one does not move the board when the modes are switched. */
+	const nameable = $derived(!!id && !!labels);
+	const naming = $derived(editing && nameable);
 
 	function rename(slot: Slot, text: string): void {
 		if (id && labels) labels.set(id, slot, text);
@@ -73,24 +76,27 @@
 </script>
 
 <div class="kpi">
-	<!-- A title emptied on purpose takes no room, but while editing the line stays so its pencil does. -->
-	{#if title || naming}
+	<!-- Held open by `nameable`, not by `naming`: a line that appeared only while editing made the card
+	     measure taller in one mode than the other, and the pane banked the difference. -->
+	{#if title || nameable}
 		<h2 class="serif">
 			<LabelLine
 				label={named.title}
 				what="title"
+				{nameable}
 				shipped={declared.title}
 				onrename={naming ? (t) => rename('title', t) : undefined}
 			/>
 		</h2>
 	{/if}
-	<!-- Rendered even when empty, so a captionless KPI lines up with a captioned neighbour — which is also
-	     where its pencil goes, since a caption has to be addable before there is one to click. -->
-	<p class="cap" aria-hidden={caption || naming ? undefined : 'true'}>
+	<!-- Rendered even when empty, so a captionless KPI lines up with a captioned neighbour, and so a caption
+	     is addable before there is one to click. -->
+	<p class="cap" aria-hidden={caption || nameable ? undefined : 'true'}>
 		<LabelLine
 			label={named.caption}
 			what="caption"
 			join={DOT}
+			{nameable}
 			shipped={declared.caption}
 			onrename={naming ? (t) => rename('caption', t) : undefined}
 		/>

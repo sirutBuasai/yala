@@ -2,8 +2,14 @@
 // given and scales to fill it; a list's three modes differ only in who owns the height and whether
 // that ownership has a ceiling.
 
-import { rowsForPx } from './units';
+import { COLS, rowsForPx } from './units';
 import type { AuthoredPane, HeightMode, PaneContent, PaneSpec, SizedPane } from './types';
+
+/** The spans a pane's content turned out to need, in units. 0 on an axis never measured. */
+export interface ContentFloor {
+	w: number;
+	h: number;
+}
 
 /**
  * The height mode a pane actually runs in. A `scale` pane is always `fixed`: with no content height
@@ -42,18 +48,34 @@ export function reservedRows(
 	return arranging ? authored.cap : Math.min(rows, authored.cap);
 }
 
-/** A whole board's authored panes as the rectangles the collision pass reads. */
+/**
+ * Height a content floor may raise. Only `scale`, whose height nothing else owns: a `fit` or `cap` pane
+ * already tracks its content both ways, and a `flow` pane on a set height scrolls instead of growing.
+ */
+function growsTaller(content: PaneContent): boolean {
+	return content === 'scale';
+}
+
+/** A whole board's authored panes as the rectangles the collision pass reads, each raised to the spans its
+    content turned out to need. Widening shifts a pane left off the right edge rather than overrunning it. */
 export function sizePanes(
 	authored: AuthoredPane[],
 	specs: Record<string, PaneSpec>,
 	measured: Record<string, number>,
+	floors: Record<string, ContentFloor>,
 	arranging: boolean
 ): SizedPane[] {
-	return authored.map((pane) => ({
-		id: pane.id,
-		x: pane.x,
-		y: pane.y,
-		w: pane.w,
-		h: reservedRows(pane, specs[pane.id]?.content ?? 'flow', measured[pane.id], arranging)
-	}));
+	return authored.map((pane) => {
+		const content = specs[pane.id]?.content ?? 'flow';
+		const floor = floors[pane.id];
+		const rows = reservedRows(pane, content, measured[pane.id], arranging);
+		const w = Math.min(COLS, Math.max(pane.w, floor?.w ?? 0));
+		return {
+			id: pane.id,
+			x: Math.min(COLS - w, pane.x),
+			y: pane.y,
+			w,
+			h: growsTaller(content) ? Math.max(rows, floor?.h ?? 0) : rows
+		};
+	});
 }

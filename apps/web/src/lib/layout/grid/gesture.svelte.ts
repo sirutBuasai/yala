@@ -69,6 +69,12 @@ export class PaneGesture {
 		return this.#pane();
 	}
 
+	/** True between press and release. A resize deliberately drives the pane past what fits, so the pane's
+	    content-floor probe stands down while this holds. */
+	get busy(): boolean {
+		return this.#base !== null;
+	}
+
 	/** The rectangle a resize edits. On a capped pane the vertical extent IS the ceiling. */
 	#editable(): Rect {
 		const authored = this.#arrangement.authored(this.#id);

@@ -12,7 +12,7 @@
 
 <script lang="ts">
 	// One pane on the board: the grid item, the arrange affordances, and the two measurements the pure
-	// layer cannot make for itself. It composes `Card` rather than being one, so the card stays
+	// layer cannot make for itself. It COMPOSES `Card` rather than being one, so the card stays
 	// grid-agnostic and the folded layout reuses it untouched.
 	import { tick, type Snippet } from 'svelte';
 	import Card from '$lib/ui/Card.svelte';
@@ -21,10 +21,11 @@
 	import SizeMode from '$lib/icons/SizeMode.svelte';
 	import { getArrangement, getGridEnv, getLabels } from './context';
 	import { drag, type DragParams } from './drag';
-	import { spills } from './spill';
+	import { overrun, spills } from './spill';
 	import { foldSpan } from './fold';
 	import { EDGES, type Edge } from './resize';
 	import { PaneGesture } from './gesture.svelte';
+	import { UNIT } from './units';
 
 	interface Props {
 		/** Pane id — a key of the board's layout. */
@@ -65,8 +66,8 @@
 	let cardEl = $state<HTMLElement>();
 	let bodyEl = $state<HTMLElement>();
 
-	// Fitted panes report their card's height, never the cell's, so the pure layer can turn it into rows.
-	// Only while unfolded: a folded pane hugs its content and reserves nothing.
+	// Fitted panes report their CARD's height — never the cell's — so the pure layer can turn it into
+	// rows. Only while unfolded: a folded pane hugs its content and reserves nothing.
 	$effect(() => {
 		const el = cardEl;
 		if (!hug || !el) return;
@@ -84,6 +85,73 @@
 		spills: () => !!cardEl && spills(cardEl, bodyEl),
 		settle: tick
 	});
+
+	/** The units this pane's content wants, given the size it currently has. */
+	function wanted(el: HTMLElement): { w: number; h: number } {
+		const over = overrun(el, bodyEl);
+		return {
+			w: placed.w + Math.ceil(over.x / UNIT),
+			h: placed.h + Math.ceil(over.y / UNIT)
+		};
+	}
+
+	// A pane grows to fit content it was not sized for — a renamed title, a longer figure, a wider column.
+	// The floor is the size the content needs rather than the deficit, so it is measured against what the
+	// pane currently has and one pass converges. Edit-mode affordances are deliberately free of layout (see
+	// `ui/LabelLine`), so this measures the same in either mode and switching modes moves nothing.
+	//
+	// Two observers, because they see different things: a resize catches the box moving (this pane, the
+	// window, a header that wrapped), a mutation catches the content changing inside a box that did not.
+	// Both are coalesced to one measurement per frame, since either can fire repeatedly for one change.
+	$effect(() => {
+		const el = cardEl;
+		if (env.folded || !el) return;
+
+		let queued = 0;
+		const measure = () => {
+			queued = 0;
+			// A label being typed into drives its own pane from `oninput` below, which is the only path that
+			// can also make it smaller again.
+			if (gesture.busy || arrangement.drafting === id) return;
+			const { w, h } = wanted(el);
+			arrangement.setFloor(id, w, h);
+		};
+		const schedule = () => {
+			queued ||= requestAnimationFrame(measure);
+		};
+
+		schedule();
+		const resize = new ResizeObserver(schedule);
+		resize.observe(el);
+		if (bodyEl) resize.observe(bodyEl);
+		const mutation = new MutationObserver(schedule);
+		mutation.observe(el, { subtree: true, childList: true, characterData: true });
+
+		return () => {
+			if (queued) cancelAnimationFrame(queued);
+			resize.disconnect();
+			mutation.disconnect();
+		};
+	});
+
+	/** The field a label edit opens (see `ui/LabelLine`), whose own events say when one is in progress. */
+	const isLabelField = (t: EventTarget | null) =>
+		t instanceof HTMLElement && t.isContentEditable && t.classList.contains('name');
+
+	/**
+	 * Follow a label as it is typed: the pane grows the moment the words stop fitting and gives the room
+	 * back as they are deleted, down to the size it had when the edit opened. Dropping to that size first is
+	 * what makes shrinking possible at all — a pane measured at its grown size reports no overflow and would
+	 * never learn it could be smaller.
+	 */
+	async function trackLabel(): Promise<void> {
+		const el = cardEl;
+		if (!el) return;
+		arrangement.relaxDraft();
+		await tick();
+		const { w, h } = wanted(el);
+		arrangement.setDraft(w, h);
+	}
 
 	/** One edge's resize wiring. Shared by the strips and by anything the view lays over them. */
 	function resizeOn(edge: Edge): DragParams {
@@ -122,6 +190,9 @@
 	style:grid-row={env.folded ? null : `${placed.y + 1} / span ${placed.h}`}
 	style:order={env.folded ? arrangement.order[id] : null}
 	style:--cap-h={capped ? `${arrangement.capPx(id)}px` : null}
+	onfocusin={(e) => isLabelField(e.target) && arrangement.startDraft(id, placed.w, placed.h)}
+	oninput={(e) => isLabelField(e.target) && void trackLabel()}
+	onfocusout={(e) => isLabelField(e.target) && void trackLabel().then(() => arrangement.endDraft())}
 >
 	<Card
 		bind:card={cardEl}
@@ -130,6 +201,7 @@
 		{count}
 		caption={shownCaption}
 		frozen={arranging}
+		nameable={!!title}
 		rename={arranging && title ? (slot, text) => labels.set(id, slot, text) : undefined}
 		shipped={{ title, caption }}
 		{actions}

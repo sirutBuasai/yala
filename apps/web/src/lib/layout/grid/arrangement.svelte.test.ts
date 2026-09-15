@@ -369,3 +369,112 @@ describe('folding', () => {
 		expect(env.arranging).toBe(false);
 	});
 });
+
+describe('content floors', () => {
+	it('grows a pane to the spans its content needs', () => {
+		const { arrangement: b } = arrangement();
+		b.setFloor('top', 30, 9);
+		expect(b.placed('top')).toMatchObject({ w: 30, h: 9 });
+	});
+
+	it('leaves a pane already big enough alone', () => {
+		const { arrangement: b } = arrangement();
+		b.setFloor('tall', 20, 8);
+		expect(b.placed('tall')).toMatchObject({ w: 24, h: 12 });
+	});
+
+	it('keeps the room it took when the content shrinks back', () => {
+		const { arrangement: b } = arrangement();
+		b.setFloor('top', 30, 9);
+		b.setFloor('top', 24, 6);
+		expect(b.placed('top')).toMatchObject({ w: 30, h: 9 });
+	});
+
+	it('re-baselines on a resize, which is the user overruling the floor', () => {
+		const { arrangement: b } = arrangement();
+		b.setFloor('top', 30, 9);
+		b.resizeTo('top', { x: 24, y: 0, w: 24, h: 6 });
+		expect(b.placed('top')).toMatchObject({ w: 24, h: 6 });
+	});
+
+	it('leaves a fitted list to its own measurement, which tracks content both ways', () => {
+		const { arrangement: b } = arrangement();
+		b.setMeasured('bottom', rows(7));
+		b.setFloor('bottom', 24, 40);
+		expect(b.placed('bottom').h).toBe(7);
+	});
+
+	it('shifts a widened pane off the right edge rather than overrunning the board', () => {
+		const { arrangement: b } = arrangement();
+		b.setFloor('top', 30, 6);
+		const top = b.placed('top');
+		expect(top.x + top.w).toBeLessThanOrEqual(48);
+	});
+
+	it('drops every floor on reset', () => {
+		const { arrangement: b } = arrangement();
+		b.setFloor('top', 30, 9);
+		b.reset();
+		expect(b.placed('top')).toMatchObject({ w: 24, h: 6 });
+	});
+});
+
+// Typing into a label is the one edit whose floor moves both ways: a title made too long and then trimmed
+// again has to leave the pane where it started.
+describe('a label being typed into', () => {
+	it('grows the pane as the words stop fitting', () => {
+		const { arrangement: b } = arrangement();
+		b.startDraft('top', 24, 6);
+		b.setDraft(24, 9);
+		expect(b.placed('top').h).toBe(9);
+	});
+
+	it('gives the room back as they are deleted', () => {
+		const { arrangement: b } = arrangement();
+		b.startDraft('top', 24, 6);
+		b.setDraft(24, 9);
+		b.relaxDraft();
+		expect(b.placed('top').h).toBe(6);
+	});
+
+	it('never goes below the size the edit opened at', () => {
+		const { arrangement: b } = arrangement();
+		b.startDraft('top', 24, 6);
+		b.setDraft(12, 3);
+		expect(b.placed('top')).toMatchObject({ w: 24, h: 6 });
+	});
+
+	it('keeps what the edit settled on once it ends', () => {
+		const { arrangement: b } = arrangement();
+		b.startDraft('top', 24, 6);
+		b.setDraft(24, 9);
+		b.endDraft();
+		expect(b.drafting).toBeNull();
+		expect(b.placed('top').h).toBe(9);
+	});
+
+	it('stops following the words after that, so a later trim keeps the room', () => {
+		const { arrangement: b } = arrangement();
+		b.startDraft('top', 24, 6);
+		b.setDraft(24, 9);
+		b.endDraft();
+		b.startDraft('top', 24, 9);
+		b.relaxDraft();
+		expect(b.placed('top').h).toBe(9);
+	});
+
+	it('names the pane it is following, so a probe leaves that one alone', () => {
+		const { arrangement: b } = arrangement();
+		expect(b.drafting).toBeNull();
+		b.startDraft('top', 24, 6);
+		expect(b.drafting).toBe('top');
+	});
+
+	it('leaves every other pane to its own committed floor', () => {
+		const { arrangement: b } = arrangement();
+		b.setFloor('tall', 24, 14);
+		b.startDraft('top', 24, 6);
+		b.setDraft(24, 9);
+		expect(b.placed('tall').h).toBe(14);
+	});
+});
