@@ -1,0 +1,50 @@
+; Logged balances, which is the only thing that gives the ledger a net-worth domain: each `balance`
+; date becomes a snapshot, and every account is valued at those dates whether or not it is asserted
+; here. Cards are left out for that reason — their balances come from the spending above.
+;
+; `pad` rather than hand-computed figures: beancount inserts whatever adjustment makes the following
+; assertion true, so these numbers stay whatever the fixture says they are as the transactions above
+; change. That is also the shape the app's own balance sink writes.
+;
+; Four dates across both years, so the year page has a series to chart and the all-time page has more
+; than one year to compare.
+
+2025-09-01 pad Assets:Cash:BankA Equity:Adjustments:BankA
+2025-09-02 balance Assets:Cash:BankA 8400.00 USD
+
+2025-09-01 pad Assets:Cash:Savings Equity:Adjustments:Savings
+2025-09-02 balance Assets:Cash:Savings 21000.00 USD
+
+2025-09-01 pad Assets:Investments:TaxAdvantaged:Employer401k Equity:Adjustments:Investments:TaxAdvantaged:Employer401k
+2025-09-02 balance Assets:Investments:TaxAdvantaged:Employer401k 46000.00 USD
+
+2025-12-31 pad Assets:Cash:BankA Equity:Adjustments:BankA
+2026-01-01 balance Assets:Cash:BankA 9100.00 USD
+
+2025-12-31 pad Assets:Cash:Savings Equity:Adjustments:Savings
+2026-01-01 balance Assets:Cash:Savings 23500.00 USD
+
+2025-12-31 pad Assets:Investments:TaxAdvantaged:Employer401k Equity:Adjustments:Investments:TaxAdvantaged:Employer401k
+2026-01-01 balance Assets:Investments:TaxAdvantaged:Employer401k 52750.00 USD
+
+2026-03-31 pad Assets:Cash:BankA Equity:Adjustments:BankA
+2026-04-01 balance Assets:Cash:BankA 9850.00 USD
+
+2026-03-31 pad Assets:Cash:Savings Equity:Adjustments:Savings
+2026-04-01 balance Assets:Cash:Savings 26200.00 USD
+
+2026-03-31 pad Assets:Investments:TaxAdvantaged:Employer401k Equity:Adjustments:Investments:TaxAdvantaged:Employer401k
+2026-04-01 balance Assets:Investments:TaxAdvantaged:Employer401k 58400.00 USD
+
+2026-06-30 pad Assets:Cash:BankA Equity:Adjustments:BankA
+2026-07-01 balance Assets:Cash:BankA 10400.00 USD
+
+2026-06-30 pad Assets:Cash:Savings Equity:Adjustments:Savings
+2026-07-01 balance Assets:Cash:Savings 29000.00 USD
+
+2026-06-30 pad Assets:Investments:TaxAdvantaged:Employer401k Equity:Adjustments:Investments:TaxAdvantaged:Employer401k
+2026-07-01 balance Assets:Investments:TaxAdvantaged:Employer401k 61900.00 USD
+
+; One tax-advantaged account asserted only later, so an account joining the picture mid-series is covered.
+2026-06-30 pad Assets:Investments:TaxAdvantaged:Broker1HSA Equity:Adjustments:Investments:TaxAdvantaged:Broker1HSA
+2026-07-01 balance Assets:Investments:TaxAdvantaged:Broker1HSA 4300.00 USD

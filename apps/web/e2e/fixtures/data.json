@@ -1,6 +1,6 @@
 {
 	"schema_version": 1,
-	"generated_at": "2026-09-15T17:05:03Z",
+	"generated_at": "2026-09-15T19:39:24Z",
 	"currency": "USD",
 	"meta": {
 		"years": [2025, 2026],
@@ -436,7 +436,7 @@
 		"domains": {
 			"spending": true,
 			"income": true,
-			"networth": false
+			"networth": true
 		}
 	},
 	"overview": {
@@ -633,7 +633,7 @@
 					"category": "Takeouts",
 					"source": "Liabilities:CC:CardA",
 					"pending": false,
-					"locator": "line:spending/2025.beancount:3",
+					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2025.beancount:3",
 					"bill": null
 				},
 				{
@@ -643,7 +643,7 @@
 					"category": "Grocery",
 					"source": "Liabilities:CC:CardA",
 					"pending": false,
-					"locator": "line:spending/2025.beancount:8",
+					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2025.beancount:8",
 					"bill": null
 				}
 			],
@@ -663,7 +663,7 @@
 					},
 					"net": 2300.0,
 					"take_home": 1550.0,
-					"locator": "line:income/2025.beancount:3"
+					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/income/2025.beancount:3"
 				}
 			],
 			"transfers": []
@@ -685,7 +685,7 @@
 					"category": "Takeouts",
 					"source": "Liabilities:CC:CardA",
 					"pending": true,
-					"locator": "line:spending/2025.beancount:12",
+					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2025.beancount:12",
 					"bill": null
 				}
 			],
@@ -713,7 +713,7 @@
 					"category": "Subscription",
 					"source": "Liabilities:CC:CardB",
 					"pending": false,
-					"locator": "line:spending/2026.beancount:3",
+					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2026.beancount:3",
 					"bill": null
 				},
 				{
@@ -723,7 +723,7 @@
 					"category": "Takeouts",
 					"source": "Liabilities:CC:CardA",
 					"pending": false,
-					"locator": "line:spending/2026.beancount:8",
+					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2026.beancount:8",
 					"bill": null
 				}
 			],
@@ -743,7 +743,7 @@
 					},
 					"net": 4750.0,
 					"take_home": 3000.0,
-					"locator": "line:income/2026.beancount:3"
+					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/income/2026.beancount:3"
 				}
 			],
 			"transfers": []
@@ -788,7 +788,7 @@
 				},
 				"net": 4750.0,
 				"take_home": 3000.0,
-				"locator": "line:income/2026.beancount:3"
+				"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/income/2026.beancount:3"
 			},
 			{
 				"date": "2025-08-15",
@@ -805,14 +805,90 @@
 				},
 				"net": 2300.0,
 				"take_home": 1550.0,
-				"locator": "line:income/2025.beancount:3"
+				"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/income/2025.beancount:3"
 			}
 		]
 	},
 	"networth": {
-		"current": null,
-		"series": [],
+		"current": {
+			"date": "2026-09-15",
+			"assets": 110150.0,
+			"liabilities": 183.15,
+			"net_worth": 109966.85,
+			"breakdown": {
+				"Liquid": 43950.0,
+				"Taxable": 0.0,
+				"Tax-advantaged": 66200.0
+			}
+		},
+		"series": [
+			{
+				"date": "2025-09-02",
+				"assets": 77100.0,
+				"liabilities": 68.72,
+				"net_worth": 77031.28,
+				"breakdown": {
+					"Liquid": 30950.0,
+					"Taxable": 0.0,
+					"Tax-advantaged": 46150.0
+				}
+			},
+			{
+				"date": "2026-01-01",
+				"assets": 87050.0,
+				"liabilities": 75.22,
+				"net_worth": 86974.78,
+				"breakdown": {
+					"Liquid": 34150.0,
+					"Taxable": 0.0,
+					"Tax-advantaged": 52900.0
+				}
+			},
+			{
+				"date": "2026-04-01",
+				"assets": 99300.0,
+				"liabilities": 183.15,
+				"net_worth": 99116.85,
+				"breakdown": {
+					"Liquid": 40600.0,
+					"Taxable": 0.0,
+					"Tax-advantaged": 58700.0
+				}
+			},
+			{
+				"date": "2026-07-01",
+				"assets": 110150.0,
+				"liabilities": 183.15,
+				"net_worth": 109966.85,
+				"breakdown": {
+					"Liquid": 43950.0,
+					"Taxable": 0.0,
+					"Tax-advantaged": 66200.0
+				}
+			}
+		],
 		"accounts": [
+			{
+				"account": "Assets:Investments:TaxAdvantaged:Employer401k",
+				"label": "Employer 401k",
+				"group": "investment",
+				"bucket": "Tax-advantaged",
+				"value": 61900.0
+			},
+			{
+				"account": "Assets:Cash:Savings",
+				"label": "Savings",
+				"group": "cash",
+				"bucket": "Liquid",
+				"value": 29000.0
+			},
+			{
+				"account": "Assets:Cash:BankA",
+				"label": "Bank A",
+				"group": "cash",
+				"bucket": "Liquid",
+				"value": 10400.0
+			},
 			{
 				"account": "Assets:Cash:BankB",
 				"label": "Bank B",
@@ -821,36 +897,15 @@
 				"value": 4550.0
 			},
 			{
-				"account": "Assets:Investments:TaxAdvantaged:Employer401k",
-				"label": "Employer 401k",
-				"group": "investment",
-				"bucket": "Tax-advantaged",
-				"value": 2200.0
-			},
-			{
 				"account": "Assets:Investments:TaxAdvantaged:Broker1HSA",
 				"label": "Broker 1 HSA",
 				"group": "investment",
 				"bucket": "Tax-advantaged",
-				"value": 300.0
-			},
-			{
-				"account": "Assets:Cash:BankA",
-				"label": "Bank A",
-				"group": "cash",
-				"bucket": "Liquid",
-				"value": 0.0
+				"value": 4300.0
 			},
 			{
 				"account": "Assets:Cash:Passthrough",
 				"label": "Passthrough",
-				"group": "cash",
-				"bucket": "Liquid",
-				"value": 0.0
-			},
-			{
-				"account": "Assets:Cash:Savings",
-				"label": "Savings",
 				"group": "cash",
 				"bucket": "Liquid",
 				"value": 0.0
@@ -884,7 +939,28 @@
 				"value": -99.95
 			}
 		],
-		"adjustments": []
+		"adjustments": [
+			{
+				"account": "Equity:Adjustments:BankA",
+				"label": "BankA",
+				"value": -10400.0
+			},
+			{
+				"account": "Equity:Adjustments:Investments:TaxAdvantaged:Broker1HSA",
+				"label": "Investments:TaxAdvantaged:Broker1HSA",
+				"value": -4000.0
+			},
+			{
+				"account": "Equity:Adjustments:Investments:TaxAdvantaged:Employer401k",
+				"label": "Investments:TaxAdvantaged:Employer401k",
+				"value": -59700.0
+			},
+			{
+				"account": "Equity:Adjustments:Savings",
+				"label": "Savings",
+				"value": -29000.0
+			}
+		]
 	},
 	"settings": {
 		"swr": 4.0,

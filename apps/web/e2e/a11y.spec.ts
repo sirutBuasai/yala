@@ -4,7 +4,7 @@
 
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { openApp, settle, showTab, TABS } from './app';
+import { openApp, RANGES, settle, showTab, TABS } from './app';
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
@@ -21,11 +21,14 @@ async function violations(page: Page) {
 test.beforeEach(async ({ page }) => openApp(page));
 
 for (const tab of TABS) {
-	test(`${tab} has no accessibility violations`, async ({ page }) => {
-		await showTab(page, tab);
-		const found = await violations(page);
-		expect(found, JSON.stringify(found, null, 2)).toEqual([]);
-	});
+	for (const range of RANGES[tab] ?? [undefined]) {
+		const board = range ? `${tab} · ${range}` : tab;
+		test(`${board} has no accessibility violations`, async ({ page }) => {
+			await showTab(page, tab, range);
+			const found = await violations(page);
+			expect(found, JSON.stringify(found, null, 2)).toEqual([]);
+		});
+	}
 }
 
 test('the light theme has no accessibility violations', async ({ page }) => {

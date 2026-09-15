@@ -1,0 +1,7 @@
+; The fixture ledger plus logged balances, which is what gives it a net-worth domain. A ledger of its
+; own because the API tests need `ledger/` to start with none: several log one balance and assert it is
+; the only snapshot. Everything but the balances is included from there rather than copied.
+include "../ledger/accounts.beancount"
+include "../ledger/spending.beancount"
+include "../ledger/income.beancount"
+include "balances.beancount"

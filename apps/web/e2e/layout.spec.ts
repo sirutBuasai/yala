@@ -1,19 +1,22 @@
 // Nothing a card holds may paint outside it, and no label may be cut off, at any width the app folds to.
 
 import { test } from '@playwright/test';
-import { audit, expectClean, openApp, setContentWidth, showTab, TABS, WIDTHS } from './app';
+import { audit, expectClean, openApp, RANGES, setContentWidth, showTab, TABS, WIDTHS } from './app';
 
 test.beforeEach(async ({ page }) => openApp(page));
 
 for (const tab of TABS) {
-	test(`${tab} contains its content at every width`, async ({ page }) => {
-		await showTab(page, tab);
-		for (const width of WIDTHS) {
-			await setContentWidth(page, width);
-			expectClean(`${tab} at ${width}px`, await audit(page));
-		}
-		await setContentWidth(page, null);
-	});
+	for (const range of RANGES[tab] ?? [undefined]) {
+		const board = range ? `${tab} · ${range}` : tab;
+		test(`${board} contains its content at every width`, async ({ page }) => {
+			await showTab(page, tab, range);
+			for (const width of WIDTHS) {
+				await setContentWidth(page, width);
+				expectClean(`${board} at ${width}px`, await audit(page));
+			}
+			await setContentWidth(page, null);
+		});
+	}
 }
 
 test('the calendar keeps one cell per weekday when it drops the week gutter', async ({ page }) => {

@@ -9,10 +9,11 @@ import { auditPage, type Audit } from './audit';
  * Built from the ledger fixture, so the suite runs anywhere and never reads the private ledger.
  * Regenerate with:
  *
- *     YALA_LEDGER_DIR=apps/api/tests/fixtures/ledger \
+ *     YALA_LEDGER_DIR=apps/api/tests/fixtures/ledger-networth \
  *       PYTHONPATH=apps/api/src python -m yala.builder apps/web/e2e/fixtures/data.json
  *
- * That fixture asserts no balances, so `domains.networth` is false and the Net Worth board renders empty.
+ * `ledger-networth` is the shared fixture plus logged balances; see its own main.beancount for why the
+ * balances cannot live in `ledger/`.
  */
 const SNAPSHOT = readFileSync(
 	fileURLToPath(new URL('./fixtures/data.json', import.meta.url)),
@@ -21,6 +22,12 @@ const SNAPSHOT = readFileSync(
 
 export const TABS = ['Home', 'Activity', 'Net Worth', 'Manage'] as const;
 export type Tab = (typeof TABS)[number];
+
+/** Each range is a board of its own, so a board is only covered once every range has been. */
+export const RANGES: Partial<Record<Tab, readonly string[]>> = {
+	Activity: ['Month', 'Year', 'All time'],
+	'Net Worth': ['Year', 'All time']
+};
 
 /** Content widths worth checking: either side of both fold thresholds, and the phone floor. */
 export const WIDTHS = [320, 390, 480, 700, 960, 1000, 1200, 1392] as const;
@@ -42,9 +49,13 @@ export async function openApp(page: Page): Promise<void> {
 	await expect(page.getByRole('tab', { name: 'Home' })).toBeVisible();
 }
 
-export async function showTab(page: Page, tab: Tab): Promise<void> {
+export async function showTab(page: Page, tab: Tab, range?: string): Promise<void> {
 	await page.getByRole('tab', { name: tab, exact: true }).click();
 	await settle(page);
+	if (range) {
+		await page.getByRole('tab', { name: range, exact: true }).click();
+		await settle(page);
+	}
 }
 
 /** Let the pane measurements, which run on rAF and a ResizeObserver, come to rest. */
