@@ -1,8 +1,9 @@
 // The board under abuse: random gestures and pathological labels, auditing after every one.
 
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import {
 	audit,
+	dragBy,
 	doGesture,
 	expectClean,
 	GESTURES,
@@ -113,4 +114,76 @@ test('merging and splitting a KPI card returns it to exactly its former size', a
 
 	expect(await board()).toBe(before);
 	expectClean('after three merge/split cycles', await audit(page));
+});
+
+// A merged card's sections share one rectangle, so every limit that holds for a card has to hold for a
+// section of one: the room a section is handed is its weighted share, which can be less than its content.
+test.describe("a merged card's sections", () => {
+	/** Home's KPI strip: three sections sharing one row, the shape where they compete for width. */
+	async function strip(page: Page) {
+		await showTab(page, 'Home');
+		await startArranging(page);
+		const cell = page.locator('.cell:has(.sections)').first();
+		await expect(cell.locator('.section')).toHaveCount(3);
+		return cell;
+	}
+
+	const spans = (page: Page) =>
+		page.evaluate(
+			() =>
+				JSON.parse(localStorage.getItem('yala-board-home-2') ?? '[]').find(
+					(p: { id: string }) => p.id === 'income'
+				)?.w as number
+		);
+
+	test('grow the card to hold a long title, and stop it at what the card can hold', async ({
+		page
+	}) => {
+		const cell = await strip(page);
+		const before = await spans(page);
+
+		await cell.locator('.editable[aria-label*="rename title"]').nth(1).click();
+		await page.locator('[aria-label="Rename title"]').pressSequentially(LONG_WORDS);
+		await page.keyboard.press('Enter');
+		await settle(page, 24);
+
+		expect(await spans(page)).toBeGreaterThan(before);
+		// Shorter than asked for: the card ran out of grid before the words ran out.
+		const shown = await cell.locator('.kpi h2').nth(1).innerText();
+		expect(shown.length).toBeLessThan(LONG_WORDS.length);
+		expectClean('after a long title in a merged section', await audit(page));
+	});
+
+	test('refuse a resize that would squeeze a section rather than clip it', async ({ page }) => {
+		const cell = await strip(page);
+		await cell.locator('.editable[aria-label*="rename title"]').nth(1).click();
+		await page.locator('[aria-label="Rename title"]').pressSequentially(LONG_WORDS);
+		await page.keyboard.press('Enter');
+		await settle(page, 24);
+
+		// The card is now as narrow as its widest section allows, so there is nothing left to give up.
+		const grown = await spans(page);
+		await dragBy(cell.locator('.handle.e'), -700, 0);
+		expect(await spans(page)).toBe(grown);
+		expectClean('after a refused resize', await audit(page));
+	});
+
+	test('carry a long title through a split and back through a merge', async ({ page }) => {
+		const cell = await strip(page);
+		await cell.locator('.editable[aria-label*="rename title"]').nth(1).click();
+		await page.locator('[aria-label="Rename title"]').pressSequentially(LONG_WORDS);
+		await page.keyboard.press('Enter');
+		await settle(page, 24);
+		const title = await cell.locator('.kpi h2').nth(1).innerText();
+
+		await page.locator('.cut').first().click();
+		await settle(page, 24);
+		expectClean('after splitting a section carrying a long title', await audit(page));
+
+		// A merge shares the inherited width out by weight, so a section can be handed less than it holds.
+		await page.locator('.join').first().click();
+		await settle(page, 28);
+		expectClean('after merging one back in', await audit(page));
+		expect(await page.locator('.kpi h2').nth(1).innerText()).toBe(title);
+	});
 });
