@@ -370,50 +370,56 @@ describe('folding', () => {
 	});
 });
 
-describe('content floors', () => {
-	it('grows a pane to the spans its content needs', () => {
+describe('growing a pane to its content', () => {
+	it('gives it the spans its content needs', () => {
 		const { arrangement: b } = arrangement();
-		b.setFloor('top', 30, 9);
+		b.grow('top', 30, 9);
 		expect(b.placed('top')).toMatchObject({ w: 30, h: 9 });
 	});
 
 	it('leaves a pane already big enough alone', () => {
 		const { arrangement: b } = arrangement();
-		b.setFloor('tall', 20, 8);
+		b.grow('tall', 20, 8);
 		expect(b.placed('tall')).toMatchObject({ w: 24, h: 12 });
 	});
 
 	it('keeps the room it took when the content shrinks back', () => {
 		const { arrangement: b } = arrangement();
-		b.setFloor('top', 30, 9);
-		b.setFloor('top', 24, 6);
+		b.grow('top', 30, 9);
+		b.grow('top', 24, 6);
 		expect(b.placed('top')).toMatchObject({ w: 30, h: 9 });
 	});
 
-	it('re-baselines on a resize, which is the user overruling the floor', () => {
+	it('gives the room back when the user resizes it away', () => {
 		const { arrangement: b } = arrangement();
-		b.setFloor('top', 30, 9);
+		b.grow('top', 30, 9);
 		b.resizeTo('top', { x: 24, y: 0, w: 24, h: 6 });
 		expect(b.placed('top')).toMatchObject({ w: 24, h: 6 });
+	});
+
+	it('writes it to the pane itself, so a gesture starts from the size on screen', () => {
+		const { arrangement: b } = arrangement();
+		b.grow('top', 30, 9);
+		expect(b.authored('top')).toMatchObject({ w: 30, h: 9 });
 	});
 
 	it('leaves a fitted list to its own measurement, which tracks content both ways', () => {
 		const { arrangement: b } = arrangement();
 		b.setMeasured('bottom', rows(7));
-		b.setFloor('bottom', 24, 40);
+		b.grow('bottom', 24, 40);
 		expect(b.placed('bottom').h).toBe(7);
 	});
 
 	it('shifts a widened pane off the right edge rather than overrunning the board', () => {
 		const { arrangement: b } = arrangement();
-		b.setFloor('top', 30, 6);
+		b.grow('top', 30, 6);
 		const top = b.placed('top');
 		expect(top.x + top.w).toBeLessThanOrEqual(48);
 	});
 
-	it('drops every floor on reset', () => {
+	it('drops the room it took on reset', () => {
 		const { arrangement: b } = arrangement();
-		b.setFloor('top', 30, 9);
+		b.grow('top', 30, 9);
 		b.reset();
 		expect(b.placed('top')).toMatchObject({ w: 24, h: 6 });
 	});
@@ -472,7 +478,7 @@ describe('a label being typed into', () => {
 
 	it('leaves every other pane to its own committed floor', () => {
 		const { arrangement: b } = arrangement();
-		b.setFloor('tall', 24, 14);
+		b.grow('tall', 24, 14);
 		b.startDraft('top', 24, 6);
 		b.setDraft(24, 9);
 		expect(b.placed('tall').h).toBe(14);

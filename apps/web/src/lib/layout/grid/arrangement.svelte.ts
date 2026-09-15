@@ -59,11 +59,10 @@ export class Arrangement {
 
 	/** Card heights in px, reported by fitted panes. */
 	#measured = $state<Record<string, number>>({});
-	/** What each pane's content turned out to need, in units. */
-	#floors = $state<Record<string, ContentFloor>>({});
 	/** The pane whose label is being typed into, with the size it had when the edit opened. While this
 	    holds, that pane's floor follows the text BOTH ways but never below `base` — so a title typed too
-	    long and then shortened again leaves the pane exactly where it started. */
+	    long and then shortened again leaves the pane exactly where it started. Only an open edit is
+	    provisional like this; growth that has settled is written to the pane itself. */
 	#draft = $state<{ id: string; base: ContentFloor; floor: ContentFloor } | null>(null);
 	/** Authored panes in priority order. Mutated live during a gesture; flushed on release. */
 	#panes = $state<AuthoredPane[]>([]);
@@ -86,10 +85,10 @@ export class Arrangement {
 		];
 	}
 
-	/** Committed floors, with the drafting pane's live one standing in for its own. */
+	/** The only floor the resolver is given: the size an open label edit is holding its pane at. */
 	readonly #effectiveFloors = $derived.by<Record<string, ContentFloor>>(() => {
 		const d = this.#draft;
-		return d ? { ...this.#floors, [d.id]: d.floor } : this.#floors;
+		return d ? { [d.id]: d.floor } : {};
 	});
 
 	readonly #placed = $derived.by<PlacedPane[]>(() => {
@@ -162,14 +161,19 @@ export class Arrangement {
 	}
 
 	/**
-	 * Report the spans a pane's content needs. Grows only — a floor is released by a hand resize, never by
-	 * the content getting smaller, so a board never reflows behind the user's back.
+	 * Give `id` the room its content turned out to need. Written to the pane itself rather than held beside
+	 * it: everything else — a resize gesture, a merge, a split — reads the authored rectangle, and a pane
+	 * that rendered bigger than it was authored snapped back to the smaller size the moment one of them
+	 * touched it. Grows only, so the room is given up by hand and never behind the user's back.
 	 */
-	setFloor(id: string, w: number, h: number): void {
-		const at = this.#floors[id];
-		const next = { w: Math.max(at?.w ?? 0, w), h: Math.max(at?.h ?? 0, h) };
-		if (at && at.w === next.w && at.h === next.h) return;
-		this.#floors = { ...this.#floors, [id]: next };
+	grow(id: string, w: number, h: number): void {
+		const at = this.authored(id);
+		if (w <= at.w && h <= at.h) return;
+		this.#update(id, (p) => ({
+			...p,
+			...clampRect({ ...p, w: Math.max(p.w, w), h: Math.max(p.h, h) })
+		}));
+		this.commit();
 	}
 
 	/** The pane whose label is being typed into, if any. Its floor is the draft's to move, not a probe's. */
@@ -201,14 +205,7 @@ export class Arrangement {
 		const d = this.#draft;
 		if (!d) return;
 		this.#draft = null;
-		this.setFloor(d.id, d.floor.w, d.floor.h);
-	}
-
-	/** Re-baseline a pane's floor on the size it was just given by hand. */
-	#releaseFloor(id: string): void {
-		if (!(id in this.#floors)) return;
-		const { [id]: _dropped, ...rest } = this.#floors;
-		this.#floors = rest;
+		this.grow(d.id, d.floor.w, d.floor.h);
 	}
 
 	#update(id: string, next: (pane: AuthoredPane) => AuthoredPane): void {
@@ -228,9 +225,6 @@ export class Arrangement {
 
 	/** Resize a pane. On a capped pane the bottom edge sets the CEILING, not the height. */
 	resizeTo(id: string, rect: Rect): void {
-		// The gesture's own spill check is what holds the minimum while a resize is in hand, so the floor
-		// stands down and is re-measured from whatever size the pane is released at.
-		this.#releaseFloor(id);
 		const mode = this.mode(id);
 		if (mode === 'cap') {
 			const clamped = clampRect({ ...rect, h: this.authored(id).h });
@@ -303,7 +297,7 @@ export class Arrangement {
 
 	reset(): void {
 		this.#pref.value = [];
-		this.#floors = {};
+		this.#draft = null;
 		this.#panes = this.#merge([]);
 	}
 

@@ -76,7 +76,7 @@
 				<!-- One level whatever the density: every card is a peer on its board, and picking the
 				     heading level by how the card LOOKS puts two neighbours at different depths. -->
 				{#if heading || nameable}
-					<h2 class:serif={density !== 'panel'}>
+					<h2 class:serif={density !== 'panel'} data-label-line>
 						<LabelLine
 							label={title ?? {}}
 							what="title"
@@ -90,7 +90,7 @@
 					</h2>
 				{/if}
 				{#if sub || nameable}
-					<p class="cap">
+					<p class="cap" data-label-line>
 						<LabelLine
 							label={caption ?? {}}
 							what="caption"
@@ -130,6 +130,12 @@
 	}
 	.titles {
 		min-width: 0;
+	}
+	h2 {
+		--label-lines: var(--label-lines-title);
+	}
+	.cap {
+		--label-lines: var(--label-lines-caption);
 	}
 	/* Actions wrap under the title rather than squeezing it in a narrow pane. */
 	.actions {

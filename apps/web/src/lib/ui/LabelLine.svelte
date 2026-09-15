@@ -9,7 +9,7 @@
 	// them, however it was positioned, either widened the line or overflowed it, and either way a card's
 	// smallest size came to depend on whether the board was being edited.
 	import type { Snippet } from 'svelte';
-	import { labelGhost, labelText, type Label } from './label';
+	import { LABEL_MAX, labelGhost, labelText, type Label } from './label';
 
 	interface Props {
 		label: Label;
@@ -49,6 +49,12 @@
 	/** One line of plain text, whatever was typed or pasted: the words are a label, not a paragraph. */
 	const clean = (text: string) => text.replace(/\s+/g, ' ').trim();
 
+	/** A backstop against pathological input, not the limit a user meets: how long a label may be is the
+	    card's business, and the pane puts back words its card cannot hold (see `grid/Pane`). */
+	function onBeforeInput(e: InputEvent): void {
+		if (e.inputType.startsWith('insert') && draft.length >= LABEL_MAX) e.preventDefault();
+	}
+
 	function commit(): void {
 		if (!editing) return;
 		editing = false;
@@ -81,6 +87,7 @@
 		tabindex="0"
 		aria-label={`Rename ${what}`}
 		data-placeholder={placeholder}
+		onbeforeinput={onBeforeInput}
 		onblur={commit}
 		onkeydown={(e) => {
 			if (e.key === 'Enter') {

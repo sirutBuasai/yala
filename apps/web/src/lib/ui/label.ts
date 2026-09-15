@@ -16,6 +16,10 @@ export interface Label {
 /** The separator a caption reads with, its two halves being statements rather than one phrase. */
 export const DOT = ' · ';
 
+/** Longest a label's words may be. Past this a title has stopped being one, and a card asked to hold it
+    would want more of the grid than the grid has. Enforced as it is typed, not trimmed afterwards. */
+export const LABEL_MAX = 120;
+
 /** Which half of a card's header a rename applies to. */
 export type Slot = 'title' | 'caption';
 

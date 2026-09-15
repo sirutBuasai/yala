@@ -17,7 +17,6 @@
 	import { tick, type Snippet } from 'svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import { labelText, type Label } from '$lib/ui/label';
-	import Grip from '$lib/icons/Grip.svelte';
 	import SizeMode from '$lib/icons/SizeMode.svelte';
 	import { getArrangement, getGridEnv, getLabels } from './context';
 	import { drag, type DragParams } from './drag';
@@ -26,6 +25,9 @@
 	import { EDGES, type Edge } from './resize';
 	import { PaneGesture } from './gesture.svelte';
 	import { UNIT } from './units';
+
+	/** How many times a pane re-measures itself before accepting that its content will not fit. */
+	const FIT_PASSES = 4;
 
 	interface Props {
 		/** Pane id — a key of the board's layout. */
@@ -36,7 +38,7 @@
 		actions?: Snippet;
 		tone?: 'default' | 'attention';
 		density?: 'figure' | 'panel';
-		/** Extra arrange-mode controls, drawn over the card alongside the grip and the resize strips.
+		/** Extra arrange-mode controls, drawn over the card alongside the height modes and resize strips.
 		    Outside the card because the card is `inert` while arranging. Anything laid over an edge must
 		    carry `data-no-drag`, or the strip beneath reads a press on it as the start of a resize. */
 		affordances?: Snippet;
@@ -86,19 +88,25 @@
 		settle: tick
 	});
 
-	/** The units this pane's content wants, given the size it currently has. */
-	function wanted(el: HTMLElement): { w: number; h: number } {
-		const over = overrun(el, bodyEl);
-		return {
-			w: placed.w + Math.ceil(over.x / UNIT),
-			h: placed.h + Math.ceil(over.y / UNIT)
-		};
+	/**
+	 * Measure, apply, and measure again until the content fits. One pass is not enough: the room a card is
+	 * given changes how its own text wraps, so a title that wanted two more rows can want a third once it
+	 * has them — which is how a pane grew and left its title still hanging out of the card. Bounded,
+	 * because content that will not fit at any size must not spin here.
+	 */
+	async function growUntilItFits(apply: (w: number, h: number) => void): Promise<void> {
+		for (let pass = 0; pass < FIT_PASSES; pass++) {
+			if (!cardEl) return;
+			const over = overrun(cardEl, bodyEl);
+			if (!over.x && !over.y) return;
+			apply(placed.w + Math.ceil(over.x / UNIT), placed.h + Math.ceil(over.y / UNIT));
+			await tick();
+		}
 	}
 
 	// A pane grows to fit content it was not sized for — a renamed title, a longer figure, a wider column.
-	// The floor is the size the content needs rather than the deficit, so it is measured against what the
-	// pane currently has and one pass converges. Edit-mode affordances are deliberately free of layout (see
-	// `ui/LabelLine`), so this measures the same in either mode and switching modes moves nothing.
+	// Edit-mode affordances are deliberately free of layout (see `ui/LabelLine`), so this measures the same
+	// in either mode and switching modes moves nothing.
 	//
 	// Two observers, because they see different things: a resize catches the box moving (this pane, the
 	// window, a header that wrapped), a mutation catches the content changing inside a box that did not.
@@ -113,8 +121,7 @@
 			// A label being typed into drives its own pane from `oninput` below, which is the only path that
 			// can also make it smaller again.
 			if (gesture.busy || arrangement.drafting === id) return;
-			const { w, h } = wanted(el);
-			arrangement.setFloor(id, w, h);
+			void growUntilItFits((w, h) => arrangement.grow(id, w, h));
 		};
 		const schedule = () => {
 			queued ||= requestAnimationFrame(measure);
@@ -139,18 +146,65 @@
 		t instanceof HTMLElement && t.isContentEditable && t.classList.contains('name');
 
 	/**
+	 * A label with more words than its line budget allows. Its own `overflow: hidden` is what bounds the
+	 * card (see `--label-lines` in app.css), and that same hidden overflow is why the card's spill probe
+	 * cannot see it — so it is asked for separately.
+	 */
+	const labelClipped = (el: HTMLElement) =>
+		[...el.querySelectorAll('[data-label-line]')].some((l) => l.scrollHeight > l.clientHeight + 1);
+
+	/** Everything this pane holds fits the room it is allowed. */
+	function everythingFits(el: HTMLElement): boolean {
+		const over = overrun(el, bodyEl);
+		return !over.x && !over.y && !labelClipped(el);
+	}
+
+	/** The last words this label held that the card could fit, and a guard against the revert below being
+	    read as one more edit. */
+	let fitting = '';
+	let reverting = false;
+
+	function caretToEnd(el: HTMLElement): void {
+		const range = document.createRange();
+		range.selectNodeContents(el);
+		range.collapse(false);
+		const selection = getSelection();
+		selection?.removeAllRanges();
+		selection?.addRange(range);
+	}
+
+	/**
 	 * Follow a label as it is typed: the pane grows the moment the words stop fitting and gives the room
 	 * back as they are deleted, down to the size it had when the edit opened. Dropping to that size first is
 	 * what makes shrinking possible at all — a pane measured at its grown size reports no overflow and would
 	 * never learn it could be smaller.
+	 *
+	 * Once the pane has taken all the room it may, words that still do not fit are put back. The limit is
+	 * the card's, never a count of characters: a wide card holds a longer title than a narrow one, and a
+	 * nowrap KPI label runs out of grid where a wrapping one runs out of lines.
 	 */
-	async function trackLabel(): Promise<void> {
-		const el = cardEl;
-		if (!el) return;
+	async function trackLabel(field: HTMLElement): Promise<void> {
+		if (!cardEl || reverting) return;
 		arrangement.relaxDraft();
 		await tick();
-		const { w, h } = wanted(el);
-		arrangement.setDraft(w, h);
+		await growUntilItFits((w, h) => arrangement.setDraft(w, h));
+		if (!cardEl) return;
+
+		if (everythingFits(cardEl)) {
+			fitting = field.textContent ?? '';
+			return;
+		}
+		// Put the words back and re-fit once. Deliberately not a loop: if the restored words do not fit
+		// either, the pane is already as large as it may get and there is nothing further to try — and a
+		// loop here spun for ever the first time that happened.
+		reverting = true;
+		field.textContent = fitting;
+		field.dispatchEvent(new Event('input', { bubbles: true }));
+		caretToEnd(field);
+		arrangement.relaxDraft();
+		await tick();
+		await growUntilItFits((w, h) => arrangement.setDraft(w, h));
+		reverting = false;
 	}
 
 	/** One edge's resize wiring. Shared by the strips and by anything the view lays over them. */
@@ -170,8 +224,8 @@
 		ArrowDown: [0, 1]
 	};
 
-	/** Keyboard equivalents on the grip: arrows move by a unit, Shift+arrows resize by one. */
-	function onGripKey(e: KeyboardEvent): void {
+	/** Keyboard equivalents on the card: arrows move by a unit, Shift+arrows resize by one. */
+	function onArrangeKey(e: KeyboardEvent): void {
 		const delta = STEPS[e.key];
 		if (!delta) return;
 		e.preventDefault();
@@ -190,9 +244,15 @@
 	style:grid-row={env.folded ? null : `${placed.y + 1} / span ${placed.h}`}
 	style:order={env.folded ? arrangement.order[id] : null}
 	style:--cap-h={capped ? `${arrangement.capPx(id)}px` : null}
-	onfocusin={(e) => isLabelField(e.target) && arrangement.startDraft(id, placed.w, placed.h)}
-	oninput={(e) => isLabelField(e.target) && void trackLabel()}
-	onfocusout={(e) => isLabelField(e.target) && void trackLabel().then(() => arrangement.endDraft())}
+	onfocusin={(e) => {
+		if (!isLabelField(e.target)) return;
+		fitting = (e.target as HTMLElement).textContent ?? '';
+		arrangement.startDraft(id, placed.w, placed.h);
+	}}
+	oninput={(e) => isLabelField(e.target) && void trackLabel(e.target as HTMLElement)}
+	onfocusout={(e) =>
+		isLabelField(e.target) &&
+		void trackLabel(e.target as HTMLElement).then(() => arrangement.endDraft())}
 >
 	<Card
 		bind:card={cardEl}
@@ -214,6 +274,10 @@
 	{#if arranging}
 		<div
 			class="grab"
+			role="button"
+			tabindex="0"
+			aria-label={`Move ${name}. Arrows move it; shift and arrows resize it.`}
+			onkeydown={onArrangeKey}
 			use:drag={{
 				onstart: () => gesture.beginMove(),
 				onmove: ({ dx, dy }) => gesture.moveTo(dx, dy),
@@ -221,37 +285,36 @@
 				oncancel: () => gesture.abandon()
 			}}
 		>
-			<!-- data-no-drag: stopping propagation here cannot work, because Svelte delegates the event
+			<!-- Only where there is something to put in it: with the grip gone, a chart pane has no height
+			     mode to choose and the bar would be an empty pill sitting on the card.
+
+			     data-no-drag: stopping propagation here cannot work, because Svelte delegates the event
 			     (see drag.ts). -->
-			<div class="tools" role="toolbar" aria-label={`Edit ${name}`} tabindex="-1" data-no-drag>
-				<button
-					class="grip"
-					type="button"
-					aria-label={`Move ${name}. Arrows move it; shift and arrows resize it.`}
-					onkeydown={onGripKey}
+			{#if arrangement.canSetHeight(id)}
+				<div
+					class="tools modes"
+					role="group"
+					aria-label={`Height of ${name}`}
+					tabindex="-1"
+					data-no-drag
 				>
-					<Grip />
-				</button>
-				{#if arrangement.canSetHeight(id)}
-					<div class="modes" role="group" aria-label={`Height of ${name}`}>
-						{#each MODE_ORDER as m (m)}
-							<button
-								type="button"
-								class="modebtn"
-								class:active={mode === m}
-								aria-pressed={mode === m}
-								title={MODE_LABELS[m]}
-								onclick={() => arrangement.setMode(id, m)}
-							>
-								<SizeMode mode={m} />
-							</button>
-						{/each}
-					</div>
-				{/if}
-			</div>
+					{#each MODE_ORDER as m (m)}
+						<button
+							type="button"
+							class="modebtn"
+							class:active={mode === m}
+							aria-pressed={mode === m}
+							title={MODE_LABELS[m]}
+							onclick={() => arrangement.setMode(id, m)}
+						>
+							<SizeMode mode={m} />
+						</button>
+					{/each}
+				</div>
+			{/if}
 		</div>
 
-		<!-- Resize strips straddling the card's edges. Not focusable and not announced: the grip is the
+		<!-- Resize strips straddling the card's edges. Not focusable and not announced: the card itself is the
 		     keyboard route in, and eight tab stops per pane would bury everything else. -->
 		{#each EDGES[mode] as edge (edge)}
 			<div class="handle {edge}" use:drag={resizeOn(edge)}></div>
@@ -379,7 +442,6 @@
 		border: 1px solid var(--border);
 		box-shadow: var(--shadow);
 	}
-	.grip,
 	.modebtn {
 		display: grid;
 		place-items: center;
@@ -392,10 +454,6 @@
 		color: var(--ink-3);
 		cursor: pointer;
 	}
-	.grip {
-		cursor: grab;
-	}
-	.grip:hover,
 	.modebtn:hover {
 		color: var(--ink);
 		background: var(--inset);
@@ -407,8 +465,6 @@
 	.modes {
 		display: flex;
 		gap: 1px;
-		padding-left: var(--space-2);
-		border-left: 1px solid var(--border);
 	}
 
 	/* Each strip is centred on the card's boundary, so the grab zone reaches either side of the visible

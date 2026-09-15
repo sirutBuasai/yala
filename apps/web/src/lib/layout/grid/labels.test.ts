@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { BoardLabels, MAX } from '$lib/layout/grid/labels';
+import { BoardLabels } from '$lib/layout/grid/labels';
+import { LABEL_MAX } from '$lib/ui/label';
 import { DOT, labelText } from '$lib/ui/label';
 
 const declared = { context: '2026', text: 'cash flow' };
@@ -68,8 +69,8 @@ describe('BoardLabels', () => {
 
 	it('caps a rename at a length a title can still be', () => {
 		const labels = new BoardLabels('board', IDS);
-		labels.set('cashflow', 'title', 'x'.repeat(MAX + 50));
-		expect(labels.textOf('cashflow', 'title')).toHaveLength(MAX);
+		labels.set('cashflow', 'title', 'x'.repeat(LABEL_MAX + 50));
+		expect(labels.textOf('cashflow', 'title')).toHaveLength(LABEL_MAX);
 	});
 
 	it('names each half of a card on its own', () => {

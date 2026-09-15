@@ -258,6 +258,12 @@
 	   the legend always fits, and the minimum is a constant instead of a function of the data. */
 	--figure-h-floor: 5rem;
 
+	/* How many lines a card's title and caption may wrap to. This is the ceiling on a pane growing to fit
+	   its own label: bound the words and the card is bounded with them, whatever its width. Without it a
+	   narrow card given a long title grew to twenty-odd rows and called that a fit. */
+	--label-lines-title: 3;
+	--label-lines-caption: 2;
+
 	/* ── List row columns ─────────────────────────────────────────────────────
 	   The fixed tracks of a list row (see RowList). The amount track is a floor, not a width, so a
 	   long total can't be clipped. In ch units so they track the font rather than a pixel guess. */
@@ -918,4 +924,12 @@ svg.chart {
 		transition-duration: 0.01ms !important;
 		scroll-behavior: auto !important;
 	}
+}
+
+/* A label may wrap to the lines its host allows and no further. Clipped as well as measured: text can
+   arrive from storage or a migration without passing through the editor, and a card must not be able to
+   grow past this however its label got there. */
+[data-label-line] {
+	max-height: calc(var(--label-lines) * 1lh);
+	overflow: hidden;
 }

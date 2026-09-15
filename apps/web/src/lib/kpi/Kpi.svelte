@@ -79,7 +79,7 @@
 	<!-- Held open by `nameable`, not by `naming`: a line that appeared only while editing made the card
 	     measure taller in one mode than the other, and the pane banked the difference. -->
 	{#if title || nameable}
-		<h2 class="serif">
+		<h2 class="serif" data-label-line>
 			<LabelLine
 				label={named.title}
 				what="title"
@@ -91,7 +91,7 @@
 	{/if}
 	<!-- Rendered even when empty, so a captionless KPI lines up with a captioned neighbour, and so a caption
 	     is addable before there is one to click. -->
-	<p class="cap" aria-hidden={caption || nameable ? undefined : 'true'}>
+	<p class="cap" data-label-line aria-hidden={caption || nameable ? undefined : 'true'}>
 		<LabelLine
 			label={named.caption}
 			what="caption"

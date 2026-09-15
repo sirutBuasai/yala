@@ -4,10 +4,7 @@
 // pane still says which period or slice it is showing.
 
 import { Pref, record, shape, text } from '$lib/utils/persist.svelte';
-import type { Label, Slot } from '$lib/ui/label';
-
-/** Past this a title has stopped being one. Longer than any label the app ships. */
-export const MAX = 120;
+import { LABEL_MAX, type Label, type Slot } from '$lib/ui/label';
 
 /** Bumped when an id on a board starts NAMING something else — a pane repointed at another figure. A
     rename outlives the code that declared the label, so without this the old name would sit on the new
@@ -26,7 +23,7 @@ export class BoardLabels {
 		this.#pref = new Pref<Record<string, Renamed>>(
 			`labels-${key}-${VERSION}`,
 			{},
-			record(shape<Renamed>({ title: text(MAX), caption: text(MAX) }))
+			record(shape<Renamed>({ title: text(LABEL_MAX), caption: text(LABEL_MAX) }))
 		);
 
 		// A rename for a card this board no longer has is dropped rather than left to sit in storage for
@@ -53,7 +50,7 @@ export class BoardLabels {
 	set(id: string, slot: Slot, value: string): void {
 		this.#pref.value = {
 			...this.#pref.value,
-			[id]: { ...this.#pref.value[id], [slot]: value.slice(0, MAX) }
+			[id]: { ...this.#pref.value[id], [slot]: value.slice(0, LABEL_MAX) }
 		};
 	}
 
