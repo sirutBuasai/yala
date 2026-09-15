@@ -114,6 +114,14 @@ export function dateLong(date: string | null | undefined): string {
 	return m ? `${MONTHS[+m[2]! - 1]} ${+m[3]!}, ${m[1]}` : (date ?? '');
 }
 
+/** A "YYYY-MM-DD" date as "Aug 26", for a view that already states which year it is showing. */
+export function dateShort(date: string): string {
+	const [, m, d] = date.split('-');
+	if (!m || !d) return date;
+
+	return `${MONTHS[+m - 1] ?? m} ${+d}`;
+}
+
 /** A "YYYY-MM-DD" date as a compact "M/D". */
 export function monthDay(date: string): string {
 	const [, m, d] = date.split('-');

@@ -24,11 +24,17 @@ import {
 	coastFi,
 	fiNumber,
 	fiProgress,
+	forceByMonth,
+	liabilitiesChange,
 	liquidRunway,
 	netWorthAccounts,
 	netWorthAllocationShare,
+	netWorthAllocationValue,
 	netWorthByMonth,
+	netWorthAssetsChange,
 	netWorthChange,
+	netWorthForce,
+	netWorthForceRate,
 	netWorthLiabilities,
 	netWorthMonthlyTable,
 	netWorthOther,
@@ -39,8 +45,10 @@ import {
 	netWorthByYear,
 	netWorthYearTable,
 	savedVsOther,
+	savedVsOtherByMonth,
 	topAccountShare,
-	yearsOfFreedom
+	yearsOfFreedom,
+	type Force
 } from './networth';
 import { type Scope, type ScopeLevel, latestMonthKey, scopeYear } from './scope';
 import { words } from '$lib/ui/label';
@@ -236,6 +244,13 @@ const CHART_DEFS: DataDef[] = [
 		build: (data, scope) => netWorthAllocationShare(data, optionalYear(data, scope))
 	},
 	{
+		id: 'networth.allocation_value',
+		label: 'Allocation by value',
+		kind: 'multiseries',
+		scopes: YEARLY,
+		build: (data, scope) => netWorthAllocationValue(data, optionalYear(data, scope))
+	},
+	{
 		id: 'networth.accounts',
 		label: 'Where the money sits',
 		kind: 'categorical',
@@ -250,6 +265,26 @@ const CHART_DEFS: DataDef[] = [
 		build: (data) => savedVsOther(data)
 	},
 	{
+		id: 'networth.saved_vs_other_by_month',
+		label: 'You vs the market, by month',
+		kind: 'multiseries',
+		scopes: ['year'],
+		build: (data, scope) => savedVsOtherByMonth(data, scopeYear(data, scope))
+	},
+	// One entry per term, so a KPI card can name the single series it draws behind its figure.
+	...(
+		[
+			['saved', 'You saved'],
+			['other', 'Market & other']
+		] as const
+	).map(([slug, label]): DataDef => ({
+		id: `networth.${slug}_by_month`,
+		label,
+		kind: 'series',
+		scopes: ['year'],
+		build: (data, scope) => forceByMonth(data, scopeYear(data, scope), slug, label)
+	})),
+	{
 		id: 'networth.year_table',
 		label: 'Year by year',
 		kind: 'table',
@@ -262,21 +297,37 @@ const CHART_DEFS: DataDef[] = [
 		label: 'Net worth',
 		kind: 'series',
 		scopes: LIFETIME,
-		build: (data) => netWorthByYear(data, 'net_worth', 'Net worth')
+		build: (data) => netWorthByYear(data, 'net_worth')
 	},
 	{
 		id: 'networth.assets_by_year',
 		label: 'Assets',
 		kind: 'series',
 		scopes: LIFETIME,
-		build: (data) => netWorthByYear(data, 'assets', 'Assets')
+		build: (data) => netWorthByYear(data, 'assets')
 	},
 	{
 		id: 'networth.liabilities_by_year',
 		label: 'Liabilities',
 		kind: 'series',
 		scopes: LIFETIME,
-		build: (data) => netWorthByYear(data, 'liabilities', 'Liabilities')
+		build: (data) => netWorthByYear(data, 'liabilities')
+	},
+	// Both units in one entry: the points carry the dollar amount as their alternate reading, so a second
+	// near-identical chart is not needed to state it.
+	{
+		id: 'networth.change_by_month',
+		label: 'Net worth & assets change',
+		kind: 'multiseries',
+		scopes: ['year'],
+		build: (data, scope) => netWorthAssetsChange(data, scopeYear(data, scope))
+	},
+	{
+		id: 'networth.liabilities_change',
+		label: 'Liabilities change',
+		kind: 'multiseries',
+		scopes: ['year'],
+		build: (data, scope) => liabilitiesChange(data, scopeYear(data, scope))
 	}
 ];
 
@@ -354,6 +405,38 @@ const NETWORTH_STATS: DataDef[] = [
 		] as const
 	).map(([id, label, build]) => scalarDef(id, label, LIFETIME, build))
 ];
+
+// --- the decomposition behind a year's change ---
+//
+// The same three terms the KPI cards carry, re-read as a matrix: a level against last year's, and a
+// monthly run-rate against last year's own rate.
+
+const FORCES: { slug: Force; label: string }[] = [
+	{ slug: 'change', label: 'Change' },
+	{ slug: 'saved', label: 'You saved' },
+	{ slug: 'other', label: 'Market & other' }
+];
+
+/** A column per term: the id for its total, and for its monthly run-rate. */
+export const NET_WORTH_FORCES = FORCES.map((f) => ({
+	slug: f.slug,
+	total: `networth.year_${f.slug}`,
+	perMonth: `avg.networth_${f.slug}_per_month`
+}));
+
+export type NetWorthForceColumn = (typeof NET_WORTH_FORCES)[number];
+
+const NET_WORTH_FORCE_DEFS: DataDef[] = FORCES.flatMap((f) => [
+	scalarDef(`networth.year_${f.slug}`, f.label, ['year'], (data, scope) =>
+		netWorthForce(data, scope, f.slug, words(f.label))
+	),
+	scalarDef(
+		`avg.networth_${f.slug}_per_month`,
+		`Avg ${f.label.toLowerCase()} / month`,
+		['year'],
+		(data, scope) => netWorthForceRate(data, scope, f.slug, words(f.label))
+	)
+]);
 
 // --- single-figure data (scalar metrics) ---
 
@@ -534,7 +617,8 @@ export const CATALOG: DataDef[] = [
 	...SERIES_DEFS,
 	...STAT_DEFS,
 	...VS_TYPICAL,
-	...NETWORTH_STATS
+	...NETWORTH_STATS,
+	...NET_WORTH_FORCE_DEFS
 ];
 
 export const CATALOG_BY_ID: Record<string, DataDef> = Object.fromEntries(
@@ -551,6 +635,9 @@ export function cashFlowChanges(cols: CashFlowColumn[]): string[] {
 
 /** A cash-flow column's heading: the catalog's own name for the measure's level. */
 export const cashFlowHeading = (c: CashFlowColumn) => CATALOG_BY_ID[c.total]!.label;
+
+/** A net-worth force column's heading, from the same place, for the same reason. */
+export const netWorthForceHeading = (c: NetWorthForceColumn) => CATALOG_BY_ID[c.total]!.label;
 
 /** Catalog entries producing a given primitive kind — powers "pick data for this chart". */
 export function dataOfKind(kind: PrimitiveKind): DataDef[] {

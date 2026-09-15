@@ -173,6 +173,14 @@ function activeMonths(
 	});
 }
 
+/** Months of a year with income or spending — what a run-rate over that year divides by. */
+export function activeMonthsIn(data: DashboardData, year: number): number {
+	return activeMonths(data, year).any;
+}
+
+/** How a run-rate states its divisor, so every board words it the same. */
+export const activeMonthsNote = (months: number): Label => live(`${months} active months`);
+
 function categorySpend(data: DashboardData, scope: Scope, category: string): number {
 	if (scope.level === 'month') {
 		const items = scope.monthKey ? (data.months[scope.monthKey]?.by_category ?? []) : [];
@@ -233,16 +241,21 @@ export function amount(data: DashboardData, scope: Scope, m: Measure, opts: Opts
 	};
 }
 
-/** Period-over-period badge. Undefined when the base is 0, which an untracked period also reads as. */
-function deltaOf(m: Measure, now: number, before: number, note: string): Scalar['delta'] {
+/** Period-over-period badge. Undefined when the base is 0, which an untracked period also reads as.
+    Tone is the caller's: which direction is good news depends on what is being compared. */
+export function percentDelta(
+	now: number,
+	before: number,
+	tone: Tone | undefined,
+	note: string
+): Scalar['delta'] {
 	if (!before) return undefined;
 	// Magnitude, not the signed base: a negative base flips the sign away from the actual movement.
-	return {
-		value: ((now - before) / Math.abs(before)) * 100,
-		unit: PERCENT,
-		tone: toneOf(m, now - before),
-		note
-	};
+	return { value: ((now - before) / Math.abs(before)) * 100, unit: PERCENT, tone, note };
+}
+
+function deltaOf(m: Measure, now: number, before: number, note: string): Scalar['delta'] {
+	return percentDelta(now, before, toneOf(m, now - before), note);
 }
 
 /** A year's run-rate for a measure, and the active months it divided by. */
@@ -291,7 +304,7 @@ export function average(
 			unit,
 			label: opts.label ?? words(`Avg ${name} / month`),
 			value: measureValue(data, { level: 'all' }, m) / months,
-			note: opts.note ?? live(`${months} active months`)
+			note: opts.note ?? activeMonthsNote(months)
 		};
 	}
 
@@ -304,7 +317,7 @@ export function average(
 		value: now.rate,
 		// Rate against rate: the levels divide by different active-month counts.
 		delta: deltaOf(m, now.rate, perMonth(data, m, y - 1).rate, 'YoY'),
-		note: opts.note ?? live(`${now.divisor} active months`)
+		note: opts.note ?? activeMonthsNote(now.divisor)
 	};
 }
 

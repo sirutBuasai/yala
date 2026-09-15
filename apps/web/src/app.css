@@ -80,6 +80,9 @@
 	   `--cat-subscription`, the first to swallow `--ink`. 35% is the most that keeps all of them at 4.5:1
 	   (36% already drops that column to 4.44); at 55% it measured 2.65:1. Re-measure before raising it. */
 	--mark-tile: 35%;
+	/* The heaviest shade behind a table cell. Far below `--mark-tile`: a heatmap tile is the whole
+	   reading, where this sits under a figure that has to stay the thing being read. */
+	--mark-cell: 20%;
 	/* Entry-type accents for the Add overlay's band and switcher. A separate axis from the roles
 	   above, so the two may share hues and re-theming the overlay can't recolour a chart. */
 	--entry-transaction: var(--salmon);
@@ -313,6 +316,7 @@
 	/* Higher than dark mode's, the reverse of the washes above: over the light card a hue can only make a
 	   tile DARKER, which moves it AWAY from `--ink` instead of into it. Worst hue here measures 7.9:1. */
 	--mark-tile: 48%;
+	--mark-cell: 30%;
 }
 
 * {
@@ -892,6 +896,12 @@ svg.chart {
 }
 .tooltip b {
 	color: #fff;
+}
+/* A second reading of the same figure, in another unit. Dimmed and spaced off the first so it reads as
+   the same number restated, not as a second number. */
+.tooltip .alt {
+	opacity: 0.65;
+	margin-left: var(--space-4);
 }
 :root[data-theme='light'] .tooltip {
 	background: #2e2a22;

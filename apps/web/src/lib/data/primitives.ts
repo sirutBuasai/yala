@@ -96,6 +96,8 @@ export interface Categorical {
 export interface SeriesPoint {
 	label: string;
 	value: number | null;
+	/** The same point read in the series' `altUnit`. */
+	alt?: number | null;
 }
 
 /** One ordered sequence, layerable with compatible peers. */
@@ -105,6 +107,12 @@ export interface Series {
 	axis: Axis;
 	name: string;
 	points: SeriesPoint[];
+	/**
+	 * A second unit the same points can be read in — reported beside the value wherever a chart states
+	 * an exact figure. For a pair of readings that say the same thing in two scales, which would
+	 * otherwise cost a whole second chart that looks identical to the first.
+	 */
+	altUnit?: Unit;
 	/** A level the whole series is judged against, drawn behind it. Named in the chart's small print. */
 	reference?: { value: number; label: string };
 }
@@ -154,10 +162,18 @@ export interface Matrix {
 	values: number[][];
 }
 
+/** Which direction of a tinted column reads as good news. */
+export type TintDirection = 'up-good' | 'up-bad';
+
 export interface TableColumn {
 	label: string;
 	/** When set, the column is numeric and formatted in this unit. */
 	unit?: Unit;
+	/**
+	 * Shade this column's cells by magnitude, greenest and reddest at its own largest value. Scaled per
+	 * column, so a column of hundreds tints as strongly as one of tens of thousands.
+	 */
+	tint?: TintDirection;
 }
 
 export interface Table {

@@ -168,7 +168,9 @@
 				/>
 			{/each}
 
-			{#each labels as lb, i (lb)}
+			<!-- Keyed by slot, not by text: two points can share a label (two balances logged in one
+			     month), and a duplicate key is a fatal error. -->
+			{#each labels as lb, i (i)}
 				{#if shown.has(i)}
 					<text x={xPos(i)} y={ih + 20} text-anchor="middle">{lb}</text>
 				{/if}

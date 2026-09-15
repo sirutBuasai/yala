@@ -8,16 +8,27 @@ import { MONTHS, monthName } from '$lib/utils/format';
 import { addMonths, monthKey } from '$lib/utils/period';
 import { measureLabel, measureValue, type Field, type Measure } from './metric';
 
+/** A second reading of the same points, for `series` to carry alongside the first. */
+interface Alt {
+	unit: Unit;
+	values: (number | null)[];
+}
+
 /** Build a Series from parallel labels/values; a null value becomes 0. */
 export function series(
 	name: string,
 	labels: string[],
 	values: (number | null)[],
 	unit: Unit,
-	axis: Axis = 'time'
+	axis: Axis = 'time',
+	alt?: Alt
 ): Series {
-	const points: SeriesPoint[] = labels.map((label, i) => ({ label, value: values[i] ?? 0 }));
-	return { kind: 'series', unit, axis, name, points };
+	const points: SeriesPoint[] = labels.map((label, i) => ({
+		label,
+		value: values[i] ?? 0,
+		alt: alt ? (alt.values[i] ?? 0) : undefined
+	}));
+	return { kind: 'series', unit, axis, name, points, altUnit: alt?.unit };
 }
 
 // --- one measure over time ---

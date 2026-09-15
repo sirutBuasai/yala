@@ -10,19 +10,28 @@ import type {
 	Scalar,
 	Series,
 	Table,
+	TintDirection,
 	Tone
 } from './primitives';
 import { MONEY, MONTHS, PERCENT, YEARS } from './primitives';
 import { categorical } from './categorical';
 import { series } from './series';
-import { measureValue } from './metric';
+import { activeMonthsIn, activeMonthsNote, measureValue, percentDelta } from './metric';
 import { type Scope, scopeYear } from './scope';
-import { money } from '$lib/utils/format';
+import { dateShort, money, monthLabel, monthName } from '$lib/utils/format';
 import { yearOf } from '$lib/utils/period';
 import { live, words, type Label } from '$lib/ui/label';
 
 /** The three figures every snapshot carries. */
 export type SnapshotField = 'net_worth' | 'assets' | 'liabilities';
+
+/** The name each field is drawn under. Shared, because it is also how the registry colours it: one
+    hue per level wherever it appears. */
+const FIELD_NAME: Record<SnapshotField, string> = {
+	net_worth: 'Net worth',
+	assets: 'Assets',
+	liabilities: 'Liabilities'
+};
 
 /** Allocation buckets in display order (mirrors the backend `BUCKETS`). */
 const BUCKETS = ['Liquid', 'Taxable', 'Tax-advantaged'];
@@ -48,22 +57,33 @@ function forYear(data: DashboardData, year: number): NetWorthSnapshot[] {
 	return snapshots(data).filter((p) => p.date.startsWith(`${year}-`));
 }
 
+/** Months of a year holding at least one snapshot, ascending — the months a change can be bounded in. */
+function snapshotMonths(data: DashboardData, year: number): string[] {
+	return [...new Set(forYear(data, year).map((p) => p.date.slice(0, 7)))];
+}
+
 /** Asset accounts only — liabilities are held and reported separately. */
 function assetAccounts(data: DashboardData) {
 	return (data.networth?.accounts ?? []).filter((a) => a.group !== 'liability');
 }
 
-/** One snapshot field per logged snapshot — lifetime (`year` omitted) or one year's. */
-function snapshotSeries(
+/** The snapshots a scope plots, and how their dates read on an axis: a year states the day, since two
+    balances can be logged in one month, while a lifetime run only has room for the month. */
+function axisOf(
 	data: DashboardData,
-	name: string,
-	field: SnapshotField,
 	year?: number
-): Series {
+): { points: NetWorthSnapshot[]; labels: string[] } {
 	const points = year == null ? snapshots(data) : forYear(data, year);
+	const label = year == null ? monthLabel : dateShort;
+	return { points, labels: points.map((p) => label(p.date)) };
+}
+
+/** One snapshot field per logged snapshot — lifetime (`year` omitted) or one year's. */
+function snapshotSeries(data: DashboardData, field: SnapshotField, year?: number): Series {
+	const { points, labels } = axisOf(data, year);
 	return series(
-		name,
-		points.map((p) => p.date),
+		FIELD_NAME[field],
+		labels,
 		points.map((p) => p[field]),
 		MONEY(data.currency)
 	);
@@ -95,34 +115,27 @@ export function netWorthScalar(data: DashboardData, field: SnapshotField, label:
 }
 
 export function netWorthByMonth(data: DashboardData, year?: number): Series {
-	return snapshotSeries(data, 'Net worth', 'net_worth', year);
+	return snapshotSeries(data, 'net_worth', year);
 }
 
 /** Net worth and assets over time; the gap between them is what is owed. */
 export function netWorthVsAssets(data: DashboardData): MultiSeries {
 	const unit = MONEY(data.currency);
-	const points = snapshots(data);
-	const labels = points.map((p) => p.date);
+	const { points, labels } = axisOf(data);
 
 	return {
 		kind: 'multiseries',
 		unit,
 		axis: 'time',
 		labels,
-		series: [
+		series: (['net_worth', 'assets'] as SnapshotField[]).map((f) =>
 			series(
-				'Net worth',
+				FIELD_NAME[f],
 				labels,
-				points.map((p) => p.net_worth),
-				unit
-			),
-			series(
-				'Assets',
-				labels,
-				points.map((p) => p.assets),
+				points.map((p) => p[f]),
 				unit
 			)
-		]
+		)
 	};
 }
 
@@ -130,10 +143,10 @@ export function netWorthVsAssets(data: DashboardData): MultiSeries {
  * A snapshot field at the close of each logged year, most recent `WINDOW_YEARS` only — past that the
  * recent years are too thin to tell apart in a KPI underlay.
  */
-export function netWorthByYear(data: DashboardData, field: SnapshotField, name: string): Series {
+export function netWorthByYear(data: DashboardData, field: SnapshotField): Series {
 	const years = snapshotYears(data).slice(-WINDOW_YEARS);
 	return series(
-		name,
+		FIELD_NAME[field],
 		years.map(String),
 		years.map((year) => bounds(data, { level: 'year', year }).close?.[field] ?? null),
 		MONEY(data.currency)
@@ -142,53 +155,160 @@ export function netWorthByYear(data: DashboardData, field: SnapshotField, name: 
 
 /** Liabilities over time on their own; illegible as a third line against a net-worth axis. */
 export function netWorthLiabilities(data: DashboardData, year?: number): Series {
-	return snapshotSeries(data, 'Liabilities', 'liabilities', year);
+	return snapshotSeries(data, 'liabilities', year);
 }
 
-/** A year's snapshots with change since the previous one. */
+/** The levels the monthly table reports, each followed by how it moved. */
+const TABLE_FIELDS: SnapshotField[] = ['net_worth', 'assets', 'liabilities'];
+
+/** Which way each level reads as good news. Owing more is the one that runs the other way, so its
+    change columns shade opposite to the rest. */
+const UP_IS_GOOD: Record<SnapshotField, TintDirection> = {
+	net_worth: 'up-good',
+	assets: 'up-good',
+	liabilities: 'up-bad'
+};
+
+/** A move as a percentage of where the period opened. Taken off the magnitude, so a negative opening
+    balance doesn't flip the sign away from the actual movement. */
+function pctOf(delta: number, open: number): number {
+	return open ? (delta / Math.abs(open)) * 100 : 0;
+}
+
+/** A year's snapshots, each level beside the change since the previous snapshot. Every level gets its
+    own pair, since the three do not move together: assets can rise on a month a card was also paid. */
 export function netWorthMonthlyTable(data: DashboardData, year: number): Table {
 	const unit = MONEY(data.currency);
 	const all = snapshots(data);
+
 	const rows = forYear(data, year).map((p) => {
 		const i = all.findIndex((q) => q.date === p.date);
 		const prev = i > 0 ? all[i - 1] : null;
-		const change = prev ? p.net_worth - prev.net_worth : 0;
-		const pct = prev && prev.net_worth ? (change / prev.net_worth) * 100 : 0;
-		return [p.date, p.net_worth, p.assets, p.liabilities, change, pct];
+
+		return [
+			dateShort(p.date),
+			...TABLE_FIELDS.flatMap((f) => {
+				const delta = prev ? p[f] - prev[f] : 0;
+				return [p[f], delta, prev ? pctOf(delta, prev[f]) : 0];
+			})
+		];
 	});
+
 	return {
 		kind: 'table',
 		columns: [
 			{ label: 'Date' },
-			{ label: 'Net worth', unit },
-			{ label: 'Assets', unit },
-			{ label: 'Liabilities', unit },
-			{ label: 'Change', unit },
-			{ label: 'Change %', unit: PERCENT }
+			// The heading repeats beside each level rather than naming it: which level a change belongs to
+			// is said by the column it sits next to. Only the change columns are shaded — a balance has no
+			// good or bad direction, only its movement does.
+			...TABLE_FIELDS.flatMap((f) => [
+				{ label: FIELD_NAME[f], unit },
+				{ label: 'Change', unit, tint: UP_IS_GOOD[f] },
+				{ label: 'Change %', unit: PERCENT, tint: UP_IS_GOOD[f] }
+			])
 		],
 		rows
 	};
 }
 
-/** Each bucket's share of assets over time. */
-export function netWorthAllocationShare(data: DashboardData, year?: number): MultiSeries {
-	const points = year == null ? snapshots(data) : forYear(data, year);
-	const labels = points.map((p) => p.date);
+/**
+ * Each level's month-over-month move across a year. A month with two snapshots reports one move, from
+ * the previous month's close to its own.
+ *
+ * `axis` picks which unit the chart plots; the other rides along as the points' alternate reading. The
+ * two say the same thing at different scales — the base barely moves month to month, so the dollar and
+ * percent shapes are near-identical — which is why they belong in one chart rather than two.
+ */
+function changeByMonth(
+	data: DashboardData,
+	year: number,
+	fields: SnapshotField[],
+	axis: 'value' | 'percent'
+): MultiSeries {
+	const money = MONEY(data.currency);
+	const unit = axis === 'percent' ? PERCENT : money;
+	const altUnit = axis === 'percent' ? money : PERCENT;
+	const keys = snapshotMonths(data, year);
+	const labels = keys.map(monthName);
+
+	/** A month's move in both units at once, so the pair cannot drift apart. */
+	const move = (monthKey: string, field: SnapshotField): { value: number; percent: number } => {
+		const { open, close } = bounds(data, { level: 'month', monthKey });
+		if (!open || !close) return { value: 0, percent: 0 };
+		const delta = close[field] - open[field];
+		return { value: delta, percent: pctOf(delta, open[field]) };
+	};
 
 	return {
 		kind: 'multiseries',
-		unit: PERCENT,
+		unit,
+		axis: 'ordinal',
+		labels,
+		series: fields.map((f) => {
+			const moves = keys.map((k) => move(k, f));
+			const read = (m: (typeof moves)[number]) => (axis === 'percent' ? m.percent : m.value);
+			const other = (m: (typeof moves)[number]) => (axis === 'percent' ? m.value : m.percent);
+			return series(FIELD_NAME[f], labels, moves.map(read), unit, 'ordinal', {
+				unit: altUnit,
+				values: moves.map(other)
+			});
+		})
+	};
+}
+
+/**
+ * The two levels that can share one chart. Liabilities are excluded and drawn on their own: they move by
+ * hundreds of dollars, invisible beside tens of thousands, and by hundreds of percent, which flattens
+ * everything else to a hairline at zero.
+ */
+const PAIRED_FIELDS: SnapshotField[] = ['net_worth', 'assets'];
+
+/** How much each month added, as a percentage of where it opened, with the dollars alongside. */
+export function netWorthAssetsChange(data: DashboardData, year: number): MultiSeries {
+	return changeByMonth(data, year, PAIRED_FIELDS, 'percent');
+}
+
+/** What is owed, month over month, on the same percentage axis as the pair above. */
+export function liabilitiesChange(data: DashboardData, year: number): MultiSeries {
+	return changeByMonth(data, year, ['liabilities'], 'percent');
+}
+
+/** One band per allocation bucket over time, `of` deciding whether a band's thickness is a share of
+    assets or the balance itself. */
+function allocation(data: DashboardData, of: 'share' | 'value', year?: number): MultiSeries {
+	const unit = of === 'share' ? PERCENT : MONEY(data.currency);
+	const { points, labels } = axisOf(data, year);
+	const read = (p: NetWorthSnapshot, b: string) => {
+		const held = p.breakdown[b] ?? 0;
+		if (of === 'value') return held;
+		return p.assets ? (held / p.assets) * 100 : 0;
+	};
+
+	return {
+		kind: 'multiseries',
+		unit,
 		axis: 'time',
 		labels,
 		series: BUCKETS.map((b) =>
 			series(
 				b,
 				labels,
-				points.map((p) => (p.assets ? ((p.breakdown[b] ?? 0) / p.assets) * 100 : 0)),
-				PERCENT
+				points.map((p) => read(p, b)),
+				unit
 			)
 		)
 	};
+}
+
+/** Each bucket's share of assets over time. */
+export function netWorthAllocationShare(data: DashboardData, year?: number): MultiSeries {
+	return allocation(data, 'share', year);
+}
+
+/** Each bucket's balance over time. The share view normalizes every column to 100%, so only this one
+    says whether a band thinned because it shrank or because another grew. */
+export function netWorthAllocationValue(data: DashboardData, year?: number): MultiSeries {
+	return allocation(data, 'value', year);
 }
 
 /** Every asset account by value, largest first. Liabilities excluded: a negative bar has no share. */
@@ -207,6 +327,11 @@ export function netWorthAccounts(data: DashboardData): Categorical {
 // The remainder stays one term: an investment snapshot's pad absorbs both market growth and unlogged
 // flow, so splitting them would be a guess.
 
+/** The ISO date prefix a scope's snapshots start with. */
+function datePrefix(data: DashboardData, scope: Scope): string {
+	return scope.level === 'month' ? (scope.monthKey ?? '') : `${scopeYear(data, scope)}-`;
+}
+
 /** The snapshots bounding a scope: the balance it started from, and the last one within it. */
 function bounds(
 	data: DashboardData,
@@ -217,11 +342,11 @@ function bounds(
 		return { open: all[0] ?? null, close: all[all.length - 1] ?? null };
 	}
 
-	const year = scopeYear(data, scope);
-	const within = forYear(data, year);
-	const before = all.filter((p) => p.date < `${year}-01-01`);
+	const prefix = datePrefix(data, scope);
+	const within = all.filter((p) => p.date.startsWith(prefix));
+	const before = all.filter((p) => p.date < prefix);
 	return {
-		// A year opens at the last snapshot before it — the balance the year started from.
+		// A period opens at the last snapshot before it — the balance the period started from.
 		open: before[before.length - 1] ?? within[0] ?? null,
 		close: within[within.length - 1] ?? null
 	};
@@ -231,6 +356,17 @@ function bounds(
 function changeOver(data: DashboardData, scope: Scope): number {
 	const { open, close } = bounds(data, scope);
 	return open && close ? close.net_worth - open.net_worth : 0;
+}
+
+/** The three figures the decomposition reads: the move, and the two terms that sum to it. */
+export type Force = 'change' | 'saved' | 'other';
+
+/** The decomposition over a scope. One source of truth, so a card, a bar and a matrix cell describing
+    the same term cannot disagree. */
+function forces(data: DashboardData, scope: Scope): Record<Force, number> {
+	const change = changeOver(data, scope);
+	const saved = measureValue(data, scope, 'saved');
+	return { change, saved, other: change - saved };
 }
 
 /** A decomposition term's share of the period's change, as its note. */
@@ -260,7 +396,7 @@ export function netWorthChange(data: DashboardData, scope: Scope): Scalar {
 
 /** How much of the scope's change in net worth came from logged saving. */
 export function netWorthSaved(data: DashboardData, scope: Scope): Scalar {
-	const saved = measureValue(data, scope, 'saved');
+	const { change, saved } = forces(data, scope);
 
 	return {
 		kind: 'scalar',
@@ -268,7 +404,7 @@ export function netWorthSaved(data: DashboardData, scope: Scope): Scalar {
 		label: words('You saved'),
 		value: saved,
 		tone: bySign(saved),
-		note: shareNote(saved, changeOver(data, scope), 'income − spending')
+		note: shareNote(saved, change, 'income − spending')
 	};
 }
 
@@ -284,8 +420,7 @@ export function netWorthOther(data: DashboardData, scope: Scope): Scalar {
 		};
 	}
 
-	const change = close.net_worth - open.net_worth;
-	const other = change - measureValue(data, scope, 'saved');
+	const { change, other } = forces(data, scope);
 
 	return {
 		kind: 'scalar',
@@ -297,20 +432,10 @@ export function netWorthOther(data: DashboardData, scope: Scope): Scalar {
 	};
 }
 
-/** Saved vs everything-else per year. */
-export function savedVsOther(data: DashboardData): MultiSeries {
+/** The two terms over a run of periods, named the way the registry colours them. */
+function forceSeries(data: DashboardData, labels: string[], scopes: Scope[]): MultiSeries {
 	const unit = MONEY(data.currency);
-	const years = snapshotYears(data);
-	const labels = years.map(String);
-
-	const saved: number[] = [];
-	const other: number[] = [];
-	for (const year of years) {
-		const scope: Scope = { level: 'year', year };
-		const s = measureValue(data, scope, 'saved');
-		saved.push(s);
-		other.push(changeOver(data, scope) - s);
-	}
+	const read = (f: Force) => scopes.map((s) => forces(data, s)[f]);
 
 	return {
 		kind: 'multiseries',
@@ -318,9 +443,80 @@ export function savedVsOther(data: DashboardData): MultiSeries {
 		axis: 'ordinal',
 		labels,
 		series: [
-			series('You saved', labels, saved, unit),
-			series('Market & other', labels, other, unit)
+			series('You saved', labels, read('saved'), unit),
+			series('Market & other', labels, read('other'), unit)
 		]
+	};
+}
+
+/** Saved vs everything-else per year. */
+export function savedVsOther(data: DashboardData): MultiSeries {
+	const years = snapshotYears(data);
+	return forceSeries(
+		data,
+		years.map(String),
+		years.map((year) => ({ level: 'year', year }))
+	);
+}
+
+/** Saved vs everything-else per month of one year: which months were yours and which were the
+    market's, where the yearly view can only say who won the year. */
+export function savedVsOtherByMonth(data: DashboardData, year: number): MultiSeries {
+	const keys = snapshotMonths(data, year);
+	return forceSeries(
+		data,
+		keys.map(monthName),
+		keys.map((monthKey) => ({ level: 'month', monthKey }))
+	);
+}
+
+/** One term per month of a year, for the mark behind a KPI card. */
+export function forceByMonth(data: DashboardData, year: number, f: Force, name: string): Series {
+	const keys = snapshotMonths(data, year);
+	return series(
+		name,
+		keys.map(monthName),
+		keys.map((monthKey) => forces(data, { level: 'month', monthKey })[f]),
+		MONEY(data.currency),
+		'ordinal'
+	);
+}
+
+/** The year's decomposition as a matrix column reads it: the level, against last year's own. */
+export function netWorthForce(data: DashboardData, scope: Scope, f: Force, label: Label): Scalar {
+	const year = scopeYear(data, scope);
+	const now = forces(data, scope)[f];
+	const before = forces(data, { level: 'year', year: year - 1 })[f];
+
+	return {
+		kind: 'scalar',
+		unit: MONEY(data.currency),
+		label,
+		value: now,
+		delta: percentDelta(now, before, bySign(now - before), 'YoY')
+	};
+}
+
+/** The same term as a monthly run-rate. Rate against rate, so a part-finished year is not read as a
+    collapse. */
+export function netWorthForceRate(
+	data: DashboardData,
+	scope: Scope,
+	f: Force,
+	label: Label
+): Scalar {
+	const year = scopeYear(data, scope);
+	const rate = (y: number) =>
+		forces(data, { level: 'year', year: y })[f] / (activeMonthsIn(data, y) || 1);
+	const now = rate(year);
+
+	return {
+		kind: 'scalar',
+		unit: MONEY(data.currency),
+		label,
+		value: now,
+		delta: percentDelta(now, rate(year - 1), bySign(now - rate(year - 1)), 'YoY'),
+		note: activeMonthsNote(activeMonthsIn(data, year))
 	};
 }
 

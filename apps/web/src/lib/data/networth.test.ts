@@ -336,3 +336,302 @@ describe('year-end levels behind a KPI', () => {
 		expect(p.points.at(-1)!.label).toBe('2025');
 	});
 });
+
+// --- how a snapshot's date reads on an axis ---
+
+/** The fixture with two balances logged in one month, which is what forces the day into the label. */
+function twiceInAugust() {
+	const data = makeNetWorthData();
+	data.networth!.series = [
+		{
+			date: '2025-08-01',
+			assets: 1000,
+			liabilities: 0,
+			net_worth: 1000,
+			breakdown: { Liquid: 400, Taxable: 600, 'Tax-advantaged': 0 }
+		},
+		{
+			date: '2025-08-26',
+			assets: 1200,
+			liabilities: 0,
+			net_worth: 1200,
+			breakdown: { Liquid: 400, Taxable: 800, 'Tax-advantaged': 0 }
+		}
+	];
+	return data;
+}
+
+describe('snapshot date labels', () => {
+	it('states the day within a year, where the header already says which year it is', () => {
+		const p = build(makeNetWorthData(), 'networth.by_month', { level: 'year', year: 2025 });
+		if (p.kind !== 'series') throw new Error('expected series');
+
+		expect(p.points.map((pt) => pt.label)).toEqual(['Jun 1']);
+	});
+
+	it('states the month and year over a lifetime, where no header can', () => {
+		const p = build(makeNetWorthData(), 'networth.by_month', { level: 'all' });
+		if (p.kind !== 'series') throw new Error('expected series');
+
+		expect(p.points.map((pt) => pt.label)).toEqual(['Jan 2024', 'Dec 2024', 'Jun 2025']);
+	});
+
+	it('keeps two balances logged in one month as two points', () => {
+		const p = build(twiceInAugust(), 'networth.by_month', { level: 'year', year: 2025 });
+		if (p.kind !== 'series') throw new Error('expected series');
+
+		// Charts key their axis ticks by slot for exactly this case, but the labels must still differ or
+		// the two points are indistinguishable to a reader.
+		expect(p.points.map((pt) => pt.label)).toEqual(['Aug 1', 'Aug 26']);
+	});
+
+	it('labels the monthly table the same way as the chart beside it', () => {
+		const p = build(twiceInAugust(), 'networth.monthly_table', { level: 'year', year: 2025 });
+		if (p.kind !== 'table') throw new Error('expected table');
+
+		expect(p.rows.map((r) => r[0])).toEqual(['Aug 1', 'Aug 26']);
+	});
+});
+
+// --- month-over-month movement ---
+
+describe('the monthly table', () => {
+	it('follows every level with its own change and percentage', () => {
+		const p = build(makeNetWorthData(), 'networth.monthly_table', { level: 'year', year: 2025 });
+		if (p.kind !== 'table') throw new Error('expected table');
+
+		expect(p.columns.map((c) => c.label)).toEqual([
+			'Date',
+			'Net worth',
+			'Change',
+			'Change %',
+			'Assets',
+			'Change',
+			'Change %',
+			'Liabilities',
+			'Change',
+			'Change %'
+		]);
+	});
+
+	// Three columns share the heading 'Change', which is only safe because the header is keyed by
+	// position; keying it by label crashes the table.
+	it('repeats a heading rather than qualifying it', () => {
+		const p = build(makeNetWorthData(), 'networth.monthly_table', { level: 'year', year: 2025 });
+		if (p.kind !== 'table') throw new Error('expected table');
+
+		const labels = p.columns.map((c) => c.label);
+		expect(labels.filter((l) => l === 'Change')).toHaveLength(3);
+		expect(new Set(labels).size).toBeLessThan(labels.length);
+	});
+
+	it('measures each level against the snapshot before it, not against the year', () => {
+		const p = build(twiceInAugust(), 'networth.monthly_table', { level: 'year', year: 2025 });
+		if (p.kind !== 'table') throw new Error('expected table');
+
+		// Nothing precedes the first snapshot, so it has no move to report.
+		expect(p.rows[0]!.slice(1, 4)).toEqual([1000, 0, 0]);
+		expect(p.rows[1]!.slice(1, 4)).toEqual([1200, 200, 20]);
+	});
+
+	it('shades the movement columns only, since a balance has no good direction', () => {
+		const p = build(makeNetWorthData(), 'networth.monthly_table', { level: 'year', year: 2025 });
+		if (p.kind !== 'table') throw new Error('expected table');
+
+		const tinted = p.columns.map((c) => !!c.tint);
+		// Date, then each level unshaded with its two movement columns shaded.
+		expect(tinted).toEqual([false, false, true, true, false, true, true, false, true, true]);
+	});
+
+	it('shades a rise in what you owe as bad news, unlike a rise in the other two', () => {
+		const p = build(makeNetWorthData(), 'networth.monthly_table', { level: 'year', year: 2025 });
+		if (p.kind !== 'table') throw new Error('expected table');
+
+		const dirOf = (label: string) => {
+			const at = p.columns.findIndex((c) => c.label === label);
+			return p.columns[at + 1]!.tint;
+		};
+		expect(dirOf('Net worth')).toBe('up-good');
+		expect(dirOf('Assets')).toBe('up-good');
+		expect(dirOf('Liabilities')).toBe('up-bad');
+	});
+});
+
+describe('change by month', () => {
+	const atYear: Scope = { level: 'year', year: 2025 };
+	const changeOf = (id: string) => {
+		const p = build(makeNetWorthData(), id, atYear);
+		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
+		return p;
+	};
+
+	it('plots the two levels that can share one chart, as percentages', () => {
+		const p = changeOf('networth.change_by_month');
+
+		expect(p.unit).toEqual(PERCENT);
+		expect(p.series.map((s) => s.name)).toEqual(['Net worth', 'Assets']);
+		// 3000 → 6000 is +100%; assets 3000 → 6500 is +116.67%.
+		expect(p.series[0]!.points[0]!.value).toBeCloseTo(100, 5);
+		expect(p.series[1]!.points[0]!.value).toBeCloseTo((3500 / 3000) * 100, 5);
+	});
+
+	// One chart, both units: a second chart of the dollars looks the same as the first, because the base
+	// barely moves month to month.
+	it('carries the dollar amount as the same points’ alternate reading', () => {
+		const p = changeOf('networth.change_by_month');
+
+		expect(p.series.every((s) => s.altUnit?.kind === 'money')).toBe(true);
+		expect(p.series.map((s) => s.points[0]!.alt)).toEqual([3000, 3500]);
+	});
+
+	// Both change panes plot percentages, so a glance moves between them without changing units.
+	it('plots liabilities in the same unit as the pair beside it', () => {
+		const pair = changeOf('networth.change_by_month');
+		const owed = changeOf('networth.liabilities_change');
+
+		expect(owed.unit).toEqual(pair.unit);
+		expect(owed.series[0]!.altUnit?.kind).toBe('money');
+		expect(owed.series[0]!.points[0]!.alt).toBe(500);
+	});
+
+	it('reports nothing rather than infinity when a level opened at zero', () => {
+		// Liabilities went 0 → 500: a rise off nothing has no percentage, though the dollars still read.
+		expect(changeOf('networth.liabilities_change').series[0]!.points[0]!.value).toBe(0);
+	});
+
+	// Liabilities swing by hundreds of percent against net worth's single digits, so sharing one chart
+	// flattens whichever level is smaller to nothing.
+	it('keeps liabilities out of the shared chart, and alone in its own', () => {
+		expect(changeOf('networth.change_by_month').series.map((s) => s.name)).not.toContain(
+			'Liabilities'
+		);
+		expect(changeOf('networth.liabilities_change').series.map((s) => s.name)).toEqual([
+			'Liabilities'
+		]);
+	});
+
+	it('reports one move per month, however many balances were logged in it', () => {
+		const p = build(twiceInAugust(), 'networth.change_by_month', atYear);
+		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
+
+		expect(p.labels).toEqual(['Aug']);
+		// The month opens at the balance it followed and closes at its last, so the two rows in the table
+		// add up to this one bar: 1000 → 1200 is +$200, which is +20%.
+		expect(p.series[0]!.points[0]!.value).toBeCloseTo(20, 5);
+		expect(p.series[0]!.points[0]!.alt).toBe(200);
+	});
+});
+
+// --- allocation as dollars rather than shares ---
+
+describe('allocation by value', () => {
+	it('reports each bucket’s balance, where the share view normalizes it away', () => {
+		const p = build(makeNetWorthData(), 'networth.allocation_value', { level: 'all' });
+		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
+
+		expect(p.unit.kind).toBe('money');
+		expect(p.series.map((s) => s.name)).toEqual(['Liquid', 'Taxable', 'Tax-advantaged']);
+		expect(p.series.map((s) => s.points[2]!.value)).toEqual([1300, 2600, 2600]);
+	});
+
+	it('draws the same buckets in the same order as the share view', () => {
+		const share = build(makeNetWorthData(), 'networth.allocation_share', { level: 'all' });
+		const value = build(makeNetWorthData(), 'networth.allocation_value', { level: 'all' });
+		if (share.kind !== 'multiseries' || value.kind !== 'multiseries') {
+			throw new Error('expected multiseries');
+		}
+
+		expect(value.series.map((s) => s.name)).toEqual(share.series.map((s) => s.name));
+		expect(value.labels).toEqual(share.labels);
+	});
+});
+
+// --- the decomposition, month by month and against last year ---
+
+describe('monthly attribution', () => {
+	it('plots one point per month a balance was logged in', () => {
+		const p = build(makeNetWorthData(), 'networth.saved_vs_other_by_month', {
+			level: 'year',
+			year: 2025
+		});
+		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
+
+		expect(p.labels).toEqual(['Jun']);
+		expect(p.series.map((s) => s.name)).toEqual(['You saved', 'Market & other']);
+	});
+
+	it('splits each month’s move the way the year is split', () => {
+		const p = build(makeNetWorthData(), 'networth.saved_vs_other_by_month', {
+			level: 'year',
+			year: 2025
+		});
+		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
+
+		// June opens at the December balance it followed, so its move is 6000 − 3000, none of it from
+		// logged saving: the fixture logs nothing in June.
+		const [saved, other] = p.series;
+		expect(saved!.points[0]!.value).toBe(0);
+		expect(other!.points[0]!.value).toBe(3000);
+	});
+
+	it('gives a KPI card the same monthly figures its pane draws', () => {
+		const pane = build(makeNetWorthData(), 'networth.saved_vs_other_by_month', {
+			level: 'year',
+			year: 2025
+		});
+		const card = build(makeNetWorthData(), 'networth.other_by_month', {
+			level: 'year',
+			year: 2025
+		});
+		if (pane.kind !== 'multiseries' || card.kind !== 'series') throw new Error('wrong kind');
+
+		expect(card.points).toEqual(pane.series[1]!.points);
+	});
+});
+
+describe('the year against last year', () => {
+	it('splits the year’s change into the two terms the cards carry', () => {
+		const at: Scope = { level: 'year', year: 2025 };
+		const change = scalar('networth.year_change', at);
+		const saved = scalar('networth.year_saved', at);
+		const other = scalar('networth.year_other', at);
+
+		expect(change.value).toBe(3000);
+		expect((saved.value ?? 0) + (other.value ?? 0)).toBe(3000);
+		// The same figures the KPI cards read, so a matrix cell cannot disagree with the card above it.
+		expect(saved.value).toBe(scalar('networth.saved', at).value);
+		expect(other.value).toBe(scalar('networth.other', at).value);
+	});
+
+	it('badges each term against the same term a year earlier', () => {
+		const at: Scope = { level: 'year', year: 2025 };
+
+		// 2024 moved 1000 → 3000; 2025 moved 3000 → 6000.
+		expect(scalar('networth.year_change', at).delta?.value).toBeCloseTo(50, 5);
+		expect(scalar('networth.year_change', at).delta?.note).toBe('YoY');
+		// 2024's remainder was negative, so the movement is measured off its magnitude.
+		expect(scalar('networth.year_other', at).delta?.value).toBeCloseTo(
+			((745.5 + 180) / 180) * 100,
+			5
+		);
+	});
+
+	it('leaves the badge off a year with nothing before it', () => {
+		expect(scalar('networth.year_change', { level: 'year', year: 2024 }).delta).toBeUndefined();
+	});
+
+	it('divides the run-rate by the active months it states', () => {
+		const at: Scope = { level: 'year', year: 2025 };
+		const rate = scalar('avg.networth_change_per_month', at);
+
+		// The fixture logs one active month in 2025, and the note is where that divisor is declared.
+		expect(rate.note?.context).toBe('1 active months');
+		expect(rate.value).toBe(3000);
+	});
+
+	it('names its columns the way the cards above them are named', () => {
+		expect(CATALOG_BY_ID['networth.year_change']!.label).toBe('Change');
+		expect(CATALOG_BY_ID['networth.year_saved']!.label).toBe('You saved');
+		expect(CATALOG_BY_ID['networth.year_other']!.label).toBe('Market & other');
+	});
+});

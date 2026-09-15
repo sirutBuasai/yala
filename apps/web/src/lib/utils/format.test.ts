@@ -3,6 +3,7 @@ import { setAccountDirectory } from '$lib/data/directory.svelte';
 import {
 	MONTHS,
 	accountLeaf,
+	dateShort,
 	esc,
 	formatAccount,
 	money,
@@ -139,5 +140,18 @@ describe('month labels', () => {
 
 	it('has twelve month abbreviations', () => {
 		expect(MONTHS).toHaveLength(12);
+	});
+
+	it('formats a YYYY-MM-DD date as month and day, without the leading zero', () => {
+		expect(dateShort('2026-08-01')).toBe('Aug 1');
+		expect(dateShort('2026-08-26')).toBe('Aug 26');
+	});
+
+	it('keeps two dates in one month apart, which is why the day is there at all', () => {
+		expect(dateShort('2026-08-01')).not.toBe(dateShort('2026-08-26'));
+	});
+
+	it('returns an unparseable date as it came', () => {
+		expect(dateShort('2026')).toBe('2026');
 	});
 });

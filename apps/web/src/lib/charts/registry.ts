@@ -164,13 +164,21 @@ function fillOf(list: Series[], s: Series, i: number, opts: AdaptOpts): string {
 }
 
 /** Name, values and colour — what every multi-series chart takes. Nulls become 0, since only a line
-    can leave a gap. */
+    can leave a gap. An alternate reading rides along where the data carries one. */
 function toPlainSeries(list: Series[], opts: AdaptOpts) {
 	return list.map((s, i) => ({
 		name: s.name,
 		values: s.points.map((pt) => pt.value ?? 0),
-		color: fillOf(list, s, i, opts)
+		color: fillOf(list, s, i, opts),
+		alt: s.altUnit ? s.points.map((pt) => pt.alt ?? null) : undefined
 	}));
+}
+
+/** The alternate unit a set of series is read in, when they agree on one. */
+function altUnitOf(list: Series[]): Series['altUnit'] {
+	const units = list.map((s) => s.altUnit);
+	const first = units[0];
+	return first && units.every((u) => u?.kind === first.kind) ? first : undefined;
 }
 
 /** The above plus the line-only treatments, which keep nulls as gaps. */
@@ -233,6 +241,7 @@ export const CHARTS: ChartDef[] = [
 				labels,
 				series: toPlainSeries(list, opts),
 				percent: sm.unit.kind === 'percent',
+				altUnit: altUnitOf(list),
 				// A reference belongs to one series, so it only travels when there is only one.
 				reference: list.length === 1 ? list[0]!.reference : undefined
 			};
