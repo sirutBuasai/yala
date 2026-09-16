@@ -32,8 +32,32 @@
 		log?: boolean;
 		/** Label each line at its right end instead of using a legend. */
 		endLabels?: boolean;
+		/**
+		 * Fix the value axis to end here instead of at the tallest reading. For a chart whose point is a
+		 * level partway up — a target line — that the data would otherwise squash to the floor. Lines
+		 * running past it flatten against the top; their tooltips still state the true figure.
+		 */
+		ceiling?: number;
 	}
-	let { labels, series, percent = false, log = false, endLabels = false }: Props = $props();
+	let {
+		labels,
+		series,
+		percent = false,
+		log = false,
+		endLabels = false,
+		ceiling
+	}: Props = $props();
+
+	/** What is drawn: the readings, held to the ceiling. Everything the reader is TOLD comes off `series`,
+	    so the frame narrows the view without misreporting a figure. */
+	const plotted = $derived(
+		ceiling == null
+			? series
+			: series.map((s) => ({
+					...s,
+					values: s.values.map((v) => (v == null ? v : Math.min(v, ceiling)))
+				}))
+	);
 
 	const showLegend = $derived(!endLabels && series.length > 1);
 
@@ -49,8 +73,8 @@
 	// Unique per instance, so two area charts on one page can't share a gradient.
 	const gid = 'lg-' + Math.random().toString(36).slice(2, 9);
 
-	const flat = $derived(series.flatMap((s) => s.values).filter((v): v is number => v != null));
-	const axis = $derived(log ? logYScale(flat, ih) : moneyYScale(flat, ih));
+	const flat = $derived(plotted.flatMap((s) => s.values).filter((v): v is number => v != null));
+	const axis = $derived(log ? logYScale(flat, ih) : moneyYScale(flat, ih, ceiling));
 	const y = $derived(axis.y);
 	const ticks = $derived(axis.ticks);
 	const xPos = (i: number) => (n > 1 ? (iw * i) / (n - 1) : iw / 2);
@@ -65,7 +89,7 @@
 	const tickFmt = (v: number) => (percent ? `${v}%` : moneyTick(v));
 
 	const paths = $derived(
-		series.map((s) => {
+		plotted.map((s) => {
 			const lineGen = line<number | null>()
 				.defined(plottable)
 				.x((_, i) => xPos(i))
@@ -88,7 +112,7 @@
 	const GAP = 14;
 	const ends = $derived.by(() => {
 		if (!endLabels) return [];
-		const list = series
+		const list = plotted
 			.map((s) => {
 				const last = [...s.values].reverse().findIndex(plottable);
 				const i = last < 0 ? -1 : n - 1 - last;
@@ -160,7 +184,7 @@
 				<text x={-8} y={y(t) + 4} text-anchor="end">{tickFmt(t)}</text>
 			{/each}
 
-			{#each series as s, si (s.name)}
+			{#each plotted as s, si (s.name)}
 				{@const pth = paths[si]!}
 				{#if s.area}
 					<path d={pth.area} fill="url(#{gid}-{si})" />
@@ -208,7 +232,7 @@
 					stroke="var(--ink-3)"
 					stroke-dasharray="3 3"
 				/>
-				{#each series as s (s.name)}
+				{#each plotted as s (s.name)}
 					{#if s.values[hover] != null}
 						<circle
 							cx={xPos(hover)}

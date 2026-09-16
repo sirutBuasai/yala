@@ -119,6 +119,8 @@ const ANNUAL_SPEND = 993;
 const MONTHLY_SPEND = ANNUAL_SPEND / 12;
 const NET_WORTH = 6000;
 const LIQUID = 1300;
+/** What a withdrawal actually comes out of: net worth less the liquid cash the runway measures. */
+const INVESTED = 2600 + 2600;
 const DEFAULT_SWR = 0.04;
 
 describe('targets', () => {
@@ -146,10 +148,13 @@ describe('targets', () => {
 		);
 	});
 
-	it('reports FI progress as a percentage of that number', () => {
+	// Measured against the INVESTED balance, not net worth: the liquid cash is held to be spent, the
+	// runway threshold is what judges it, and counting it here flattered every FI figure.
+	it('reports FI progress as a percentage of that number, from the invested balance', () => {
 		const s = scalar('networth.fi_progress');
 		expect(s.unit).toEqual(PERCENT);
-		expect(s.value).toBeCloseTo((NET_WORTH / (ANNUAL_SPEND / DEFAULT_SWR)) * 100, 5);
+		expect(s.value).toBeCloseTo((INVESTED / (ANNUAL_SPEND / DEFAULT_SWR)) * 100, 5);
+		expect(s.value!).toBeLessThan((NET_WORTH / (ANNUAL_SPEND / DEFAULT_SWR)) * 100);
 	});
 
 	it('measures years of freedom against annual spending', () => {

@@ -16,6 +16,7 @@ import type {
 	Unit
 } from './primitives';
 import { MONEY, MONTHS, PERCENT, YEARS } from './primitives';
+import { assumptionsOf, realRate, yearsToRetirement, type Assumptions } from './assumptions';
 import { categorical } from './categorical';
 import { series } from './series';
 import {
@@ -856,8 +857,11 @@ export function netWorthYearTable(data: DashboardData): Table {
 // --- targets, derived from your own spending and the settings you state ---
 
 /** Annualized `measure` over the trailing year of months with data. Exported for the projection, which
-    needs the same two rates the targets are built from so a preview cannot disagree with them. */
-export function trailingAnnual(data: DashboardData, measure: 'spending' | 'saved'): number {
+    needs the same rates the targets are built from so a preview cannot disagree with them. */
+export function trailingAnnual(
+	data: DashboardData,
+	measure: 'spending' | 'saved' | 'contributions'
+): number {
 	const keys = data.meta.month_keys.filter((k) => data.months[k]).slice(-12);
 	if (!keys.length) return 0;
 
@@ -871,25 +875,65 @@ export function trailingAnnual(data: DashboardData, measure: 'spending' | 'saved
 
 const trailingAnnualSpend = (data: DashboardData) => trailingAnnual(data, 'spending');
 
-const swrOf = (data: DashboardData) => data.settings?.swr ?? 4;
+/**
+ * The two rates a plan runs on, each the figure stated or else the one the ledger logged.
+ *
+ * `saved` is a RESIDUAL — income less spending — so it is not a measured flow into investments. Payroll
+ * contributions are, and they always land there; whatever is left over is money that merely went unspent,
+ * so how much reaches the market is a choice rather than a fact. Hence the split: `residual` seeds the
+ * control, `investing` is what the projection actually adds.
+ */
+export function plannedRates(
+	data: DashboardData,
+	a: Assumptions
+): { spending: number; investing: number; contributions: number; residual: number } {
+	const contributions = trailingAnnual(data, 'contributions');
+	// Floored: a month funded out of savings contributes more than it took in, which is not a negative
+	// leftover to seed the control from.
+	const residual = Math.max(0, trailingAnnual(data, 'saved') - contributions);
 
-/** The portfolio that sustains your current spending at your stated withdrawal rate. */
-export function fiNumber(data: DashboardData): Scalar {
-	const annual = trailingAnnualSpend(data);
-	const rate = swrOf(data) / 100;
+	return {
+		spending: a.plannedSpending ?? trailingAnnualSpend(data),
+		// NOT capped at `residual`: money can be moved into the market from anywhere, so planning to invest
+		// more than last year's leftover is a legitimate plan rather than an error to clamp away.
+		investing: contributions + (a.outOfPocket ?? residual),
+		contributions,
+		residual
+	};
+}
+
+/** The buckets a return compounds. Liquid cash is held to be spent, so it is not projected to grow. */
+const INVESTED = BUCKETS.filter((b) => b !== 'Liquid');
+
+/**
+ * The balance a withdrawal actually comes out of: the invested buckets, not net worth. Cash held as a
+ * runway is not funding a retirement — the runway threshold is what measures that — and counting it
+ * toward the FI number flattered every figure derived from one. Null before anything is snapshotted.
+ */
+export function investedBalance(data: DashboardData): number | null {
+	const current = data.networth?.current;
+	if (!current) return null;
+
+	return INVESTED.reduce((sum, bucket) => sum + heldIn(current, bucket), 0);
+}
+
+/** The portfolio that sustains your planned spending at your stated withdrawal rate. */
+export function fiNumber(data: DashboardData, a: Assumptions = assumptionsOf(data)): Scalar {
+	const annual = plannedRates(data, a).spending;
+	const rate = a.swr / 100;
 
 	return {
 		kind: 'scalar',
 		unit: MONEY(data.currency),
 		label: words('FI number'),
 		value: rate && annual ? annual / rate : null,
-		note: annual ? live(`${money(annual)}/yr at ${swrOf(data)}%`) : words('no spending logged yet')
+		note: annual ? live(`${money(annual)}/yr at ${a.swr}%`) : words('no spending logged yet')
 	};
 }
 
-export function fiProgress(data: DashboardData): Scalar {
-	const target = fiNumber(data).value;
-	const current = currentNetWorth(data);
+export function fiProgress(data: DashboardData, a: Assumptions = assumptionsOf(data)): Scalar {
+	const target = fiNumber(data, a).value;
+	const current = investedBalance(data);
 
 	return {
 		kind: 'scalar',
@@ -900,15 +944,6 @@ export function fiProgress(data: DashboardData): Scalar {
 	};
 }
 
-/** Years until the retirement age you stated, or null without a birth year to count from. */
-function yearsToRetirement(data: DashboardData): number | null {
-	const birthYear = data.settings?.birth_year ?? null;
-	if (birthYear === null) return null;
-
-	const age = new Date().getFullYear() - birthYear;
-	return Math.max(0, (data.settings?.retire_age ?? 60) - age);
-}
-
 /**
  * Years your net worth would cover at your current spending, measured against the years left until
  * retirement — whether the balance could already carry you there.
@@ -916,10 +951,10 @@ function yearsToRetirement(data: DashboardData): number | null {
  * Not measured against the years a portfolio at the FI number would cover: that is `1 / swr`, so the
  * ratio would come out identical to `fiProgress` and state the same thing in a second unit.
  */
-export function yearsOfFreedom(data: DashboardData): Scalar {
+export function yearsOfFreedom(data: DashboardData, a: Assumptions = assumptionsOf(data)): Scalar {
 	const annual = trailingAnnualSpend(data);
 	const current = currentNetWorth(data);
-	const runway = yearsToRetirement(data);
+	const runway = yearsToRetirement(a);
 
 	return {
 		kind: 'scalar',
@@ -949,24 +984,38 @@ export function liquidRunway(data: DashboardData): Scalar {
  * Progress to "coast" — the balance that, left alone, compounds into your FI number by your target
  * age. Null without a birth year, which is the only source of how long you have.
  */
-export function coastFi(data: DashboardData): Scalar {
-	const unit = PERCENT;
-	const years = yearsToRetirement(data);
-	const target = fiNumber(data).value;
-	const current = currentNetWorth(data);
+/**
+ * The balance that, left alone, compounds into the FI number by the retirement age — the FI number
+ * discounted back over the years remaining. Null without a birth year to count those years from.
+ *
+ * Exported so the figure and any explanation of it read the same number from the same place.
+ */
+export function coastTarget(
+	data: DashboardData,
+	a: Assumptions = assumptionsOf(data)
+): number | null {
+	const years = yearsToRetirement(a);
+	const target = fiNumber(data, a).value;
+	if (years === null || !target) return null;
 
-	if (years === null || !target || current === null) {
+	return target / (1 + realRate(a) / 100) ** years;
+}
+
+export function coastFi(data: DashboardData, a: Assumptions = assumptionsOf(data)): Scalar {
+	const unit = PERCENT;
+	const years = yearsToRetirement(a);
+	const needed = coastTarget(data, a);
+	const current = investedBalance(data);
+
+	if (needed === null || current === null) {
 		return {
 			kind: 'scalar',
 			unit,
 			label: words('Coast FI'),
 			value: null,
-			note: years === null ? words('set your birth year in Manage') : undefined
+			note: years === null ? words('set your birth year in Financial planning') : undefined
 		};
 	}
-
-	const growth = (1 + (data.settings?.real_return ?? 5) / 100) ** years;
-	const needed = target / growth;
 
 	return {
 		kind: 'scalar',
@@ -1025,14 +1074,22 @@ export function topAccountShare(data: DashboardData): Scalar {
  * Cash runway, the FI number and Coast FI as one bullet set, each reusing the scalar that computes it.
  * Rows with no value are dropped rather than drawn empty.
  */
-export function netWorthThresholds(data: DashboardData): Bullet {
+export function netWorthThresholds(
+	data: DashboardData,
+	a: Assumptions = assumptionsOf(data)
+): Bullet {
 	const runway = liquidRunway(data);
-	const fi = fiProgress(data);
-	const coast = coastFi(data);
-	const target = data.settings?.runway_target ?? 6;
+	const fi = fiProgress(data, a);
+	const coast = coastFi(data, a);
 
 	const rows: BulletRow[] = [
-		{ label: 'Cash runway', unit: MONTHS, value: runway.value, target, note: runway.note },
+		{
+			label: 'Cash runway',
+			unit: MONTHS,
+			value: runway.value,
+			target: a.runwayTarget,
+			note: runway.note
+		},
 		{ label: 'FI number', unit: PERCENT, value: fi.value, target: 100, note: fi.note },
 		{ label: 'Coast FI', unit: PERCENT, value: coast.value, target: 100, note: coast.note }
 	];

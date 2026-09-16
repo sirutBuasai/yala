@@ -31,6 +31,15 @@
 	/* The arrange chrome's accent. The one accent that swaps with the theme, so arranging never
 	   reads as the hue the data itself uses (see the light block). */
 	--arrange-line: var(--lav);
+	/* A form control's own accent: `-fill` paints a solid area — a slider's track and thumb — and `-line`
+	   draws a 1px border or a small glyph, where the bright accent leaves almost nothing to see on the pale
+	   page (the note on `--arrange-line` below is the same observation).
+
+	   Neither needs a light-mode override: the hue does not diverge by theme, and `--lav-text` already
+	   carries the legibility shift the light page needs. Naming them here rather than reaching for `--lav`
+	   at each site is what lets the accent move in one edit. */
+	--control-fill: var(--lav);
+	--control-line: var(--lav-text);
 	/* Category palette. */
 	--cat-housing: #f7768e;
 	--cat-grocery: #f295c5;
@@ -486,7 +495,7 @@ a {
 
 /* A focused input tints its border too, so the field reads as active and not just ringed. */
 input:focus-visible {
-	border-color: var(--lav);
+	border-color: var(--control-line);
 }
 
 /* Strip the up/down spinner arrows on number inputs. */

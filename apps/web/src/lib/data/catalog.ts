@@ -58,6 +58,7 @@ import {
 	yearsOfFreedom,
 	type GrowthPart
 } from './networth';
+import { depletionYear, investedProjection } from './projection';
 import { type Scope, type ScopeLevel, latestMonthKey, scopeYear } from './scope';
 import { words } from '$lib/ui/label';
 import {
@@ -266,6 +267,15 @@ const CHART_DEFS: DataDef[] = [
 		scopes: LIFETIME,
 		build: (data) => netWorthThresholds(data)
 	},
+	// Forward-looking, so no scope but lifetime: a projection from a past year's close would be a
+	// different question from the one the modal asks.
+	{
+		id: 'networth.invested_projection',
+		label: 'Projected investments',
+		kind: 'multiseries',
+		scopes: LIFETIME,
+		build: (data) => investedProjection(data)
+	},
 	{
 		id: 'networth.liabilities_trend',
 		label: 'Liabilities over time',
@@ -460,9 +470,12 @@ const NETWORTH_STATS: DataDef[] = [
 			['networth.years_of_freedom', 'Years of freedom', yearsOfFreedom],
 			['networth.runway', 'Liquid runway', liquidRunway],
 			['networth.balance_growth', 'Balance growth', balanceGrowth],
-			['networth.top_account', 'Top account', topAccountShare]
+			['networth.top_account', 'Top account', topAccountShare],
+			['networth.depletion', 'Depletion year', depletionYear]
+			// Wrapped rather than passed straight through: the targets take their assumptions as a second
+			// argument, and handing them a scope there would read it as one.
 		] as const
-	).map(([id, label, build]) => scalarDef(id, label, LIFETIME, build))
+	).map(([id, label, build]) => scalarDef(id, label, LIFETIME, (data) => build(data)))
 ];
 
 // --- the decomposition behind a change in net worth ---

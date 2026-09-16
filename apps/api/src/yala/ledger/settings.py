@@ -30,7 +30,7 @@ class SettingSpec:
 
     key: str
     label: str  # how the field is named in an error message and in the UI
-    kind: str  # "percent" | "age" | "year" | "months" — drives coercion and how the UI renders it
+    kind: str  # "percent"|"age"|"year"|"months"|"money" — drives coercion and how the UI renders it
     minimum: Decimal
     maximum: Decimal
     default: Decimal | None  # None = no sensible default; dependent features stay hidden
@@ -38,31 +38,42 @@ class SettingSpec:
 
     @property
     def is_integer(self) -> bool:
-        """Ages, years, and month counts are whole numbers; rates carry decimals."""
-        return self.kind in ("age", "year", "months")
+        """Ages, years, month counts and planning amounts are whole; only rates carry decimals."""
+        return self.kind in ("age", "year", "months", "money")
 
 
 SETTINGS: tuple[SettingSpec, ...] = (
+    # Floored well above zero: the FI number is spending divided by this, so a rate near
+    # zero puts the target in the tens of millions and takes the value axis with it.
     SettingSpec(
         key="swr",
         label="Withdrawal rate",
         kind="percent",
-        minimum=Decimal("0.1"),
+        minimum=Decimal("1.5"),
         maximum=Decimal(20),
         default=Decimal(4),
-        help="Share of the portfolio you plan to withdraw each year at retirement.",
+        help="Annual withdrawal rate from investment after retirement.",
     ),
+    # Nominal, not real: the return people actually know is the market's headline figure.
+    # The real rate every projection compounds at is derived from this and `inflation` — see
+    # the Fisher relation in the frontend's `realRate`, exact rather than a subtraction.
     SettingSpec(
-        key="real-return",
-        label="Expected real return",
+        key="nominal-return",
+        label="Expected nominal return",
         kind="percent",
         minimum=Decimal(0),
         maximum=Decimal(20),
-        default=Decimal(5),
-        help=(
-            "Investment annual returns, used for balance growth projections without further "
-            "contributions."
-        ),
+        default=Decimal(8),
+        help="Expected annual investment return adjusted with inflation.",
+    ),
+    SettingSpec(
+        key="inflation",
+        label="Expected inflation",
+        kind="percent",
+        minimum=Decimal(0),
+        maximum=Decimal(15),
+        default=Decimal(3),
+        help="Long-run annual inflation rate.",
     ),
     SettingSpec(
         key="retire-age",
@@ -71,7 +82,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
         minimum=Decimal(18),
         maximum=Decimal(100),
         default=Decimal(60),
-        help="The age the balance growth projection ends.",
+        help="The age you stop contributing and start withdrawing money.",
     ),
     SettingSpec(
         key="runway-target",
@@ -82,6 +93,36 @@ SETTINGS: tuple[SettingSpec, ...] = (
         default=Decimal(6),
         help="Number of months in spending you want held in liquid assets.",
     ),
+    # The two planning amounts. Both default to None, meaning "use what the ledger
+    # logged": the figure is data-derived, so a static default here would be a guess, and
+    # the form seeds the control from the data instead.
+    SettingSpec(
+        key="planned-spending",
+        label="Planned spending",
+        kind="money",
+        minimum=Decimal(0),
+        maximum=Decimal(500_000),
+        default=None,
+        help="Projected yearly spending.",
+    ),
+    SettingSpec(
+        key="out-of-pocket",
+        label="Out-of-pocket investments",
+        kind="money",
+        minimum=Decimal(0),
+        maximum=Decimal(500_000),
+        default=None,
+        help="Additional yearly investments out-of-pocket excluding payroll contributions.",
+    ),
+    SettingSpec(
+        key="horizon-age",
+        label="Plan horizon age",
+        kind="age",
+        minimum=Decimal(60),
+        maximum=Decimal(110),
+        default=Decimal(95),
+        help="The age you plan to stop spending money.",
+    ),
     SettingSpec(
         key="birth-year",
         label="Birth year",
@@ -90,8 +131,8 @@ SETTINGS: tuple[SettingSpec, ...] = (
         maximum=Decimal(2100),
         default=None,
         help=(
-            "Your birth year, used with your target retirement age for the balance growth "
-            "projection."
+            "Your birth year, used for balance growth projection with respect to the target "
+            "retirement age."
         ),
     ),
 )

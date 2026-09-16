@@ -24,6 +24,8 @@
 		valueLabels?: boolean;
 		/** Heatmap scaling: per row (default) or one scale for the whole grid. */
 		normalize?: 'row' | 'col' | 'global';
+		/** Fix a line chart's value axis to end here, so a level partway up is not squashed to the floor. */
+		ceiling?: number;
 	}
 	let {
 		primitive,
@@ -36,7 +38,8 @@
 		endLabels,
 		dashed,
 		valueLabels,
-		normalize
+		normalize,
+		ceiling
 	}: Props = $props();
 
 	const def = $derived(chart ? CHARTS_BY_ID[chart] : defaultChart(primitive.kind));
@@ -49,7 +52,8 @@
 		endLabels,
 		dashed,
 		valueLabels,
-		normalize
+		normalize,
+		ceiling
 	});
 	const chartProps = $derived(def ? def.adapt(primitive, opts) : null);
 </script>

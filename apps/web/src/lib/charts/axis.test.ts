@@ -101,6 +101,27 @@ describe('moneyYScale', () => {
 		expect(Number.isFinite(y(0))).toBe(true);
 		expect(ticks).toContain(0);
 	});
+
+	it('rounds the top outward when nothing caps it', () => {
+		// `.nice()` lifts 3.6M to 4M, so the tallest reading sits below the top edge.
+		expect(moneyYScale([0, 3_600_000], 300).y(3_600_000)).toBeGreaterThan(0);
+	});
+
+	/**
+	 * Bug: a chart capped at a chosen level had `.nice()` round the ceiling up, leaving a dead band above
+	 * lines that were already clipped — so the plot stopped short of where the frame said it did.
+	 */
+	it('puts a capped top exactly at the top edge', () => {
+		const { y, ticks } = moneyYScale([0, 3_600_000], 300, 3_600_000);
+		expect(y(3_600_000)).toBe(0);
+		expect(y(0)).toBe(300);
+		// Gridlines stay on round numbers, and none is drawn above the cap.
+		expect(Math.max(...ticks)).toBeLessThanOrEqual(3_600_000);
+	});
+
+	it('keeps the cap even when the data falls well short of it', () => {
+		expect(moneyYScale([0, 100], 300, 1_000_000).y(1_000_000)).toBe(0);
+	});
 });
 
 describe('labelIndices', () => {
@@ -128,6 +149,24 @@ describe('labelIndices', () => {
 		const shown = labelIndices(9, 300, dates(9));
 		const [secondLast, last] = shown.slice(-2);
 		expect(last! - secondLast!).toBeGreaterThan(1);
+	});
+
+	/**
+	 * Bug: a 70-point axis of 4-char years printed 2092 over 2095. The stride placed a label three slots
+	 * from the end where each needed six, and the old guard only dropped a neighbour closer than HALF a
+	 * stride — so it kept both. The room a label needs is a pixel measurement, not a fraction of a stride.
+	 */
+	it('keeps every drawn label at least its own width apart on a long axis', () => {
+		const years = Array.from({ length: 70 }, (_, i) => String(2026 + i));
+		const innerWidth = 592;
+		const shown = labelIndices(70, innerWidth, years);
+		const room = 4 * 6.2 + 12;
+
+		for (let i = 1; i < shown.length; i++) {
+			const gap = ((shown[i]! - shown[i - 1]!) * innerWidth) / 69;
+			expect(gap, `${years[shown[i - 1]!]} to ${years[shown[i]!]}`).toBeGreaterThanOrEqual(room);
+		}
+		expect(shown.at(-1)).toBe(69);
 	});
 
 	it('handles degenerate series', () => {

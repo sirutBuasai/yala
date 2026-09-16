@@ -257,9 +257,11 @@ export function makeNetWorthData(): DashboardData {
 	};
 	data.settings = {
 		swr: 4,
-		real_return: 5,
+		nominal_return: 8,
+		inflation: 3,
 		retire_age: 60,
 		runway_target: 6,
+		horizon_age: 95,
 		birth_year: null
 	};
 	return data;

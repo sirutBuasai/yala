@@ -95,14 +95,18 @@ export type Label1 = string;
 export type Value1 = number;
 export type Adjustments = NetWorthAdjustment[];
 export type Swr = number;
-export type RealReturn = number;
+export type NominalReturn = number;
+export type Inflation = number;
 export type RetireAge = number;
 export type RunwayTarget = number;
+export type HorizonAge = number;
 export type BirthYear = number | null;
+export type PlannedSpending = number | null;
+export type OutOfPocket = number | null;
 export type SettingSpecs = SettingField[] | null;
 export type Key = string;
 export type Label2 = string;
-export type Kind1 = 'percent' | 'age' | 'year' | 'months';
+export type Kind1 = 'percent' | 'age' | 'year' | 'months' | 'money';
 export type Min = number;
 export type Max = number;
 export type Default = number | null;
@@ -397,10 +401,14 @@ export interface NetWorthAdjustment {
  */
 export interface SettingsSection {
 	swr: Swr;
-	real_return: RealReturn;
+	nominal_return: NominalReturn;
+	inflation: Inflation;
 	retire_age: RetireAge;
 	runway_target: RunwayTarget;
+	horizon_age: HorizonAge;
 	birth_year?: BirthYear;
+	planned_spending?: PlannedSpending;
+	out_of_pocket?: OutOfPocket;
 }
 /**
  * The spec behind one setting: how the form names it, bounds it, and explains it. Snapshotted

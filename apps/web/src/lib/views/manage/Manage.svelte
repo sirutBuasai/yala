@@ -1,16 +1,16 @@
 <script lang="ts">
-	// Everything the ledger declares, plus the few assumptions it can't derive, as one console: an index
-	// of accounts on the left, one detail panel on the right. Every panel is driven by the kind
-	// capabilities the API sends, so a kind gains a control server-side rather than here.
+	// Every account the ledger declares, as one console: an index on the left, one detail panel on the
+	// right. Every panel is driven by the kind capabilities the API sends, so a kind gains a control
+	// server-side rather than here.
 	import type { AccountsInfo } from '$lib/data/load';
 	import type { DashboardData } from '$lib/data/types';
 	import { accountInfo } from '$lib/data/directory.svelte';
 	import { accountLeaf } from '$lib/utils/format';
+	import { PICK_ACCOUNT } from '$lib/copy';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import AccountIndex from '$lib/views/manage/AccountIndex.svelte';
 	import AccountPanel from '$lib/views/manage/AccountPanel.svelte';
 	import NewAccount from '$lib/views/manage/NewAccount.svelte';
-	import SettingsPanel from '$lib/views/manage/SettingsPanel.svelte';
 	import { KIND_ORDER } from '$lib/views/manage/kinds';
 
 	interface Props {
@@ -61,23 +61,19 @@
 		deduction: deductions.map(accountLeaf)
 	});
 
-	type Shown = { at: 'account'; account: string } | { at: 'settings' };
-
-	let shown = $state<Shown>({ at: 'settings' });
+	let selected = $state<string | null>(null);
 	// Opening an account is a flow of its own, over the page rather than in it — nothing on the page is
 	// being looked at while it runs.
 	let opening = $state(false);
-
-	const selected = $derived(shown.at === 'account' ? shown.account : null);
 
 	function saved() {
 		onsaved?.();
 	}
 
-	/** An account that has just been renamed is at a new path. The panel resolves where it went, so
-	    only a close — or a rename it could not place — falls back to the settings panel. */
+	/** An account that has just been renamed is at a new path. The panel resolves where it went, so only
+	    a close — or a rename it could not place — drops the selection. */
 	$effect(() => {
-		if (shown.at === 'account' && !accountInfo(shown.account)) shown = { at: 'settings' };
+		if (selected !== null && !accountInfo(selected)) selected = null;
 	});
 </script>
 
@@ -85,47 +81,31 @@
 
 <div class="console">
 	<aside>
-		<AccountIndex
-			{kindNames}
-			{selected}
-			onselect={(account) => (shown = { at: 'account', account })}
-		>
+		<AccountIndex {kindNames} {selected} onselect={(account) => (selected = account)}>
 			{#snippet actions()}
 				<button type="button" class="btn-primary new" onclick={() => (opening = true)}
 					>+ New account</button
 				>
 			{/snippet}
 		</AccountIndex>
-		<div class="foot">
-			<button
-				type="button"
-				class="btn-mini"
-				aria-pressed={shown.at === 'settings'}
-				onclick={() => (shown = { at: 'settings' })}>Financial planning</button
-			>
-		</div>
 	</aside>
 
-	{#if shown.at === 'account'}
+	{#if selected !== null}
 		<AccountPanel
-			account={shown.account}
+			account={selected}
 			{kinds}
 			destinations={[
 				...destinations,
-				...(accountInfo(shown.account)?.kind === 'investment' ? cards : [])
+				...(accountInfo(selected)?.kind === 'investment' ? cards : [])
 			]}
 			{employers}
-			balance={balances[shown.account] ?? null}
+			balance={balances[selected] ?? null}
 			onchanged={saved}
-			onrenamed={(account) => (shown = { at: 'account', account })}
+			onrenamed={(account) => (selected = account)}
 		/>
 	{:else}
 		<main>
-			<h2>Financial planning</h2>
-			<p class="cap">
-				Assumptions used to calculate financial independence metrics and runway targets.
-			</p>
-			<SettingsPanel onsaved={saved} />
+			<p class="cap">{PICK_ACCOUNT}</p>
 		</main>
 	{/if}
 </div>
@@ -161,20 +141,10 @@
 	.new {
 		flex: 0 0 auto;
 	}
-	.foot {
-		border-top: 1px solid var(--border);
-		padding-top: var(--gap-row);
-	}
-	h2 {
-		font-family: var(--font-display);
-		font-size: var(--text-panel);
-		letter-spacing: var(--ls-snug);
-		margin: 0 0 var(--space-3);
-	}
 	.cap {
 		font-size: var(--text-caption);
 		color: var(--ink-3);
-		margin: 0 0 var(--space-6);
+		margin: 0;
 	}
 
 	@media (max-width: 60rem) {

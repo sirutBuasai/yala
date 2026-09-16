@@ -15,11 +15,18 @@
 	import { snapshotYears } from '$lib/data/networth';
 	import { yearSpan } from '$lib/utils/format';
 	import { live, words } from '$lib/ui/label';
+	import Planning from '$lib/views/networth/Planning.svelte';
 
 	interface Props {
 		data: DashboardData;
+		/** Called after the planning assumptions change, to re-pull the figures derived from them. */
+		onsaved: () => void;
 	}
-	let { data }: Props = $props();
+	let { data, onsaved }: Props = $props();
+
+	// The one pane on this board you can act on: every bar it draws is measured against an assumption, so
+	// the assumptions are edited from it rather than from a settings page a page away.
+	let planning = $state(false);
 
 	const all: Scope = { level: 'all' };
 	const span = $derived(yearSpan(snapshotYears(data)));
@@ -239,6 +246,14 @@
 	</Pane>
 
 	{#each figurePanes(PANES) as [id, figure] (id)}
-		<FigurePane {id} {data} spec={figure} />
+		<FigurePane {id} {data} spec={figure} actions={id === 'thresholds' ? adjust : undefined} />
 	{/each}
 </Board>
+
+{#snippet adjust()}
+	<button class="btn-ghost" onclick={() => (planning = true)}>Adjust</button>
+{/snippet}
+
+{#if planning}
+	<Planning {data} {onsaved} onclose={() => (planning = false)} />
+{/if}

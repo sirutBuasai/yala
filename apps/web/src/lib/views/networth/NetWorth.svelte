@@ -66,7 +66,7 @@
 	{#if range.value === 'year'}
 		<YearView {data} year={year.value} />
 	{:else}
-		<AllTimeView {data} />
+		<AllTimeView {data} {onsaved} />
 	{/if}
 {:else}
 	<p class="cap pad">No balances logged yet. Log each account balance to start tracking.</p>

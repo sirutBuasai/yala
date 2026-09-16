@@ -41,6 +41,8 @@ interface AdaptOpts {
 	log?: boolean;
 	/** Label each line at its right edge instead of drawing a legend. */
 	endLabels?: boolean;
+	/** Fix a line chart's value axis to end here, so a level partway up is not squashed to the floor. */
+	ceiling?: number;
 	/** Heatmap scaling: per band along the named axis ('row' by default), or one scale for the grid. */
 	normalize?: 'row' | 'col' | 'global';
 	/** Series names to draw as a dotted line. */
@@ -264,7 +266,8 @@ export const CHARTS: ChartDef[] = [
 				series: toLineSeries(list, opts),
 				percent,
 				log: opts.log,
-				endLabels: opts.endLabels
+				endLabels: opts.endLabels,
+				ceiling: opts.ceiling
 			};
 		}
 	}),

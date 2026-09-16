@@ -26,14 +26,26 @@ export function plotSize(w: number, h: number, m: Margins): { iw: number; ih: nu
 	return { iw: Math.max(0, w - m.l - m.r), ih: Math.max(0, h - m.t - m.b) };
 }
 
-/** Zero-anchored linear value→pixel Y scale, plus its ticks. `ih` is the inner plot height in px. */
-export function moneyYScale(values: number[], ih: number): ValueScale<ScaleLinear<number, number>> {
+/**
+ * Zero-anchored linear value→pixel Y scale, plus its ticks. `ih` is the inner plot height in px.
+ *
+ * `cap` fixes the top of the domain exactly, skipping the outward rounding: for a frame chosen on purpose
+ * — a chart capped at a target level — `.nice()` rounded the ceiling up and left a dead band above the
+ * clipped lines, so the plot no longer ended where the frame said it did. Ticks still land on round
+ * numbers below it; the top edge itself carries no label.
+ */
+export function moneyYScale(
+	values: number[],
+	ih: number,
+	cap?: number
+): ValueScale<ScaleLinear<number, number>> {
+	const lo = Math.min(0, ...values);
 	const y = scaleLinear()
-		.domain([Math.min(0, ...values), Math.max(0, ...values)])
-		.nice()
+		.domain([lo, cap ?? Math.max(0, ...values)])
 		.range([ih, 0]);
+	if (cap == null) y.nice();
 
-	return { y, ticks: y.ticks(4) };
+	return { y, ticks: y.ticks(4).filter((t) => t <= y.domain()[1]!) };
 }
 
 /**
@@ -124,9 +136,12 @@ export function labelIndices(count: number, innerWidth: number, labels: string[]
 	const out: number[] = [];
 	for (let i = 0; i < count - 1; i += stride) out.push(i);
 
+	// The last tick is always drawn, so it is the one the stride cannot place. Drop the label before it
+	// when the two would not both fit — measured in PIXELS, not as a fraction of the stride: a gap of
+	// three-quarters of a stride still overlapped, which is how a 70-year axis printed 2092 over 2095.
 	const last = count - 1;
 	const prev = out[out.length - 1];
-	if (prev !== undefined && last - prev < stride * 0.5) out.pop();
+	if (prev !== undefined && ((last - prev) * innerWidth) / last < room) out.pop();
 	out.push(last);
 
 	return out;

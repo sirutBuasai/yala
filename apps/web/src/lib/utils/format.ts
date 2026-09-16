@@ -33,10 +33,22 @@ export function moneyExact(n: number | null | undefined): string {
 	return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString(undefined, digits);
 }
 
+/**
+ * An unsigned magnitude abbreviated to its tier: thousands as `k`, millions as `M`, one decimal until
+ * the tier's tens so a label is never more than four digits wide.
+ *
+ * Both tiers, because a projection compounds past a thousand thousand and its axis read "$50000k" when
+ * `k` was the only one.
+ */
+function tiered(magnitude: number): string {
+	return magnitude >= 1e6
+		? (magnitude / 1e6).toFixed(magnitude < 1e7 ? 1 : 0) + 'M'
+		: (magnitude / 1e3).toFixed(magnitude < 1e4 ? 1 : 0) + 'k';
+}
+
 export function moneyK(n: number | null | undefined): string {
 	n = n || 0;
-
-	return (n < 0 ? '-$' : '$') + (Math.abs(n) / 1000).toFixed(Math.abs(n) < 10000 ? 1 : 0) + 'k';
+	return (n < 0 ? '-$' : '$') + tiered(Math.abs(n));
 }
 
 /** Compact money for tight spaces: abbreviate thousands, keep smaller figures exact. */
@@ -49,9 +61,7 @@ export function moneyCompact(n: number | null | undefined): string {
     for the figure itself. */
 export function numCompact(n: number | null | undefined): string {
 	const v = n || 0;
-	return Math.abs(v) >= 1000
-		? (v / 1000).toFixed(Math.abs(v) < 10000 ? 1 : 0) + 'k'
-		: String(Math.round(v));
+	return Math.abs(v) >= 1000 ? (v < 0 ? '-' : '') + tiered(Math.abs(v)) : String(Math.round(v));
 }
 
 export function pct(part: number, whole: number): string {

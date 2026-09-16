@@ -17,6 +17,15 @@
 		accentText?: string;
 		/** Small uppercase label above the title. */
 		kicker?: string;
+		/** A line under the title saying what the panel is for. */
+		caption?: string;
+		/** Room for two columns of content side by side — controls beside what they drive. */
+		wide?: boolean;
+		/**
+		 * The children scroll their own regions rather than the body scrolling as one. For a panel split
+		 * into panes that must move independently; the body then fills the panel and clips.
+		 */
+		paned?: boolean;
 		/** Extra header content below the title row, inside the band. */
 		controls?: Snippet;
 		children: Snippet;
@@ -28,6 +37,9 @@
 		accent,
 		accentText,
 		kicker,
+		caption,
+		wide = false,
+		paned = false,
 		controls,
 		children
 	}: Props = $props();
@@ -41,6 +53,7 @@
 >
 	<div
 		class="panel {variant}"
+		class:wide
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="overlay-title"
@@ -61,6 +74,7 @@
 				<div class="titles">
 					{#if kicker}<span class="kicker">{kicker}</span>{/if}
 					<h2 id="overlay-title" class="serif">{title}</h2>
+					{#if caption}<p class="cap">{caption}</p>{/if}
 				</div>
 				<!-- data-dismiss keeps the focus trap from opening on "close" (see focusTrap); the label
 				     gives it a spoken name, since "✕" alone is not one. -->
@@ -76,7 +90,7 @@
 				<div class="controls">{@render controls()}</div>
 			{/if}
 		</div>
-		<div class="body scroller trap">
+		<div class="body" class:scroller={!paned} class:trap={!paned} class:paned>
 			{@render children()}
 		</div>
 	</div>
@@ -111,6 +125,11 @@
 		box-shadow: var(--shadow-modal);
 		width: min(760px, 100%);
 		max-height: 88vh;
+	}
+	/* Two columns of content need room for both; below that the panel is already full-width and the
+	   content itself falls back to one column. */
+	.modal.wide {
+		width: min(1180px, 100%);
 	}
 	.drawer {
 		position: fixed;
@@ -152,6 +171,11 @@
 		margin: 0;
 		font-size: var(--text-dialog);
 	}
+	.head .cap {
+		margin: var(--space-1) 0 0;
+		font-size: var(--text-caption);
+		color: var(--ink-3);
+	}
 	.controls {
 		margin-top: var(--space-6);
 	}
@@ -170,5 +194,18 @@
 	/* Scrolling, scroll containment and the slim scrollbar all come from the shared `.scroller`. */
 	.body {
 		padding: var(--space-10) var(--space-11);
+	}
+	/* Handed to the content instead: the body takes the leftover height and clips, so a pane inside it has
+	   a bounded box to scroll within. `min-height: 0` is load-bearing — without it a flex child refuses to
+	   shrink below its content and the panel grows past `max-height` instead of the pane scrolling. */
+	.body.paned {
+		flex: 1 1 auto;
+		min-height: 0;
+		overflow: hidden;
+		/* A single grid row rather than a block: the body's height here is FLEX-RESOLVED, not specified, so a
+		   `height: 100%` child fell back to auto and grew past it. `minmax(0, 1fr)` hands the child a
+		   definite height and still lets it shrink. */
+		display: grid;
+		grid-template-rows: minmax(0, 1fr);
 	}
 </style>

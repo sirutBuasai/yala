@@ -10,13 +10,16 @@ export type Unit =
 	| { kind: 'money'; currency: string }
 	| { kind: 'percent' }
 	| { kind: 'count' }
-	| { kind: 'duration'; period: 'month' | 'year' };
+	| { kind: 'duration'; period: 'month' | 'year' }
+	| { kind: 'year' };
 
 export const MONEY = (currency = 'USD'): Unit => ({ kind: 'money', currency });
 export const PERCENT: Unit = { kind: 'percent' };
 export const COUNT: Unit = { kind: 'count' };
 export const MONTHS: Unit = { kind: 'duration', period: 'month' };
 export const YEARS: Unit = { kind: 'duration', period: 'year' };
+/** A point on the calendar. Distinct from `YEARS`, which is a span of them. */
+export const YEAR: Unit = { kind: 'year' };
 
 /** Render a raw value in its unit. Shared so every visual formats the same figure the same way. */
 export function formatUnit(value: number, unit: Unit): string {
@@ -27,6 +30,9 @@ export function formatUnit(value: number, unit: Unit): string {
 			return `${Math.round(value)}%`;
 		case 'count':
 			return Math.round(value).toLocaleString();
+		// Bare digits: a grouped "2,071" reads as a quantity rather than a date.
+		case 'year':
+			return String(Math.round(value));
 		// Durations keep a decimal: they are small enough that rounding changes the answer.
 		case 'duration':
 			return `${value.toFixed(1)} ${unit.period === 'month' ? 'mo' : 'yr'}`;

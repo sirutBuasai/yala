@@ -245,7 +245,7 @@ class SettingField(_Base):
 
     key: str
     label: str
-    kind: Literal["percent", "age", "year", "months"]
+    kind: Literal["percent", "age", "year", "months", "money"]
     min: float
     max: float
     default: float | None  # null = no sensible default; dependent features stay hidden
@@ -257,10 +257,15 @@ class SettingsSection(_Base):
     unset with no default, and features depending on it stay hidden rather than guessing."""
 
     swr: float  # withdrawal rate, percent
-    real_return: float  # expected return above inflation, percent
+    nominal_return: float  # expected return before inflation, percent
+    inflation: float  # long-run inflation the return is discounted by, percent
     retire_age: float  # target retirement age
     runway_target: float  # months of spending to hold in cash
+    horizon_age: float  # age the projection runs to, and so the age the balance must last until
     birth_year: float | None = None  # unset → age-based projections hidden
+    # Both unset → use the figures the ledger logged; the frontend seeds the controls from those.
+    planned_spending: float | None = None  # yearly spending to plan against
+    out_of_pocket: float | None = None  # yearly investing beyond payroll contributions
 
 
 class DashboardData(_Base):

@@ -1,0 +1,90 @@
+// The figures the ledger can't derive, as one object. Every target and projection reads them through
+// here rather than off `data.settings`, which is what lets a preview be drawn against values that have
+// not been written yet.
+
+import type { DashboardData } from '$lib/data/types';
+
+export interface Assumptions {
+	/** Withdrawal rate at retirement, as a percentage. */
+	swr: number;
+	/** Expected annual investment return before inflation, as a percentage. */
+	nominalReturn: number;
+	/** Long-run inflation the return is discounted by, as a percentage. */
+	inflation: number;
+	retireAge: number;
+	/** Months of spending to hold liquid. */
+	runwayTarget: number;
+	/** The age the projection runs to, and so the age the balance has to last until. */
+	horizonAge: number;
+	/** Null means unset. Everything counted from it stays null rather than guessing an age. */
+	birthYear: number | null;
+	/** Yearly spending to plan against. Null falls back to what the ledger logged. */
+	plannedSpending: number | null;
+	/**
+	 * Yearly investing beyond payroll contributions, which are always invested and so are not in this
+	 * figure. Not held to what happens to be left over after spending: money can be moved into the market
+	 * from anywhere. Null falls back to the leftover the ledger logged.
+	 */
+	outOfPocket: number | null;
+}
+
+/** Mirrors the backend spec defaults, for a snapshot taken before a setting existed. */
+const FALLBACK: Assumptions = {
+	swr: 4,
+	nominalReturn: 8,
+	inflation: 3,
+	retireAge: 60,
+	runwayTarget: 6,
+	horizonAge: 95,
+	birthYear: null,
+	plannedSpending: null,
+	outOfPocket: null
+};
+
+/** What the ledger currently states, each figure falling back to its default. */
+export function assumptionsOf(data: DashboardData): Assumptions {
+	const s = data.settings;
+	if (!s) return FALLBACK;
+
+	return {
+		swr: s.swr ?? FALLBACK.swr,
+		nominalReturn: s.nominal_return ?? FALLBACK.nominalReturn,
+		inflation: s.inflation ?? FALLBACK.inflation,
+		retireAge: s.retire_age ?? FALLBACK.retireAge,
+		runwayTarget: s.runway_target ?? FALLBACK.runwayTarget,
+		horizonAge: s.horizon_age ?? FALLBACK.horizonAge,
+		birthYear: s.birth_year ?? null,
+		plannedSpending: s.planned_spending ?? null,
+		outOfPocket: s.out_of_pocket ?? null
+	};
+}
+
+/**
+ * The return every projection actually compounds at: the nominal return discounted by inflation, so a
+ * balance and the spending it funds are both in today's purchasing power.
+ *
+ * The Fisher relation, `(1+real) = (1+nominal)/(1+inflation)`, NOT `nominal - inflation`. The shortcut
+ * overstates the real rate by about a tenth of a point, which compounds to roughly 7% too much balance
+ * over a seventy-year horizon — small enough to look right and large enough to matter.
+ *
+ * Returned as a percentage, to match the figures it is derived from.
+ */
+export function realRate(a: Assumptions): number {
+	return ((1 + a.nominalReturn / 100) / (1 + a.inflation / 100) - 1) * 100;
+}
+
+/**
+ * The assumption a setting feeds, for a form that holds its values by the ledger's key. The two spellings
+ * differ only in casing, so deriving one from the other keeps them from falling out of step.
+ */
+export function assumptionKey(settingKey: string): keyof Assumptions {
+	return settingKey.replace(/-(\w)/g, (_, c: string) => c.toUpperCase()) as keyof Assumptions;
+}
+
+/** Years until the retirement age stated, or null without a birth year to count from. */
+export function yearsToRetirement(a: Assumptions): number | null {
+	if (a.birthYear === null) return null;
+
+	const age = new Date().getFullYear() - a.birthYear;
+	return Math.max(0, a.retireAge - age);
+}

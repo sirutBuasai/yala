@@ -45,8 +45,17 @@ describe('moneyK', () => {
 		expect(moneyK(25000)).toBe('$25k');
 	});
 
+	// A projection compounds into the millions, and one tier alone rendered its axis "$50000k".
+	it('steps up to millions rather than counting thousands past a thousand', () => {
+		expect(moneyK(1_000_000)).toBe('$1.0M');
+		expect(moneyK(9_900_000)).toBe('$9.9M');
+		expect(moneyK(50_000_000)).toBe('$50M');
+		expect(moneyK(999_999)).toBe('$1000k');
+	});
+
 	it('handles negatives and nullish', () => {
 		expect(moneyK(-2500)).toBe('-$2.5k');
+		expect(moneyK(-3_400_000)).toBe('-$3.4M');
 		expect(moneyK(null)).toBe('$0.0k');
 	});
 });

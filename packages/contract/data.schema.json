@@ -910,7 +910,8 @@
             "percent",
             "age",
             "year",
-            "months"
+            "months",
+            "money"
           ],
           "title": "Kind",
           "type": "string"
@@ -959,8 +960,12 @@
           "title": "Swr",
           "type": "number"
         },
-        "real_return": {
-          "title": "Real Return",
+        "nominal_return": {
+          "title": "Nominal Return",
+          "type": "number"
+        },
+        "inflation": {
+          "title": "Inflation",
           "type": "number"
         },
         "retire_age": {
@@ -969,6 +974,10 @@
         },
         "runway_target": {
           "title": "Runway Target",
+          "type": "number"
+        },
+        "horizon_age": {
+          "title": "Horizon Age",
           "type": "number"
         },
         "birth_year": {
@@ -982,13 +991,39 @@
           ],
           "default": null,
           "title": "Birth Year"
+        },
+        "planned_spending": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Planned Spending"
+        },
+        "out_of_pocket": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Out Of Pocket"
         }
       },
       "required": [
         "swr",
-        "real_return",
+        "nominal_return",
+        "inflation",
         "retire_age",
-        "runway_target"
+        "runway_target",
+        "horizon_age"
       ],
       "title": "SettingsSection",
       "type": "object"

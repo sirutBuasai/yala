@@ -77,12 +77,16 @@
 		flex: 1 1 auto;
 	}
 	/* Each row takes an equal share of whatever height the pane has, and its label line is fixed, so the
-	   leftover goes to the bar: shrink the pane and the bars thin, grow it and they thicken. */
+	   leftover goes to the bar: shrink the pane and the bars thin, grow it and they thicken.
+
+	   The floor is what makes the set self-sizing: `flex-basis: 0` alone has no intrinsic height, so in a
+	   container that states none — an overlay rather than a sized pane — every row collapsed and the three
+	   painted on top of each other. It never binds on a board, whose panes are taller than this. */
 	.bul {
 		display: flex;
 		flex-direction: column;
 		flex: 1 1 0;
-		min-height: 0;
+		min-height: 2.5rem;
 	}
 	.head {
 		display: flex;

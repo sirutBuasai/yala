@@ -344,7 +344,15 @@ describe('getSettings', () => {
 	it('reads the SNAPSHOT when there is no API, so the form still renders', async () => {
 		// Every form renders either way; only the write is refused.
 		const doc = makeData();
-		doc.settings = { swr: 4, real_return: 5, retire_age: 60, runway_target: 6, birth_year: null };
+		doc.settings = {
+			swr: 4,
+			nominal_return: 8,
+			inflation: 3,
+			retire_age: 60,
+			runway_target: 6,
+			horizon_age: 95,
+			birth_year: null
+		};
 		doc.setting_specs = [
 			{
 				key: 'swr',
@@ -358,12 +366,12 @@ describe('getSettings', () => {
 			// A hyphenated key: the contract spells it with an underscore, so reading `settings` straight
 			// through would leave this one blank.
 			{
-				key: 'real-return',
-				label: 'Expected real return',
+				key: 'nominal-return',
+				label: 'Expected return',
 				kind: 'percent',
 				min: 0,
-				max: 15,
-				default: 5,
+				max: 20,
+				default: 8,
 				help: 'h'
 			},
 			{
@@ -382,14 +390,22 @@ describe('getSettings', () => {
 		const { info, error } = await getSettings();
 
 		expect(error).toBeNull();
-		expect(info?.specs.map((s) => s.key)).toEqual(['swr', 'real-return', 'retire-age']);
+		expect(info?.specs.map((s) => s.key)).toEqual(['swr', 'nominal-return', 'retire-age']);
 		// Every spec the form renders has its value beside it, whatever its key looks like.
-		expect(info?.values).toEqual({ swr: 4, 'real-return': 5, 'retire-age': 60 });
+		expect(info?.values).toEqual({ swr: 4, 'nominal-return': 8, 'retire-age': 60 });
 	});
 
 	it('gives a spec the snapshot has no value for a null rather than dropping the field', async () => {
 		const doc = makeData();
-		doc.settings = { swr: 4, real_return: 5, retire_age: 60, runway_target: 6, birth_year: null };
+		doc.settings = {
+			swr: 4,
+			nominal_return: 8,
+			inflation: 3,
+			retire_age: 60,
+			runway_target: 6,
+			horizon_age: 95,
+			birth_year: null
+		};
 		doc.setting_specs = [
 			{
 				key: 'birth-year',
@@ -421,7 +437,15 @@ describe('getSettings', () => {
 
 	it('says the snapshot is too old rather than showing a blank panel', async () => {
 		const doc = makeData();
-		doc.settings = { swr: 4, real_return: 5, retire_age: 60, runway_target: 6, birth_year: null };
+		doc.settings = {
+			swr: 4,
+			nominal_return: 8,
+			inflation: 3,
+			retire_age: 60,
+			runway_target: 6,
+			horizon_age: 95,
+			birth_year: null
+		};
 		doc.setting_specs = null;
 		vi.stubGlobal('fetch', routed({ 'data.json': doc }, ['/api/']));
 		await loadData();
