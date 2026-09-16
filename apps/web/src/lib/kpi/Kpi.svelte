@@ -1,8 +1,3 @@
-<script module lang="ts">
-	/** Width one point of a chart needs before its neighbours stop being tellable apart. */
-	const CHART_PX_PER_POINT = 3;
-</script>
-
 <script lang="ts">
 	// One KPI. A card of its own and a section of a merged card are the same thing, so this is the only
 	// component that renders a figure.
@@ -10,9 +5,20 @@
 	import { NO_VALUE } from '$lib/copy';
 	import type { Scalar, Series } from '$lib/data/primitives';
 	import { build } from '$lib/data/catalog';
-	import { deltaLabel, formatDelta, formatUnit } from '$lib/data/primitives';
+	import {
+		CAP_DIGITS,
+		capped,
+		deltaLabel,
+		formatDelta,
+		formatUnit,
+		formatUnitCompact,
+		formatUnitExact,
+		type DeltaDetail
+	} from '$lib/data/primitives';
+	import { contentFloor, levelThatFits, watchWidth } from '$lib/ui/fit';
 	import { seriesColor } from '$lib/charts/registry';
 	import Badge, { badgeTone } from '$lib/ui/Badge.svelte';
+	import DeltaBadge from '$lib/ui/DeltaBadge.svelte';
 	import LabelLine from '$lib/ui/LabelLine.svelte';
 	import { DOT, labelText, type Slot } from '$lib/ui/label';
 	import { tryLabels } from '$lib/layout/grid/context';
@@ -55,14 +61,22 @@
 	);
 	const title = $derived(labelText(named.title));
 	const caption = $derived(labelText(named.caption, DOT));
-	// A tone means the sign carries the meaning (see `Scalar.tone`), so the sign is shown.
-	const value = $derived(
-		scalar.value === null
-			? NO_VALUE
-			: scalar.tone
-				? formatDelta(scalar.value, scalar.unit)
-				: formatUnit(scalar.value, scalar.unit)
-	);
+	/**
+	 * The figure, at a given amount of detail. `abbreviate` gives up the thousands, `digits` holds the magnitude
+	 * to a ceiling; either is a fallback for a box that cannot hold the whole reading.
+	 *
+	 * A tone means the sign carries the meaning (see `Scalar.tone`), so the sign is shown.
+	 */
+	function reading({ abbreviate = false, digits = Infinity } = {}): string {
+		if (scalar.value === null) return NO_VALUE;
+
+		const v = capped(scalar.value, digits);
+		if (!abbreviate) return scalar.tone ? formatDelta(v, scalar.unit) : formatUnit(v, scalar.unit);
+
+		return (scalar.tone && v > 0 ? '+' : '') + formatUnitCompact(v, scalar.unit);
+	}
+
+	const value = $derived(reading());
 	const behind = $derived(
 		spec.series && spec.chart && spec.chart !== 'ring' && spec.chart !== 'meter'
 			? { series: build(data, spec.series, spec.scope) as Series, shape: spec.chart }
@@ -75,9 +89,88 @@
 	const markColor = $derived(seriesColor(behind ? behind.series.name : labelText(scalar.label)));
 
 	const delta = $derived(scalar.delta);
+	const full = $derived(delta ? deltaLabel(delta) : '');
+
+	/** How a rung reads: the figure, and how much of the delta rides with it. `null` drops the delta. */
+	interface Rung {
+		num: string;
+		delta: DeltaDetail | null;
+	}
+
+	const deltaText = (detail: DeltaDetail | null) =>
+		delta && detail ? deltaLabel(delta, detail) : '';
+
+	/**
+	 * What this reading may give up to fit its pane, richest first: the delta's note, then the delta's
+	 * magnitude, then the figure's thousands, then the delta itself, and only last the figure's own magnitude.
+	 * The figure is never dropped and the type never shrinks — a wider pane stops higher up the ladder, so every
+	 * ceiling here is the pane's rather than a number written in this file.
+	 */
+	const LEVELS = $derived.by(() => {
+		const short = reading({ abbreviate: true });
+		const capping: DeltaDetail = { digits: CAP_DIGITS, note: false };
+		const rungs: Rung[] = [
+			{ num: value, delta: {} },
+			{ num: value, delta: { note: false } },
+			{ num: value, delta: capping },
+			{ num: short, delta: capping },
+			{ num: short, delta: null },
+			{ num: reading({ abbreviate: true, digits: CAP_DIGITS }), delta: null }
+		];
+
+		const seen = new Set<string>();
+		return rungs.filter((r) => {
+			const k = `${r.num}|${deltaText(r.delta)}`;
+			return seen.has(k) ? false : (seen.add(k), true);
+		});
+	});
+
+	// Measured rather than predicted: these widths belong to the font and theme in force.
+	let frontEl = $state<HTMLElement>();
+	let probeEl = $state<HTMLElement>();
+	let room = $state(0);
+	let widths = $state<number[]>([]);
+	/** Room on the line the text does not have: a ring or a meter, plus the gaps. */
+	let chrome = $state(0);
+
+	$effect(() => {
+		const el = frontEl;
+		if (!el) return;
+
+		const watch = watchWidth(el, (width) => {
+			room = width;
+			const gap = parseFloat(getComputedStyle(el).columnGap) || 0;
+			const others = [...el.children].filter(
+				(c) => !c.classList.contains('num') && !c.classList.contains('badge')
+			);
+			chrome =
+				others.reduce((total, c) => total + c.getBoundingClientRect().width, 0) +
+				Math.max(0, el.children.length - 1) * gap;
+		});
+		return watch.stop;
+	});
+
+	$effect(() => {
+		const el = probeEl;
+		if (!el) return;
+		void LEVELS;
+		widths = [...el.children].map((line) => line.getBoundingClientRect().width);
+	});
+
+	const shown = $derived(LEVELS[levelThatFits(widths, room, chrome)] ?? LEVELS[0]!);
+	/** The reading a clamped one stands in for, for the tooltip and for a screen reader. */
+	const spoken = $derived(
+		[scalar.value === null ? NO_VALUE : formatUnitExact(scalar.value, scalar.unit), full]
+			.filter(Boolean)
+			.join(' ')
+	);
+	const clamped = $derived(shown.num !== value || deltaText(shown.delta) !== full);
 </script>
 
-<div class="kpi">
+<div
+	class="kpi"
+	style:--content-floor={widths.length ? contentFloor(widths[widths.length - 1]! + chrome) : null}
+>
 	<!-- Held open by `nameable`, not by `naming`: a line that appeared only while editing made the card
 	     measure taller in one mode than the other, and the pane banked the difference. -->
 	{#if title || nameable}
@@ -104,25 +197,28 @@
 		/>
 	</p>
 
-	<div
-		class="stat"
-		style:--chart-min={behind ? `${behind.series.points.length * CHART_PX_PER_POINT}px` : null}
-	>
+	<div class="stat">
 		{#if behind}
 			<div class="behind">
 				<Spark series={behind.series} shape={behind.shape} color={markColor} />
 			</div>
 		{/if}
 		<!-- Its own layer, so the figure and badge paint over the chart untinted. -->
-		<div class="front">
+		<div class="front" bind:this={frontEl}>
 			{#if spec.chart === 'ring'}
 				<Ring percent={scalar.value} color={markColor} />
 			{/if}
-			<span class="num serif" class:good={scalar.tone === 'good'} class:bad={scalar.tone === 'bad'}>
-				{value}
+			<span
+				class="num serif"
+				class:good={scalar.tone === 'good'}
+				class:bad={scalar.tone === 'bad'}
+				title={clamped ? spoken : undefined}
+				aria-label={clamped ? spoken : undefined}
+			>
+				{shown.num}
 			</span>
-			{#if delta}
-				<Badge tone={badgeTone(delta.tone)}>{deltaLabel(delta)}</Badge>
+			{#if delta && shown.delta}
+				<DeltaBadge {delta} {...shown.delta} />
 			{/if}
 			{#if meter !== null}
 				<Meter
@@ -135,19 +231,31 @@
 			{/if}
 		</div>
 	</div>
+
+	<!-- Every level, laid out as the line above lays out, so the widths compared are the real ones. -->
+	<div class="probe" aria-hidden="true" bind:this={probeEl}>
+		{#each LEVELS as l (l.num + deltaText(l.delta))}
+			<span class="line">
+				<span class="num serif">{l.num}</span>
+				{#if delta && l.delta}<Badge tone={badgeTone(delta.tone)}>{deltaText(l.delta)}</Badge>{/if}
+			</span>
+		{/each}
+	</div>
 </div>
 
 <style>
 	/**
-	 * Nothing here reflows, so the demand is the same at every size and the resize probe can treat it as a
-	 * floor. `min-content` must resolve to a BOX, not text ink: ink overflowing a box the card doesn't
-	 * scroll never reaches the card's scroll width, so a drag sailed past it and the title clipped.
+	 * The floor is the TIGHTEST reading this figure can fall back to (see the levels above), not its widest:
+	 * at `min-content` the card's minimum was the longest figure it might ever show, so a pane refused to be
+	 * narrowed into the very sizes the clamp exists to serve. A label that would clip still refuses, but that
+	 * is the probe's job (see `grid/Pane.svelte`), not this box's.
 	 */
 	.kpi {
+		position: relative;
 		display: flex;
 		flex-direction: column;
 		flex: 1 1 auto;
-		min-width: min-content;
+		min-width: max(var(--content-floor, 0px), min-content);
 	}
 	/* One line each, and neither may be shrunk: `[data-label-line]` clips to `--label-lines`, so a host
 	   that leaves it unset bounds nothing, and the column is then free to squeeze a line under its own
@@ -164,8 +272,10 @@
 		min-height: calc(var(--text-secondary) * var(--lh-body));
 		white-space: nowrap;
 	}
-	/* Pins the figure to the bottom, and is the box the chart scales into. The chart is positioned out of
-	   flow and demands no width of its own, so `--chart-min` is how it reaches the floor above. */
+	/* Pins the figure to the bottom, and is the box the chart scales into. No minimum of its own on either
+	   axis: the mark is decorative and drawn at a fixed viewBox that its box scales (see `Spark`), so a floor
+	   here would be a data-dependent one — a series with more points would refuse a resize a shorter series
+	   allowed. */
 	.stat {
 		position: relative;
 		flex: 1 1 auto;
@@ -173,23 +283,22 @@
 		align-items: flex-end;
 		margin-top: auto;
 		padding-top: var(--space-4);
-		min-width: var(--chart-min, 0);
+		min-width: 0;
 	}
-	/**
-	 * Floored at the figure's own height rather than `--figure-h-floor`, which is sized for a plot area with
-	 * axes and exceeds a whole stat row, so a card carrying a chart would not resize at all. Floored from the
-	 * top so the excess overflows downward: scrollable overflow is measured from a box's top-left, so a chart
-	 * growing upward would be invisible to the probe and would paint over the title.
-	 */
 	.behind {
 		position: absolute;
-		inset: 0 0 auto 0;
-		height: 100%;
-		min-height: calc(var(--text-display) * var(--lh-tight));
+		inset: 0;
 		z-index: 0;
 		pointer-events: none;
 	}
-	/* Spans the stat's width, so an inline mark asking for the leftover space (see `Meter`) has some. */
+	/**
+	 * Spans the stat's width, so an inline mark asking for the leftover space (see `Meter`) has some. `hidden`,
+	 * so the figure can never spill the card: the clamp is what keeps it readable.
+	 *
+	 * `contain: inline-size` keeps the figure out of the card's own min-content, which is what the LABELS are
+	 * measured by — a rename grows the pane, and the widest figure standing in that number made the card
+	 * refuse the narrow sizes the clamp exists for. The figure's floor is `--content-floor` instead.
+	 */
 	.front {
 		position: relative;
 		z-index: 1;
@@ -198,6 +307,8 @@
 		gap: var(--gap-row);
 		flex: 1 1 auto;
 		min-width: 0;
+		overflow: hidden;
+		contain: inline-size;
 	}
 	/* Arranging covers the card with a drag surface, but this layer is z-indexed above it and nothing in
 	   here is interactive, so a press on the figure landed on nothing and the card would not drag. */
@@ -222,5 +333,27 @@
 	}
 	.num.bad {
 		color: var(--crit-text);
+	}
+	/* Laid out but unpainted: `display: none` measures nothing. Zero-sized and clipped because an absolutely
+	   positioned descendant still counts towards an ancestor's SCROLLABLE overflow — sized, the probe read as
+	   content spilling the card and every KPI pane refused to be resized. */
+	.probe {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 0;
+		height: 0;
+		overflow: hidden;
+		visibility: hidden;
+		pointer-events: none;
+	}
+	/* The same axis, gap and nowrap as `.front`, since that is the line being measured for. `max-content`
+	   because the box above gives it no width to lay out in. */
+	.probe .line {
+		display: flex;
+		width: max-content;
+		align-items: baseline;
+		gap: var(--gap-row);
+		white-space: nowrap;
 	}
 </style>

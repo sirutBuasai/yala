@@ -22,23 +22,20 @@
 
 	const yr = $derived<Scope>({ level: 'year', year });
 
-	// Two columns, each read top to bottom. The chain first, each term with its own accumulation behind
-	// it — an area running up to the year's total says how evenly it arrived. No badges: the terms
-	// subtract from each other, and a change against last year belongs to the cash-flow matrix.
-	//
-	// Then net income and the three rates it is the base of. Net leads because the two rates under it
-	// divide it; the deduction rate is of gross, so it sits beneath net rather than atop the chain.
+	// Two columns, each read top to bottom: the income chain, each term with its own accumulation behind it,
+	// then net income and the rates it is the base of. No badges on the chain, since the terms subtract from
+	// each other and a change against last year belongs to the cash-flow matrix.
 	const KPIS = $derived<KpiBoardDefs>({
 		gross: {
-			rect: { x: 0, y: 0, w: 8, h: 6 },
+			rect: { x: 0, y: 0, w: 8, h: 5 },
 			spec: { figure: 'income.gross', scope: yr, chart: 'area', series: 'running.gross' }
 		},
 		deductions: {
-			rect: { x: 0, y: 6, w: 8, h: 5 },
+			rect: { x: 0, y: 5, w: 8, h: 5 },
 			spec: { figure: 'income.deductions', scope: yr, chart: 'area', series: 'running.deductions' }
 		},
 		contributions: {
-			rect: { x: 0, y: 11, w: 8, h: 5 },
+			rect: { x: 0, y: 10, w: 8, h: 5 },
 			spec: {
 				figure: 'income.contributions',
 				scope: yr,
@@ -47,7 +44,7 @@
 			}
 		},
 		takehome: {
-			rect: { x: 0, y: 16, w: 8, h: 5 },
+			rect: { x: 0, y: 15, w: 8, h: 5 },
 			// Overrides the catalog's caption: this one names the thing that arrives rather than describing
 			// what the measure means.
 			spec: {
@@ -59,19 +56,19 @@
 			}
 		},
 		net: {
-			rect: { x: 8, y: 0, w: 8, h: 6 },
+			rect: { x: 8, y: 0, w: 8, h: 5 },
 			spec: { figure: 'income.net', scope: yr, chart: 'area', series: 'running.net' }
 		},
 		deductionRate: {
-			rect: { x: 8, y: 6, w: 8, h: 5 },
+			rect: { x: 8, y: 5, w: 8, h: 5 },
 			spec: { figure: 'ratio.deduction_rate', scope: yr, chart: 'ring' }
 		},
 		spendingRate: {
-			rect: { x: 8, y: 11, w: 8, h: 5 },
+			rect: { x: 8, y: 10, w: 8, h: 5 },
 			spec: { figure: 'ratio.spending_rate', scope: yr, chart: 'ring' }
 		},
 		savingsRate: {
-			rect: { x: 8, y: 16, w: 8, h: 5 },
+			rect: { x: 8, y: 15, w: 8, h: 5 },
 			spec: { figure: 'ratio.savings_rate', scope: yr, chart: 'ring' }
 		}
 	});
@@ -84,10 +81,10 @@
 	const PANES = $derived(
 		kpis.board({
 			// `scale` so the matrix is given room or taken down to where its rows would clip, like a KPI card.
-			cashflow: { x: 16, y: 0, w: 32, h: 10, content: 'scale' },
+			cashflow: { x: 16, y: 0, w: 32, h: 9, content: 'scale' },
 			trend: {
 				x: 16,
-				y: 10,
+				y: 9,
 				w: 32,
 				h: 11,
 				content: 'scale',
@@ -101,7 +98,7 @@
 			},
 			flow: {
 				x: 0,
-				y: 39,
+				y: 38,
 				w: 48,
 				h: 24,
 				content: 'scale',
@@ -120,7 +117,7 @@
 			// since it is the categories that span orders of magnitude.
 			heatmap: {
 				x: 0,
-				y: 21,
+				y: 20,
 				w: 48,
 				h: 18,
 				content: 'scale',
@@ -142,8 +139,8 @@
 	const CHAIN = cashFlowChain(['income', 'spending', 'saved']);
 	const columns = CHAIN.map(cashFlowHeading);
 
-	// The run-rate row carries no caption: its divisor is each measure's own active months, which the
-	// figures state per cell.
+	// The run-rate row carries no caption: every column divides by the same active months, so the matrix
+	// hoists that divisor under the label itself.
 	const cashflow = $derived([
 		{
 			label: live(`Total ${year}`),

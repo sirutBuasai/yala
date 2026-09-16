@@ -7,6 +7,7 @@
 	// On-brand replacement for a native <select>: a Popup-hosted listbox. Keyboard: Up/Down move,
 	// Enter/Space select, Esc close, Home/End jump.
 	import { untrack, type Snippet } from 'svelte';
+	import { onKey } from '$lib/utils/keys';
 	import Popup from '$lib/overlay/Popup.svelte';
 
 	interface Props {
@@ -54,28 +55,24 @@
 		open = false;
 		triggerEl?.focus();
 	}
+	function dismiss() {
+		open = false;
+		triggerEl?.focus();
+	}
+	function commit() {
+		const opt = options[active];
+		if (opt !== undefined) choose(opt);
+	}
 	function onkeynav(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
-			e.preventDefault();
-			open = false;
-			triggerEl?.focus();
-		} else if (e.key === 'ArrowDown') {
-			e.preventDefault();
-			active = Math.min(options.length - 1, active + 1);
-		} else if (e.key === 'ArrowUp') {
-			e.preventDefault();
-			active = Math.max(0, active - 1);
-		} else if (e.key === 'Home') {
-			e.preventDefault();
-			active = 0;
-		} else if (e.key === 'End') {
-			e.preventDefault();
-			active = options.length - 1;
-		} else if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			const opt = options[active];
-			if (opt !== undefined) choose(opt);
-		}
+		onKey(e, {
+			Escape: dismiss,
+			ArrowDown: () => (active = Math.min(options.length - 1, active + 1)),
+			ArrowUp: () => (active = Math.max(0, active - 1)),
+			Home: () => (active = 0),
+			End: () => (active = options.length - 1),
+			Enter: commit,
+			' ': commit
+		});
 	}
 </script>
 

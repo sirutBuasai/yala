@@ -93,12 +93,9 @@ export function logYScale(
 }
 
 /**
- * How a money axis labels itself, chosen from the ticks it is about to draw rather than fixed per chart:
- * abbreviated once every tick worth abbreviating clears a thousand, exact below that. So a chart never has
- * to know which scale it is drawing.
- *
- * Zero is exempt from the test and always exact — it sits on almost every money axis, so requiring it to
- * clear a thousand would leave every axis unabbreviated.
+ * How a money axis labels itself, chosen from the ticks it is about to draw rather than fixed per chart, so a
+ * chart never has to know which scale it is drawing. Zero is exempt from the test and always exact: it sits on
+ * almost every money axis, and requiring it to clear a thousand left every axis unabbreviated.
  */
 export function moneyAxisFormat(ticks: number[]): (v: number) => string {
 	const scaled = ticks.filter((t) => t !== 0);

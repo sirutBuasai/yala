@@ -1,7 +1,8 @@
 <script lang="ts">
-	// One glyph per height mode, built from the same two marks — rules for the edges that bound the
-	// pane, and an arrow for where the content pushes — so they read as a set.
+	// One glyph per height mode, built from the same two marks — rules for the edges that bound the pane, and
+	// an arrow for where the content pushes — so they read as a set.
 	import type { HeightMode } from '$lib/layout/grid/types';
+	import Icon from './Icon.svelte';
 
 	interface Props {
 		mode: HeightMode;
@@ -24,15 +25,8 @@
 	};
 </script>
 
-<svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
+<Icon {size} weight={1.5}>
 	{#each PATHS[mode] as d (d)}
-		<path
-			{d}
-			fill="none"
-			stroke="currentColor"
-			stroke-width="1.5"
-			stroke-linecap="round"
-			stroke-linejoin="round"
-		/>
+		<path {d} />
 	{/each}
-</svg>
+</Icon>

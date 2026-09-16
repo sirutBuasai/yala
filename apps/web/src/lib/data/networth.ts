@@ -447,11 +447,9 @@ function span(data: DashboardData, scope: Scope): { start: string; next: string 
 }
 
 /**
- * The snapshots bounding a scope. A balance is logged BEFORE the period's money has moved, so a snapshot
- * dated the period's first day is its OPENING balance and the period closes on the snapshot dated the
- * start of the next one.
- *
- * Reading the last snapshot dated *inside* the period as its close instead put every period's balance
+ * The snapshots bounding a scope. A balance is logged BEFORE the period's money has moved, so a snapshot dated
+ * the period's first day is its OPENING balance and the period closes on the snapshot dated the start of the
+ * next one. Reading the last snapshot dated *inside* the period as its close put every period's balance
  * movement against the following period's logged saving.
  */
 function bounds(data: DashboardData, scope: Scope): Window {
@@ -475,12 +473,10 @@ function changeOver(data: DashboardData, scope: Scope): number {
 }
 
 /**
- * The snapshots a month-over-month bar spans: the freshest reading in the month before, to the freshest in
- * the month itself.
- *
- * Deliberately not `bounds`. This takes the NEWEST balance available rather than the one dated at the
- * period's edge, so a mid-month reading counts — the point of the bars. The cost is that the window
- * drifts, so the bars do not sum to the year figures, which use `bounds`.
+ * The snapshots a month-over-month bar spans: the freshest reading in the month before, to the freshest in the
+ * month itself. Deliberately not `bounds` — taking the newest balance rather than the one dated at the period's
+ * edge is what makes a mid-month reading count, at the cost of a drifting window, so these bars do not sum to
+ * the year figures.
  */
 function monthOverMonth(data: DashboardData, monthKey: string): Window {
 	const all = snapshots(data);
@@ -684,9 +680,7 @@ export function netWorthGrowthPerMonth(
 	part: GrowthPart,
 	label: Label
 ): Scalar {
-	// Resolved per scope rather than read off `scope.year`, which a year scope may leave for the default.
-	const months = (s: Scope) =>
-		activeMonthsIn(data, s.level === 'year' ? scopeYear(data, s) : undefined) || 1;
+	const months = (s: Scope) => activeMonthsIn(data, s) || 1;
 	const rate = (s: Scope) => growthParts(data, s)[part] / months(s);
 
 	const now = rate(scope);

@@ -1,10 +1,8 @@
 <script lang="ts">
-	// A labelled range whose reading is also an input, so a figure can be dragged to or typed in. Takes
-	// its bounds and step from the caller rather than owning any, so whatever describes the figure — a
-	// backend spec, a form — is what both controls are drawn from.
-	//
-	// Its three parts each sit in their own row of the parent grid, so a stack of these aligns across the
-	// row however many lines a label or a help line takes. The parent must supply the rows.
+	// A labelled range whose reading is also an input, so a figure can be dragged to or typed in. Bounds and
+	// step come from the caller, so whatever describes the figure is what both controls are drawn from. Its
+	// three parts each sit in their own row of the PARENT grid, which must supply them, so that a stack of
+	// these aligns however many lines a label takes.
 	interface Props {
 		label: string;
 		value: number;

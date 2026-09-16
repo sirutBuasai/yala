@@ -1,13 +1,11 @@
 <script lang="ts">
-	// One card label, renamed by clicking the words themselves. The field IS the words: an inline
-	// `contenteditable`, so it wraps exactly where the finished label will and the pane can grow with it as it
-	// is typed. An `<input>` cannot — it scrolls its own overflow, so a title long enough to wrap left the
-	// card reporting that everything still fitted. Only the words are editable: a label's derived half sits in
-	// front of the field as ghost text, so the period or count can't be typed over.
+	// One card label, renamed by clicking the words themselves. The field IS the words, an inline
+	// `contenteditable`: an `<input>` scrolls its own overflow, so a title long enough to wrap left the card
+	// reporting that everything still fitted. A label's derived half sits in front as ghost text, so the period
+	// or count cannot be typed over.
 	//
-	// The words are the control because the pane's own minimum is measured off this content: a pencil beside
-	// them, however it was positioned, either widened the line or overflowed it, and either way a card's
-	// smallest size came to depend on whether the board was being edited.
+	// No pencil beside the words, because the pane's minimum is measured off this content: any affordance here
+	// made a card's smallest size depend on whether the board was being edited.
 	import type { Snippet } from 'svelte';
 	import { LABEL_MAX, labelGhost, labelText, type Label } from './label';
 

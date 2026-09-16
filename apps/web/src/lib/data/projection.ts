@@ -1,14 +1,7 @@
-// Where the invested balance goes from here, under the assumptions you state. Two lines: one that keeps
-// investing at the rate you have been, one that stops. The gap between them is what continuing to invest is
-// worth.
-//
-// Two reference levels are drawn behind them, because they answer different questions:
-//   FI number    spending / withdrawal rate — a pot that is never drawn down.
-//   Lasts to N   the present value of spending from retirement to the horizon age — a pot that IS drawn
-//                down, and so a smaller one. Its return funds the difference.
-//
-// Both rates come from `plannedRates`, the same reader the targets are built from, so a projection can
-// never disagree with the FI number drawn beside it.
+// Where the invested balance goes from here, under the assumptions you state: one line that keeps investing
+// at the rate you have been, one that stops. The two reference levels behind them differ in whether the pot
+// is ever drawn down, so the drawn-down one is the smaller. Rates come from `plannedRates`, the same reader
+// the targets use, so a projection cannot disagree with the FI number drawn beside it.
 
 import type { DashboardData } from '$lib/data/types';
 import type { MultiSeries, Scalar, Series } from './primitives';

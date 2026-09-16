@@ -36,40 +36,47 @@
 	const label = $derived(monthLabel(monthKey));
 	const mo = $derived<Scope>({ level: 'month', monthKey });
 
-	// Two rows: the month's three levels with how they moved and the year's shape behind each, then the
-	// three rates that say how it was run. A ring on the two that are shares of income; "vs average" is
-	// already a signed deviation, so a chart would only restate it.
+	// Two columns, each read top to bottom: what came in, what reached the account, what was kept — then what
+	// went out, how that sits against a usual month, and the share of income it took. A ring on the share;
+	// "vs typical" is already a signed deviation, so a chart would only restate it.
 	const KPIS = $derived<KpiBoardDefs>({
 		income: {
 			rect: { x: 0, y: 0, w: 8, h: 5 },
 			spec: { figure: 'change.income_mom', scope: mo, chart: 'bar', series: 'trend.income' }
 		},
-		spent: {
-			rect: { x: 0, y: 5, w: 8, h: 5 },
-			spec: { figure: 'change.spending_mom', scope: mo, chart: 'bar', series: 'trend.spending' }
+		// Captionless on purpose: read between income and saved, the figure needs no gloss.
+		takehome: {
+			rect: { x: 0, y: 5, w: 8, h: 6 },
+			spec: {
+				figure: 'income.takehome',
+				scope: mo,
+				chart: 'bar',
+				series: 'trend.takehome',
+				caption: words('')
+			}
 		},
 		saved: {
-			rect: { x: 0, y: 10, w: 8, h: 6 },
+			rect: { x: 0, y: 11, w: 8, h: 5 },
 			spec: { figure: 'change.saved_mom', scope: mo, chart: 'bar', series: 'trend.saved' }
 		},
-		typical: {
+		spent: {
 			rect: { x: 8, y: 0, w: 8, h: 5 },
+			spec: { figure: 'change.spending_mom', scope: mo, chart: 'bar', series: 'trend.spending' }
+		},
+		typical: {
+			rect: { x: 8, y: 5, w: 8, h: 6 },
 			spec: { figure: 'spending.vs_typical', scope: mo }
 		},
 		spendingRate: {
-			rect: { x: 8, y: 5, w: 8, h: 5 },
+			rect: { x: 8, y: 11, w: 8, h: 5 },
 			spec: { figure: 'ratio.spending_rate', scope: mo, chart: 'ring' }
-		},
-		savingsRate: {
-			rect: { x: 8, y: 10, w: 8, h: 6 },
-			spec: { figure: 'ratio.savings_rate', scope: mo, chart: 'ring' }
 		}
 	});
 
-	// Two stacks beside the month's shape: the three levels, then the rates that judge them.
+	// One card per column, so each reads as a chain rather than as three unrelated figures.
 	const kpis = useKpiBoard('activity:month', () => KPIS, [
-		{ ids: ['income', 'spent', 'saved'], axis: 'column' },
-		{ ids: ['typical', 'spendingRate', 'savingsRate'], axis: 'column' }
+		{ ids: ['income', 'takehome', 'saved'], axis: 'column' },
+		{ ids: ['spent', 'typical', 'spendingRate'], axis: 'column' }
 	]);
 
 	// A list beside a neighbour takes a set height, so the row keeps its line and scrolls once the month

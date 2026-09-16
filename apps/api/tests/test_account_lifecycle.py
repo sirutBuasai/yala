@@ -234,13 +234,13 @@ def _meta(client: TestClient, account: str, **body):
 def test_editing_the_aliases_shortens_the_name_without_renaming_the_account(client: TestClient):
     """An account's displayed name derives from its leaf; the aliases only shorten it when a row is
     too narrow. Editing them is not a rename, and the account path must not move."""
-    _open(client, "card", institution_name="Bank of A", account_name="Cash Rewards")
-    account = "Liabilities:CC:BankOfACashRewards"
+    _open(client, "card", institution_name="Bank of Example", account_name="Cash Rewards")
+    account = "Liabilities:CC:BankOfExampleCashRewards"
 
-    r = _meta(client, account, institution_alias="BoA")
+    r = _meta(client, account, institution_alias="BoE")
 
     assert r.status_code == 200, r.text
-    assert r.json()["name"] == "BoA Cash Rewards"
+    assert r.json()["name"] == "BoE Cash Rewards"
     assert account in _led(client).active_accounts()
 
 
@@ -248,23 +248,23 @@ def test_clearing_an_alias_restores_the_full_name(client: TestClient):
     _open(
         client,
         "card",
-        institution_name="Bank of A",
+        institution_name="Bank of Example",
         account_name="Cash Rewards",
-        institution_alias="BoA",
+        institution_alias="BoE",
     )
-    account = "Liabilities:CC:BankOfACashRewards"
+    account = "Liabilities:CC:BankOfExampleCashRewards"
 
     r = _meta(client, account, institution_alias=None)
 
     assert r.status_code == 200, r.text
-    assert r.json()["name"] == "Bank of A Cash Rewards"
+    assert r.json()["name"] == "Bank of Example Cash Rewards"
 
 
 def test_an_alias_is_held_to_the_same_name_rule(client: TestClient):
     """An alias stands in for the name, so it may say no more than the name may."""
-    _open(client, "card", institution_name="Bank of A", account_name="Cash Rewards")
+    _open(client, "card", institution_name="Bank of Example", account_name="Cash Rewards")
 
-    r = _meta(client, "Liabilities:CC:BankOfACashRewards", institution_alias='BoA "X"')
+    r = _meta(client, "Liabilities:CC:BankOfExampleCashRewards", institution_alias='BoE "X"')
 
     assert r.status_code == 422
     assert "institution_alias can only contain" in r.json()["detail"]
@@ -274,16 +274,16 @@ def test_a_field_the_request_leaves_out_is_left_alone(client: TestClient):
     _open(
         client,
         "card",
-        institution_name="Bank of A",
+        institution_name="Bank of Example",
         account_name="Cash Rewards",
-        institution_alias="BoA",
+        institution_alias="BoE",
     )
-    account = "Liabilities:CC:BankOfACashRewards"
+    account = "Liabilities:CC:BankOfExampleCashRewards"
 
     _meta(client, account, account_alias="Cash")
 
     entry = client.get("/api/data").json()["meta"]["accounts"][account]
-    assert entry["institution_alias"] == "BoA"
+    assert entry["institution_alias"] == "BoE"
     assert entry["account_alias"] == "Cash"
 
 

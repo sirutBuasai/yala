@@ -15,7 +15,7 @@ from yala.ledger.naming import (
 
 # The bank is multi-word on purpose: it exercises the particle rule and gives the bank half of a
 # name room to shorten.
-BANK = "Bank of A"
+BANK = "Bank of Example"
 BANK_ALIAS = "BkA"
 BROKER = "Brokerage A"
 BROKER_ALIAS = "BrA"
@@ -33,8 +33,8 @@ class TestRender:
             ("BrokerHSA", "Broker HSA"),
             ("RothIRA", "Roth IRA"),
             # Interior particles lowercase; splitting on case alone would capitalize them.
-            ("BankOfA", "Bank of A"),
-            ("BankOfACashRewards", "Bank of A Cash Rewards"),
+            ("BankOfExample", "Bank of Example"),
+            ("BankOfExampleCashRewards", "Bank of Example Cash Rewards"),
             # Letter->digit needs its own split: there is no case change at that boundary.
             ("Employer401k", "Employer 401k"),
             ("BrokerEmployer401k", "Broker Employer 401k"),
@@ -61,7 +61,7 @@ class TestAccountName:
         its full form even when one is declared."""
         meta = {"institution_name": BANK, "institution_alias": BANK_ALIAS}
 
-        assert account_name("Assets:Cash:BankOfA", meta) == "Bank of A"
+        assert account_name("Assets:Cash:BankOfExample", meta) == "Bank of Example"
 
     def test_the_institution_short_form_comes_in_first(self) -> None:
         meta = {
@@ -80,7 +80,7 @@ class TestAccountName:
             "institution_alias": BANK_ALIAS,
             "account_alias": "Cash",
         }
-        name = account_name("Liabilities:CC:BankOfACashRewards", meta)
+        name = account_name("Liabilities:CC:BankOfExampleCashRewards", meta)
 
         assert name == "BkA Cash Rewards"
 
@@ -91,7 +91,7 @@ class TestAccountName:
             "institution_alias": BANK_ALIAS,
             "account_alias": "Biz Plat",
         }
-        name = account_name("Liabilities:CC:BankOfABusinessPlatinum", meta)
+        name = account_name("Liabilities:CC:BankOfExampleBusinessPlatinum", meta)
 
         assert name == "BkA Biz Plat"
         assert len(name) <= NAME_CAP
@@ -125,7 +125,7 @@ class TestAccountName:
     def test_a_bank_is_named_by_its_institution_alone(self) -> None:
         meta = {"institution_name": BANK, "institution_alias": BANK_ALIAS}
 
-        assert account_name("Assets:Cash:BankOfA", meta) == "Bank of A"
+        assert account_name("Assets:Cash:BankOfExample", meta) == "Bank of Example"
 
     def test_the_name_no_longer_depends_on_the_leaf(self) -> None:
         """The parts are authoritative: a leaf that reads differently does not change the name,
@@ -151,7 +151,7 @@ class TestCompose:
     @pytest.mark.parametrize(
         ("typed", "segment"),
         [
-            ("Bank of A", "BankOfA"),
+            ("Bank of Example", "BankOfExample"),
             ("Cash Rewards", "CashRewards"),
             ("Roth IRA", "RothIRA"),
             # Caps the user typed survive, so an acronym stays one word.
@@ -168,7 +168,7 @@ class TestCompose:
 
     @pytest.mark.parametrize(
         "typed",
-        ["Bank of A", "Cash Rewards", "Roth IRA", "AB Bank", "Employer 401k"],
+        ["Bank of Example", "Cash Rewards", "Roth IRA", "AB Bank", "Employer 401k"],
     )
     def test_round_trips_through_render(self, typed: str) -> None:
         """What the user typed is what they get back, so a form can promise the account will read
@@ -180,14 +180,14 @@ class TestComposeStem:
     """The one composer every account path is built from."""
 
     def test_joins_the_two_halves(self) -> None:
-        assert compose_stem("Bank of A", "Cash Rewards") == "BankOfACashRewards"
+        assert compose_stem("Bank of Example", "Cash Rewards") == "BankOfExampleCashRewards"
 
     def test_institution_alone(self) -> None:
-        assert compose_stem("Bank of A") == "BankOfA"
+        assert compose_stem("Bank of Example") == "BankOfExample"
 
     @pytest.mark.parametrize("product", [None, ""])
     def test_a_missing_product_contributes_nothing(self, product: str | None) -> None:
-        assert compose_stem("Bank of A", product) == "BankOfA"
+        assert compose_stem("Bank of Example", product) == "BankOfExample"
 
     def test_composes_to_one_segment(self) -> None:
         """An account name is a single path segment, so a colon is dropped rather than nesting."""

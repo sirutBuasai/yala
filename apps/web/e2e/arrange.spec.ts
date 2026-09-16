@@ -103,6 +103,14 @@ test('merging and splitting a KPI card returns it to exactly its former size', a
 	await startArranging(page);
 
 	const board = () => page.evaluate(() => localStorage.getItem('yala-board-activity:month-2'));
+	// Nothing is stored until a gesture stores it: only Edit mode may write a pane's rectangle, so the
+	// comparison starts after the first cycle rather than at rest.
+	expect(await board()).toBeNull();
+
+	await page.locator('.cut').first().click();
+	await settle(page);
+	await page.locator('.join').first().click();
+	await settle(page);
 	const before = await board();
 
 	// A rounding error banked into either half grows the card a little on every cycle.
@@ -129,13 +137,12 @@ test.describe("a merged card's sections", () => {
 		return cell;
 	}
 
+	/** The strip's width as RENDERED. Not from storage: nothing is stored until a gesture stores it. */
 	const spans = (page: Page) =>
-		page.evaluate(
-			() =>
-				JSON.parse(localStorage.getItem('yala-board-home-2') ?? '[]').find(
-					(p: { id: string }) => p.id === 'income'
-				)?.w as number
-		);
+		page.evaluate(() => {
+			const cell = document.querySelector<HTMLElement>('.board > .cell:has(.sections)')!;
+			return Number(cell.style.gridColumn.match(/span\s*(\d+)/)![1]);
+		});
 
 	test('grow the card to hold a long title, and stop it at what the card can hold', async ({
 		page

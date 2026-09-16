@@ -153,10 +153,6 @@ export interface DashboardData {
 	setting_specs?: SettingSpecs;
 	account_lists?: AccountLists | null;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "Meta".
- */
 export interface Meta {
 	years: Years;
 	month_keys: MonthKeys;
@@ -166,10 +162,6 @@ export interface Meta {
 	accounts: Accounts;
 	domains: Domains;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "DateRange".
- */
 export interface DateRange {
 	start: Start;
 	end: End;
@@ -181,9 +173,6 @@ export interface Accounts {
  * One account's whole record: what it is called, what it is, and what it carries. Every field
  * is resolved from ledger metadata by the backend, so the naming rule has one implementation
  * rather than one per language.
- *
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "AccountInfo".
  */
 export interface AccountInfo {
 	name: Name;
@@ -202,37 +191,22 @@ export interface AccountInfo {
 }
 /**
  * Which domains carry data.
- *
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "Domains".
  */
 export interface Domains {
 	spending: Spending;
 	income: Income;
 	networth?: Networth;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "Overview".
- */
 export interface Overview {
 	by_year: ByYear;
 	all_time_by_category: AllTimeByCategory;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "YearSpend".
- */
 export interface YearSpend {
 	year: Year;
 	spent: Spent;
 	income: Income1;
 	saved: Saved;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "CategoryAmount".
- */
 export interface CategoryAmount {
 	category: Category;
 	amount: Amount;
@@ -240,19 +214,11 @@ export interface CategoryAmount {
 export interface Years1 {
 	[k: string]: YearPage;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "YearPage".
- */
 export interface YearPage {
 	total_spent: TotalSpent;
 	total_income: TotalIncome;
 	matrix: Matrix;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "MonthMatrixRow".
- */
 export interface MonthMatrixRow {
 	month: Month;
 	spent: Spent1;
@@ -264,10 +230,6 @@ export interface Spent1 {
 export interface Months {
 	[k: string]: MonthPage;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "MonthPage".
- */
 export interface MonthPage {
 	total_spent: TotalSpent1;
 	total_income: TotalIncome1;
@@ -276,10 +238,6 @@ export interface MonthPage {
 	paychecks: Paychecks;
 	transfers?: Transfers;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "Txn".
- */
 export interface Txn {
 	date: Date;
 	payee: Payee;
@@ -290,10 +248,6 @@ export interface Txn {
 	locator: Locator;
 	bill?: Bill;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "PaycheckOut".
- */
 export interface PaycheckOut {
 	date: Date1;
 	payee: Payee1;
@@ -311,10 +265,6 @@ export interface Deductions {
 export interface Contributions {
 	[k: string]: number;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "Transfer".
- */
 export interface Transfer {
 	date: Date2;
 	payee: Payee2;
@@ -324,19 +274,11 @@ export interface Transfer {
 	pending: Pending1;
 	locator: Locator2;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "IncomeSection".
- */
 export interface IncomeSection {
 	by_year: ByYear1;
 	by_month: ByMonth;
 	recent_paychecks: RecentPaychecks;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "IncomeYear".
- */
 export interface IncomeYear {
 	year: Year1;
 	gross: Gross1;
@@ -348,20 +290,12 @@ export interface IncomeYear {
 export interface ByMonth {
 	[k: string]: number[];
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "NetWorthSection".
- */
 export interface NetWorthSection {
 	current: NetWorthSnapshot | null;
 	series: Series;
 	accounts: Accounts1;
 	adjustments: Adjustments;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "NetWorthSnapshot".
- */
 export interface NetWorthSnapshot {
 	date: Date3;
 	assets: Assets;
@@ -372,10 +306,6 @@ export interface NetWorthSnapshot {
 export interface Breakdown {
 	[k: string]: number;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "NetWorthAccount".
- */
 export interface NetWorthAccount {
 	account: Account;
 	label: Label;
@@ -383,10 +313,6 @@ export interface NetWorthAccount {
 	bucket: Bucket;
 	value: Value;
 }
-/**
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "NetWorthAdjustment".
- */
 export interface NetWorthAdjustment {
 	account: Account1;
 	label: Label1;
@@ -395,9 +321,6 @@ export interface NetWorthAdjustment {
 /**
  * Effective user settings: what the ledger states, else the built-in default. A null means
  * unset with no default, and features depending on it stay hidden rather than guessing.
- *
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "SettingsSection".
  */
 export interface SettingsSection {
 	swr: Swr;
@@ -413,9 +336,6 @@ export interface SettingsSection {
 /**
  * The spec behind one setting: how the form names it, bounds it, and explains it. Snapshotted
  * alongside the values so the settings form renders with no API running.
- *
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "SettingField".
  */
 export interface SettingField {
 	key: Key;
@@ -432,9 +352,6 @@ export interface SettingField {
  * Snapshotted into ``data.json`` as well as served live from ``/api/accounts`` so the forms still
  * render when the local API is down. Writes are then refused by the frontend's write guard rather
  * than by an absent list, since a form that vanishes reads as a missing feature.
- *
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "AccountLists".
  */
 export interface AccountLists {
 	kinds: Kinds;
@@ -454,9 +371,6 @@ export interface AccountLists {
  * What one kind of account is allowed to carry, so a form offers exactly the controls that
  * apply. Copied off :data:`yala.ledger.accounts.KINDS`, which the routes enforce and which
  * documents each flag, so the form and the API cannot disagree.
- *
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "AccountKind".
  */
 export interface AccountKind {
 	name: Name1;
@@ -475,9 +389,6 @@ export interface AccountKind {
 /**
  * One selectable paycheck line, scoped to an employer (null = offered by every employer). A
  * contribution always names one, that meta being what marks its account payroll-contributable.
- *
- * This interface was referenced by `DashboardData`'s JSON-Schema
- * via the `definition` "PayrollOption".
  */
 export interface PayrollOption {
 	kind: Kind2;

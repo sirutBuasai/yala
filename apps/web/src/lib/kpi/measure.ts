@@ -53,12 +53,11 @@ function measure(sections: HTMLElement, axis: MergeAxis): Section[] {
 }
 
 /**
- * The span each half of a split at `index` needs, in units. `span` is the merged card's own span along
- * the axis; the board's floor is `splitRects`' to apply.
+ * The span each half of a split at `index` needs, in units. `span` is the merged card's own span along the
+ * axis; the board's floor is `splitRects`' to apply.
  *
- * A half's sections will divide its card in proportion to their weights, so its floor is set by whichever
- * section's share runs out first, not by the sections added up — added up, the widest would be relying on
- * its neighbours to give room back.
+ * A half's sections divide its card by weight, so its floor is whichever section's share runs out first, not
+ * the sections added up — added up, the widest relies on its neighbours to give room back.
  */
 export function splitFloors(
 	sections: HTMLElement,

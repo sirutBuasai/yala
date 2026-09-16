@@ -155,27 +155,17 @@ function totals(data: DashboardData, scope: Scope): Totals {
 	});
 }
 
-/** Months with income, with spending, or either — in one year, or over every tracked year. */
-function activeMonths(
-	data: DashboardData,
-	year?: number
-): { income: number; spend: number; any: number } {
-	return memo(data, `act:${year ?? 'all'}`, () => {
-		const rows =
-			year === undefined
-				? Object.values(data.years).flatMap((y) => y.matrix)
-				: (data.years[String(year)]?.matrix ?? []);
-		return {
-			income: rows.filter((r) => r.income > 0).length,
-			spend: rows.filter((r) => sumValues(r.spent) > 0).length,
-			any: rows.filter((r) => r.income > 0 || sumValues(r.spent) > 0).length
-		};
-	});
-}
+/** A month is active once ANYTHING is logged in it. */
+const isActive = (md: MonthPage): boolean => md.total_income > 0 || md.total_spent > 0;
 
-/** Months with income or spending — what a run-rate divides by. `year` omitted means every tracked one. */
-export function activeMonthsIn(data: DashboardData, year?: number): number {
-	return activeMonths(data, year).any;
+/**
+ * The ONE divisor every run-rate divides by, whatever the measure: a row of run-rates has to reconcile, and
+ * counting only the months a measure itself moved in gives each column its own denominator.
+ *
+ * 0 when nothing is logged in the scope, so callers floor it themselves.
+ */
+export function activeMonthsIn(data: DashboardData, scope: Scope): number {
+	return monthsInScope(data, scope).filter(([, md]) => isActive(md)).length;
 }
 
 /** How a run-rate states its divisor, so every board words it the same. */
@@ -265,10 +255,9 @@ function perMonth(
 	m: Measure,
 	year: number
 ): { rate: number; divisor: number } {
-	const active = activeMonths(data, year);
-	const divisor =
-		(m === 'spending' ? active.spend : m === 'income' ? active.income : active.any) || 1;
-	return { rate: measureValue(data, { level: 'year', year }, m) / divisor, divisor };
+	const scope: Scope = { level: 'year', year };
+	const divisor = activeMonthsIn(data, scope) || 1;
+	return { rate: measureValue(data, scope, m) / divisor, divisor };
 }
 
 /**
@@ -296,10 +285,8 @@ export function average(
 		};
 	}
 
-	// Lifetime shares one divisor across measures so a row of these still adds up; per-year each
-	// measure keeps its own active count.
 	if (scope.level === 'all') {
-		const months = activeMonths(data).any || 1;
+		const months = activeMonthsIn(data, scope) || 1;
 		return {
 			kind: 'scalar',
 			unit,
@@ -389,9 +376,7 @@ function countValue(data: DashboardData, scope: Scope, of: Countable): number {
 		case 'paychecks':
 			return scopePaychecks(data, scope).length;
 		case 'active_months':
-			return monthsInScope(data, scope).filter(
-				([, md]) => md.total_income > 0 || md.total_spent > 0
-			).length;
+			return activeMonthsIn(data, scope);
 		case 'categories': {
 			const seen = new Set<string>();
 			for (const c of data.meta.categories) {

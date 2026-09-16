@@ -2,11 +2,9 @@
 	// Heatmap over a Matrix: a real table, so the axes are headers a screen reader can announce. It scales
 	// rather than scrolls — columns divide the pane's width and type is sized off the row height.
 	//
-	// Each band scales to its own max, since categories span orders of magnitude and one grid-wide scale
-	// leaves the median cell near-blank. Intensity is therefore not comparable between bands, only down
-	// one. `normalize` names the axis a band runs along, so the scale follows the categories whichever way
-	// the grid is turned. A band may carry its own hue; the palette isn't luminance-matched, so equal
-	// depths across hues do not look equally deep.
+	// Each band scales to its own max, since categories span orders of magnitude and one grid-wide scale leaves
+	// the median cell near-blank; intensity is comparable down a band, not between them. `normalize` names the
+	// axis a band runs along, so the scale follows the categories whichever way the grid is turned.
 	import { numCompact, esc } from '$lib/utils/format';
 	import { formatUnitExact, type Unit } from '$lib/data/primitives';
 	import { showTip, hideTip } from '$lib/utils/tooltip';

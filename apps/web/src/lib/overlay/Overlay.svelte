@@ -1,10 +1,8 @@
 <script lang="ts">
-	// A dismissible panel floating near the top of the page over a scrim. With `accent` the header becomes a
-	// full-bleed tinted band; either way the header stays fixed and the body scrolls.
-	//
-	// A native `<dialog>` opened with `showModal()`, so the top layer, the `::backdrop` scrim, Esc and
-	// focus restoration are the platform's (see overlay/modal). The transitions are CSS rather than
-	// Svelte's, because a `::backdrop` is not an element a Svelte transition can reach.
+	// A dismissible panel floating near the top of the page over a scrim; the header stays fixed and the body
+	// scrolls. A native `<dialog>` opened with `showModal()`, so the top layer, the scrim, Esc and focus
+	// restoration are the platform's (see overlay/modal). Transitions are CSS, because a `::backdrop` is not an
+	// element a Svelte transition can reach.
 	import type { Snippet } from 'svelte';
 	import { modal } from './modal';
 	import { dur } from '$lib/utils/motion';

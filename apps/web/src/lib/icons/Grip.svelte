@@ -1,6 +1,8 @@
 <script lang="ts">
-	// The "pick this up and move it" mark, used by the pane grid's drag handle. Dots rather than a
-	// stroked glyph so it reads as texture and doesn't compete with the pane title beside it.
+	// The "pick this up and move it" mark, used by the pane grid's drag handle. Dots rather than a stroked
+	// glyph so it reads as texture and doesn't compete with the pane title beside it.
+	import Icon from './Icon.svelte';
+
 	interface Props {
 		size?: number;
 	}
@@ -10,10 +12,10 @@
 	const ROWS = [4, 8, 12];
 </script>
 
-<svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
+<Icon {size} filled>
 	{#each COLUMNS as cx (cx)}
 		{#each ROWS as cy (cy)}
-			<circle {cx} {cy} r="1.35" fill="currentColor" />
+			<circle {cx} {cy} r="1.35" />
 		{/each}
 	{/each}
-</svg>
+</Icon>

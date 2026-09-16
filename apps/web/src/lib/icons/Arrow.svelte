@@ -1,5 +1,7 @@
 <script lang="ts">
 	// A directional arrow: shaft plus head.
+	import Icon from './Icon.svelte';
+
 	interface Props {
 		dir: 'up' | 'down';
 		size?: number;
@@ -9,13 +11,6 @@
 	const d = $derived(dir === 'up' ? 'M8 13V3M4.5 6.5 8 3l3.5 3.5' : 'M8 3v10M4.5 9.5 8 13l3.5-3.5');
 </script>
 
-<svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
-	<path
-		{d}
-		fill="none"
-		stroke="currentColor"
-		stroke-width="1.6"
-		stroke-linecap="round"
-		stroke-linejoin="round"
-	/>
-</svg>
+<Icon {size}>
+	<path {d} />
+</Icon>

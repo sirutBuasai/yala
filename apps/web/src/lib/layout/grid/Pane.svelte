@@ -20,7 +20,7 @@
 	import SizeMode from '$lib/icons/SizeMode.svelte';
 	import { getArrangement, getGridEnv, getLabels } from './context';
 	import { drag, type DragParams } from './drag';
-	import { overrun } from './spill';
+	import { overrun, spillReport } from './spill';
 	import { foldSpan } from './fold';
 	import { EDGES, type Edge } from './resize';
 	import { PaneGesture } from './gesture.svelte';
@@ -82,21 +82,27 @@
 	// clipped a card's own caption left it in a state no rename could recover from. `tick` is what makes a
 	// candidate size real before it is measured.
 	const gesture = new PaneGesture(() => id, arrangement, {
-		spills: () => !!cardEl && !everythingFits(cardEl),
+		spills: () => {
+			if (!cardEl) return false;
+			const fits = everythingFits(cardEl);
+			if (!fits && import.meta.env.DEV) {
+				console.debug(`[grid] ${id} refused:`, [
+					...spillReport(cardEl, bodyEl),
+					...clippedLabels(cardEl)
+				]);
+			}
+			return !fits;
+		},
 		settle: tick
 	});
 
 	/**
 	 * Measure, apply, and measure again until the content fits or the pane can grow no further. One pass is
-	 * never enough, for two reasons: the room a card is given changes how its own text wraps, so a title that
-	 * wanted two more rows can want a third once it has them; and a SECTION of a merged card receives only
-	 * its weighted share of what the card gains, so the shortfall it reports understates the growth needed by
-	 * roughly the number of sections.
+	 * never enough: the room a card is given changes how its own text wraps, and a section of a merged card
+	 * receives only its weighted share of what the card gains, so it understates the growth needed.
 	 *
-	 * Bounded by the grid rather than by a pass count: a pane cannot grow past `COLS`, so a pass that fails
-	 * to change the placed size is against a limit and no further pass can help. A fixed budget instead let
-	 * the leftmost section — whose overrun propagates across the whole card and so reports the full
-	 * shortfall at once — reach the edge of the grid, while its neighbours ran out of passes part way.
+	 * Bounded by the grid rather than by a pass count — a pass that fails to change the placed size is against
+	 * a limit, and a fixed budget left some sections short of the edge while others reached it.
 	 */
 	async function growUntilItFits(apply: (w: number, h: number) => void): Promise<void> {
 		for (let pass = 0; pass < COLS; pass++) {
@@ -110,42 +116,10 @@
 		}
 	}
 
-	// A pane grows to fit content it was not sized for — a renamed title, a longer figure, a wider column.
-	// Edit-mode affordances are deliberately free of layout (see `ui/LabelLine`), so this measures the same
-	// in either mode and switching modes moves nothing.
-	//
-	// Two observers, because they see different things: a resize catches the box moving (this pane, the
-	// window, a header that wrapped), a mutation catches the content changing inside a box that did not.
-	// Both are coalesced to one measurement per frame, since either can fire repeatedly for one change.
-	$effect(() => {
-		const el = cardEl;
-		if (env.folded || !el) return;
-
-		let queued = 0;
-		const measure = () => {
-			queued = 0;
-			// A label being typed into drives its own pane from `oninput` below, which is the only path that
-			// can also make it smaller again.
-			if (gesture.busy || arrangement.drafting === id) return;
-			void growUntilItFits((w, h) => arrangement.grow(id, w, h));
-		};
-		const schedule = () => {
-			queued ||= requestAnimationFrame(measure);
-		};
-
-		schedule();
-		const resize = new ResizeObserver(schedule);
-		resize.observe(el);
-		if (bodyEl) resize.observe(bodyEl);
-		const mutation = new MutationObserver(schedule);
-		mutation.observe(el, { subtree: true, childList: true, characterData: true });
-
-		return () => {
-			if (queued) cancelAnimationFrame(queued);
-			resize.disconnect();
-			mutation.disconnect();
-		};
-	});
+	// NOTHING here observes the content and resizes the pane around it: an observer that grew a pane to fit
+	// its content also grew it for whichever period's figures ran longest, wrote that to storage, and every
+	// other period inherited the deviation. Content adapts to the pane instead — a chart scales, a KPI figure
+	// clamps, a list scrolls — and only an arrange gesture or a rename may change the rectangle.
 
 	/** The field a label edit opens (see `ui/LabelLine`), whose own events say when one is in progress. */
 	const isLabelField = (t: EventTarget | null) =>
@@ -158,10 +132,12 @@
 	 *
 	 * Both axes: a wrapping label runs out of LINES, one that cannot wrap runs out of WIDTH.
 	 */
-	const labelClipped = (el: HTMLElement) =>
-		[...el.querySelectorAll('[data-label-line]')].some(
-			(l) => l.scrollHeight > l.clientHeight + 1 || l.scrollWidth > l.clientWidth + 1
-		);
+	const clippedLabels = (el: HTMLElement) =>
+		[...el.querySelectorAll('[data-label-line]')]
+			.filter((l) => l.scrollHeight > l.clientHeight + 1 || l.scrollWidth > l.clientWidth + 1)
+			.map((l) => `label "${l.textContent?.trim().slice(0, 20)}"`);
+
+	const labelClipped = (el: HTMLElement) => clippedLabels(el).length > 0;
 
 	/** Everything this pane holds fits the room it is allowed. */
 	function everythingFits(el: HTMLElement): boolean {
@@ -187,14 +163,12 @@
 	}
 
 	/**
-	 * Follow a label as it is typed: the pane grows the moment the words stop fitting and gives the room
-	 * back as they are deleted, down to the size it had when the edit opened. Dropping to that size first is
-	 * what makes shrinking possible at all — a pane measured at its grown size reports no overflow and would
-	 * never learn it could be smaller.
+	 * Follow a label as it is typed: the pane grows when the words stop fitting and gives the room back as they
+	 * are deleted, down to the size the edit opened at. Dropping to that size first is what makes shrinking
+	 * possible — measured at its grown size a pane reports no overflow and never learns it could be smaller.
 	 *
-	 * Once the pane has taken all the room it may, words that still do not fit are put back. The limit is
-	 * the card's, never a count of characters: a wide card holds a longer title than a narrow one, and a
-	 * nowrap KPI label runs out of grid where a wrapping one runs out of lines.
+	 * Words that still do not fit once the pane has all the room it may take are put back. The limit is the
+	 * card's, never a character count, since it depends on the card's width and on whether the label wraps.
 	 */
 	async function trackLabel(field: HTMLElement): Promise<void> {
 		if (!cardEl || reverting) return;
@@ -385,9 +359,14 @@
 		min-height: var(--figure-h-floor);
 		max-height: none;
 	}
-	/* On the grid a pane can be resized, and this table's overrun is what makes it REFUSE (see
-	   charts/StatMatrix); folded there is no resize and no room to grow, so it scrolls instead. */
-	.cell:not(.folded) :global(.matrixbox) {
+	/* The width content that scales or clamps has stated it cannot go under (see `ui/fit`). Grid only: a folded
+	   card has no resize to refuse, so a floor there would only bleed. */
+	.cell:not(.folded) :global([data-floor]) {
+		min-width: var(--content-floor, 0);
+	}
+	/* Let out of its box only while arranging, where the overrun is what makes a resize REFUSE (see
+	   charts/StatMatrix). Elsewhere it scrolls, or a new column would bleed out of the card. */
+	.cell.arranging:not(.folded) :global(.matrixbox) {
 		overflow-x: visible;
 	}
 	/* Folded, the card hugs its content, so a size container inside it has no height to take and would

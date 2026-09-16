@@ -12,6 +12,7 @@
 	import { flowOf, mergeAxis, spanOf, unionRect, withSpan, type MergeAxis } from './merge';
 	import { splitFloors } from './measure';
 	import { getKpiBoard } from './context';
+	import Icon from '$lib/icons/Icon.svelte';
 	import Kpi from './Kpi.svelte';
 
 	interface Props {
@@ -105,15 +106,24 @@
 		arrangement.commit();
 	}
 
-	/** The grouping already fitted. Plain, not state: it must not re-run the check that sets it. */
-	let fitted = '';
+	const groupingOf = (g: typeof group) => `${g.axis}:${g.ids.join('|')}`;
+
+	/**
+	 * The grouping already fitted, seeded with the one this card MOUNTED with rather than empty: a stored merge
+	 * was fitted when the user made it, and re-fitting on every load let whichever period had the longest
+	 * figures grow the card for all the others. Only a merge or split made here may resize a pane.
+	 *
+	 * Plain, not state: it must not re-run the check that sets it.
+	 */
+	// svelte-ignore state_referenced_locally
+	let fitted = groupingOf(group);
 
 	// An effect rather than the tail of `join`: a merge rebuilds the board around the new pane set, so the
 	// element the gesture had bound is gone and the card to measure is the one this render just made. Keyed
 	// on the GROUPING alone — a resize is the gesture's business, and it holds its own last fitting size.
 	$effect(() => {
 		const el = sectionsEl;
-		const grouping = `${group.axis}:${group.ids.join('|')}`;
+		const grouping = groupingOf(group);
 		if (!el || env.folded || grouping === fitted) return;
 		fitted = grouping;
 		if (group.ids.length > 1) void grow(group.axis);
@@ -176,16 +186,9 @@
 					data-no-drag
 					onclick={() => join(axis, other)}
 				>
-					<svg viewBox="0 0 16 16" aria-hidden="true">
-						<path
-							d="M8 3v10M4.5 6.5 8 3l3.5 3.5M4.5 9.5 8 13l3.5-3.5"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.6"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/>
-					</svg>
+					<Icon>
+						<path d="M8 3v10M4.5 6.5 8 3l3.5 3.5M4.5 9.5 8 13l3.5-3.5" />
+					</Icon>
 				</button>
 			{/if}
 		{/each}
@@ -293,9 +296,5 @@
 		bottom: 0;
 		left: 25%;
 		transform: translate(-50%, 50%);
-	}
-	.join svg {
-		width: 14px;
-		height: 14px;
 	}
 </style>

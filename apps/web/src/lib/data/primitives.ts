@@ -1,7 +1,7 @@
 // Data primitives: the shapes the dashboard can compute, decoupled from how they're drawn. Numbers +
 // structure + a `unit`, never colours or chart config.
 
-import { money, moneyExact } from '$lib/utils/format';
+import { money, moneyCompact, moneyExact, numCompact } from '$lib/utils/format';
 import type { Label } from '$lib/ui/label';
 
 // --- units ---
@@ -44,14 +44,49 @@ export function formatUnitExact(value: number, unit: Unit): string {
 	return unit.kind === 'money' ? moneyExact(value) : formatUnit(value, unit);
 }
 
+/** For a box too narrow for the whole reading: the thousands abbreviated. Only these two units have any to
+    give up — a percentage or a duration is short already. */
+export function formatUnitCompact(value: number, unit: Unit): string {
+	if (unit.kind === 'money') return moneyCompact(value);
+	if (unit.kind === 'count') return numCompact(value);
+
+	return formatUnit(value, unit);
+}
+
 /** For a figure whose sign is its meaning. The unit formatters only ever show a minus. */
 export function formatDelta(value: number, unit: Unit): string {
 	return (value > 0 ? '+' : '') + formatUnit(value, unit);
 }
 
+/**
+ * A magnitude held to `digits` digits, sign kept. What a reading falls back to where the box cannot hold the
+ * figure: a percentage against a near-zero base has no bound, and a card does. The reading it stands in for
+ * belongs in the tooltip beside it (see `formatUnitExact`).
+ */
+export function capped(value: number, digits: number): number {
+	const ceiling = 10 ** digits - 1;
+
+	return Math.abs(value) > ceiling ? Math.sign(value) * ceiling : value;
+}
+
+/** Digits a capped reading is held to. Nothing marks one as capped, so there is one ceiling rather than a
+    graded set: an intermediate cap would read as a figure somebody could act on. */
+export const CAP_DIGITS = 3;
+
+/** How much of a delta to show: `digits` caps its magnitude, `note` keeps what it is measured against. */
+export interface DeltaDetail {
+	digits?: number;
+	note?: boolean;
+}
+
 /** A delta as it reads on a card: the signed figure, then what it is measured against. */
-export function deltaLabel(delta: NonNullable<Scalar['delta']>): string {
-	return formatDelta(delta.value, delta.unit) + (delta.note ? ` ${delta.note}` : '');
+export function deltaLabel(
+	delta: NonNullable<Scalar['delta']>,
+	{ digits = Infinity, note = true }: DeltaDetail = {}
+): string {
+	const tail = note && delta.note ? ` ${delta.note}` : '';
+
+	return formatDelta(capped(delta.value, digits), delta.unit) + tail;
 }
 
 // --- primitive kinds ---

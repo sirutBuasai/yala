@@ -1,11 +1,10 @@
 // One pointer-drag action, shared by moving and resizing. It knows the DOM and nothing about the board.
-// Deltas are cumulative from the press, so clamping re-derives from a fixed origin rather than
-// accumulating: dragging a pane into a wall and back out again is exact.
+// Deltas are cumulative from the press, so clamping re-derives from a fixed origin: dragging a pane into a
+// wall and back out again is exact.
 //
-// A press is not yet a drag — the gesture stays pending until the pointer has travelled `THRESHOLD`.
-// That is what lets a control on a drag surface stay clickable: Svelte delegates pointer events to the
-// document root, so `preventDefault` on the press would swallow the click with it. `[data-no-drag]`
-// opts a control out of starting a gesture at all.
+// A press is not yet a drag — the gesture stays pending until the pointer has travelled `THRESHOLD`, which is
+// what keeps a control on a drag surface clickable, since `preventDefault` on the press would swallow the
+// click with it. `[data-no-drag]` opts a control out of starting a gesture at all.
 
 const OPT_OUT = '[data-no-drag]';
 

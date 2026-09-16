@@ -35,12 +35,11 @@ export interface Overrun {
 
 /**
  * The worst overrun across every box worth probing. Children and body are probed for height too: a
- * size-container wrapper computes its own box regardless of contents, so a spill inside one never reaches
- * the card's scroll height.
+ * size-container wrapper computes its own box regardless of contents, so a spill inside one never reaches the
+ * card's scroll height.
  *
- * Width is deliberately limited to the card and `MEASURED` boxes. Measuring the box a list row bleeds out
- * of counts that bleed at every width, so the pane could never be narrowed; a row measures its own grid
- * tracks instead, which fit until they genuinely don't.
+ * Width is limited to the card and `MEASURED` boxes: a list row bleeds at every width, so counting that left
+ * the pane impossible to narrow — a row measures its own grid tracks instead.
  */
 export function overrun(card: HTMLElement, body?: HTMLElement): Overrun {
 	let x = overflowPx(card, 'x');
@@ -62,4 +61,24 @@ export function overrun(card: HTMLElement, body?: HTMLElement): Overrun {
 export function spills(card: HTMLElement, body?: HTMLElement): boolean {
 	const { x, y } = overrun(card, body);
 	return x > 0 || y > 0;
+}
+
+/** Which boxes are overrunning, and by how much — for a dev-mode log when a resize is refused, since the
+    refusal is otherwise indistinguishable from a gesture that never ran. */
+export function spillReport(card: HTMLElement, body?: HTMLElement): string[] {
+	const boxes: [Element, 'x' | 'y'][] = [
+		[card, 'x'],
+		[card, 'y'],
+		...[...card.children].map((c): [Element, 'y'] => [c, 'y']),
+		...[...(body?.children ?? [])].map((c): [Element, 'y'] => [c, 'y']),
+		...[...card.querySelectorAll(MEASURED)].flatMap((b): [Element, 'x' | 'y'][] => [
+			[b, 'x'],
+			[b, 'y']
+		])
+	];
+
+	return boxes
+		.map(([el, axis]) => ({ el, axis, px: overflowPx(el, axis) }))
+		.filter(({ px }) => px > 0)
+		.map(({ el, axis, px }) => `${el.tagName.toLowerCase()}.${el.className} ${axis}+${px}`);
 }

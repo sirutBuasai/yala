@@ -1,10 +1,8 @@
 <script lang="ts">
-	// One managed account: what it is named, what it is linked to, and the end of its life. Which
-	// controls appear comes from the kind capabilities the API sends.
-	//
-	// Renaming is not a mode: a name is a field like any other and one Save covers the lot. But a rename
-	// rewrites the account's path in every entry that mentions it while an alias only shortens what the
-	// name renders as, so the two go to different endpoints in a fixed order (see `submit`).
+	// One managed account: what it is named, what it is linked to, and the end of its life. Which controls
+	// appear comes from the kind capabilities the API sends. Renaming is not a mode — one Save covers the lot —
+	// but a rename rewrites the account's path in every entry that mentions it while an alias only changes what
+	// the name renders as, so the two go to different endpoints in a fixed order (see `submit`).
 	import {
 		relabelAccount,
 		renameAccount,

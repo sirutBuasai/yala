@@ -22,12 +22,14 @@
 		/** Draw the tone as a tinted, outlined chip rather than as bare coloured text. */
 		filled?: boolean;
 		title?: string;
+		/** What a screen reader reads instead of the text — for a reading the badge had to shorten. */
+		label?: string;
 		children: Snippet;
 	}
-	let { tone = 'neutral', dot = false, filled = false, title, children }: Props = $props();
+	let { tone = 'neutral', dot = false, filled = false, title, label, children }: Props = $props();
 </script>
 
-<span class="badge {tone}" class:filled {title}>
+<span class="badge {tone}" class:filled {title} aria-label={label}>
 	{#if dot}<span class="dot" aria-hidden="true">●</span>{/if}{@render children()}
 </span>
 

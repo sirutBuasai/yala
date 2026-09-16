@@ -1,6 +1,9 @@
 <script module lang="ts">
 	// Process-wide counter for unique day-cell id bases (aria-activedescendant).
 	let seq = 0;
+
+	/** Rows on the calendar run a week apart, which is what a vertical arrow travels. */
+	const DAYS_A_WEEK = 7;
 </script>
 
 <script lang="ts">
@@ -8,6 +11,7 @@
 	// the day, Enter selects, Esc closes.
 	import { untrack } from 'svelte';
 	import { MONTHS, dateLong } from '$lib/utils/format';
+	import { onKey } from '$lib/utils/keys';
 	import Popup from '$lib/overlay/Popup.svelte';
 	import Chevron from '$lib/icons/Chevron.svelte';
 
@@ -100,27 +104,22 @@
 		viewY = dt.getFullYear();
 		viewM = dt.getMonth();
 	}
+	function commit() {
+		if (active) pick(active);
+	}
 	function onkeynav(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
-			e.preventDefault();
-			open = false;
-			triggerEl?.focus();
-		} else if (e.key === 'ArrowLeft') {
-			e.preventDefault();
-			shiftActive(-1);
-		} else if (e.key === 'ArrowRight') {
-			e.preventDefault();
-			shiftActive(1);
-		} else if (e.key === 'ArrowUp') {
-			e.preventDefault();
-			shiftActive(-7);
-		} else if (e.key === 'ArrowDown') {
-			e.preventDefault();
-			shiftActive(7);
-		} else if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			if (active) pick(active);
-		}
+		onKey(e, {
+			Escape: () => {
+				open = false;
+				triggerEl?.focus();
+			},
+			ArrowLeft: () => shiftActive(-1),
+			ArrowRight: () => shiftActive(1),
+			ArrowUp: () => shiftActive(-DAYS_A_WEEK),
+			ArrowDown: () => shiftActive(DAYS_A_WEEK),
+			Enter: commit,
+			' ': commit
+		});
 	}
 </script>
 

@@ -78,6 +78,33 @@ describe('average', () => {
 		const saved = average(d, 'saved', 'month', { level: 'all' }).value ?? 0;
 		expect(saved).toBeCloseTo(income - spent);
 	});
+
+	// A month that logged spending but no income is active for EVERY measure, income included: counting
+	// each measure's own months gave the columns different divisors, so the row stopped adding up.
+	it('per month in a year counts a month with no income as active', () => {
+		const d = makeData();
+		d.months['2025-02'] = {
+			total_spent: 10,
+			total_income: 0,
+			by_category: [{ category: 'Grocery', amount: 10 }],
+			transactions: [],
+			paychecks: []
+		};
+		d.years['2025']!.matrix[1] = { month: 2, spent: { Grocery: 10 }, income: 0 };
+		d.overview.by_year[1] = { year: 2025, spent: 55.5, income: 2300, saved: 2244.5 };
+
+		const yr = { level: 'year', year: 2025 } as const;
+		const income = average(d, 'income', 'month', yr);
+		const spent = average(d, 'spending', 'month', yr);
+		const saved = average(d, 'saved', 'month', yr);
+
+		expect(income.value).toBeCloseTo(2300 / 2);
+		expect(spent.value).toBeCloseTo(55.5 / 2);
+		expect(saved.value).toBeCloseTo((income.value ?? 0) - (spent.value ?? 0));
+		for (const s of [income, spent, saved]) {
+			expect(s.note).toEqual({ context: '2 active months' });
+		}
+	});
 });
 
 describe('ratio', () => {

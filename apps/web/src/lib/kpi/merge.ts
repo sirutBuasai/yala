@@ -178,15 +178,11 @@ export function sectionSpans(weights: number[], span: number): number[] {
 }
 
 /**
- * How a split divides the card's rectangle: each half takes the span its own sections occupy.
- *
- * While the weights still add up to the card they are the spans the sections came in at, so restoring one
- * needs no measuring and what fitted before the merge fits again. `floors` (measured; see `measure.ts`)
- * speaks only for a card resized since. Consulting it either way ratcheted the board wider on every
- * merge-and-split cycle, since it prices in padding the merged card was already paying.
- *
- * Too small for both floors there is no legal split: both keep their floor and the second overlaps, for
- * the push rule to send below. That is the only case where the halves may exceed the card.
+ * How a split divides the card's rectangle: each half takes the span its own sections occupy. While the
+ * weights still add up to the card, they are the spans the sections came in at, so what fitted before the
+ * merge fits again; `floors` speaks only for a card resized since, and consulting it otherwise ratcheted the
+ * board wider on every merge-and-split cycle. Where neither floor fits, both keep theirs and the second
+ * overlaps for the push rule to send below — the only case where the halves may exceed the card.
  */
 export function splitRects(
 	group: KpiGroup,

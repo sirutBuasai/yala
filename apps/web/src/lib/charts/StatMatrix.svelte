@@ -1,16 +1,13 @@
 <script lang="ts">
-	// A grid of figures where rows and columns both carry meaning. As loose tiles that structure is
-	// invisible and costs a row of height; as a matrix the layout says it and a glance down a column
-	// compares.
-	//
-	// A cell's number is a plain level and never coloured; a period-over-period change rides along as a
-	// badge, which is where the colour goes.
+	// A grid of figures where rows and columns both carry meaning: as loose tiles that structure is invisible
+	// and costs a row of height. A cell's number is a plain level and never coloured; a period-over-period
+	// change rides along as a badge, which is where the colour goes.
 	import type { DashboardData } from '$lib/data/types';
 	import { NO_VALUE } from '$lib/copy';
 	import type { StatRow } from '$lib/charts/statMatrix';
 	import { build } from '$lib/data/catalog';
-	import { deltaLabel, formatUnit, type Scalar } from '$lib/data/primitives';
-	import Badge, { badgeTone } from '$lib/ui/Badge.svelte';
+	import { CAP_DIGITS, formatUnit, type Scalar } from '$lib/data/primitives';
+	import DeltaBadge from '$lib/ui/DeltaBadge.svelte';
 	import { DOT, labelText } from '$lib/ui/label';
 
 	interface Props {
@@ -25,14 +22,13 @@
 		rows.map((r) => {
 			const values = r.cells.map((c) => {
 				const s = build(data, c.id, c.scope) as Scalar;
-				const d = s.delta;
 				return {
 					key: c.id,
 					text: s.value === null ? NO_VALUE : formatUnit(s.value, s.unit),
 					// Read to text here: the row's cells are compared for agreement below, and two notes saying
 					// the same thing arrive as two objects.
 					note: labelText(s.note),
-					badge: d ? { text: deltaLabel(d), tone: badgeTone(d.tone) } : null
+					delta: s.delta ?? null
 				};
 			});
 			// A note must hold for the whole row: once under the label when every cell agrees, per cell when
@@ -72,7 +68,7 @@
 						<td>
 							<span class="figure">
 								{v.text}
-								{#if v.badge}<Badge tone={v.badge.tone}>{v.badge.text}</Badge>{/if}
+								{#if v.delta}<DeltaBadge delta={v.delta} digits={CAP_DIGITS} />{/if}
 							</span>
 							{#if v.note}<small>{v.note}</small>{/if}
 						</td>

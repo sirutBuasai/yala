@@ -1,7 +1,15 @@
+<script module lang="ts">
+	/** How far the label line may be scaled down before small type is the worse answer. Holds the smallest
+	    reading around 11px, under which a threshold's name stops being comfortably legible. */
+	const MIN_SCALE = 0.85;
+</script>
+
 <script lang="ts">
 	// A set of progress bars, one per row, each read against its own target — see `fillTo` for the scaling
 	// rule the rows share with the KPI meter.
 	import { NO_VALUE } from '$lib/copy';
+	import { SLACK } from '$lib/layout/grid/spill';
+	import { contentFloor, watchWidth } from '$lib/ui/fit';
 	import { fillTo, fillText } from '$lib/charts/progress';
 	import { formatUnit, type Unit } from '$lib/data/primitives';
 	import { labelText, type Label } from '$lib/ui/label';
@@ -18,9 +26,42 @@
 		rows: Row[];
 	}
 	let { rows }: Props = $props();
+
+	let box = $state<HTMLElement>();
+
+	/** Scale the label line into the room it has, the way a chart scales into its pane: a truncated label reads
+	    as a different threshold than the one it names. Measured at full size, applied as a multiplier. */
+	function refit(): void {
+		const el = box;
+		if (!el) return;
+
+		el.style.setProperty('--fit', '1');
+		const need = [...el.querySelectorAll<HTMLElement>('.head')].reduce((worst, head) => {
+			const parts = [...head.children].reduce((sum, c) => sum + c.scrollWidth, 0);
+			const gap = parseFloat(getComputedStyle(head).columnGap) || 0;
+			return Math.max(worst, parts + gap);
+		}, 0);
+		const room = el.clientWidth;
+		// `SLACK` off the room: scaled to exactly what is available, the widest line lands a subpixel over and
+		// ellipsises the label the scale was there to save.
+		const fit = need && room ? Math.min(1, (room - SLACK) / need) : 1;
+		el.style.setProperty('--fit', String(Math.max(MIN_SCALE, fit)));
+		// Under the floor the line would have to be truncated, so state the width it cannot go under and let the
+		// pane overrun: an overrun is what makes a resize refuse (see `spill.ts`).
+		el.style.setProperty('--content-floor', contentFloor(need * MIN_SCALE));
+	}
+
+	$effect(() => {
+		const el = box;
+		if (!el) return;
+		// `rows` read so a change of data re-measures, not only a change of box.
+		void rows;
+		const watch = watchWidth(el, refit, { settled: true });
+		return watch.stop;
+	});
 </script>
 
-<div class="bullets">
+<div class="bullets" data-floor bind:this={box}>
 	{#each rows as row (row.label)}
 		{@const f = fillTo(row.value, row.target)}
 		<div class="bul">
@@ -81,8 +122,9 @@
 		margin-bottom: var(--space-3);
 		flex: none;
 	}
+	/* `--fit` is the measured scale (see `refit`). Ellipsis remains for what the scale floor cannot cover. */
 	.name {
-		font-size: var(--text-control);
+		font-size: calc(var(--text-control) * var(--fit, 1));
 		color: var(--ink-2);
 		min-width: 0;
 		/* Truncated rather than wrapped: a label that took a second line would steal the bar's height, and
@@ -93,11 +135,11 @@
 	}
 	.name small {
 		color: var(--ink-3);
-		font-size: var(--text-caption);
+		font-size: calc(var(--text-caption) * var(--fit, 1));
 		margin-left: var(--space-3);
 	}
 	.figure {
-		font-size: var(--text-row);
+		font-size: calc(var(--text-row) * var(--fit, 1));
 		font-weight: var(--fw-semibold);
 		font-variant-numeric: tabular-nums;
 		white-space: nowrap;

@@ -265,15 +265,15 @@ def test_post_account_composes_the_leaf_from_institution_and_name(client: TestCl
         "/api/account",
         json={
             "kind": "card",
-            "institution_name": "Bank of A",
+            "institution_name": "Bank of Example",
             "account_name": "Cash Rewards",
         },
     )
 
     assert r.status_code == 200
-    assert r.json()["account"] == "Liabilities:CC:BankOfACashRewards"
+    assert r.json()["account"] == "Liabilities:CC:BankOfExampleCashRewards"
     # Over the display cap with no alias on file, so it comes back in full (step 5).
-    assert r.json()["name"] == "Bank of A Cash Rewards"
+    assert r.json()["name"] == "Bank of Example Cash Rewards"
 
 
 def test_post_account_writes_naming_metadata_and_applies_the_alias(client: TestClient):
@@ -281,27 +281,27 @@ def test_post_account_writes_naming_metadata_and_applies_the_alias(client: TestC
         "/api/account",
         json={
             "kind": "card",
-            "institution_name": "Bank of A",
+            "institution_name": "Bank of Example",
             "account_name": "Cash Rewards",
-            "institution_alias": "BoA",
+            "institution_alias": "BoE",
         },
     )
 
     assert r.status_code == 200
-    assert r.json()["name"] == "BoA Cash Rewards"
+    assert r.json()["name"] == "BoE Cash Rewards"
 
     meta = client.get("/api/data").json()["meta"]["accounts"]
-    entry = meta["Liabilities:CC:BankOfACashRewards"]
-    assert entry["name"] == "BoA Cash Rewards"
-    assert entry["institution_name"] == "Bank of A"
+    entry = meta["Liabilities:CC:BankOfExampleCashRewards"]
+    assert entry["name"] == "BoE Cash Rewards"
+    assert entry["institution_name"] == "Bank of Example"
 
 
 def test_post_account_cash_is_named_by_institution_alone(client: TestClient):
-    r = client.post("/api/account", json={"kind": "bank", "institution_name": "Bank of A"})
+    r = client.post("/api/account", json={"kind": "bank", "institution_name": "Bank of Example"})
 
-    assert r.json()["account"] == "Assets:Cash:BankOfA"
+    assert r.json()["account"] == "Assets:Cash:BankOfExample"
     # Under the cap, so the alias would not fire even if one were declared.
-    assert r.json()["name"] == "Bank of A"
+    assert r.json()["name"] == "Bank of Example"
 
 
 def test_post_account_accepts_blank_optional_aliases(client: TestClient):
@@ -311,7 +311,7 @@ def test_post_account_accepts_blank_optional_aliases(client: TestClient):
         "/api/account",
         json={
             "kind": "card",
-            "institution_name": "Bank of A",
+            "institution_name": "Bank of Example",
             "account_name": "Cash Rewards",
             "institution_alias": "",
             "account_alias": "   ",
@@ -319,11 +319,13 @@ def test_post_account_accepts_blank_optional_aliases(client: TestClient):
     )
 
     assert r.status_code == 200
-    assert r.json()["name"] == "Bank of A Cash Rewards"
+    assert r.json()["name"] == "Bank of Example Cash Rewards"
 
     # A blank alias must not be written as an empty metadata value either.
-    opened = client.get("/api/data").json()["meta"]["accounts"]["Liabilities:CC:BankOfACashRewards"]
-    assert opened["institution_name"] == "Bank of A"
+    opened = client.get("/api/data").json()["meta"]["accounts"][
+        "Liabilities:CC:BankOfExampleCashRewards"
+    ]
+    assert opened["institution_name"] == "Bank of Example"
 
 
 def test_post_account_refuses_a_quoted_institution(client: TestClient):

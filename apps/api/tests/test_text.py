@@ -16,7 +16,7 @@ def test_collapse_of_only_control_characters_is_empty():
 
 
 def test_single_line_passes_ordinary_text_through():
-    assert single_line("Bank of A", "institution") == "Bank of A"
+    assert single_line("Bank of Example", "institution") == "Bank of Example"
 
 
 @pytest.mark.parametrize("value", ["a\nb", "a\tb", "a\x00b", "a\x7fb"])

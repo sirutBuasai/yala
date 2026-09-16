@@ -1,10 +1,9 @@
 // Svelte action turning a `<dialog>` into the app's modal: open it in the top layer, put focus where it
 // belongs, and dismiss it on Esc or a press outside the panel.
 //
-// `showModal()` is what makes the rest of the document inert, restores focus to whatever opened the
-// dialog, and gives the scrim a `::backdrop` rather than an element in the page. Focus PLACEMENT stays
-// ours: the first focusable is usually the dismiss button, and opening a panel should not announce
-// "close".
+// `showModal()` makes the rest of the document inert, restores focus to whatever opened the dialog, and gives
+// the scrim a `::backdrop`. Focus PLACEMENT stays ours: the first focusable is usually the dismiss button, and
+// opening a panel should not announce "close".
 
 const FOCUSABLE =
 	'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';

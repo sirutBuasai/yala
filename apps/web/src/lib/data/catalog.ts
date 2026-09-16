@@ -405,7 +405,7 @@ const CHART_DEFS: DataDef[] = [
 // Generated over the same measures the scalars use, so a KPI's chart and its number agree.
 
 /** Measures with a period-by-period trend. Month scope reads as the trailing twelve. */
-const TRENDS: Field[] = ['income', 'spending', 'saved'];
+const TRENDS: Field[] = ['income', 'spending', 'saved', 'takehome'];
 
 /** Measures with a running total. */
 const RUNNING: Field[] = ['gross', 'deductions', 'contributions', 'net', 'takehome', 'saved'];
@@ -562,7 +562,7 @@ const RATIOS: { id: string; label: string; num: Measure; den: Measure; note: str
 		label: 'Deduction rate',
 		num: 'deductions',
 		den: 'gross',
-		note: 'of gross withheld'
+		note: 'of gross income'
 	}
 ];
 
