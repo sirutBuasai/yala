@@ -1,7 +1,7 @@
 <script lang="ts">
 	// A figure against the level it is judged by, inline on the stat's own row. Unlike the other KPI marks
 	// this one is not decorative — the fill IS the reading, on the same scaling rule as `BulletChart`.
-	import { fillTo } from '$lib/charts/progress';
+	import { fillTo, fillText } from '$lib/charts/progress';
 	import { formatUnit, type Unit } from '$lib/data/primitives';
 
 	interface Props {
@@ -9,8 +9,11 @@
 		target: number;
 		unit: Unit;
 		color: string;
+		/** What the meter is a reading OF — the KPI's own title, since the track sits beside no label of its
+		    own to be named by. */
+		label: string;
 	}
-	let { value, target, unit, color }: Props = $props();
+	let { value, target, unit, color, label }: Props = $props();
 
 	const fill = $derived(fillTo(value, target));
 </script>
@@ -20,9 +23,11 @@
 	<div
 		class="track"
 		role="meter"
+		aria-label={label}
 		aria-valuenow={value ?? undefined}
 		aria-valuemin="0"
 		aria-valuemax={target}
+		aria-valuetext={fillText(value, target, unit)}
 	>
 		<span class="fill" class:reached={fill?.reached} style:width={fill?.width ?? '0%'}></span>
 	</div>

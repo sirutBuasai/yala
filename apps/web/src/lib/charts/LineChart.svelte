@@ -83,7 +83,6 @@
 	const fmt = (v: number) => (percent ? `${Math.round(v)}%` : money(v));
 	// The hover carries the cents the end label rounds away.
 	const tipFmt = (v: number) => (percent ? `${Math.round(v)}%` : moneyExact(v));
-	// Abbreviation decided by the ticks themselves — see `moneyAxisFormat`.
 	const moneyTick = $derived(moneyAxisFormat(ticks));
 	const tickFmt = (v: number) => (percent ? `${v}%` : moneyTick(v));
 

@@ -61,7 +61,6 @@
 	// Quarters of the stacked total, which read cleanly for a share chart and reasonably for absolutes.
 	const ticks = $derived([0, 0.25, 0.5, 0.75, 1].map((f) => peak * f));
 
-	/** Abbreviation decided by the ticks themselves — see `moneyAxisFormat`. */
 	const moneyTick = $derived(moneyAxisFormat(ticks));
 	const tickFmt = (t: number) => (unit.kind === 'money' ? moneyTick(t) : formatUnit(t, unit));
 

@@ -125,7 +125,13 @@
 				<Badge tone={badgeTone(delta.tone)}>{deltaLabel(delta)}</Badge>
 			{/if}
 			{#if meter !== null}
-				<Meter value={scalar.value} target={meter} unit={scalar.unit} color={markColor} />
+				<Meter
+					value={scalar.value}
+					target={meter}
+					unit={scalar.unit}
+					color={markColor}
+					label={title}
+				/>
 			{/if}
 		</div>
 	</div>

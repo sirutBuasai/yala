@@ -2,7 +2,7 @@
 	// A set of progress bars, one per row, each read against its own target — see `fillTo` for the scaling
 	// rule the rows share with the KPI meter.
 	import { NO_VALUE } from '$lib/copy';
-	import { fillTo } from '$lib/charts/progress';
+	import { fillTo, fillText } from '$lib/charts/progress';
 	import { formatUnit, type Unit } from '$lib/data/primitives';
 	import { labelText, type Label } from '$lib/ui/label';
 
@@ -42,9 +42,7 @@
 				aria-valuenow={row.value ?? undefined}
 				aria-valuemin="0"
 				aria-valuemax={row.target}
-				aria-valuetext={row.value == null
-					? 'not available'
-					: `${formatUnit(row.value, row.unit)} of ${formatUnit(row.target, row.unit)}`}
+				aria-valuetext={fillText(row.value, row.target, row.unit)}
 			>
 				{#if f}
 					<span class="value" class:reached={f.reached} style:width={f.width}></span>
@@ -66,11 +64,14 @@
 
 	   The floor is load-bearing: `flex-basis: 0` alone has no intrinsic height, so in a container that
 	   states none — an overlay rather than a sized pane — every row collapsed onto the others. */
+	/* A basis of 0 resolves to no height at all where there is none to share out, and a folded card hugs its
+	   content — so rows claiming none measured zero and painted below the card's bottom edge. `min-content`
+	   is what makes the floor provably enough for whatever a row holds. */
 	.bul {
 		display: flex;
 		flex-direction: column;
 		flex: 1 1 0;
-		min-height: 2.5rem;
+		min-height: max(2.5rem, min-content);
 	}
 	.head {
 		display: flex;

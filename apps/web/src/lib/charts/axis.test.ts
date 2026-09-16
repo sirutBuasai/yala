@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
 	fitFontSize,
+	halfLabelWidth,
 	labelAnchor,
 	labelIndices,
 	moneyAxisFormat,
@@ -219,5 +220,15 @@ describe('fitFontSize', () => {
 
 	it('survives an empty label list rather than returning NaN', () => {
 		expect(fitFontSize(100, [], 8, 12)).toBe(12);
+	});
+});
+
+describe('halfLabelWidth', () => {
+	it('grows with the text, so a longer figure is held further from the edge', () => {
+		expect(halfLabelWidth('$1k')).toBeLessThan(halfLabelWidth('-$123,456'));
+	});
+
+	it('reaches nothing at all for an empty label', () => {
+		expect(halfLabelWidth('')).toBe(0);
 	});
 });

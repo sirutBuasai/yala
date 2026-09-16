@@ -2,7 +2,14 @@
 	// One bar chart for 1..n series: one renders as plain columns with value labels, more as grouped bars
 	// with a legend. Callers pick "Bar", never "column" vs "grouped bars".
 	import { scaleBand } from 'd3-scale';
-	import { moneyAxisFormat, moneyYScale, signedYScale, plotSize } from '$lib/charts/axis';
+	import {
+		halfLabelWidth,
+		moneyAxisFormat,
+		moneyYScale,
+		signedYScale,
+		plotSize
+	} from '$lib/charts/axis';
+	import { clamp } from '$lib/utils/num';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import { moneyCompact, moneyExact, esc } from '$lib/utils/format';
 	import { showTip, hideTip, withAlt } from '$lib/utils/tooltip';
@@ -70,7 +77,6 @@
 	const fmt = (v: number) => (percent ? `${Math.round(v)}%` : moneyCompact(v));
 	// A tooltip is asked for the exact figure, so money keeps its cents there.
 	const tipFmt = (v: number) => (percent ? `${Math.round(v)}%` : moneyExact(v));
-	// Abbreviation decided by the ticks themselves — see `moneyAxisFormat`.
 	const moneyTick = $derived(moneyAxisFormat(ticks));
 	const tickFmt = (v: number) => (percent ? `${v}%` : moneyTick(v));
 
@@ -78,6 +84,13 @@
 	// Above a rising bar and below a falling one, so a label never sits on the axis.
 	const labelY = (v: number, yv: number) =>
 		v < 0 ? Math.max(yv, base) + 14 : Math.min(yv, base) - 6;
+
+	/** Centred on its bar, but held inside the plot at the ends: `svg.chart` does not clip, and a chart's
+	    side margins are narrower than half a figure, so a wide one on an edge bar paints outside the card. */
+	const labelX = (cx: number, text: string) => {
+		const half = halfLabelWidth(text);
+		return clamp(cx, half, Math.max(half, iw - half));
+	};
 
 	const label = $derived(
 		chartLabel(
@@ -129,7 +142,7 @@
 						<text
 							class="vlabel"
 							class:below={v < 0}
-							x={bx + bw / 2}
+							x={labelX(bx + bw / 2, fmt(v))}
 							y={labelY(v, yv)}
 							text-anchor="middle">{fmt(v)}</text
 						>

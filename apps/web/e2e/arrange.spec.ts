@@ -77,7 +77,8 @@ function random(seed: number) {
 
 for (const [tab, seed] of [
 	['Home', 31],
-	['Activity', 64]
+	['Activity', 64],
+	['Net Worth', 97]
 ] as const) {
 	test(`${tab} survives 30 random gestures (seed ${seed})`, async ({ page }) => {
 		await showTab(page, tab);

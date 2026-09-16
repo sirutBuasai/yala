@@ -123,6 +123,12 @@ export function fitFontSize(gutter: number, labels: string[], min = 8, max = 12)
 /** Width one character of axis type takes, near enough to budget with. */
 const AXIS_GLYPH_W = 6.2;
 
+/** Half the width `text` takes in axis type, which is how far a centred label reaches either side of the
+    point it is centred on. */
+export function halfLabelWidth(text: string): number {
+	return (text.length * AXIS_GLYPH_W) / 2;
+}
+
 /**
  * How an x-label at `i` aligns to its point: centred, except at the ends, where it anchors inward to read
  * flush with the plot's edge. The last tick sits ON that edge and a chart's right margin is narrower than
