@@ -103,7 +103,7 @@
 			class="editable"
 			role="button"
 			tabindex="0"
-			aria-label={`${shown} — rename ${what}`}
+			aria-label={`${shown}, rename ${what}`}
 			title={`Rename ${what}`}
 			onclick={open}
 			onkeydown={(e) => {

@@ -68,8 +68,6 @@
 			? { series: build(data, spec.series, spec.scope) as Series, shape: spec.chart }
 			: null
 	);
-	// A meter needs the level the figure is judged by, which is the scalar's own; without one there is
-	// nothing to fill towards, so the card falls back to the bare figure.
 	const meter = $derived(spec.chart === 'meter' && scalar.target != null ? scalar.target : null);
 
 	// A chart is named by the series it draws, which is not always the figure in front of it; a ring IS
@@ -177,8 +175,7 @@
 		z-index: 0;
 		pointer-events: none;
 	}
-	/* Spans the stat's width rather than hugging its content, so an inline mark that asks for the leftover
-	   space (see `Meter`) has some to take. The figures inside stay left-aligned either way. */
+	/* Spans the stat's width, so an inline mark asking for the leftover space (see `Meter`) has some. */
 	.front {
 		position: relative;
 		z-index: 1;

@@ -1,11 +1,7 @@
 <script lang="ts">
-	// A figure against the level it is judged by, inline on the stat's own row: "9.5 yr / 34 yr [####]".
-	// Unlike the other KPI marks this one is not decorative — the track's end IS the target, so the fill is
-	// the reading. Same scaling rule as `BulletChart`: capped at the target rather than stretched to the
-	// value, so two cards using it stay comparable.
-	//
-	// Inline rather than under the figure so it costs the card no height of its own, and takes whatever
-	// width the pane has left over.
+	// A figure against the level it is judged by, inline on the stat's own row. Unlike the other KPI marks
+	// this one is not decorative — the fill IS the reading, on the same scaling rule as `BulletChart`.
+	import { fillTo } from '$lib/charts/progress';
 	import { formatUnit, type Unit } from '$lib/data/primitives';
 
 	interface Props {
@@ -16,9 +12,7 @@
 	}
 	let { value, target, unit, color }: Props = $props();
 
-	const share = $derived(value == null || !target ? null : (value / target) * 100);
-	const width = $derived(share == null ? '0%' : `${Math.min(100, Math.max(0, share))}%`);
-	const reached = $derived(share != null && share >= 100);
+	const fill = $derived(fillTo(value, target));
 </script>
 
 <div class="meter" style:--mark={color}>
@@ -30,7 +24,7 @@
 		aria-valuemin="0"
 		aria-valuemax={target}
 	>
-		<span class="fill" class:reached style:width></span>
+		<span class="fill" class:reached={fill?.reached} style:width={fill?.width ?? '0%'}></span>
 	</div>
 </div>
 
@@ -51,7 +45,6 @@
 		white-space: nowrap;
 		flex: none;
 	}
-	/* Takes whatever width is left, floored so a narrow card still shows a bar rather than a sliver. */
 	.track {
 		position: relative;
 		flex: 1 1 auto;

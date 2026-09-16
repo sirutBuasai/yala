@@ -31,13 +31,9 @@
 	/* The arrange chrome's accent. The one accent that swaps with the theme, so arranging never
 	   reads as the hue the data itself uses (see the light block). */
 	--arrange-line: var(--lav);
-	/* A form control's own accent: `-fill` paints a solid area — a slider's track and thumb — and `-line`
-	   draws a 1px border or a small glyph, where the bright accent leaves almost nothing to see on the pale
-	   page (the note on `--arrange-line` below is the same observation).
-
-	   Neither needs a light-mode override: the hue does not diverge by theme, and `--lav-text` already
-	   carries the legibility shift the light page needs. Naming them here rather than reaching for `--lav`
-	   at each site is what lets the accent move in one edit. */
+	/* A form control's own accent: `-fill` paints a solid area, `-line` draws a hairline or a small glyph,
+	   where the bright accent leaves almost nothing to see on the pale page. Neither needs a light-mode
+	   override — `--lav-text` already carries the legibility shift the light page needs. */
 	--control-fill: var(--lav);
 	--control-line: var(--lav-text);
 	/* Category palette. */
@@ -410,6 +406,12 @@ a {
    one token, so callers can't drift between near-identical size tokens. */
 .cap {
 	color: var(--ink-3);
+	font-size: var(--text-secondary);
+	margin: 0;
+}
+/* The same voice for a refusal, so no caller has to restate the critical colour. */
+.err {
+	color: var(--crit-text);
 	font-size: var(--text-secondary);
 	margin: 0;
 }
@@ -905,8 +907,7 @@ svg.chart {
 .tooltip b {
 	color: #fff;
 }
-/* A second reading of the same figure, in another unit. Dimmed and spaced off the first so it reads as
-   the same number restated, not as a second number. */
+/* A second reading of the same figure, dimmed so it reads as that number restated rather than a new one. */
 .tooltip .alt {
 	opacity: 0.65;
 	margin-left: var(--space-4);

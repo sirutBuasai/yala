@@ -16,7 +16,7 @@ export function setGridEnv(env: GridEnv): void {
 
 export function getGridEnv(): GridEnv {
 	const env = getContext<GridEnv | undefined>(ENV);
-	if (!env) throw new Error('grid: no GridEnv in context — the page must call setGridEnv()');
+	if (!env) throw new Error('grid: no GridEnv in context; the page must call setGridEnv()');
 	return env;
 }
 
@@ -27,7 +27,7 @@ export function setArrangement(arrangement: Arrangement): void {
 export function getArrangement(): Arrangement {
 	const arrangement = getContext<Arrangement | undefined>(ARRANGEMENT);
 	if (!arrangement)
-		throw new Error('grid: no arrangement in context — a Pane must be inside a Board');
+		throw new Error('grid: no arrangement in context; a Pane must be inside a Board');
 	return arrangement;
 }
 
@@ -37,7 +37,7 @@ export function setLabels(labels: BoardLabels): void {
 
 export function getLabels(): BoardLabels {
 	const labels = getContext<BoardLabels | undefined>(LABELS);
-	if (!labels) throw new Error('grid: no labels in context — a Pane must be inside a Board');
+	if (!labels) throw new Error('grid: no labels in context; a Pane must be inside a Board');
 	return labels;
 }
 

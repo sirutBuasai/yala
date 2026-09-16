@@ -454,13 +454,9 @@ describe('year-end levels behind a KPI', () => {
 
 // --- how a snapshot's date reads on an axis ---
 
-/**
- * The fixture with balances logged on the 1st of two consecutive months, which is what lets a month's
- * move be measured at all: the month opens on its own snapshot and closes on the next month's, since a
- * balance dated the 1st is taken before that month's money has moved.
- *
- * January is the month with both a snapshot pair and logged activity in the base fixture.
- */
+/** The fixture with balances logged on the 1st of two consecutive months, which is what lets a month's
+    move be measured: a balance dated the 1st is taken before that month's money has moved, so the month
+    opens on its own snapshot and closes on the next month's. */
 function loggedOnTheFirst() {
 	const data = makeNetWorthData();
 	data.networth!.series = [
@@ -618,10 +614,9 @@ describe('change by month', () => {
 		return p;
 	};
 
-	// Month over month, so a bar is measured from the freshest reading in the month before. The fixture's
-	// January has no December snapshot to measure from, which is why the figures land on February — the bar
-	// is labelled one month after the movement it describes. That is the cost of using the newest balance
-	// rather than the one dated at the month's edge.
+	// Month over month, so a bar is measured from the freshest reading in the month before — a bar is
+	// therefore labelled one month after the movement it describes. That is the cost of using the newest
+	// balance rather than the one dated at the month's edge.
 	it('plots the two levels that can share one chart, as percentages', () => {
 		const p = changeOf('networth.change_by_month');
 

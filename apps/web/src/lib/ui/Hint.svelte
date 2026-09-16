@@ -17,9 +17,7 @@
 	let { label, children }: Props = $props();
 
 	const id = $props.id();
-	/** Held open by a click, until something else is pressed. */
 	let pinned = $state(false);
-	/** Held open by the pointer resting on it. */
 	let hovering = $state(false);
 	const open = $derived(pinned || hovering);
 
@@ -29,13 +27,12 @@
 	let at = $state<{ left: number; top: number } | null>(null);
 
 	/**
-	 * Placed against the viewport rather than the mark it belongs to, because an absolutely-positioned
-	 * bubble is clipped by any scrolling ancestor — and these sit inside a pane that scrolls, which cut
-	 * every hint off at the column's edge.
+	 * Placed against the viewport rather than the mark it belongs to: an absolutely-positioned bubble is
+	 * clipped by any scrolling ancestor, and these sit inside a pane that scrolls.
 	 *
 	 * Preferred alignment is the bubble's left edge under the mark; where that would overrun the panel it
-	 * hangs the other way. Measured, not decided by which column the control is in: the column count moves
-	 * with the panel's width, so a hint near the edge at one size is nowhere near it at another.
+	 * hangs the other way. Measured, not decided by which column the control is in, since the column count
+	 * moves with the panel's width.
 	 */
 	function place() {
 		if (!root || !bubble) return;
@@ -124,8 +121,8 @@
 </span>
 
 <style>
-	/* Not `.wrap`: that is the app's page shell (see app.css), and borrowing the name inherited its
-	   page padding — which made every slider's label row 128px tall. */
+	/* Not `.wrap`: that is the app's page shell (see app.css), and borrowing the name inherited its page
+	   padding. */
 	.hint {
 		position: relative;
 		display: inline-flex;
@@ -145,10 +142,6 @@
 	.dot.pinned {
 		color: var(--control-line);
 	}
-	/**
-	 * Anchored to the mark and lifted above the panel's own stacking. Left-aligned to it but allowed to
-	 * run leftward instead where it would leave the panel, since these sit in a narrow column.
-	 */
 	/* `fixed`, so no scrolling ancestor can clip it; `place()` supplies the coordinates. */
 	.bubble {
 		position: fixed;
@@ -181,7 +174,6 @@
 		user-select: text;
 		border-color: var(--control-line);
 	}
-	/* The description first, then the arithmetic, then what it means. */
 	.bubble :global(b) {
 		display: block;
 		color: var(--ink);

@@ -472,10 +472,11 @@ const NETWORTH_STATS: DataDef[] = [
 			['networth.balance_growth', 'Balance growth', balanceGrowth],
 			['networth.top_account', 'Top account', topAccountShare],
 			['networth.depletion', 'Depletion year', depletionYear]
-			// Wrapped rather than passed straight through: the targets take their assumptions as a second
-			// argument, and handing them a scope there would read it as one.
 		] as const
-	).map(([id, label, build]) => scalarDef(id, label, LIFETIME, (data) => build(data)))
+	)
+		// Wrapped rather than passed straight through: these take their assumptions as a second argument,
+		// and handing them a scope there would read it as one.
+		.map(([id, label, build]) => scalarDef(id, label, LIFETIME, (data) => build(data)))
 ];
 
 // --- the decomposition behind a change in net worth ---

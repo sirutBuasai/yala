@@ -34,11 +34,10 @@ export function moneyExact(n: number | null | undefined): string {
 }
 
 /**
- * An unsigned magnitude abbreviated to its tier: thousands as `k`, millions as `M`, one decimal until
- * the tier's tens so a label is never more than four digits wide.
+ * An unsigned magnitude abbreviated to its tier: thousands as `k`, millions as `M`, one decimal until the
+ * tier's tens so a label is never more than four digits wide.
  *
- * Both tiers, because a projection compounds past a thousand thousand and its axis read "$50000k" when
- * `k` was the only one.
+ * Both tiers, because a projection compounds past a million and `k` alone left the axis unreadable.
  */
 function tiered(magnitude: number): string {
 	return magnitude >= 1e6
@@ -124,7 +123,7 @@ export function dateLong(date: string | null | undefined): string {
 	return m ? `${MONTHS[+m[2]! - 1]} ${+m[3]!}, ${m[1]}` : (date ?? '');
 }
 
-/** A "YYYY-MM-DD" date as "Aug 26", for a view that already states which year it is showing. */
+/** A "YYYY-MM-DD" date as "Mon D", for a view that already states which year it is showing. */
 export function dateShort(date: string): string {
 	const [, m, d] = date.split('-');
 	if (!m || !d) return date;

@@ -32,11 +32,9 @@
 		log?: boolean;
 		/** Label each line at its right end instead of using a legend. */
 		endLabels?: boolean;
-		/**
-		 * Fix the value axis to end here instead of at the tallest reading. For a chart whose point is a
-		 * level partway up — a target line — that the data would otherwise squash to the floor. Lines
-		 * running past it flatten against the top; their tooltips still state the true figure.
-		 */
+		/** Fix the value axis to end here instead of at the tallest reading, for a chart whose point is a
+		    level partway up. Lines running past it flatten against the top; tooltips still state the true
+		    figure. */
 		ceiling?: number;
 	}
 	let {
@@ -200,8 +198,7 @@
 				/>
 			{/each}
 
-			<!-- Keyed by slot, not by text: two points can share a label (two balances logged in one
-			     month), and a duplicate key is a fatal error. -->
+			<!-- Keyed by slot, not by text: two points can share a label, and a duplicate key is fatal. -->
 			{#each labels as lb, i (i)}
 				{#if shown.has(i)}
 					<text x={xPos(i)} y={ih + 20} text-anchor="middle">{lb}</text>

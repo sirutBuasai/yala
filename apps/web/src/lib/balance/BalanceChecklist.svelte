@@ -506,9 +506,4 @@
 		font-size: var(--text-subtitle);
 		margin: 0;
 	}
-	.err {
-		color: var(--crit-text);
-		font-size: var(--text-secondary);
-		margin: 0;
-	}
 </style>

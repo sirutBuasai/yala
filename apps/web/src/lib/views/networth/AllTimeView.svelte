@@ -15,6 +15,18 @@
 	import { snapshotYears } from '$lib/data/networth';
 	import { yearSpan } from '$lib/utils/format';
 	import { live, words } from '$lib/ui/label';
+	import {
+		ALLOCATION,
+		ALLOCATION_CAPTION,
+		ATTRIBUTION,
+		ATTRIBUTION_CAPTION,
+		BUCKET_CHANGE,
+		LIABILITIES,
+		PROGRESS,
+		PROGRESS_CAPTION,
+		SNAPSHOT_LEVELS,
+		TREND
+	} from '$lib/views/networth/copy';
 	import Planning from '$lib/views/networth/Planning.svelte';
 
 	interface Props {
@@ -24,18 +36,12 @@
 	}
 	let { data, onsaved }: Props = $props();
 
-	// The one pane on this board you can act on: every bar it draws is measured against an assumption, so
-	// the assumptions are edited from it rather than from a settings page a page away.
 	let planning = $state(false);
 
 	const all: Scope = { level: 'all' };
 	const span = $derived(yearSpan(snapshotYears(data)));
 
-	// The position, what it is made of, how long it would last, then the rate that got it there. All read
-	// today's live totals, so they cannot disagree about which snapshot they are describing. The three
-	// levels carry a bar per logged year behind them; a duration and a rate have no yearly level to plot.
-	// Opens below the matrix and the progress bars, which read across the full width; declared in reading
-	// order down the column.
+	// All read today's live totals, so they cannot disagree about which snapshot they describe.
 	const KPIS: KpiBoardDefs = {
 		networth: {
 			rect: { x: 0, y: 11, w: 11, h: 5 },
@@ -60,7 +66,7 @@
 			}
 		},
 		// A bar per year rather than a ring: the ring clamps at 100 and a compound rate has no ceiling, so
-		// it would sit full at any growth worth having. The bars say whether it is slowing.
+		// it would sit full at any growth worth having.
 		growthRate: {
 			rect: { x: 0, y: 26, w: 11, h: 5 },
 			spec: {
@@ -70,25 +76,19 @@
 				series: 'networth.growth_rate_by_year'
 			}
 		},
-		// Measured against the years left until retirement, which the figure carries as its own target. The
-		// meter sits on the figure's own row, so this costs no more height than a bare card.
 		freedom: {
 			rect: { x: 0, y: 31, w: 11, h: 5 },
 			spec: { figure: 'networth.years_of_freedom', scope: all, chart: 'meter' }
 		}
 	};
 
-	// One column down the side: the position, its parts, the rate that got it there, then how long it
-	// lasts, read top to bottom.
 	const kpis = useKpiBoard('networth:all', () => KPIS, [
 		{ ids: ['networth', 'assets', 'liabilities', 'growthRate', 'freedom'], axis: 'column' }
 	]);
 
 	const PANES = $derived(
 		kpis.board({
-			// The board opens on where you stand against your own targets: the lifetime split, then how far
-			// along each threshold you are. `scale` so each is given room or taken down to where its rows
-			// would clip, like a KPI card.
+			// `scale` so each pane is given room or taken down to where its rows would clip, like a KPI card.
 			growth: { x: 0, y: 0, w: 28, h: 11, content: 'scale' },
 			thresholds: {
 				x: 28,
@@ -100,8 +100,8 @@
 					figure: 'networth.thresholds',
 					scope: all,
 					chart: 'bullet',
-					title: words('Financial progress'),
-					caption: words('key metrics for financial independence')
+					title: words(PROGRESS),
+					caption: words(PROGRESS_CAPTION)
 				}
 			},
 			// Assets dashed so net worth stays the primary reading.
@@ -117,7 +117,7 @@
 					chart: 'line',
 					area: true,
 					dashed: ['Assets'],
-					title: words('Net worth & assets'),
+					title: words(TREND),
 					caption: words('total lifetime net worth snapshots')
 				}
 			},
@@ -132,11 +132,10 @@
 					scope: all,
 					chart: 'line',
 					area: true,
-					title: words('Liabilities'),
+					title: words(LIABILITIES),
 					caption: words('total lifetime liabilities snapshots')
 				}
 			},
-			// Where it sits, beside what it is made of.
 			accounts: {
 				x: 0,
 				y: 36,
@@ -147,14 +146,12 @@
 					figure: 'networth.accounts',
 					scope: all,
 					chart: 'ranked-bars',
-					// Keyed by account, so each bar takes its institution's hue rather than the category
-					// fallback, which gave every bar the same colour.
+					// Keyed by account, so each bar takes its institution's hue rather than the category fallback.
 					colorBy: 'account',
 					title: words('Where the money sits'),
 					caption: words('asset allocation as account balances')
 				}
 			},
-			// Dollars on the axis with each band's share on hover, the same reading the year board gives.
 			allocation: {
 				x: 20,
 				y: 36,
@@ -165,11 +162,10 @@
 					figure: 'networth.allocation_value',
 					scope: all,
 					chart: 'stacked-area',
-					title: words('Asset allocations'),
-					caption: words('dollar amount and shares by asset type')
+					title: words(ALLOCATION),
+					caption: words(ALLOCATION_CAPTION)
 				}
 			},
-			// Who added the dollars, beside where they landed. The per-level change is in the table below.
 			sources: {
 				x: 0,
 				y: 51,
@@ -180,12 +176,10 @@
 					figure: 'networth.saved_vs_other',
 					scope: all,
 					chart: 'bar',
-					title: words('You vs the market, by year'),
-					caption: words('direct savings vs market gains + other income')
+					title: words(`${ATTRIBUTION}, by year`),
+					caption: words(ATTRIBUTION_CAPTION)
 				}
 			},
-			// Dollars on the axis, since the three types are parts of one total and their moves compare
-			// directly; the percentage each move was of its own opening balance rides along on hover.
 			buckets: {
 				x: 20,
 				y: 51,
@@ -196,7 +190,7 @@
 					figure: 'networth.bucket_change_by_year',
 					scope: all,
 					chart: 'bar',
-					title: words('Change by asset type'),
+					title: words(BUCKET_CHANGE),
 					caption: { context: 'Lifetime', text: 'dollars gained or lost each year' }
 				}
 			},
@@ -212,14 +206,13 @@
 					scope: all,
 					chart: 'table',
 					title: words('Yearly snapshots'),
-					caption: words('changes to net worth, assets, and liabilities YoY')
+					caption: words(`${SNAPSHOT_LEVELS} YoY`)
 				}
 			}
 		})
 	);
 
-	// The lifetime move and the two parts it splits into, then the same three as a yearly and a monthly
-	// rate. Headings and ids both come from the catalog's one ordered set, so a heading cannot end up over
+	// Headings and ids both come from the catalog's one ordered set, so a heading cannot end up over
 	// another part's figure.
 	const columns = NET_WORTH_GROWTH.map(netWorthGrowthHeading);
 	const cellsOf = (pick: (c: (typeof NET_WORTH_GROWTH)[number]) => string) =>
@@ -251,7 +244,7 @@
 </Board>
 
 {#snippet adjust()}
-	<button class="btn-ghost" onclick={() => (planning = true)}>Adjust</button>
+	<button type="button" class="btn-ghost" onclick={() => (planning = true)}>Adjust</button>
 {/snippet}
 
 {#if planning}

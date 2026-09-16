@@ -15,10 +15,8 @@
 		return typeof value === 'number' && unit ? formatUnit(value, unit) : String(value);
 	}
 
-	/**
-	 * Each tinted column's largest magnitude, which is what its shading is scaled against. Per column,
-	 * never across the table: a column of hundreds would never tint beside one of tens of thousands.
-	 */
+	/** Each tinted column's largest magnitude, which its shading is scaled against. Per column, never
+	    across the table, or a column of hundreds would never tint beside one of tens of thousands. */
 	const peaks = $derived(
 		table.columns.map((c, j) =>
 			c.tint
@@ -30,7 +28,7 @@
 	);
 
 	/** A cell's shade: which way the news runs, and how strongly, or null where nothing is shaded. The
-	    depth is a fraction here and scaled by the theme in CSS, as every other mark in the app is. */
+	    depth is a fraction here and scaled by the theme in CSS. */
 	function shade(value: string | number, col: number): { good: boolean; a: number } | null {
 		const dir = table.columns[col]?.tint;
 		if (!dir || typeof value !== 'number' || value === 0) return null;
@@ -40,8 +38,7 @@
 
 		return {
 			good: value > 0 === (dir === 'up-good'),
-			// Floored, so the smallest real movement is still visible rather than indistinguishable from no
-			// movement at all.
+			// Floored, so the smallest real movement is still distinguishable from none.
 			a: 0.25 + 0.75 * (Math.abs(value) / peak)
 		};
 	}
@@ -55,8 +52,8 @@
 		<table>
 			<thead>
 				<tr>
-					<!-- Keyed by position, not by label: a table that repeats a heading beside each level it
-					     belongs to has several columns called the same thing, and a duplicate key is fatal. -->
+					<!-- Keyed by position, not by label: a heading may repeat beside each level it belongs to,
+					     and a duplicate key is fatal. -->
 					{#each table.columns as c, i (i)}
 						<th scope="col" class:num={!!c.unit}>{c.label}</th>
 					{/each}
@@ -120,8 +117,7 @@
 		font-variant-numeric: tabular-nums;
 	}
 	/* Inset rather than edge-to-edge, so the shading reads as belonging to the figure instead of redrawing
-	   the table's own grid. Shares `--mark-tile` with the heatmap: a shaded cell is a shaded cell, and the
-	   two sit on the same boards. Strength is per theme (see app.css). */
+	   the table's own grid. Shares `--mark-tile` with the heatmap, whose cells sit on the same boards. */
 	.tinted {
 		position: relative;
 		isolation: isolate;

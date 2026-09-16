@@ -25,11 +25,11 @@
 	};
 	type Group = { title: string; note: string; tokens: TypeToken[] };
 
-	// `px` is only the readout; the sample itself is sized by `var(--text-…)`, so it reflects app.css.
+	// `px` is only the readout; the sample itself is sized by `var(--text-*)`, so it reflects app.css.
 	const typeGroups: Group[] = [
 		{
 			title: 'Hero & titles',
-			note: 'The loudest type — fancy serif face, one clear step apart.',
+			note: 'The loudest type: fancy serif face, one clear step apart.',
 			tokens: [
 				{
 					name: 'text-display',
@@ -84,7 +84,7 @@
 		},
 		{
 			title: 'Body & controls',
-			note: 'The reading + interaction layer — modern sans face.',
+			note: 'The reading + interaction layer: modern sans face.',
 			tokens: [
 				{
 					name: 'text-body',
@@ -502,7 +502,7 @@
 	<section class="card grp">
 		<div class="grphead">
 			<h3>Edge-to-edge bleed</h3>
-			<span>Hover a row — highlight runs to the card edge; divider + content stay inset.</span>
+			<span>Hover a row: highlight runs to the card edge; divider + content stay inset.</span>
 		</div>
 		<div class="bleed-x">
 			{#each bleedRows as r (r.label)}

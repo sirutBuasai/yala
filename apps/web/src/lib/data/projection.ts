@@ -1,9 +1,9 @@
 // Where the invested balance goes from here, under the assumptions you state. Two lines: one that keeps
 // investing at the rate you have been, one that stops. The gap between them is what continuing to invest is
-// worth, and where the coasting line still reaches the FI number is Coast FI.
+// worth.
 //
 // Two reference levels are drawn behind them, because they answer different questions:
-//   FI number    spending / withdrawal rate — a pot that is never drawn down, the 4% rule's shape.
+//   FI number    spending / withdrawal rate — a pot that is never drawn down.
 //   Lasts to N   the present value of spending from retirement to the horizon age — a pot that IS drawn
 //                down, and so a smaller one. Its return funds the difference.
 //
@@ -19,14 +19,11 @@ import { series } from './series';
 import { money } from '$lib/utils/format';
 import { live, words } from '$lib/ui/label';
 
-/** The line that keeps contributing, and the one that doesn't. */
 const INVESTING = 'Investing';
 const COASTING = 'Coasting';
 
-/** The perpetual target: a balance whose return alone covers the withdrawal. */
 const TARGET = 'FI number';
 
-/** The finite target, named for the age it is sized to reach. */
 const lastsToName = (a: Assumptions) => `Lasts to ${a.horizonAge}`;
 
 /** Everything read AGAINST the investing line, so a caller can draw them all dotted. */
@@ -34,13 +31,9 @@ export function secondaryLines(a: Assumptions): string[] {
 	return [COASTING, TARGET, lastsToName(a)];
 }
 
-/**
- * The balance whose return alone covers spending, `spending / r` — the level a projection turns around at.
- *
- * This, not the withdrawal rate against the return, is what decides whether a balance lasts: the
- * withdrawal is a fixed sum, so a balance above this earns more than it pays out however high the stated
- * rate is. Comparing the two RATES only describes a portfolio sitting exactly at the FI number.
- */
+/** The level a projection turns around at, `spending / r`. This, not the withdrawal rate against the
+    return, decides whether a balance lasts: the withdrawal is a fixed sum, so a balance above this earns
+    more than it pays out however high the stated rate is. */
 export function breakEven(
 	data: DashboardData,
 	a: Assumptions = assumptionsOf(data)
@@ -67,10 +60,8 @@ export function balanceAtRetirement(
 
 /**
  * The balance that funds `spend` a year from retirement to the horizon age and reaches zero exactly
- * there — the present value of an annuity, `spend × (1 − (1+r)^−n) / r`.
- *
- * Far smaller than `spend × n`, because the balance keeps earning while it is drawn on: most of what a
- * long retirement pays out is return, not principal. Null when the horizon is not past retirement.
+ * there — the present value of an annuity, `spend × (1 − (1+r)^−n) / r`. Far smaller than `spend × n`,
+ * because the balance keeps earning while it is drawn on. Null when the horizon is not past retirement.
  */
 export function lastsToHorizon(
 	data: DashboardData,
@@ -85,7 +76,6 @@ export function lastsToHorizon(
 	return r === 0 ? spend * years : spend * ((1 - (1 + r) ** -years) / r);
 }
 
-/** One line's balance, year by year, alongside the years it spans. */
 interface Path {
 	years: number[];
 	investing: number[];
@@ -97,8 +87,7 @@ interface Path {
  * from that year on it withdraws trailing annual spending instead — real dollars, not a share of the
  * balance, because a percentage can never exhaust a portfolio and would make depletion unanswerable.
  *
- * Floored at zero: past that the balance is spent, and a line diving negative reads as a debt that was
- * never taken on.
+ * Floored at zero: past that the balance is spent, and a line diving negative reads as a debt.
  */
 function walk(start: number, a: Assumptions, contribution: number, spend: number): Path | null {
 	if (a.birthYear === null) return null;
@@ -136,12 +125,8 @@ function pathFor(data: DashboardData, a: Assumptions): Path | null {
 	return walk(start, a, rates.investing, rates.spending);
 }
 
-/**
- * The invested balance projected forward, with both targets drawn flat behind it.
- *
- * Investments rather than net worth: a withdrawal comes out of the invested pot, and the liquid cash the
- * runway threshold measures is not part of it.
- */
+/** The invested balance projected forward, with both targets drawn flat behind it. Investments rather
+    than net worth: a withdrawal comes out of the invested pot, not the runway's liquid cash. */
 export function investedProjection(
 	data: DashboardData,
 	a: Assumptions = assumptionsOf(data)
@@ -178,10 +163,8 @@ export function investedProjection(
 	};
 }
 
-/**
- * The first year the balance is spent, measured on the line that keeps investing — the plan actually
- * being followed. Null where it never depletes, which is the answer a sustainable plan gives.
- */
+/** The first year the balance is spent, measured on the line that keeps investing — the plan actually
+    being followed. Null where it never depletes. */
 export function depletionYear(data: DashboardData, a: Assumptions = assumptionsOf(data)): Scalar {
 	const path = pathFor(data, a);
 	const spend = plannedRates(data, a).spending;

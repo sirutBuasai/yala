@@ -18,11 +18,9 @@ const THIS_YEAR = new Date().getFullYear();
 /** The invested part of the fixture's position: everything but the Liquid bucket. */
 const INVESTED = 2600 + 2600;
 
-/**
- * Assumptions naming the REAL rate directly. Inflation is zeroed, which makes the nominal figure and the
- * real one the same number — so an expectation can state the rate the projection actually compounds at
- * without restating the Fisher step (which `assumptions.test.ts` covers on its own).
- */
+/** Assumptions naming the REAL rate directly. Inflation is zeroed, so the nominal and real figures are
+    the same number and an expectation need not restate the Fisher step — `assumptions.test.ts` covers
+    that on its own. */
 const assume = ({
 	realReturn = 5,
 	...over
@@ -168,11 +166,9 @@ describe('projection', () => {
 });
 
 describe('planned rates', () => {
-	/**
-	 * "Saved" is income less spending — a residual, not a measured flow into the market. Payroll
-	 * contributions ARE measured and always land there; the leftover is money that merely went unspent, so
-	 * how much of it is invested is a choice. Assuming all of it was overstating the rate.
-	 */
+	// "Saved" is income less spending — a residual, not a measured flow into the market. Payroll
+	// contributions ARE measured and always land there; how much of the leftover is invested is a choice,
+	// and assuming all of it overstated the rate.
 	it('splits saved into contributions, which always invest, and a leftover that need not', () => {
 		const data = makeNetWorthData();
 		const contributions = trailingAnnual(data, 'contributions');
@@ -224,11 +220,9 @@ describe('planned rates', () => {
 });
 
 describe('break-even', () => {
-	/**
-	 * The level that actually decides whether a balance lasts. Comparing the withdrawal RATE against the
-	 * return only describes a portfolio sitting exactly at the FI number, which is how a warning came to
-	 * claim a balance could not last while the chart correctly drew it rising forever.
-	 */
+	// The level that actually decides whether a balance lasts. Comparing the withdrawal RATE against the
+	// return only describes a portfolio sitting exactly at the FI number, which is how a warning came to
+	// claim a balance could not last while the chart correctly drew it rising forever.
 	it('is the balance whose return alone covers planned spending', () => {
 		const data = makeNetWorthData();
 		const a = assume({ realReturn: 5, plannedSpending: 50000 });
@@ -261,11 +255,8 @@ describe('break-even', () => {
 });
 
 describe('lasts to the horizon', () => {
-	/**
-	 * The figure has to be the pot that reaches exactly zero at the horizon. Simulated rather than
-	 * asserted against a constant, because the naive `spend × years` answer is nearly twice as large and
-	 * a formula slip would still look plausible.
-	 */
+	// Simulated rather than asserted against a constant: the naive `spend × years` answer is nearly twice
+	// as large, so a formula slip would still look plausible.
 	it('funds spending to the horizon and lands on zero', () => {
 		const data = makeNetWorthData();
 		const a = assume({ realReturn: 5, retireAge: 60, horizonAge: 80 });

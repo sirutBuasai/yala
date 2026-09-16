@@ -4,7 +4,7 @@
 	import { area, line } from 'd3-shape';
 	import { esc } from '$lib/utils/format';
 	import { formatUnit, formatUnitExact, type Unit } from '$lib/data/primitives';
-	import { showTip, hideTip } from '$lib/utils/tooltip';
+	import { showTip, hideTip, withAlt } from '$lib/utils/tooltip';
 	import { labelIndices, moneyAxisFormat, plotSize } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import Legend from '$lib/charts/Legend.svelte';
@@ -61,8 +61,7 @@
 	// Quarters of the stacked total, which read cleanly for a share chart and reasonably for absolutes.
 	const ticks = $derived([0, 0.25, 0.5, 0.75, 1].map((f) => peak * f));
 
-	/** Abbreviation decided by the ticks themselves — see `moneyAxisFormat`. The axis only has to give the
-	    scale; the tooltip carries the exact figure. */
+	/** Abbreviation decided by the ticks themselves — see `moneyAxisFormat`. */
 	const moneyTick = $derived(moneyAxisFormat(ticks));
 	const tickFmt = (t: number) => (unit.kind === 'money' ? moneyTick(t) : formatUnit(t, unit));
 
@@ -81,12 +80,8 @@
 
 	const shown = $derived(new Set(labelIndices(n, iw, labels)));
 
-	/** A band's figure at one point: what the axis states, plus its other reading where it has one. */
-	function bandValue(band: Band, i: number): string {
-		const v = formatUnitExact(band.values[i] ?? 0, unit);
-		const other = altUnit && band.alt ? band.alt[i] : null;
-		return other == null ? v : `${v}<span class="alt">${formatUnitExact(other, altUnit!)}</span>`;
-	}
+	const bandValue = (band: Band, i: number) =>
+		withAlt(formatUnitExact(band.values[i] ?? 0, unit), band.alt?.[i], altUnit);
 
 	/** The point being hovered, which marks each band's boundary as well as filling the tooltip. */
 	let at = $state<number | null>(null);
@@ -128,8 +123,8 @@
 				{/if}
 			{/each}
 
-			<!-- Marked on each band's upper boundary, which is the edge the eye follows: a band's own value is
-			     its thickness, and there is no single point on it to mark. -->
+			<!-- Marked on each band's upper boundary: a band's value is its thickness, so it has no single
+			     point of its own to mark. -->
 			{#if at !== null}
 				<line
 					class="gridline"

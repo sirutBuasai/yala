@@ -1,11 +1,8 @@
 <script lang="ts">
-	// Progress bars against a target. The track IS the target, so a row reading 48% fills 48% of it and
-	// two rows measured in different units are still comparable at a glance.
-	//
-	// Not scaled to the value: a track that stretched to whatever was furthest out drew a row at 250% and
-	// a row at 15-of-6 as the same nearly-full bar, which is the one thing this must not do. Past the
-	// target the bar fills and the overflow is marked instead.
+	// A set of progress bars, one per row, each read against its own target — see `fillTo` for the scaling
+	// rule the rows share with the KPI meter.
 	import { NO_VALUE } from '$lib/copy';
+	import { fillTo } from '$lib/charts/progress';
 	import { formatUnit, type Unit } from '$lib/data/primitives';
 	import { labelText, type Label } from '$lib/ui/label';
 
@@ -21,29 +18,18 @@
 		rows: Row[];
 	}
 	let { rows }: Props = $props();
-
-	/** How far along its target a row sits, capped at the track. Null where there is nothing to draw. */
-	function fill(row: Row): { width: string; over: boolean } | null {
-		if (row.value == null || !row.target) return null;
-
-		const share = (row.value / row.target) * 100;
-		return { width: `${Math.min(100, Math.max(0, share))}%`, over: share > 100 };
-	}
-
-	const reached = (row: Row) => row.value != null && row.value >= row.target;
 </script>
 
 <div class="bullets">
 	{#each rows as row (row.label)}
-		{@const f = fill(row)}
+		{@const f = fillTo(row.value, row.target)}
 		<div class="bul">
-			<!-- The row's footnote sits on the label line rather than under the bar: it is what the figure is
-			     measured against, and a third line per row cost more height than the bars themselves. -->
+			<!-- The footnote sits on the label line: a third line per row cost more height than the bars. -->
 			<div class="head">
 				<span class="name">
 					{row.label}{#if row.note}<small>{labelText(row.note)}</small>{/if}
 				</span>
-				<span class="figure" class:reached={reached(row)}>
+				<span class="figure" class:reached={f?.reached}>
 					{row.value == null ? NO_VALUE : formatUnit(row.value, row.unit)}
 					<span class="of">/ {formatUnit(row.target, row.unit)}</span>
 				</span>
@@ -61,7 +47,7 @@
 					: `${formatUnit(row.value, row.unit)} of ${formatUnit(row.target, row.unit)}`}
 			>
 				{#if f}
-					<span class="value" class:reached={reached(row)} style:width={f.width}></span>
+					<span class="value" class:reached={f.reached} style:width={f.width}></span>
 					{#if f.over}<span class="over" aria-hidden="true"></span>{/if}
 				{/if}
 			</div>
@@ -76,12 +62,10 @@
 		gap: var(--gap-row);
 		flex: 1 1 auto;
 	}
-	/* Each row takes an equal share of whatever height the pane has, and its label line is fixed, so the
-	   leftover goes to the bar: shrink the pane and the bars thin, grow it and they thicken.
+	/* An equal share of the pane's height each, the fixed label line leaving the rest to the bar.
 
-	   The floor is what makes the set self-sizing: `flex-basis: 0` alone has no intrinsic height, so in a
-	   container that states none — an overlay rather than a sized pane — every row collapsed and the three
-	   painted on top of each other. It never binds on a board, whose panes are taller than this. */
+	   The floor is load-bearing: `flex-basis: 0` alone has no intrinsic height, so in a container that
+	   states none — an overlay rather than a sized pane — every row collapsed onto the others. */
 	.bul {
 		display: flex;
 		flex-direction: column;
@@ -124,7 +108,6 @@
 		color: var(--ink-3);
 		font-weight: var(--fw-regular);
 	}
-	/* Floored so a short pane still shows a bar, and capped so a tall one doesn't draw slabs. */
 	.track {
 		position: relative;
 		flex: 1 1 auto;
@@ -134,8 +117,6 @@
 		background: var(--inset);
 		overflow: hidden;
 	}
-	/* Fills the track's height: the track's end IS the target, so there is nothing behind the bar left to
-	   see. */
 	.value {
 		position: absolute;
 		inset-block: 0;
@@ -146,8 +127,7 @@
 	.value.reached {
 		background: var(--role-saving);
 	}
-	/* A notched right edge for a row past its target, so a full bar and an overflowing one are told apart
-	   without stretching the track and making every row look alike. */
+	/* Notched, so a full bar and an overflowing one are told apart without stretching the track. */
 	.over {
 		position: absolute;
 		inset-block: 0;

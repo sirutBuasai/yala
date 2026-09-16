@@ -30,8 +30,7 @@ export function plotSize(w: number, h: number, m: Margins): { iw: number; ih: nu
  * Zero-anchored linear value→pixel Y scale, plus its ticks. `ih` is the inner plot height in px.
  *
  * `cap` fixes the top of the domain exactly, skipping the outward rounding: for a frame chosen on purpose
- * — a chart capped at a target level — `.nice()` rounded the ceiling up and left a dead band above the
- * clipped lines, so the plot no longer ended where the frame said it did. Ticks still land on round
+ * `.nice()` rounded the ceiling up and left a dead band above the clipped lines. Ticks still land on round
  * numbers below it; the top edge itself carries no label.
  */
 export function moneyYScale(
@@ -95,12 +94,11 @@ export function logYScale(
 
 /**
  * How a money axis labels itself, chosen from the ticks it is about to draw rather than fixed per chart:
- * abbreviated once every tick worth abbreviating is a thousand or more, exact below that. So an axis over
- * hundreds reads "$400" and one over hundreds of thousands reads "$400k", without either chart knowing
- * which case it is in.
+ * abbreviated once every tick worth abbreviating clears a thousand, exact below that. So a chart never has
+ * to know which scale it is drawing.
  *
- * Zero is exempt from the test and always exact — it is on almost every money axis, and requiring it to
- * clear a thousand would keep every axis unabbreviated. `moneyK(0)` would also render it "$0.0k".
+ * Zero is exempt from the test and always exact — it sits on almost every money axis, so requiring it to
+ * clear a thousand would leave every axis unabbreviated.
  */
 export function moneyAxisFormat(ticks: number[]): (v: number) => string {
 	const scaled = ticks.filter((t) => t !== 0);
@@ -136,9 +134,9 @@ export function labelIndices(count: number, innerWidth: number, labels: string[]
 	const out: number[] = [];
 	for (let i = 0; i < count - 1; i += stride) out.push(i);
 
-	// The last tick is always drawn, so it is the one the stride cannot place. Drop the label before it
-	// when the two would not both fit — measured in PIXELS, not as a fraction of the stride: a gap of
-	// three-quarters of a stride still overlapped, which is how a 70-year axis printed 2092 over 2095.
+	// The last tick is always drawn, so it is the one the stride cannot place. Drop the label before it when
+	// the two would not both fit — measured in PIXELS, not as a fraction of the stride, which let a gap of
+	// most of a stride still overlap on a long axis.
 	const last = count - 1;
 	const prev = out[out.length - 1];
 	if (prev !== undefined && ((last - prev) * innerWidth) / last < room) out.pop();

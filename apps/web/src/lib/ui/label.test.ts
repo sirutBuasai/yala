@@ -28,8 +28,8 @@ describe('labelText', () => {
 	});
 
 	it('lets a label override the join its slot reads with', () => {
-		expect(labelText({ context: '2026', text: 'cash flow', join: ' — ' }, DOT)).toBe(
-			'2026 — cash flow'
+		expect(labelText({ context: '2026', text: 'cash flow', join: ' / ' }, DOT)).toBe(
+			'2026 / cash flow'
 		);
 	});
 

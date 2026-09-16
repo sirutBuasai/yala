@@ -54,9 +54,9 @@ SETTINGS: tuple[SettingSpec, ...] = (
         default=Decimal(4),
         help="Annual withdrawal rate from investment after retirement.",
     ),
-    # Nominal, not real: the return people actually know is the market's headline figure.
-    # The real rate every projection compounds at is derived from this and `inflation` — see
-    # the Fisher relation in the frontend's `realRate`, exact rather than a subtraction.
+    # Nominal, not real: the return people actually know is the market's headline
+    # figure. The real rate every projection compounds at is derived from this and
+    # ``inflation`` — see ``realRate`` up front.
     SettingSpec(
         key="nominal-return",
         label="Expected nominal return",
@@ -64,7 +64,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
         minimum=Decimal(0),
         maximum=Decimal(20),
         default=Decimal(8),
-        help="Expected annual investment return adjusted with inflation.",
+        help="Expected annual investment return before inflation is taken out.",
     ),
     SettingSpec(
         key="inflation",
@@ -94,8 +94,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
         help="Number of months in spending you want held in liquid assets.",
     ),
     # The two planning amounts. Both default to None, meaning "use what the ledger
-    # logged": the figure is data-derived, so a static default here would be a guess, and
-    # the form seeds the control from the data instead.
+    # logged": the figure is data-derived, so a static default would be a guess.
     SettingSpec(
         key="planned-spending",
         label="Planned spending",

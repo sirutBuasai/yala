@@ -3,8 +3,8 @@
 	// its bounds and step from the caller rather than owning any, so whatever describes the figure — a
 	// backend spec, a form — is what both controls are drawn from.
 	//
-	// Its three parts each sit in their own row of the parent grid (see `.field`), so a stack of these
-	// aligns across the row however many lines a label or a help line takes.
+	// Its three parts each sit in their own row of the parent grid, so a stack of these aligns across the
+	// row however many lines a label or a help line takes. The parent must supply the rows.
 	interface Props {
 		label: string;
 		value: number;
@@ -43,32 +43,31 @@
 	const id = $props.id();
 
 	/**
-	 * What the number field currently holds, as text. A buffer rather than the bound number, because
-	 * binding a number straight to the input made every keystroke re-render it from the clamped value: the
-	 * field could not be emptied, so deleting a digit in place was impossible and only replacing the whole
-	 * selection worked. Cleared on commit to fall back through to `value`.
+	 * What the number field currently holds, as text. A buffer rather than the bound number: binding a
+	 * number straight to the input re-rendered it from the clamped value on every keystroke, so the field
+	 * could not be emptied and a digit could not be deleted in place. Cleared on commit to fall back
+	 * through to `value`.
 	 */
 	let typed = $state<string | null>(null);
 
-	/** Grouped at rest so six digits are readable, plain while being typed into — separators in a field
+	/** Grouped at rest so long figures are readable, plain while being typed into — separators in a field
 	    you are editing fight the caret. */
 	const shown = $derived(typed ?? (grouped ? value.toLocaleString() : String(value)));
 
 	/**
-	 * How wide the field has to be: the longest text it can hold, not the text it holds now — a box sized
-	 * to "5" clipped "11.9" the moment a second digit and a decimal arrived. `ch` is a digit's width, and
-	 * the extra covers the padding, the border and a decimal point, which are all narrower than a digit.
+	 * How wide the field has to be: the longest text it can hold, not the text it holds now, or a box sized
+	 * to the opening figure clips as digits arrive. `ch` is a digit's width; the extra covers the padding,
+	 * the border and a decimal point, all narrower than a digit.
 	 */
 	const widest = $derived(
 		Math.max(
 			(grouped ? Math.round(max).toLocaleString() : String(max)).length,
 			(grouped ? Math.round(min).toLocaleString() : String(min)).length,
-			// A stepped rate can hold one more character than either bound: "11.9" against a bound of "20".
+			// A stepped rate can hold a decimal point and a place beyond what either bound needs.
 			String(max).length + (Number.isInteger(step) ? 0 : 2)
 		)
 	);
 
-	/** Where the thumb sits along the track, as a percentage — the stop the filled half runs to. */
 	const filled = $derived(max > min ? ((value - min) / (max - min)) * 100 : 0);
 
 	/** Commit the typed text, holding it to the bounds. Empty snaps to the minimum, which is what an
@@ -136,8 +135,6 @@
 		}}
 	/>
 
-	<!-- The reading and the way back on one line, the reading wrapping under itself rather than pushing the
-	     button down: a control's reset should sit at a predictable place whatever its figure says. -->
 	<div class="notes">
 		{#if footnote}<p class="foot">{footnote}</p>{/if}
 		{#if footer}<div class="footer">{@render footer()}</div>{/if}
@@ -145,8 +142,6 @@
 </div>
 
 <style>
-	/* Three rows inherited from the parent grid, so the label lines, the tracks and the help lines each
-	   align across a row of sliders regardless of how many lines any one of them wraps to. */
 	.slider {
 		display: grid;
 		grid-template-rows: subgrid;
@@ -178,7 +173,6 @@
 		letter-spacing: var(--ls-wide);
 		min-width: 0;
 	}
-	/* The reading, not the name: it is what changes as the track is dragged, so it carries the weight. */
 	.reading {
 		display: inline-flex;
 		align-items: baseline;
@@ -211,8 +205,7 @@
 	}
 	/**
 	 * Drawn rather than left to `accent-color`, which colours only the filled half and the thumb: the
-	 * browser picked the UNFILLED half itself and chose a near-black bar, so on the light page the track
-	 * read as a heavy rule with a bright dot on it. Styling both halves puts the empty one on `--inset`.
+	 * browser picked a near-black unfilled half, which on the light page read as a heavy rule.
 	 *
 	 * Both vendor sets are needed — WebKit has no `::-moz-range-progress`, so its fill comes from a
 	 * gradient stopped at `--filled` instead.
@@ -291,7 +284,6 @@
 		color: var(--ink-2);
 		font-variant-numeric: tabular-nums;
 	}
-	/* Right-aligned whether or not there is a figure beside it, so a column of these lines up. */
 	.footer {
 		flex: 0 0 auto;
 		margin-left: auto;

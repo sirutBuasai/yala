@@ -20,11 +20,8 @@ export interface Assumptions {
 	birthYear: number | null;
 	/** Yearly spending to plan against. Null falls back to what the ledger logged. */
 	plannedSpending: number | null;
-	/**
-	 * Yearly investing beyond payroll contributions, which are always invested and so are not in this
-	 * figure. Not held to what happens to be left over after spending: money can be moved into the market
-	 * from anywhere. Null falls back to the leftover the ledger logged.
-	 */
+	/** Yearly investing beyond payroll contributions, which are always invested and so are not in this
+	    figure. Not held to what is left over after spending. Null falls back to the ledger's leftover. */
 	outOfPocket: number | null;
 }
 
@@ -61,22 +58,18 @@ export function assumptionsOf(data: DashboardData): Assumptions {
 
 /**
  * The return every projection actually compounds at: the nominal return discounted by inflation, so a
- * balance and the spending it funds are both in today's purchasing power.
+ * balance and the spending it funds are both in today's purchasing power. Returned as a percentage.
  *
  * The Fisher relation, `(1+real) = (1+nominal)/(1+inflation)`, NOT `nominal - inflation`. The shortcut
- * overstates the real rate by about a tenth of a point, which compounds to roughly 7% too much balance
- * over a seventy-year horizon — small enough to look right and large enough to matter.
- *
- * Returned as a percentage, to match the figures it is derived from.
+ * overstates the real rate by a fraction of a point, which compounds to a badly wrong balance over a
+ * lifetime horizon.
  */
 export function realRate(a: Assumptions): number {
 	return ((1 + a.nominalReturn / 100) / (1 + a.inflation / 100) - 1) * 100;
 }
 
-/**
- * The assumption a setting feeds, for a form that holds its values by the ledger's key. The two spellings
- * differ only in casing, so deriving one from the other keeps them from falling out of step.
- */
+/** The assumption a setting feeds, for a form that holds its values by the ledger's key. Derived rather
+    than mapped: the two spellings differ only in casing, so a table of them would fall out of step. */
 export function assumptionKey(settingKey: string): keyof Assumptions {
 	return settingKey.replace(/-(\w)/g, (_, c: string) => c.toUpperCase()) as keyof Assumptions;
 }

@@ -23,14 +23,12 @@
 {/if}
 
 <style>
+	/* The colours come from the shared `.err` / `.cap` voices; only the placement is local. */
 	.err,
 	.note {
 		display: block;
 		margin-top: var(--space-4);
 		font-size: var(--text-caption);
-	}
-	.err {
-		color: var(--crit-text);
 	}
 	.note {
 		color: var(--ink-3);

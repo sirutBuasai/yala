@@ -12,8 +12,7 @@ describe('moneyAxisFormat', () => {
 		expect(fmt(500)).toBe('$500');
 	});
 
-	// Zero sits on almost every money axis, so testing it would keep every axis unabbreviated — and
-	// `moneyK` would render it "$0.0k".
+	// Zero sits on almost every money axis, so holding it to the threshold would leave every axis exact.
 	it('always renders zero exactly, and lets it off the threshold test', () => {
 		expect(moneyAxisFormat([0, 5000, 10000])(0)).toBe('$0');
 		expect(moneyAxisFormat([0, 5000, 10000])(5000)).toBe('$5.0k');
@@ -103,7 +102,7 @@ describe('moneyYScale', () => {
 	});
 
 	it('rounds the top outward when nothing caps it', () => {
-		// `.nice()` lifts 3.6M to 4M, so the tallest reading sits below the top edge.
+		// `.nice()` rounds the domain top up, so the tallest reading sits below the top edge.
 		expect(moneyYScale([0, 3_600_000], 300).y(3_600_000)).toBeGreaterThan(0);
 	});
 
@@ -152,9 +151,9 @@ describe('labelIndices', () => {
 	});
 
 	/**
-	 * Bug: a 70-point axis of 4-char years printed 2092 over 2095. The stride placed a label three slots
-	 * from the end where each needed six, and the old guard only dropped a neighbour closer than HALF a
-	 * stride — so it kept both. The room a label needs is a pixel measurement, not a fraction of a stride.
+	 * Bug: a long axis printed its last two labels on top of each other. The old guard only dropped a
+	 * neighbour closer than HALF a stride, but the room a label needs is a pixel measurement rather than a
+	 * fraction of a stride.
 	 */
 	it('keeps every drawn label at least its own width apart on a long axis', () => {
 		const years = Array.from({ length: 70 }, (_, i) => String(2026 + i));

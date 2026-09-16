@@ -13,6 +13,16 @@
 	import { NET_WORTH_GROWTH, netWorthGrowthHeading } from '$lib/data/catalog';
 	import { statCells } from '$lib/charts/statMatrix';
 	import { live, words } from '$lib/ui/label';
+	import {
+		ALLOCATION,
+		ALLOCATION_CAPTION,
+		ATTRIBUTION,
+		ATTRIBUTION_CAPTION,
+		BUCKET_CHANGE,
+		LIABILITIES,
+		SNAPSHOT_LEVELS,
+		TREND
+	} from '$lib/views/networth/copy';
 
 	interface Props {
 		data: DashboardData;
@@ -22,12 +32,7 @@
 
 	const yr = $derived<Scope>({ level: 'year', year });
 
-	// Where you ended, the rate that got you there, and the two parts of the move. Net worth is a
-	// position, so its badge carries the year's move; the two parts are signed, so their own sign carries
-	// it. Each of the three money cards draws its own month-by-month shape behind the figure: the position
-	// as a level, the parts as the per-month amounts that accumulate into it.
-	//
-	// Declared in reading order, and the widths are what the two merged cards divide themselves by.
+	// The widths are what the two merged cards divide themselves by.
 	const KPIS = $derived<KpiBoardDefs>({
 		networth: {
 			rect: { x: 0, y: 0, w: 11, h: 5 },
@@ -65,8 +70,6 @@
 		}
 	});
 
-	// Two cards, one per row: where you stand and how efficiently you got there, then the two halves of
-	// the same move, which are the point read together.
 	const kpis = useKpiBoard('networth:year', () => KPIS, [
 		{ ids: ['networth', 'rate'], axis: 'row' },
 		{ ids: ['saved', 'other'], axis: 'row' }
@@ -74,11 +77,9 @@
 
 	const PANES = $derived(
 		kpis.board({
-			// Beside the KPI column rather than under it: the matrix is the same reading those cards give,
-			// against last year. `scale` so it is given room or taken down to where its rows would clip.
+			// `scale` so each pane is given room or taken down to where its rows would clip, like a KPI card.
 			growth: { x: 18, y: 0, w: 30, h: 10, content: 'scale' },
-			// Assets dashed so net worth stays the primary reading, as on the lifetime board. The gap between
-			// the two lines is what is owed.
+			// Assets dashed so net worth stays the primary reading; the gap between the two is what is owed.
 			trend: {
 				x: 0,
 				y: 10,
@@ -91,11 +92,10 @@
 					chart: 'line',
 					area: true,
 					dashed: ['Assets'],
-					title: words('Net worth & assets'),
+					title: words(TREND),
 					caption: { context: String(year), text: 'total net worth and assets MoM' }
 				}
 			},
-			// The trend and what is owed stack down the left; the mix takes the taller pane beside them.
 			allocation: {
 				x: 23,
 				y: 10,
@@ -106,8 +106,8 @@
 					figure: 'networth.allocation_value',
 					scope: yr,
 					chart: 'stacked-area',
-					title: words('Asset allocations'),
-					caption: words('dollar amount and shares by asset type')
+					title: words(ALLOCATION),
+					caption: words(ALLOCATION_CAPTION)
 				}
 			},
 			liabilities: {
@@ -121,12 +121,10 @@
 					scope: yr,
 					chart: 'line',
 					area: true,
-					title: words('Liabilities'),
+					title: words(LIABILITIES),
 					caption: { context: String(year), text: 'total liabilities MoM' }
 				}
 			},
-			// Who added the dollars, beside where they landed. Dollars on both axes, since the asset types are
-			// parts of one total; each move's percentage of its own opening balance rides along on hover.
 			attribution: {
 				x: 0,
 				y: 30,
@@ -137,11 +135,8 @@
 					figure: 'networth.saved_vs_other_by_month',
 					scope: yr,
 					chart: 'bar',
-					title: words('You vs the market, by month'),
-					caption: {
-						context: String(year),
-						text: 'direct savings vs market gains + other income'
-					}
+					title: words(`${ATTRIBUTION}, by month`),
+					caption: { context: String(year), text: ATTRIBUTION_CAPTION }
 				}
 			},
 			buckets: {
@@ -154,7 +149,7 @@
 					figure: 'networth.bucket_change_by_month',
 					scope: yr,
 					chart: 'bar',
-					title: words('Change by asset type'),
+					title: words(BUCKET_CHANGE),
 					caption: { context: String(year), text: 'dollars gained or lost each month' }
 				}
 			},
@@ -170,15 +165,14 @@
 					scope: yr,
 					chart: 'table',
 					title: words('Monthly snapshots'),
-					caption: words('changes to net worth, assets, and liabilities MoM')
+					caption: words(`${SNAPSHOT_LEVELS} MoM`)
 				}
 			}
 		})
 	);
 
-	// The year's move and the two terms it splits into, each against last year, then the same three as a
-	// monthly rate. Headings and ids both come from the catalog's one ordered set, so a heading cannot end
-	// up over another term's figure.
+	// Headings and ids both come from the catalog's one ordered set, so a heading cannot end up over
+	// another term's figure.
 	const columns = NET_WORTH_GROWTH.map(netWorthGrowthHeading);
 	const cellsOf = (pick: (c: (typeof NET_WORTH_GROWTH)[number]) => string) =>
 		statCells(NET_WORTH_GROWTH.map(pick), yr);

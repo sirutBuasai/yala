@@ -1,6 +1,7 @@
 // Shared chart tooltip singleton; Tooltip.svelte, mounted once at the app root, renders the content.
 
 import { writable } from 'svelte/store';
+import { formatUnitExact, type Unit } from '$lib/data/primitives';
 
 interface TipState {
 	html: string;
@@ -17,4 +18,12 @@ export function showTip(html: string, e: MouseEvent): void {
 
 export function hideTip(): void {
 	tip.update((t) => ({ ...t, visible: false }));
+}
+
+/** One figure with the same figure restated in a second unit, where the data carries one. Exact on both
+    sides: a tooltip is where the reader comes for the number itself. */
+export function withAlt(shown: string, alt: number | null | undefined, unit?: Unit): string {
+	if (alt == null || !unit) return shown;
+
+	return `${shown}<span class="alt">${formatUnitExact(alt, unit)}</span>`;
 }

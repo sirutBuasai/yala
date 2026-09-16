@@ -31,7 +31,6 @@ import { dateShort, money, monthLabel, monthName } from '$lib/utils/format';
 import { addMonths, yearOf } from '$lib/utils/period';
 import { live, words, type Label } from '$lib/ui/label';
 
-/** The three figures every snapshot carries. */
 export type SnapshotField = 'net_worth' | 'assets' | 'liabilities';
 
 /** The name each field is drawn under. Shared, because it is also how the registry colours it: one
@@ -40,6 +39,13 @@ const FIELD_NAME: Record<SnapshotField, string> = {
 	net_worth: 'Net worth',
 	assets: 'Assets',
 	liabilities: 'Liabilities'
+};
+
+/** Which way each level reads as good news. Owing more is the one that runs the other way. */
+const UP_IS_GOOD: Record<SnapshotField, TintDirection> = {
+	net_worth: 'up-good',
+	assets: 'up-good',
+	liabilities: 'up-bad'
 };
 
 /** Allocation buckets in display order (mirrors the backend `BUCKETS`). */
@@ -52,7 +58,6 @@ function snapshots(data: DashboardData): NetWorthSnapshot[] {
 	return data.networth?.series ?? [];
 }
 
-/** Today's live total, or null before anything is snapshotted. */
 function currentNetWorth(data: DashboardData): number | null {
 	return data.networth?.current?.net_worth ?? null;
 }
@@ -71,7 +76,6 @@ function snapshotMonths(data: DashboardData, year: number): string[] {
 	return [...new Set(forYear(data, year).map((p) => p.date.slice(0, 7)))];
 }
 
-/** Asset accounts only — liabilities are held and reported separately. */
 function assetAccounts(data: DashboardData) {
 	return (data.networth?.accounts ?? []).filter((a) => a.group !== 'liability');
 }
@@ -98,7 +102,6 @@ function snapshotSeries(data: DashboardData, field: SnapshotField, year?: number
 	);
 }
 
-/** For signed decompositions, where the sign is the figure's meaning. */
 function bySign(value: number): Tone {
 	return value >= 0 ? 'good' : 'bad';
 }
@@ -148,10 +151,8 @@ export function netWorthVsAssets(data: DashboardData, year?: number): MultiSerie
 	};
 }
 
-/**
- * A snapshot field at the close of each logged year, most recent `WINDOW_YEARS` only — past that the
- * recent years are too thin to tell apart in a KPI underlay.
- */
+/** A snapshot field at the close of each logged year, most recent `WINDOW_YEARS` only — past that the
+    recent years are too thin to tell apart in a KPI underlay. */
 export function netWorthByYear(data: DashboardData, field: SnapshotField): Series {
 	const years = snapshotYears(data).slice(-WINDOW_YEARS);
 	return series(
@@ -167,16 +168,48 @@ export function netWorthLiabilities(data: DashboardData, year?: number): Series 
 	return snapshotSeries(data, 'liabilities', year);
 }
 
-/** The levels the monthly table reports, each followed by how it moved. */
-const TABLE_FIELDS: SnapshotField[] = ['net_worth', 'assets', 'liabilities'];
+// --- a period's move, read the same way wherever it is drawn ---
 
-/** Which way each level reads as good news. Owing more is the one that runs the other way, so its
-    change columns shade opposite to the rest. */
-const UP_IS_GOOD: Record<SnapshotField, TintDirection> = {
-	net_worth: 'up-good',
-	assets: 'up-good',
-	liabilities: 'up-bad'
+interface Window {
+	open: NetWorthSnapshot | null;
+	close: NetWorthSnapshot | null;
+}
+
+/** One window per period, labelled for an ordinal axis or a table's first column. */
+interface Run {
+	labels: string[];
+	windows: Window[];
+}
+
+/** One named figure a snapshot carries, plus which direction of its move reads as good news. */
+interface Reading {
+	name: string;
+	of: (p: NetWorthSnapshot) => number;
+	tint: TintDirection;
+}
+
+const READING: Record<SnapshotField, Reading> = {
+	net_worth: { name: FIELD_NAME.net_worth, of: (p) => p.net_worth, tint: UP_IS_GOOD.net_worth },
+	assets: { name: FIELD_NAME.assets, of: (p) => p.assets, tint: UP_IS_GOOD.assets },
+	liabilities: {
+		name: FIELD_NAME.liabilities,
+		of: (p) => p.liabilities,
+		tint: UP_IS_GOOD.liabilities
+	}
 };
+
+const LEVELS: Reading[] = [READING.net_worth, READING.assets, READING.liabilities];
+
+/** The two levels that can share one chart. Liabilities are excluded and drawn on their own: they move
+    by hundreds of dollars against tens of thousands, and by hundreds of percent against single digits. */
+const PAIRED: Reading[] = [READING.net_worth, READING.assets];
+
+/** More of any asset type is good news, so every bucket's change reads the same way. */
+const HOLDINGS: Reading[] = BUCKETS.map((bucket) => ({
+	name: bucket,
+	of: (p: NetWorthSnapshot) => p.breakdown[bucket] ?? 0,
+	tint: 'up-good' as TintDirection
+}));
 
 /** A move as a percentage of where the period opened. Taken off the magnitude, so a negative opening
     balance doesn't flip the sign away from the actual movement. */
@@ -184,178 +217,168 @@ function pctOf(delta: number, open: number): number {
 	return open ? (delta / Math.abs(open)) * 100 : 0;
 }
 
-/** A year's snapshots, each level beside the change since the previous snapshot. Every level gets its
-    own pair, since the three do not move together: assets can rise on a month a card was also paid. */
-export function netWorthMonthlyTable(data: DashboardData, year: number): Table {
-	const unit = MONEY(data.currency);
-	const all = snapshots(data);
+/** A reading's move over one window, in both units at once so the pair cannot drift apart. */
+function move(w: Window, r: Reading): { value: number; percent: number } {
+	if (!w.open || !w.close) return { value: 0, percent: 0 };
 
-	const rows = forYear(data, year).map((p) => {
-		const i = all.findIndex((q) => q.date === p.date);
-		const prev = i > 0 ? all[i - 1] : null;
+	const delta = r.of(w.close) - r.of(w.open);
+	return { value: delta, percent: pctOf(delta, r.of(w.open)) };
+}
 
-		return [
-			dateShort(p.date),
-			...TABLE_FIELDS.flatMap((field) => {
-				const delta = prev ? p[field] - prev[field] : 0;
-				return [p[field], delta, prev ? pctOf(delta, prev[field]) : 0];
-			})
-		];
-	});
+/** A year's months as a run — month over month, so the freshest reading counts. See `monthOverMonth`. */
+function monthlyRun(data: DashboardData, year: number): Run {
+	const keys = snapshotMonths(data, year);
+	return { labels: keys.map(monthName), windows: keys.map((k) => monthOverMonth(data, k)) };
+}
+
+function yearlyRun(data: DashboardData, newestFirst = false): Run {
+	const years = snapshotYears(data);
+	if (newestFirst) years.reverse();
 
 	return {
-		kind: 'table',
-		columns: [
-			{ label: 'Date' },
-			// The heading repeats beside each level rather than naming it: which level a change belongs to
-			// is said by the column it sits next to. Only the change columns are shaded — a balance has no
-			// good or bad direction, only its movement does.
-			...TABLE_FIELDS.flatMap((field) => [
-				{ label: FIELD_NAME[field], unit },
-				{ label: 'Change', unit, tint: UP_IS_GOOD[field] },
-				{ label: 'Change %', unit: PERCENT, tint: UP_IS_GOOD[field] }
-			])
-		],
-		rows
+		labels: years.map(String),
+		windows: years.map((year) => bounds(data, { level: 'year', year }))
 	};
 }
 
-/**
- * Each level's month-over-month move across a year. A month with two snapshots reports one move, from
- * the previous month's close to its own.
- *
- * `axis` picks which unit the chart plots; the other rides along as the points' alternate reading. The
- * two say the same thing at different scales — the base barely moves month to month, so the dollar and
- * percent shapes are near-identical — which is why they belong in one chart rather than two.
- */
-function changeByMonth(
+/** Each snapshot of a year against the one logged before it, wherever that fell. */
+function snapshotRun(data: DashboardData, year: number): Run {
+	const all = snapshots(data);
+	const points = forYear(data, year);
+
+	return {
+		labels: points.map((p) => dateShort(p.date)),
+		windows: points.map((p) => {
+			const i = all.findIndex((q) => q.date === p.date);
+			return { open: i > 0 ? all[i - 1]! : null, close: p };
+		})
+	};
+}
+
+/** One series per reading. `axis` picks which unit the chart plots; the other rides along as the points'
+    alternate reading, so one chart answers "how much" and "what fraction" instead of two. */
+function moveSeries(
 	data: DashboardData,
-	year: number,
-	fields: SnapshotField[],
+	run: Run,
+	readings: Reading[],
 	axis: 'value' | 'percent'
 ): MultiSeries {
-	const money = MONEY(data.currency);
-	const unit = axis === 'percent' ? PERCENT : money;
-	const altUnit = axis === 'percent' ? money : PERCENT;
-	const keys = snapshotMonths(data, year);
-	const labels = keys.map(monthName);
-
-	/** A month's move in both units at once, so the pair cannot drift apart. Month over month, so the
-	    freshest reading counts — see `monthOverMonth`. */
-	const move = (monthKey: string, field: SnapshotField): { value: number; percent: number } => {
-		const { open, close } = monthOverMonth(data, monthKey);
-		if (!open || !close) return { value: 0, percent: 0 };
-		const delta = close[field] - open[field];
-		return { value: delta, percent: pctOf(delta, open[field]) };
-	};
+	const cash = MONEY(data.currency);
+	const unit = axis === 'percent' ? PERCENT : cash;
+	const altUnit = axis === 'percent' ? cash : PERCENT;
+	const other = axis === 'percent' ? 'value' : 'percent';
 
 	return {
 		kind: 'multiseries',
 		unit,
 		axis: 'ordinal',
-		labels,
-		series: fields.map((field) => {
-			const moves = keys.map((k) => move(k, field));
-			const read = (m: (typeof moves)[number]) => (axis === 'percent' ? m.percent : m.value);
-			const other = (m: (typeof moves)[number]) => (axis === 'percent' ? m.value : m.percent);
-			return series(FIELD_NAME[field], labels, moves.map(read), unit, 'ordinal', {
-				unit: altUnit,
-				values: moves.map(other)
-			});
-		})
-	};
-}
-
-/**
- * The two levels that can share one chart. Liabilities are excluded and drawn on their own: they move by
- * hundreds of dollars, invisible beside tens of thousands, and by hundreds of percent, which flattens
- * everything else to a hairline at zero.
- */
-const PAIRED_FIELDS: SnapshotField[] = ['net_worth', 'assets'];
-
-/** How much each month added, as a percentage of where it opened, with the dollars alongside. */
-export function netWorthAssetsChange(data: DashboardData, year: number): MultiSeries {
-	return changeByMonth(data, year, PAIRED_FIELDS, 'percent');
-}
-
-/**
- * The same two levels a year at a time: whether growth is speeding up or slowing as the base gets
- * bigger, which the dollar decomposition beside it cannot say.
- */
-function changeByYear(data: DashboardData, fields: SnapshotField[]): MultiSeries {
-	const years = snapshotYears(data);
-	const money = MONEY(data.currency);
-	const labels = years.map(String);
-
-	const move = (year: number, field: SnapshotField) => {
-		const { open, close } = bounds(data, { level: 'year', year });
-		if (!open || !close) return { value: 0, percent: 0 };
-		const delta = close[field] - open[field];
-		return { value: delta, percent: pctOf(delta, open[field]) };
-	};
-
-	return {
-		kind: 'multiseries',
-		unit: PERCENT,
-		axis: 'ordinal',
-		labels,
-		series: fields.map((field) => {
-			const moves = years.map((y) => move(y, field));
+		labels: run.labels,
+		series: readings.map((r) => {
+			const moves = run.windows.map((w) => move(w, r));
 			return series(
-				FIELD_NAME[field],
-				labels,
-				moves.map((m) => m.percent),
-				PERCENT,
+				r.name,
+				run.labels,
+				moves.map((m) => m[axis]),
+				unit,
 				'ordinal',
-				{
-					unit: money,
-					values: moves.map((m) => m.value)
-				}
+				{ unit: altUnit, values: moves.map((m) => m[other]) }
 			);
 		})
 	};
 }
 
+/** `<name> | Change | Change %` per reading, after the column that names the period. Only the change
+    columns are shaded: a balance has no good or bad direction, only its movement does. */
+function deltaColumns(period: string, readings: Reading[], unit: Unit): TableColumn[] {
+	return [
+		{ label: period },
+		...readings.flatMap((r) => [
+			{ label: r.name, unit },
+			{ label: 'Change', unit, tint: r.tint },
+			{ label: 'Change %', unit: PERCENT, tint: r.tint }
+		])
+	];
+}
+
+function deltaTable(data: DashboardData, period: string, run: Run, readings: Reading[]): Table {
+	return {
+		kind: 'table',
+		columns: deltaColumns(period, readings, MONEY(data.currency)),
+		rows: run.labels.map((label, i) => {
+			const w = run.windows[i]!;
+			return [
+				label,
+				...readings.flatMap((r) => {
+					const m = move(w, r);
+					return [w.close ? r.of(w.close) : 0, m.value, m.percent];
+				})
+			];
+		})
+	};
+}
+
+/** A year's snapshots, each level beside the change since the previous snapshot. Every level gets its
+    own pair, since the three do not move together: assets can rise on a month a card was also paid. */
+export function netWorthMonthlyTable(data: DashboardData, year: number): Table {
+	return deltaTable(data, 'Date', snapshotRun(data, year), LEVELS);
+}
+
+export function netWorthAssetsChange(data: DashboardData, year: number): MultiSeries {
+	return moveSeries(data, monthlyRun(data, year), PAIRED, 'percent');
+}
+
+/** The same two levels a year at a time: whether growth is speeding up or slowing as the base gets
+    bigger, which the dollar decomposition beside it cannot say. */
 export function netWorthAssetsChangeByYear(data: DashboardData): MultiSeries {
-	return changeByYear(data, PAIRED_FIELDS);
+	return moveSeries(data, yearlyRun(data), PAIRED, 'percent');
 }
 
-/** What is owed, year over year, on an axis of its own. */
+// Liabilities take an axis of their own, for the reason `PAIRED` gives.
 export function liabilitiesChangeByYear(data: DashboardData): MultiSeries {
-	return changeByYear(data, ['liabilities']);
+	return moveSeries(data, yearlyRun(data), [READING.liabilities], 'percent');
 }
 
-/** What is owed, month over month, on the same percentage axis as the pair above. */
 export function liabilitiesChange(data: DashboardData, year: number): MultiSeries {
-	return changeByMonth(data, year, ['liabilities'], 'percent');
+	return moveSeries(data, monthlyRun(data, year), [READING.liabilities], 'percent');
+}
+
+/** Dollars on the axis, not percent: the buckets are parts of one total, so their moves compare directly,
+    where a percentage would make the smallest bucket's swings the loudest. */
+export function bucketChangeByMonth(data: DashboardData, year: number): MultiSeries {
+	return moveSeries(data, monthlyRun(data, year), HOLDINGS, 'value');
+}
+
+export function bucketChangeByYear(data: DashboardData): MultiSeries {
+	return moveSeries(data, yearlyRun(data), HOLDINGS, 'value');
+}
+
+export function bucketMonthlyTable(data: DashboardData, year: number): Table {
+	return deltaTable(data, 'Date', snapshotRun(data, year), HOLDINGS);
+}
+
+export function bucketYearTable(data: DashboardData): Table {
+	return deltaTable(data, 'Year', yearlyRun(data, true), HOLDINGS);
 }
 
 /** Net worth's percent move per logged year — the shape behind the compound-growth card. Named for the
     rate rather than the balance, so the registry gives it its own hue instead of net worth's. */
 export function growthRateByYear(data: DashboardData): Series {
-	const years = snapshotYears(data);
-
+	const run = yearlyRun(data);
 	return series(
 		'Balance growth',
-		years.map(String),
-		years.map((year) => {
-			const { open, close } = bounds(data, { level: 'year', year });
-			return open && close ? pctOf(close.net_worth - open.net_worth, open.net_worth) : 0;
-		}),
+		run.labels,
+		run.windows.map((w) => move(w, READING.net_worth).percent),
 		PERCENT,
 		'ordinal'
 	);
 }
 
-/**
- * One band per allocation bucket over time, `of` deciding whether a band's thickness is a share of assets
- * or the balance itself. Whichever it is not rides along as the points' alternate reading: a band answers
- * "how much" and "what fraction" at once, where the chart's axis can only state one.
- */
+/** One band per bucket, `of` deciding whether a band's thickness is a share of assets or the balance
+    itself. Whichever it is not rides along as the points' alternate reading. */
 function allocation(data: DashboardData, of: 'share' | 'value', year?: number): MultiSeries {
-	const money = MONEY(data.currency);
-	const unit = of === 'share' ? PERCENT : money;
-	const altUnit = of === 'share' ? money : PERCENT;
+	const cash = MONEY(data.currency);
+	const unit = of === 'share' ? PERCENT : cash;
+	const altUnit = of === 'share' ? cash : PERCENT;
 	const { points, labels } = axisOf(data, year);
 
 	const held = (p: NetWorthSnapshot, b: string) => p.breakdown[b] ?? 0;
@@ -381,7 +404,6 @@ function allocation(data: DashboardData, of: 'share' | 'value', year?: number): 
 	};
 }
 
-/** Each bucket's share of assets over time. */
 export function netWorthAllocationShare(data: DashboardData, year?: number): MultiSeries {
 	return allocation(data, 'share', year);
 }
@@ -392,12 +414,8 @@ export function netWorthAllocationValue(data: DashboardData, year?: number): Mul
 	return allocation(data, 'value', year);
 }
 
-/**
- * Every asset account by value, largest first. Liabilities excluded: a negative bar has no share.
- *
- * Labelled by display name but coloured by ledger path, which is what the account colour map is keyed
- * by — labelling and colouring by the same string left every bar on the fallback hue.
- */
+/** Every asset account by value, largest first — liabilities excluded, since a negative bar has no share.
+    Labelled by display name but coloured by ledger path, which is what the colour map is keyed by. */
 export function netWorthAccounts(data: DashboardData): Categorical {
 	return categorical(
 		assetAccounts(data).map((a) => ({
@@ -429,18 +447,14 @@ function span(data: DashboardData, scope: Scope): { start: string; next: string 
 }
 
 /**
- * The snapshots bounding a scope: the balance it opened at, and the balance it closed at.
+ * The snapshots bounding a scope. A balance is logged BEFORE the period's money has moved, so a snapshot
+ * dated the period's first day is its OPENING balance and the period closes on the snapshot dated the
+ * start of the next one.
  *
- * A balance is logged BEFORE the period's money has moved — a snapshot dated the 1st is taken before
- * that month's first paycheck lands. So it is the period's OPENING balance, and the period closes on the
- * snapshot dated the start of the next one. Reading the last snapshot dated *inside* the period as its
- * close instead put every period's balance movement against the following period's logged saving, so the
- * decomposition subtracted two different months from each other.
+ * Reading the last snapshot dated *inside* the period as its close instead put every period's balance
+ * movement against the following period's logged saving.
  */
-function bounds(
-	data: DashboardData,
-	scope: Scope
-): { open: NetWorthSnapshot | null; close: NetWorthSnapshot | null } {
+function bounds(data: DashboardData, scope: Scope): Window {
 	const all = snapshots(data);
 	if (scope.level === 'all') {
 		return { open: all[0] ?? null, close: all[all.length - 1] ?? null };
@@ -455,7 +469,6 @@ function bounds(
 	return { open: upTo(start) ?? inside[0] ?? null, close: upTo(next) };
 }
 
-/** The change in net worth over a scope, or 0 when it can't be bounded. */
 function changeOver(data: DashboardData, scope: Scope): number {
 	const { open, close } = bounds(data, scope);
 	return open && close ? close.net_worth - open.net_worth : 0;
@@ -467,10 +480,9 @@ function changeOver(data: DashboardData, scope: Scope): number {
  *
  * Deliberately not `bounds`. This takes the NEWEST balance available rather than the one dated at the
  * period's edge, so a mid-month reading counts — the point of the bars. The cost is that the window
- * drifts: a month whose only snapshot is dated the 1st reports the month before's movement, and the bars
- * therefore do not sum to the year figures, which use `bounds`.
+ * drifts, so the bars do not sum to the year figures, which use `bounds`.
  */
-function monthOverMonth(data: DashboardData, monthKey: string) {
+function monthOverMonth(data: DashboardData, monthKey: string): Window {
 	const all = snapshots(data);
 	const latestIn = (key: string) => all.filter((p) => p.date.startsWith(key)).at(-1) ?? null;
 	// Falls back to the last snapshot before this month where the one before it has none, so a gap in
@@ -480,11 +492,9 @@ function monthOverMonth(data: DashboardData, monthKey: string) {
 	return { open: latestIn(addMonths(monthKey, -1)) ?? before, close: latestIn(monthKey) };
 }
 
-/**
- * Logged saving across a snapshot window: every tracked month whose 1st falls in `[open, close)`. A
- * snapshot dated the 1st is taken before that month's money moves, so the month the window opens on counts
- * and the month it closes on does not — a window of Jul 1 → Aug 26 is July's saving plus August's.
- */
+/** Logged saving across a snapshot window: every tracked month whose 1st falls in `[open, close)`. A
+    snapshot dated the 1st is taken before that month's money moves, so the month the window opens on
+    counts and the month it closes on does not. */
 function savedBetween(data: DashboardData, open: string, close: string): number {
 	return data.meta.month_keys
 		.filter((key) => `${key}-01` >= open && `${key}-01` < close)
@@ -501,10 +511,8 @@ function momParts(data: DashboardData, monthKey: string): Record<GrowthPart, num
 	return { change, saved, other: change - saved };
 }
 
-/**
- * How a period's growth is read: the whole move, and the two parts that sum to it. `change` is the
- * growth itself rather than a part of it, which is why the type is named for the parts of a whole.
- */
+/** The whole move, and the two parts that sum to it. `change` is the growth itself rather than a part of
+    it, which is why the type is named for the parts of a whole. */
 export type GrowthPart = 'change' | 'saved' | 'other';
 
 /** A scope's growth, split. One source of truth, so a card, a bar and a matrix cell describing the same
@@ -515,7 +523,6 @@ function growthParts(data: DashboardData, scope: Scope): Record<GrowthPart, numb
 	return { change, saved, other: change - saved };
 }
 
-/** A decomposition term's share of the period's change, as its note. */
 function shareNote(part: number, change: number, fallback: string): Label {
 	return change ? live(`${Math.round((part / change) * 100)}% of the change`) : words(fallback);
 }
@@ -600,7 +607,6 @@ function growthSeries(
 	};
 }
 
-/** Saved vs everything-else per year. */
 export function savedVsOther(data: DashboardData): MultiSeries {
 	const years = snapshotYears(data);
 	return growthSeries(
@@ -700,157 +706,25 @@ export function netWorthGrowthPerMonth(
 	return out;
 }
 
-// --- where the money landed, period by period ---
-//
-// The same shape as the snapshot tables above: a level, its move, and that move as a share of what the
-// bucket opened at. Read as a table rather than bars, since the question is how many dollars a type
-// added and what fraction of itself that was — two figures a shape can only imply.
-
-/** A bucket's balance in a snapshot, or 0 when it held none. */
-const heldIn = (p: NetWorthSnapshot | null, bucket: string) => p?.breakdown[bucket] ?? 0;
-
-/** Every bucket's level, move and percentage for one period. */
-function bucketCells(open: NetWorthSnapshot | null, close: NetWorthSnapshot | null): number[] {
-	return BUCKETS.flatMap((bucket) => {
-		const level = heldIn(close, bucket);
-		const delta = open && close ? level - heldIn(open, bucket) : 0;
-		return [level, delta, open ? pctOf(delta, heldIn(open, bucket)) : 0];
-	});
-}
-
-/** More of any asset type is good news, so every bucket's change columns shade the same way. */
-function bucketColumns(unit: Unit, period: string): TableColumn[] {
-	return [
-		{ label: period },
-		...BUCKETS.flatMap((bucket) => [
-			{ label: bucket, unit },
-			{ label: 'Change', unit, tint: 'up-good' as TintDirection },
-			{ label: 'Change %', unit: PERCENT, tint: 'up-good' as TintDirection }
-		])
-	];
-}
-
-/**
- * How much each allocation bucket added over a run of periods. Dollars on the axis: the three buckets are
- * parts of one total, so their moves are directly comparable — which is the whole question — where a
- * percentage would make the smallest bucket's swings the loudest. The percentage rides along on hover.
- */
-/** `windows` is a period's opening and closing snapshot, so the yearly and month-over-month readings can
-    each supply their own pairing. */
-function bucketChange(
-	data: DashboardData,
-	labels: string[],
-	windows: { open: NetWorthSnapshot | null; close: NetWorthSnapshot | null }[]
-): MultiSeries {
-	const unit = MONEY(data.currency);
-
-	return {
-		kind: 'multiseries',
-		unit,
-		axis: 'ordinal',
-		labels,
-		series: BUCKETS.map((bucket) => {
-			const moves = windows.map(({ open, close }) => {
-				if (!close) return { value: 0, percent: 0 };
-				const delta = heldIn(close, bucket) - heldIn(open, bucket);
-				return { value: delta, percent: pctOf(delta, heldIn(open, bucket)) };
-			});
-			return series(
-				bucket,
-				labels,
-				moves.map((m) => m.value),
-				unit,
-				'ordinal',
-				{ unit: PERCENT, values: moves.map((m) => m.percent) }
-			);
-		})
-	};
-}
-
-/** Each bucket's move per month of one year, month over month — see `monthOverMonth`. */
-export function bucketChangeByMonth(data: DashboardData, year: number): MultiSeries {
-	const keys = snapshotMonths(data, year);
-	return bucketChange(
-		data,
-		keys.map(monthName),
-		keys.map((monthKey) => monthOverMonth(data, monthKey))
-	);
-}
-
-/** Each bucket's move per logged year. */
-export function bucketChangeByYear(data: DashboardData): MultiSeries {
-	const years = snapshotYears(data);
-	return bucketChange(
-		data,
-		years.map(String),
-		years.map((year) => bounds(data, { level: 'year', year }))
-	);
-}
-
-/** Each bucket per snapshot of one year, measured against the snapshot before it. */
-export function bucketMonthlyTable(data: DashboardData, year: number): Table {
-	const all = snapshots(data);
-
-	const rows = forYear(data, year).map((p) => {
-		const i = all.findIndex((q) => q.date === p.date);
-		return [dateShort(p.date), ...bucketCells(i > 0 ? all[i - 1]! : null, p)];
-	});
-
-	return { kind: 'table', columns: bucketColumns(MONEY(data.currency), 'Date'), rows };
-}
-
-/** Each bucket per logged year, measured against the balance the year opened from. */
-export function bucketYearTable(data: DashboardData): Table {
-	const rows = snapshotYears(data)
-		.reverse()
-		.map((year) => {
-			const { open, close } = bounds(data, { level: 'year', year });
-			return [String(year), ...bucketCells(open, close)];
-		});
-
-	return { kind: 'table', columns: bucketColumns(MONEY(data.currency), 'Year'), rows };
-}
-
-/**
- * Every year: each level with how it moved, then the change split into what you saved and what you
- * didn't. The same shape as the monthly table, plus the decomposition only a whole year can carry.
- */
+/** The monthly table's shape plus the decomposition only a whole year can carry. */
 export function netWorthYearTable(data: DashboardData): Table {
 	const unit = MONEY(data.currency);
 	const years = snapshotYears(data).reverse();
-
-	const rows = years.map((year) => {
-		const scope: Scope = { level: 'year', year };
-		const { open, close } = bounds(data, scope);
-		const { saved, other } = growthParts(data, scope);
-
-		return [
-			String(year),
-			...TABLE_FIELDS.flatMap((field) => {
-				const level = close?.[field] ?? 0;
-				const delta = open && close ? close[field] - open[field] : 0;
-				return [level, delta, open ? pctOf(delta, open[field]) : 0];
-			}),
-			saved,
-			other
-		];
-	});
+	const table = deltaTable(data, 'Year', yearlyRun(data, true), LEVELS);
 
 	return {
-		kind: 'table',
+		...table,
+		// These two add to the net-worth Change column above, which is why they carry no percentage of their
+		// own: a share of the change is what the pane above the table is for.
 		columns: [
-			{ label: 'Year' },
-			...TABLE_FIELDS.flatMap((field) => [
-				{ label: FIELD_NAME[field], unit },
-				{ label: 'Change', unit, tint: UP_IS_GOOD[field] },
-				{ label: 'Change %', unit: PERCENT, tint: UP_IS_GOOD[field] }
-			]),
-			// These two add to the net-worth Change column above, which is why they carry no percentage of
-			// their own: a share of the change is what the pane above the table is for.
+			...table.columns,
 			{ label: 'Saved', unit, tint: 'up-good' },
 			{ label: 'Market & other', unit, tint: 'up-good' }
 		],
-		rows
+		rows: table.rows.map((row, i) => {
+			const { saved, other } = growthParts(data, { level: 'year', year: years[i]! });
+			return [...row, saved, other];
+		})
 	};
 }
 
@@ -876,12 +750,10 @@ export function trailingAnnual(
 const trailingAnnualSpend = (data: DashboardData) => trailingAnnual(data, 'spending');
 
 /**
- * The two rates a plan runs on, each the figure stated or else the one the ledger logged.
+ * The rates a plan runs on, each the figure stated or else the one the ledger logged.
  *
- * `saved` is a RESIDUAL — income less spending — so it is not a measured flow into investments. Payroll
- * contributions are, and they always land there; whatever is left over is money that merely went unspent,
- * so how much reaches the market is a choice rather than a fact. Hence the split: `residual` seeds the
- * control, `investing` is what the projection actually adds.
+ * `saved` is a RESIDUAL — income less spending — not a measured flow into investments; payroll
+ * contributions are. Hence the split: `residual` seeds the control, `investing` is what a projection adds.
  */
 export function plannedRates(
 	data: DashboardData,
@@ -905,16 +777,14 @@ export function plannedRates(
 /** The buckets a return compounds. Liquid cash is held to be spent, so it is not projected to grow. */
 const INVESTED = BUCKETS.filter((b) => b !== 'Liquid');
 
-/**
- * The balance a withdrawal actually comes out of: the invested buckets, not net worth. Cash held as a
- * runway is not funding a retirement — the runway threshold is what measures that — and counting it
- * toward the FI number flattered every figure derived from one. Null before anything is snapshotted.
- */
+/** The balance a withdrawal actually comes out of: the invested buckets, not net worth. Cash held as a
+    runway is not funding a retirement, and counting it flattered every figure derived from the FI number.
+    Null before anything is snapshotted. */
 export function investedBalance(data: DashboardData): number | null {
 	const current = data.networth?.current;
 	if (!current) return null;
 
-	return INVESTED.reduce((sum, bucket) => sum + heldIn(current, bucket), 0);
+	return INVESTED.reduce((sum, bucket) => sum + (current.breakdown[bucket] ?? 0), 0);
 }
 
 /** The portfolio that sustains your planned spending at your stated withdrawal rate. */
@@ -944,13 +814,9 @@ export function fiProgress(data: DashboardData, a: Assumptions = assumptionsOf(d
 	};
 }
 
-/**
- * Years your net worth would cover at your current spending, measured against the years left until
- * retirement — whether the balance could already carry you there.
- *
- * Not measured against the years a portfolio at the FI number would cover: that is `1 / swr`, so the
- * ratio would come out identical to `fiProgress` and state the same thing in a second unit.
- */
+/** Years your net worth would cover at your current spending, against the years left until retirement.
+    NOT against the years a portfolio at the FI number would cover: that is `1 / swr`, so the ratio would
+    come out identical to `fiProgress`. */
 export function yearsOfFreedom(data: DashboardData, a: Assumptions = assumptionsOf(data)): Scalar {
 	const annual = trailingAnnualSpend(data);
 	const current = currentNetWorth(data);
@@ -980,16 +846,9 @@ export function liquidRunway(data: DashboardData): Scalar {
 	};
 }
 
-/**
- * Progress to "coast" — the balance that, left alone, compounds into your FI number by your target
- * age. Null without a birth year, which is the only source of how long you have.
- */
-/**
- * The balance that, left alone, compounds into the FI number by the retirement age — the FI number
- * discounted back over the years remaining. Null without a birth year to count those years from.
- *
- * Exported so the figure and any explanation of it read the same number from the same place.
- */
+/** The FI number discounted back over the years remaining — the balance that, left alone, compounds into
+    it by the retirement age. Null without a birth year. Exported so the figure and any explanation of it
+    read the same number from the same place. */
 export function coastTarget(
 	data: DashboardData,
 	a: Assumptions = assumptionsOf(data)
@@ -1028,10 +887,8 @@ export function coastFi(data: DashboardData, a: Assumptions = assumptionsOf(data
 
 // --- rates and risk ---
 
-/**
- * Compound annual growth of the balance, as a percentage. Not a return: contributions are included, so
- * it overstates investment performance. Null under half a year of history.
- */
+/** Compound annual growth of the balance, as a percentage. Not a return: contributions are included, so
+    it overstates investment performance. Null under half a year of history. */
 export function balanceGrowth(data: DashboardData): Scalar {
 	const all = snapshots(data);
 	const first = all[0];
@@ -1052,7 +909,6 @@ export function balanceGrowth(data: DashboardData): Scalar {
 	};
 }
 
-/** The largest single account as a share of assets. */
 export function topAccountShare(data: DashboardData): Scalar {
 	const assets = assetAccounts(data);
 	const total = assets.reduce((sum, a) => sum + a.value, 0);
@@ -1070,10 +926,7 @@ export function topAccountShare(data: DashboardData): Scalar {
 	};
 }
 
-/**
- * Cash runway, the FI number and Coast FI as one bullet set, each reusing the scalar that computes it.
- * Rows with no value are dropped rather than drawn empty.
- */
+/** One bullet set, each row reusing the scalar that computes it. Rows with no value are dropped. */
 export function netWorthThresholds(
 	data: DashboardData,
 	a: Assumptions = assumptionsOf(data)

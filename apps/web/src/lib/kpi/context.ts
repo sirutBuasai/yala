@@ -17,6 +17,6 @@ export function useKpiBoard(key: string, defs: () => KpiBoardDefs, merged?: KpiM
 
 export function getKpiBoard(): KpiBoard {
 	const board = getContext<KpiBoard | undefined>(KEY);
-	if (!board) throw new Error('kpi: no KpiBoard in context — the view must call useKpiBoard()');
+	if (!board) throw new Error('kpi: no KpiBoard in context; the view must call useKpiBoard()');
 	return board;
 }

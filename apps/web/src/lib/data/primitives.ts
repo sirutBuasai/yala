@@ -30,7 +30,7 @@ export function formatUnit(value: number, unit: Unit): string {
 			return `${Math.round(value)}%`;
 		case 'count':
 			return Math.round(value).toLocaleString();
-		// Bare digits: a grouped "2,071" reads as a quantity rather than a date.
+		// Bare digits: a grouped year reads as a quantity rather than a date.
 		case 'year':
 			return String(Math.round(value));
 		// Durations keep a decimal: they are small enough that rounding changes the answer.
@@ -92,11 +92,8 @@ export interface Scalar {
 export interface CategoricalPoint {
 	key: string;
 	value: number;
-	/**
-	 * What this point's colour is looked up by, where that differs from the key it is labelled with — an
-	 * account's ledger path, say, when the label shown is the account's display name. The colour map is
-	 * keyed by path, so without this the lookup misses and every point takes the fallback hue.
-	 */
+	/** What this point's colour is looked up by, where that differs from the key it is labelled with. The
+	    colour map is keyed by ledger path, so a point labelled by display name needs this. */
 	colorKey?: string;
 }
 
@@ -121,11 +118,8 @@ export interface Series {
 	axis: Axis;
 	name: string;
 	points: SeriesPoint[];
-	/**
-	 * A second unit the same points can be read in — reported beside the value wherever a chart states
-	 * an exact figure. For a pair of readings that say the same thing in two scales, which would
-	 * otherwise cost a whole second chart that looks identical to the first.
-	 */
+	/** A second unit the same points can be read in, reported beside the value wherever a chart states an
+	    exact figure — so a pair of readings at two scales costs one chart rather than two. */
 	altUnit?: Unit;
 	/** A level the whole series is judged against, drawn behind it. Named in the chart's small print. */
 	reference?: { value: number; label: string };

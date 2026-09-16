@@ -9,9 +9,9 @@ const label = (a: string) => a.split(':').pop() ?? a;
 describe('Select', () => {
 	it('shows the placeholder when there is no value, and the label when there is', () => {
 		const { unmount } = render(Select, {
-			props: { value: '', options: opts, ariaLabel: 'Account', placeholder: 'Pick…' }
+			props: { value: '', options: opts, ariaLabel: 'Account', placeholder: 'Pick...' }
 		});
-		expect(screen.getByLabelText('Account')).toHaveTextContent('Pick…');
+		expect(screen.getByLabelText('Account')).toHaveTextContent('Pick...');
 		unmount();
 
 		render(Select, {
