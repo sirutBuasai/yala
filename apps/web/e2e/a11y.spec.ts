@@ -2,21 +2,8 @@
 // pitched against (see the contrast notes in app.css), and its colour rules are the ones a redesign is
 // most likely to break silently.
 
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
-import { openApp, RANGES, settle, showTab, TABS } from './app';
-
-const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
-
-async function violations(page: Page) {
-	const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
-	return violations.map((v) => ({
-		id: v.id,
-		impact: v.impact,
-		help: v.help,
-		nodes: v.nodes.map((n) => n.target.join(' ')).slice(0, 5)
-	}));
-}
+import { expect, test } from '@playwright/test';
+import { openApp, RANGES, settle, showTab, TABS, violations } from './app';
 
 test.beforeEach(async ({ page }) => openApp(page));
 

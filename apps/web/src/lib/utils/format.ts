@@ -115,8 +115,8 @@ export function yearSpan(years: number[], empty = ''): string {
 	return years.length ? `${years[0]}–${years[years.length - 1]}` : empty;
 }
 
-/** A "YYYY-MM-DD" date as it reads in prose: "Jan 15, 2025". Unparseable input is returned as it
-    came, since a date the app cannot read is still better shown than swallowed. */
+/** An ISO date as it reads in prose, with the month named. Unparseable input is returned as it came,
+    since a date the app cannot read is still better shown than swallowed. */
 export function dateLong(date: string | null | undefined): string {
 	const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date ?? '');
 

@@ -1,5 +1,6 @@
 // Shared harness: serve the app the fixture snapshot, drive its tabs and boards, and read the audit back.
 
+import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -69,6 +70,21 @@ export async function settle(page: Page, frames = 12): Promise<void> {
 
 export async function audit(page: Page): Promise<Audit> {
 	return page.evaluate(auditPage);
+}
+
+/** WCAG A/AA is the bar the palette was pitched against (see the contrast notes in app.css), and its colour
+    rules are the ones a redesign is most likely to break silently. */
+const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
+
+/** Axe's findings, trimmed to what names the defect — the full report is thousands of lines. */
+export async function violations(page: Page) {
+	const { violations: found } = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
+	return found.map((v) => ({
+		id: v.id,
+		impact: v.impact,
+		help: v.help,
+		nodes: v.nodes.map((n) => n.target.join(' ')).slice(0, 5)
+	}));
 }
 
 /**
