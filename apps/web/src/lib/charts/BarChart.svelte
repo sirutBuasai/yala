@@ -2,16 +2,11 @@
 	// One bar chart for 1..n series: one renders as plain columns with value labels, more as grouped bars
 	// with a legend. Callers pick "Bar", never "column" vs "grouped bars".
 	import { scaleBand } from 'd3-scale';
-	import {
-		halfLabelWidth,
-		moneyAxisFormat,
-		moneyYScale,
-		signedYScale,
-		plotSize
-	} from '$lib/charts/axis';
+	import { halfLabelWidth, moneyYScale, signedYScale, plotSize } from '$lib/charts/axis';
 	import { clamp } from '$lib/utils/num';
 	import { ChartBox } from '$lib/charts/box.svelte';
-	import { moneyCompact, moneyExact, esc } from '$lib/utils/format';
+	import { esc } from '$lib/utils/format';
+	import { chartFormat } from '$lib/charts/format';
 	import { showTip, hideTip, withAlt } from '$lib/utils/tooltip';
 	import Legend from '$lib/charts/Legend.svelte';
 	import { chartLabel } from '$lib/charts/aria';
@@ -27,8 +22,8 @@
 	interface Props {
 		labels: string[];
 		series: Series[];
-		/** Format the value axis, labels and tooltips as percentages instead of money. */
-		percent?: boolean;
+		/** The unit every series is read in, which decides how the axis, labels and tooltips word it. */
+		unit: Unit;
 		/** The unit each series' `alt` is in. */
 		altUnit?: Unit;
 		/** Print each bar's own figure above it. Only a lone series can carry them — over several they
@@ -37,14 +32,7 @@
 		/** A level the whole chart is judged against, drawn behind the bars. */
 		reference?: { value: number; label: string };
 	}
-	let {
-		labels,
-		series,
-		percent = false,
-		altUnit,
-		valueLabels = false,
-		reference
-	}: Props = $props();
+	let { labels, series, unit, altUnit, valueLabels = false, reference }: Props = $props();
 
 	const single = $derived(series.length <= 1);
 
@@ -72,15 +60,12 @@
 	const ticks = $derived(axis.ticks);
 	const base = $derived(y(0));
 
-	// Kept exact below a thousand: abbreviating a bar of tens leaves nothing readable on a chart whose bars
-	// span both sides of a thousand.
-	const fmt = (v: number) => (percent ? `${Math.round(v)}%` : moneyCompact(v));
-	// A tooltip is asked for the exact figure, so money keeps its cents there.
-	const tipFmt = (v: number) => (percent ? `${Math.round(v)}%` : moneyExact(v));
-	const moneyTick = $derived(moneyAxisFormat(ticks));
-	const tickFmt = (v: number) => (percent ? `${v}%` : moneyTick(v));
+	const f = $derived(chartFormat(unit, ticks));
+	// A bar label abbreviates but stays exact below a thousand: on a chart whose bars span both sides of
+	// one, abbreviating a bar of tens leaves nothing readable.
+	const fmt = (v: number) => f.compact(v);
 
-	const tipValue = (s: Series, i: number) => withAlt(tipFmt(s.values[i]!), s.alt?.[i], altUnit);
+	const tipValue = (s: Series, i: number) => withAlt(f.exact(s.values[i]!), s.alt?.[i], altUnit);
 	// Above a rising bar and below a falling one, so a label never sits on the axis.
 	const labelY = (v: number, yv: number) =>
 		v < 0 ? Math.max(yv, base) + 14 : Math.min(yv, base) - 6;
@@ -110,7 +95,7 @@
 		<g class="axis" transform="translate({m.l},{m.t})">
 			{#each ticks as t (t)}
 				<line class="gridline" x1={0} x2={iw} y1={y(t)} y2={y(t)} />
-				<text x={-8} y={y(t) + 4} text-anchor="end">{tickFmt(t)}</text>
+				<text x={-8} y={y(t) + 4} text-anchor="end">{f.tick(t)}</text>
 			{/each}
 			{#if straddles}
 				<line class="zero" x1={0} x2={iw} y1={base} y2={base} />

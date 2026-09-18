@@ -2,8 +2,7 @@
 	// Add / edit a transaction. Without `locator` it adds; with one it prefills from that entry and
 	// saves an update or deletes it.
 	import { get } from 'svelte/store';
-	import type { AccountsInfo } from '$lib/data/load';
-	import { EntryForm } from '$lib/entries/entryForm.svelte';
+	import { EntryForm, type EntryFormProps } from '$lib/entries/entryForm.svelte';
 	import { formatAccount, money } from '$lib/utils/format';
 	import { lastCategory, lastEntryDate, lastFundingAccount, seed } from '$lib/utils/editPrefs';
 	import { problems, TEXT_MAX, validateRows } from '$lib/forms/validate';
@@ -14,16 +13,7 @@
 	import Select from '$lib/forms/fields/Select.svelte';
 	import AmountInput from '$lib/ui/AmountInput.svelte';
 
-	interface Props {
-		accounts: AccountsInfo;
-		/** When set, edit that entry; when absent, add a new transaction. */
-		locator?: string;
-		/** Add mode only: pre-fill the date field. */
-		presetDate?: string;
-		/** Called after a successful save or delete (parent refreshes data + closes the modal). */
-		onsaved: () => void;
-	}
-	let { accounts, locator, presetDate, onsaved }: Props = $props();
+	let { accounts, locator, presetDate, onsaved }: EntryFormProps = $props();
 
 	const editing = $derived(locator != null);
 

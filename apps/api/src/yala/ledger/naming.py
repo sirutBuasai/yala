@@ -3,7 +3,7 @@
 A named account's ``open`` records the name in the parts it was typed in, beside an alias for each.
 The name is those parts joined, and shortening happens at read time by swapping the aliases in.
 Storing the parts rather than splitting the leaf back apart is what lets a name be edited a part at
-a time and shown back as written; an account with no parts on file falls back to its leaf.
+a time and shown back as written.
 """
 
 from __future__ import annotations
@@ -12,11 +12,11 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from yala.ledger.constants import meta_str
 from yala.ledger.paths import leaf
 
 #: Display-name budget, in characters: what a list row shows without truncating. A target, not a
-#: guarantee — a name with no short form to apply is returned at full length, so callers must still
-#: be able to truncate.
+#: guarantee, so callers must still be able to truncate.
 NAME_CAP = 20
 
 INSTITUTION_NAME_META = "institution_name"
@@ -28,7 +28,8 @@ ACCOUNT_ALIAS_META = "account_alias"
 @dataclass(frozen=True)
 class NamePart:
     """One part of a named account's name. Which parts an account has is the kind's business; what
-    each part *is* is decided here, so opening, editing and renaming read one set of answers."""
+    each part *is* is decided here, so opening, editing and renaming read one set of answers.
+    """
 
     #: Request field, contract field and meta key all share this name.
     field: str
@@ -37,8 +38,7 @@ class NamePart:
     shared: bool
     #: Belongs to the product half of the name, which only a kind whose name has one carries.
     product: bool
-    #: Names the account. Changing it rewrites the leaf, so it is a rename, not a metadata edit; the
-    #: rest only shorten what the name renders as.
+    #: Names the account, so changing it rewrites the leaf; the rest only shorten it.
     names: bool
 
 
@@ -62,10 +62,8 @@ _LETTER_DIGIT = re.compile(r"([A-Za-z])(\d)")
 
 
 def render(leaf: str) -> str:
-    """A CamelCase account leaf as display words.
-
-    Splits on case changes, keeps an acronym whole while separating the word that follows, splits
-    letter→digit, and lowercases interior particles.
+    """A CamelCase account leaf as display words: split on case changes and letter→digit, an acronym
+    kept whole, interior particles lowercased.
     """
     spaced = _LOWER_UPPER.sub(r"\1 \2", leaf)
     spaced = _ACRONYM_WORD.sub(r"\1 \2", spaced)
@@ -80,10 +78,10 @@ def render(leaf: str) -> str:
 
 
 def compose(typed: str) -> str:
-    """Typed words as the account segment they name — the inverse of :func:`render`.
+    """Typed words as the account segment they name, the inverse of :func:`render`.
 
-    Each word's first letter is capitalized and the rest left as typed, so an acronym entered in
-    caps survives and :func:`render` returns the words as written.
+    Only each word's first letter is capitalized, the rest left as typed, so an acronym entered in
+    caps survives the round trip.
     """
     words = re.sub(r"[^A-Za-z0-9 ]", " ", typed).split()
 
@@ -93,30 +91,24 @@ def compose(typed: str) -> str:
 def compose_stem(institution: str | None, product: str | None = None) -> str:
     """The single path segment a name's parts compose to.
 
-    The one composer: every account path is built from this, so a leaf and the parts recorded beside
-    it cannot describe different names.
+    Every account path is built from this, so a leaf and the parts recorded beside it cannot
+    describe different names.
     """
     return compose(institution or "") + compose(product or "")
-
-
-def _part(meta: Mapping[str, object] | None, key: str) -> str | None:
-    value = (meta or {}).get(key)
-
-    return str(value) if value else None
 
 
 def institution_of(meta: Mapping[str, object] | None) -> str | None:
     """The institution an account is held at, as declared. ``None`` when it has none.
 
-    Declared rather than inferred: an account name is not reliable evidence — a plan named for an
-    employer but held at a custodian, or a co-brand card naming two institutions, both defeat it.
+    Declared rather than inferred: a plan named for an employer but held at a custodian, or a
+    co-brand card naming two institutions, both defeat reading it off the name.
     """
-    return _part(meta, INSTITUTION_NAME_META)
+    return meta_str(meta, INSTITUTION_NAME_META)
 
 
 def name_parts(meta: Mapping[str, object] | None) -> tuple[str | None, str | None]:
     """The institution half and the product half of a name, as the ``open`` declares them."""
-    return _part(meta, INSTITUTION_NAME_META), _part(meta, ACCOUNT_NAME_META)
+    return meta_str(meta, INSTITUTION_NAME_META), meta_str(meta, ACCOUNT_NAME_META)
 
 
 def shared_parts(meta: Mapping[str, object] | None) -> dict[str, str]:
@@ -127,7 +119,7 @@ def shared_parts(meta: Mapping[str, object] | None) -> dict[str, str]:
     return {
         part.field: value
         for part in NAME_PARTS
-        if part.shared and (value := _part(meta, part.field)) is not None
+        if part.shared and (value := meta_str(meta, part.field)) is not None
     }
 
 
@@ -142,8 +134,8 @@ def account_name(account: str, meta: Mapping[str, object] | None = None) -> str:
     if institution is None and product is None:
         return render(leaf(account))
 
-    short_institution = _part(meta, INSTITUTION_ALIAS_META) or institution
-    short_product = _part(meta, ACCOUNT_ALIAS_META) or product
+    short_institution = meta_str(meta, INSTITUTION_ALIAS_META) or institution
+    short_product = meta_str(meta, ACCOUNT_ALIAS_META) or product
 
     # Shortest last: the first that fits wins, and if none do the shortest is the best on offer.
     candidates = [

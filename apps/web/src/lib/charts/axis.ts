@@ -30,8 +30,7 @@ export function plotSize(w: number, h: number, m: Margins): { iw: number; ih: nu
  * Zero-anchored linear value→pixel Y scale, plus its ticks. `ih` is the inner plot height in px.
  *
  * `cap` fixes the top of the domain exactly, skipping the outward rounding: for a frame chosen on purpose
- * `.nice()` rounded the ceiling up and left a dead band above the clipped lines. Ticks still land on round
- * numbers below it; the top edge itself carries no label.
+ * `.nice()` rounded the ceiling up and left a dead band above the clipped lines.
  */
 export function moneyYScale(
 	values: number[],
@@ -47,10 +46,8 @@ export function moneyYScale(
 	return { y, ticks: y.ticks(4).filter((t) => t <= y.domain()[1]!) };
 }
 
-/**
- * Linear Y scale for values that straddle zero. Headroom on each populated end but no outward rounding,
- * so zero sits where the data puts it — `moneyYScale`'s rounding inflates a small deficit into a band.
- */
+/** Linear Y scale for values straddling zero: headroom on each populated end but no outward rounding, so
+    zero sits where the data puts it. `moneyYScale`'s rounding inflates a small deficit into a band. */
 export function signedYScale(
 	values: number[],
 	ih: number,
@@ -66,10 +63,8 @@ export function signedYScale(
 	return { y, ticks: y.ticks(4) };
 }
 
-/**
- * Log10 value→pixel Y scale for series spanning orders of magnitude. The domain snaps outward to whole
- * decades; non-positive values can't be plotted and are dropped by the caller (`defined`).
- */
+/** Log10 Y scale for series spanning orders of magnitude. The domain snaps outward to whole decades;
+    non-positive values can't be plotted and are dropped by the caller. */
 export function logYScale(
 	values: number[],
 	ih: number
@@ -94,8 +89,8 @@ export function logYScale(
 
 /**
  * How a money axis labels itself, chosen from the ticks it is about to draw rather than fixed per chart, so a
- * chart never has to know which scale it is drawing. Zero is exempt from the test and always exact: it sits on
- * almost every money axis, and requiring it to clear a thousand left every axis unabbreviated.
+ * chart never has to know which scale it is on. Zero is exempt and always exact: it sits on almost every money
+ * axis, and requiring it to clear a thousand left every axis unabbreviated.
  */
 export function moneyAxisFormat(ticks: number[]): (v: number) => string {
 	const scaled = ticks.filter((t) => t !== 0);
@@ -104,14 +99,12 @@ export function moneyAxisFormat(ticks: number[]): (v: number) => string {
 	return (v) => (v === 0 ? money(0) : abbreviate ? moneyK(v) : money(v));
 }
 
-/**
- * Average glyph width as a fraction of font size. Approximate on purpose: measuring needs a canvas or a
- * layout pass, and erring small only means slightly smaller type, never a clipped label.
- */
+/** Average glyph width as a fraction of font size. Approximate on purpose: measuring needs a canvas or a
+    layout pass, and erring small only means smaller type, never a clipped label. */
 const GLYPH_RATIO = 0.55;
 
 /** The font size at which the longest of `labels` fits inside `gutter` px, clamped to stay legible: a
-    label gutter shrinks its type rather than truncating. */
+    gutter shrinks its type rather than truncating. */
 export function fitFontSize(gutter: number, labels: string[], min = 8, max = 12): number {
 	const longest = Math.max(1, ...labels.map((l) => l.length));
 	return Math.max(min, Math.min(max, gutter / (GLYPH_RATIO * longest)));
@@ -127,9 +120,9 @@ export function halfLabelWidth(text: string): number {
 }
 
 /**
- * How an x-label at `i` aligns to its point: centred, except at the ends, where it anchors inward to read
- * flush with the plot's edge. The last tick sits ON that edge and a chart's right margin is narrower than
- * half a label; `svg.chart` does not clip, so centred there it paints outside the card.
+ * How an x-label at `i` aligns to its point: centred, except at the ends, where it anchors inward. The last
+ * tick sits ON the plot's edge and a chart's right margin is narrower than half a label; `svg.chart` does not
+ * clip, so centred there it paints outside the card.
  */
 export function labelAnchor(i: number, count: number): 'start' | 'middle' | 'end' {
 	if (count <= 1) return 'middle';
@@ -137,10 +130,8 @@ export function labelAnchor(i: number, count: number): 'start' | 'middle' | 'end
 	return i === count - 1 ? 'end' : 'middle';
 }
 
-/**
- * Which x-label indices to draw: budget each the width of the longest, keep every nth, and always keep
- * the last. Its neighbour is dropped when the two would overlap.
- */
+/** Which x-label indices to draw: budget each the width of the longest, keep every nth, and always keep the
+    last. Its neighbour is dropped when the two would overlap. */
 export function labelIndices(count: number, innerWidth: number, labels: string[]): number[] {
 	if (count <= 1) return count === 1 ? [0] : [];
 
@@ -151,9 +142,8 @@ export function labelIndices(count: number, innerWidth: number, labels: string[]
 	const out: number[] = [];
 	for (let i = 0; i < count - 1; i += stride) out.push(i);
 
-	// The last tick is always drawn, so it is the one the stride cannot place. Drop the label before it when
-	// the two would not both fit — measured in PIXELS, not as a fraction of the stride, which let a gap of
-	// most of a stride still overlap on a long axis.
+	// Drop the label before the last when the two would not both fit. Measured in PIXELS, not as a fraction
+	// of the stride, which let a gap of most of a stride still overlap on a long axis.
 	const last = count - 1;
 	const prev = out[out.length - 1];
 	if (prev !== undefined && ((last - prev) * innerWidth) / last < room) out.pop();

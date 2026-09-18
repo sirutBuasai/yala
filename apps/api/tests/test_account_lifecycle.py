@@ -339,7 +339,7 @@ def test_metadata_the_kind_cannot_carry_is_refused(
     r = _meta(client, account, **{field: value})
 
     assert r.status_code == 422
-    assert f"{field} do" in r.json()["detail"]  # "does not apply" / "do not apply"
+    assert f"{field} does not apply" in r.json()["detail"]
 
 
 def test_an_empty_metadata_edit_is_refused(client: TestClient):

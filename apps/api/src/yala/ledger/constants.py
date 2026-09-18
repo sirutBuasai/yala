@@ -6,6 +6,8 @@ account subtree means.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 EXPENSES = "Expenses:"
 DEDUCTIONS = EXPENSES + "Deductions:"
 INCOME = "Income:"
@@ -46,3 +48,14 @@ INTERNAL_META = frozenset({"filename", "lineno"})
 RETIRED_META = frozenset({"src"})  # spreadsheet-import artifact
 MANAGED_META = frozenset({"id", "funding", "bill"})  # always recomputed
 DROPPED_META = INTERNAL_META | RETIRED_META | MANAGED_META
+
+
+def meta_str(meta: Mapping[str, object] | None, key: str) -> str | None:
+    """One metadata value as text, or ``None`` when it is absent or empty.
+
+    The one reader for every optional meta key: beancount hands values back untyped, and an empty
+    string has to read the same as a missing key, or a cleared field would look like a set one.
+    """
+    value = (meta or {}).get(key)
+
+    return str(value) if value else None

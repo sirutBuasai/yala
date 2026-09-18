@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from yala import projections
@@ -29,7 +29,7 @@ from yala.routes.common import (
     valid_money_account,
 )
 from yala.routes.entries.shared import entry_date
-from yala.routes.errors import api_errors
+from yala.routes.errors import api_errors, invalid
 
 router = APIRouter()
 
@@ -61,18 +61,14 @@ def _resolve_paycheck(
     valid_money_account(body.deposit_account)
 
     if body.employer not in payroll.employers(led):
-        raise HTTPException(
-            status_code=422, detail=f"unknown or inactive employer: {body.employer!r}"
-        )
+        raise invalid(f"unknown or inactive employer: {body.employer!r}")
 
     def legs(kind: str, items: dict[str, float]) -> list[tuple[payroll.PayrollOption, Decimal]]:
         out = []
         for label, amount in items.items():
             option = payroll.resolve(led, kind, label, body.employer)
             if option is None:
-                raise HTTPException(
-                    status_code=422, detail=f"no {kind} {label!r} for {body.employer}"
-                )
+                raise invalid(f"no {kind} {label!r} for {body.employer}")
             out.append((option, dec(amount)))
         return out
 

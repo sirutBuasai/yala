@@ -1,18 +1,17 @@
 """What every account route needs: the kind an account belongs to, and the checks they all repeat.
 
-Kept apart from :mod:`yala.routes.common` (which every route family shares) so an account-specific
+Kept apart from :mod:`yala.routes.common`, which every route family shares, so an account-specific
 rule has one home without leaking into the transaction or settings routes.
 """
 
 from __future__ import annotations
-
-from fastapi import HTTPException
 
 from yala.ledger import Ledger
 from yala.ledger.accounts import Kind, kind_of, sweep_referrers
 from yala.ledger.naming import NAME_PARTS, PART_BY_FIELD
 from yala.ledger.payroll import employers
 from yala.routes.common import valid_label, valid_leaf, valid_money_account, valid_name
+from yala.routes.errors import invalid, not_found
 from yala.schema import KindName, TierName
 
 __all__ = [
@@ -26,6 +25,9 @@ __all__ = [
     "labels_meta",
     "open_destination",
     "reject_referrers",
+    "require_applies",
+    "require_closed",
+    "require_carries",
     "require_open",
     "resolve",
 ]
@@ -43,12 +45,27 @@ ALIAS_FIELDS = tuple(part.field for part in NAME_PARTS if not part.names)
 def carries(kind: Kind, field: str) -> bool:
     """Whether ``kind`` has the naming field ``field`` to give.
 
-    A cash account is named by its institution alone — there is only one of them per bank — so it
-    has no product half to name or to shorten.
+    A cash account is named by its institution alone, there being one per bank, so it has no product
+    half to name or to shorten.
     """
     part = PART_BY_FIELD[field]
 
     return kind.named and (kind.product or not part.product)
+
+
+def require_applies(kind: Kind, field: str, applies: bool) -> None:
+    """Refuse a field ``kind`` has no room for.
+
+    Sent anyway it is worth naming rather than dropping. One wording for every such field, so a form
+    can match on it.
+    """
+    if not applies:
+        raise invalid(f"{field} does not apply to a {kind.name} account")
+
+
+def require_carries(kind: Kind, field: str) -> None:
+    """The same refusal for a naming field, which :func:`carries` decides."""
+    require_applies(kind, field, carries(kind, field))
 
 
 def resolve(account: str) -> tuple[str, Kind]:
@@ -56,49 +73,57 @@ def resolve(account: str) -> tuple[str, Kind]:
     valid_name(account)
     kind = kind_of(account)
     if kind is None:
-        raise HTTPException(status_code=422, detail=f"not a manageable account: {account!r}")
+        raise invalid(f"not a manageable account: {account!r}")
     return account, kind
 
 
-def require_open(led: Ledger, account: str) -> None:
+def _require_declared(led: Ledger, account: str) -> None:
+    """Refuse an account the ledger has never declared, open or closed."""
     if account not in led.declared_accounts():
-        raise HTTPException(status_code=404, detail=f"unknown account: {account!r}")
+        raise not_found(f"unknown account: {account!r}")
+
+
+def require_open(led: Ledger, account: str) -> None:
+    _require_declared(led, account)
     if not led.is_open(account):
-        raise HTTPException(status_code=422, detail=f"{account} is closed")
+        raise invalid(f"{account} is closed")
+
+
+def require_closed(led: Ledger, account: str) -> None:
+    _require_declared(led, account)
+    if led.is_open(account):
+        raise invalid(f"{account} is already open")
 
 
 def open_destination(led: Ledger, dest: str, account: str) -> str:
-    """Validate ``dest`` as a distinct, currently-open asset/liability target for ``account`` —
-    the shared check for every operation that moves a balance to another account."""
+    """``dest`` as a distinct, currently-open asset/liability target for ``account``: the shared
+    check for every operation that moves a balance elsewhere.
+    """
     valid_money_account(dest)
     if dest == account:
-        raise HTTPException(status_code=422, detail="destination must differ from the account")
+        raise invalid("destination must differ from the account")
     if not led.is_open(dest):
-        raise HTTPException(status_code=422, detail=f"destination is not an open account: {dest!r}")
+        raise invalid(f"destination is not an open account: {dest!r}")
     return dest
 
 
 def reject_referrers(led: Ledger, account: str) -> None:
     """Refuse to close an account others sweep into, naming them so they can be repointed.
 
-    Left alone, each referrer would sweep into a closed account, which reconcile can only skip — the
-    passthrough would then quietly keep a balance that belongs somewhere else.
+    Left alone each referrer would sweep into a closed account, which reconcile can only skip,
+    leaving the passthrough quietly holding a balance that belongs elsewhere.
     """
     referrers = sweep_referrers(led, account)
     if referrers:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"{', '.join(referrers)} sweep into {account}; "
-                "point them elsewhere before closing it"
-            ),
+        raise invalid(
+            f"{', '.join(referrers)} sweep into {account}; point them elsewhere before closing it"
         )
 
 
 def known_employer(led: Ledger, employer: str) -> str:
     valid_leaf(employer, "employer")
     if employer not in employers(led):
-        raise HTTPException(status_code=422, detail=f"unknown or inactive employer: {employer!r}")
+        raise invalid(f"unknown or inactive employer: {employer!r}")
     return employer
 
 

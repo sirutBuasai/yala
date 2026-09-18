@@ -10,7 +10,7 @@
 	import { useKpiBoard } from '$lib/kpi/context';
 	import KpiCards from '$lib/kpi/KpiCards.svelte';
 	import StatMatrix from '$lib/charts/StatMatrix.svelte';
-	import { NET_WORTH_GROWTH, netWorthGrowthHeading } from '$lib/data/catalog';
+	import { NET_WORTH_GROWTH, columnHeading } from '$lib/data/catalog';
 	import { statCells } from '$lib/charts/statMatrix';
 	import { live, words } from '$lib/ui/label';
 	import {
@@ -173,7 +173,7 @@
 
 	// Headings and ids both come from the catalog's one ordered set, so a heading cannot end up over
 	// another term's figure.
-	const columns = NET_WORTH_GROWTH.map(netWorthGrowthHeading);
+	const columns = NET_WORTH_GROWTH.map(columnHeading);
 	const cellsOf = (pick: (c: (typeof NET_WORTH_GROWTH)[number]) => string) =>
 		statCells(NET_WORTH_GROWTH.map(pick), yr);
 

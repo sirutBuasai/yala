@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { money, moneyExact, esc } from '$lib/utils/format';
+	import { esc } from '$lib/utils/format';
+	import { chartFormat } from '$lib/charts/format';
+	import { type Unit } from '$lib/data/primitives';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import { sumBy } from '$lib/utils/num';
 	import { chartLabel } from '$lib/charts/aria';
@@ -20,8 +22,12 @@
 	interface Props {
 		nodes: SankeyNode[];
 		links: SankeyLink[];
+		/** The unit every node and link is read in. */
+		unit: Unit;
 	}
-	let { nodes, links }: Props = $props();
+	let { nodes, links, unit }: Props = $props();
+
+	const f = $derived(chartFormat(unit));
 
 	const label = $derived(
 		chartLabel(
@@ -172,7 +178,7 @@
 			stroke-opacity="var(--mark-flow)"
 			role="presentation"
 			onmousemove={(e) =>
-				showTip(`<b>${esc(r.l.source)} → ${esc(r.l.target)}</b><br>${moneyExact(r.l.value)}`, e)}
+				showTip(`<b>${esc(r.l.source)} → ${esc(r.l.target)}</b><br>${f.exact(r.l.value)}`, e)}
 			onmouseleave={hideTip}
 		/>
 	{/each}
@@ -188,18 +194,18 @@
 			role="presentation"
 			onmousemove={(e) =>
 				showTip(
-					`<b>${esc(nv.node.label)}</b><br>${moneyExact(nv.node.value)}${nv.pct != null ? ` · ${nv.pct}%` : ''}`,
+					`<b>${esc(nv.node.label)}</b><br>${f.exact(nv.node.value)}${nv.pct != null ? ` · ${nv.pct}%` : ''}`,
 					e
 				)}
 			onmouseleave={hideTip}
 		/>
 		{#if nv.side === 'left'}
 			<text class="lbl" x={nv.x - 8} y={nv.cy + 4} text-anchor="end">
-				{nv.node.label}<tspan class="val" dx="6">{money(nv.node.value)}</tspan>
+				{nv.node.label}<tspan class="val" dx="6">{f.plain(nv.node.value)}</tspan>
 			</text>
 		{:else if nv.side === 'above'}
 			<text class="lbl" x={nv.x + NODE_W / 2} y={nv.y - 6} text-anchor="middle">
-				{nv.node.label}<tspan class="val" dx="6">{money(nv.node.value)}</tspan
+				{nv.node.label}<tspan class="val" dx="6">{f.plain(nv.node.value)}</tspan
 				>{#if nv.pct != null}<tspan class="pct" dx="5">{nv.pct}%</tspan>{/if}
 			</text>
 		{:else}
@@ -212,7 +218,7 @@
 			<text class="lbl" x={nv.x + NODE_W + 24} y={ly} text-anchor="start">
 				<tspan x={nv.x + NODE_W + 24} dy="-1">{nv.node.label}</tspan>
 				<tspan class="val" x={nv.x + NODE_W + 24} dy={LABEL_LINE}
-					>{money(nv.node.value)}{#if nv.pct != null}<tspan class="pct" dx="5">{nv.pct}%</tspan
+					>{f.plain(nv.node.value)}{#if nv.pct != null}<tspan class="pct" dx="5">{nv.pct}%</tspan
 						>{/if}</tspan
 				>
 			</text>

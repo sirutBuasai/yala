@@ -3,7 +3,7 @@
 
 import type { DashboardData } from '$lib/data/types';
 import type { Primitive, PrimitiveKind } from './primitives';
-import { MONEY } from './primitives';
+import { MONEY, scalar } from './primitives';
 import { categorical, whereItWent } from './categorical';
 import { categoryDeviation } from './deviation';
 import {
@@ -61,6 +61,7 @@ import {
 import { depletionYear, investedProjection } from './projection';
 import { type Scope, type ScopeLevel, latestMonthKey, scopeYear } from './scope';
 import { words } from '$lib/ui/label';
+import { sumBy } from '$lib/utils/num';
 import {
 	amount,
 	average,
@@ -126,7 +127,7 @@ const CHART_DEFS: DataDef[] = [
 				const yd = data.years[String(scopeYear(data, scope))];
 				const items = data.meta.categories.map((c) => ({
 					category: c,
-					amount: yd ? yd.matrix.reduce((sum, row) => sum + (row.spent[c] ?? 0), 0) : 0
+					amount: yd ? sumBy(yd.matrix, (row) => row.spent[c] ?? 0) : 0
 				}));
 				return categorical(items, unit, 999);
 			}
@@ -149,8 +150,8 @@ const CHART_DEFS: DataDef[] = [
 					unit
 				);
 			}
-			const income = data.overview.by_year.reduce((a, r) => a + r.income, 0);
-			const spent = data.overview.by_year.reduce((a, r) => a + r.spent, 0);
+			const income = sumBy(data.overview.by_year, (r) => r.income);
+			const spent = sumBy(data.overview.by_year, (r) => r.spent);
 			return whereItWent(data.overview.all_time_by_category, income, spent, unit);
 		}
 	},
@@ -647,12 +648,7 @@ const VS_TYPICAL: DataDef[] = [
 	scalarDef('spending.vs_typical', 'vs your average', ['month'], (data, scope) =>
 		scope.monthKey
 			? vsTypical(data, scope.monthKey, 'spending', { label: words('vs your average') })
-			: {
-					kind: 'scalar',
-					unit: MONEY(data.currency),
-					label: words('vs your average'),
-					value: null
-				}
+			: scalar(MONEY(data.currency), words('vs your average'), null)
 	)
 ];
 
@@ -713,11 +709,9 @@ export function cashFlowChanges(cols: CashFlowColumn[]): string[] {
 	});
 }
 
-/** A cash-flow column's heading: the catalog's own name for the measure's level. */
-export const cashFlowHeading = (c: CashFlowColumn) => CATALOG_BY_ID[c.total]!.label;
-
-/** A net-worth growth column's heading, from the same place, for the same reason. */
-export const netWorthGrowthHeading = (c: NetWorthGrowthColumn) => CATALOG_BY_ID[c.total]!.label;
+/** A stat-matrix column's heading: the catalog's own name for the measure's level, so a heading and
+    the figures under it cannot name the measure differently. */
+export const columnHeading = (c: { total: string }) => CATALOG_BY_ID[c.total]!.label;
 
 /** Catalog entries producing a given primitive kind — powers "pick data for this chart". */
 export function dataOfKind(kind: PrimitiveKind): DataDef[] {

@@ -1,14 +1,13 @@
-// Where the invested balance goes from here, under the assumptions you state: one line that keeps investing
-// at the rate you have been, one that stops. The two reference levels behind them differ in whether the pot
-// is ever drawn down, so the drawn-down one is the smaller. Rates come from `plannedRates`, the same reader
-// the targets use, so a projection cannot disagree with the FI number drawn beside it.
+// Where the invested balance goes from here: one line that keeps investing at the rate you have been, one
+// that stops, against two reference levels. Rates come from `plannedRates`, so a projection cannot disagree
+// with the FI number drawn beside it.
 
 import type { DashboardData } from '$lib/data/types';
 import type { MultiSeries, Scalar, Series } from './primitives';
-import { MONEY, YEAR } from './primitives';
+import { MONEY, YEAR, scalar } from './primitives';
 import { type Assumptions, assumptionsOf, realRate } from './assumptions';
 import { fiNumber, investedBalance, plannedRates } from './networth';
-import { series } from './series';
+import { multiseries, series } from './series';
 import { money } from '$lib/utils/format';
 import { live, words } from '$lib/ui/label';
 
@@ -25,8 +24,8 @@ export function secondaryLines(a: Assumptions): string[] {
 }
 
 /** The level a projection turns around at, `spending / r`. This, not the withdrawal rate against the
-    return, decides whether a balance lasts: the withdrawal is a fixed sum, so a balance above this earns
-    more than it pays out however high the stated rate is. */
+    return, decides whether a balance lasts: the withdrawal is a fixed sum, so anything above this earns
+    more than it pays out. */
 export function breakEven(
 	data: DashboardData,
 	a: Assumptions = assumptionsOf(data)
@@ -52,9 +51,9 @@ export function balanceAtRetirement(
 }
 
 /**
- * The balance that funds `spend` a year from retirement to the horizon age and reaches zero exactly
- * there — the present value of an annuity, `spend × (1 − (1+r)^−n) / r`. Far smaller than `spend × n`,
- * because the balance keeps earning while it is drawn on. Null when the horizon is not past retirement.
+ * The balance that funds `spend` a year from retirement to the horizon age and reaches zero exactly there:
+ * the present value of an annuity, `spend × (1 − (1+r)^−n) / r`. Far smaller than `spend × n`, since the
+ * balance keeps earning while it is drawn on. Null when the horizon is not past retirement.
  */
 export function lastsToHorizon(
 	data: DashboardData,
@@ -76,9 +75,9 @@ interface Path {
 }
 
 /**
- * Compound `start` forward a year at a time. Before the retirement year a line adds its contribution;
- * from that year on it withdraws trailing annual spending instead — real dollars, not a share of the
- * balance, because a percentage can never exhaust a portfolio and would make depletion unanswerable.
+ * Compound `start` forward a year at a time. Before the retirement year a line adds its contribution; from
+ * then on it withdraws trailing annual spending — real dollars, not a share of the balance, since a
+ * percentage can never exhaust a portfolio and would make depletion unanswerable.
  *
  * Floored at zero: past that the balance is spent, and a line diving negative reads as a debt.
  */
@@ -118,8 +117,8 @@ function pathFor(data: DashboardData, a: Assumptions): Path | null {
 	return walk(start, a, rates.investing, rates.spending);
 }
 
-/** The invested balance projected forward, with both targets drawn flat behind it. Investments rather
-    than net worth: a withdrawal comes out of the invested pot, not the runway's liquid cash. */
+/** The invested balance projected forward, both targets drawn flat behind it. Investments rather than net
+    worth: a withdrawal comes out of the invested pot, not the runway's liquid cash. */
 export function investedProjection(
 	data: DashboardData,
 	a: Assumptions = assumptionsOf(data)
@@ -127,7 +126,7 @@ export function investedProjection(
 	const unit = MONEY(data.currency);
 	const path = pathFor(data, a);
 	// An empty set rather than flat lines at zero: a chart draws that as "nothing to show".
-	if (!path) return { kind: 'multiseries', unit, axis: 'ordinal', labels: [], series: [] };
+	if (!path) return multiseries(unit, 'ordinal', [], []);
 
 	const labels = path.years.map(String);
 	const line = (name: string, values: number[]): Series =>
@@ -142,32 +141,22 @@ export function investedProjection(
 				]
 			: [];
 
-	return {
-		kind: 'multiseries',
-		unit,
-		axis: 'ordinal',
-		labels,
-		series: [
-			line(INVESTING, path.investing),
-			line(COASTING, path.coasting),
-			...level(TARGET, fiNumber(data, a).value),
-			...level(lastsToName(a), lastsToHorizon(data, a))
-		]
-	};
+	return multiseries(unit, 'ordinal', labels, [
+		line(INVESTING, path.investing),
+		line(COASTING, path.coasting),
+		...level(TARGET, fiNumber(data, a).value),
+		...level(lastsToName(a), lastsToHorizon(data, a))
+	]);
 }
 
-/** The first year the balance is spent, measured on the line that keeps investing — the plan actually
-    being followed. Null where it never depletes. */
+/** The first year the balance is spent, on the line that keeps investing — the plan actually being
+    followed. Null where it never depletes. */
 export function depletionYear(data: DashboardData, a: Assumptions = assumptionsOf(data)): Scalar {
 	const path = pathFor(data, a);
 	const spend = plannedRates(data, a).spending;
 	const at = path?.investing.findIndex((balance) => balance <= 0) ?? -1;
 
-	return {
-		kind: 'scalar',
-		unit: YEAR,
-		label: words('Depletion year'),
-		value: path && at !== -1 ? path.years[at]! : null,
+	return scalar(YEAR, words('Depletion year'), path && at !== -1 ? path.years[at]! : null, {
 		note: path && at !== -1 ? live(`at ${money(spend)}/yr`) : words('never at this rate')
-	};
+	});
 }

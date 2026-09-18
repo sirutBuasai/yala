@@ -5,6 +5,7 @@ import type { DashboardData } from '$lib/data/types';
 import type { Axis, MultiSeries, Series, SeriesPoint, Unit } from './primitives';
 import { MONEY, PERCENT } from './primitives';
 import { MONTHS, monthName } from '$lib/utils/format';
+import { sum, sumBy } from '$lib/utils/num';
 import { addMonths, monthKey } from '$lib/utils/period';
 import { measureLabel, measureValue, type Field, type Measure } from './metric';
 
@@ -29,6 +30,11 @@ export function series(
 		alt: alt ? (alt.values[i] ?? 0) : undefined
 	}));
 	return { kind: 'series', unit, axis, name, points, altUnit: alt?.unit };
+}
+
+/** Series that overlay, bundled under the axis and labels they share. */
+export function multiseries(unit: Unit, axis: Axis, labels: string[], list: Series[]): MultiSeries {
+	return { kind: 'multiseries', unit, axis, labels, series: list };
 }
 
 // --- one measure over time ---
@@ -111,13 +117,12 @@ export function cashFlowBars(data: DashboardData, year?: number): MultiSeries {
 		year == null ? measureByYear(data, f) : measureByMonth(data, f, year)
 	);
 
-	return {
-		kind: 'multiseries',
-		unit: MONEY(data.currency),
-		axis: 'ordinal',
-		labels: list[0]?.points.map((p) => p.label) ?? [],
-		series: list.map((s) => ({ ...s, axis: 'ordinal' as const }))
-	};
+	return multiseries(
+		MONEY(data.currency),
+		'ordinal',
+		list[0]?.points.map((p) => p.label) ?? [],
+		list.map((s) => ({ ...s, axis: 'ordinal' as const }))
+	);
 }
 
 /**
@@ -130,29 +135,28 @@ export function categorySpendByYear(data: DashboardData): MultiSeries {
 	const labels = years.map(String);
 
 	const totalFor = (year: number, cat: string) =>
-		(data.years[String(year)]?.matrix ?? []).reduce((s, row) => s + (row.spent[cat] ?? 0), 0);
+		sumBy(data.years[String(year)]?.matrix ?? [], (row) => row.spent[cat] ?? 0);
 
 	// Spend somewhere in the range, so a closed category keeps its history and an unused one is dropped.
 	const cats = data.meta.categories
 		.map((c) => ({ c, values: years.map((y) => totalFor(y, c)) }))
-		.map((e) => ({ ...e, lifetime: e.values.reduce((a, b) => a + b, 0) }))
+		.map((e) => ({ ...e, lifetime: sum(e.values) }))
 		.filter((e) => e.lifetime > 0)
 		.sort((a, b) => b.lifetime - a.lifetime);
 
-	return {
-		kind: 'multiseries',
+	return multiseries(
 		unit,
-		axis: 'ordinal',
+		'ordinal',
 		labels,
-		series: cats.map((e) => series(e.c, labels, e.values, unit, 'ordinal'))
-	};
+		cats.map((e) => series(e.c, labels, e.values, unit, 'ordinal'))
+	);
 }
 
 /** Savings-to-income ratio per year, as a percentage. */
 export function savingsRate(data: DashboardData): Series {
 	const saved = measureByYear(data, 'saved');
 	const income = measureByYear(data, 'income');
-	const total = (s: Series) => s.points.reduce((a, p) => a + (p.value ?? 0), 0);
+	const total = (s: Series) => sumBy(s.points, (p) => p.value ?? 0);
 	const lifetimeIncome = total(income);
 	return {
 		...saved,

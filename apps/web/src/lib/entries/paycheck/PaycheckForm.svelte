@@ -3,8 +3,7 @@
 	// saves an update or deletes it.
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
-	import type { AccountsInfo } from '$lib/data/load';
-	import { EntryForm } from '$lib/entries/entryForm.svelte';
+	import { EntryForm, type EntryFormProps } from '$lib/entries/entryForm.svelte';
 	import { formatAccount, money } from '$lib/utils/format';
 	import {
 		lastContributionLabels,
@@ -22,16 +21,7 @@
 	import FormSection from '$lib/forms/fields/FormSection.svelte';
 	import AmountInput from '$lib/ui/AmountInput.svelte';
 
-	interface Props {
-		accounts: AccountsInfo;
-		/** When set, edit that paycheck; when absent, add a new one. */
-		locator?: string;
-		/** Add mode only: pre-fill the date field. */
-		presetDate?: string;
-		/** Called after a successful save or delete (parent refreshes data + closes the modal). */
-		onsaved: () => void;
-	}
-	let { accounts, locator, presetDate, onsaved }: Props = $props();
+	let { accounts, locator, presetDate, onsaved }: EntryFormProps = $props();
 
 	const editing = $derived(locator != null);
 

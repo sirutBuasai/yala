@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { pie, arc } from 'd3-shape';
-	import { money, moneyExact, esc } from '$lib/utils/format';
+	import { esc } from '$lib/utils/format';
+	import { chartFormat } from '$lib/charts/format';
+	import { type Unit } from '$lib/data/primitives';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Empty from '$lib/ui/Empty.svelte';
 	import { sumBy } from '$lib/utils/num';
@@ -12,8 +14,12 @@
 	}
 	interface Props {
 		slices: Slice[];
+		/** The unit every slice is read in. */
+		unit: Unit;
 	}
-	let { slices }: Props = $props();
+	let { slices, unit }: Props = $props();
+
+	const f = $derived(chartFormat(unit));
 
 	const R = 120;
 	const total = $derived(sumBy(slices, (s) => s.value));
@@ -48,7 +54,7 @@
 							role="presentation"
 							onmousemove={(e) =>
 								showTip(
-									`<b>${esc(a.data.name)}</b><br>${moneyExact(a.data.value)} · ${pctOf(a.data.value)}%`,
+									`<b>${esc(a.data.name)}</b><br>${f.exact(a.data.value)} · ${pctOf(a.data.value)}%`,
 									e
 								)}
 							onmouseleave={hideTip}
@@ -71,7 +77,7 @@
 					<li>
 						<span class="sw" style:background={s.color}></span>
 						<span class="nm" title={s.name}>{s.name}</span>
-						<span class="val">{money(s.value)} · {pctOf(s.value)}%</span>
+						<span class="val">{f.plain(s.value)} · {pctOf(s.value)}%</span>
 					</li>
 				{/each}
 			</ul>

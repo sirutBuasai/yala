@@ -6,7 +6,7 @@
 import type { DashboardData } from '$lib/data/types';
 import type { Flow, FlowLink, FlowNode } from './primitives';
 import { MONEY } from './primitives';
-import { sumValues } from '$lib/utils/num';
+import { sumBy, sumValues } from '$lib/utils/num';
 
 /** Split `total` across named buckets by their `shares` proportions. Nothing when the total is zero,
  * and a single `fallbackLabel` bucket when there's no breakdown to split by. */
@@ -70,7 +70,7 @@ export function moneyFlow(data: DashboardData, year?: number): Flow {
 		year == null
 			? [...data.overview.all_time_by_category].sort((a, b) => b.amount - a.amount)
 			: yearCategories(data, year);
-	const spent = cats.reduce((a, c) => a + c.amount, 0);
+	const spent = sumBy(cats, (c) => c.amount);
 	const cashSavings = Math.max(0, takeHome - spent);
 
 	const nodes: FlowNode[] = [{ id: 'Gross', label: 'Gross', value: gross, col: 0, role: 'gross' }];

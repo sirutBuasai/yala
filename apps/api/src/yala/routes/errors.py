@@ -11,8 +11,8 @@ from contextlib import contextmanager
 
 from fastapi import HTTPException
 
-# Pydantic error ``loc`` field name → the label the user sees in the form, so a body-validation
-# failure reads in the form's vocabulary rather than raw JSON keys.
+# Pydantic error ``loc`` field name → the label the user sees, so a body-validation failure reads in
+# the form's vocabulary rather than raw JSON keys.
 FIELD_LABELS = {
     "payee": "Title",
     "amount": "Amount",
@@ -32,11 +32,22 @@ FIELD_LABELS = {
 }
 
 
+def invalid(detail: str) -> HTTPException:
+    """The refusal a bad request gets. Raised, never returned: ``raise invalid(...)``."""
+    return HTTPException(status_code=422, detail=detail)
+
+
+def not_found(detail: str) -> HTTPException:
+    """The refusal a request naming something the ledger does not have gets."""
+    return HTTPException(status_code=404, detail=detail)
+
+
 @contextmanager
 def api_errors() -> Iterator[None]:
     """Map exceptions raised in a write endpoint's body to HTTP errors: ``KeyError`` → 404 for an
-    unknown locator, any other client-input problem → 422. Explicit ``HTTPException``\\ s (e.g. a
-    409 sweep conflict) pass through unchanged."""
+    unknown locator, any other client-input problem → 422. An explicit ``HTTPException`` passes
+    through unchanged.
+    """
     try:
         yield
 
@@ -44,10 +55,10 @@ def api_errors() -> Iterator[None]:
         raise
 
     except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise not_found(str(e))
 
     except Exception as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise invalid(str(e))
 
 
 def humanize_error(err: dict) -> str:

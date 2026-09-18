@@ -4,6 +4,7 @@ import type { DashboardData } from '$lib/data/types';
 import type { Matrix } from './primitives';
 import { MONEY } from './primitives';
 import { MONTHS } from '$lib/utils/format';
+import { sumBy } from '$lib/utils/num';
 
 export function categoryByMonth(data: DashboardData, year: number): Matrix {
 	const yd = data.years[String(year)];
@@ -14,7 +15,7 @@ export function categoryByMonth(data: DashboardData, year: number): Matrix {
 	}
 	// Biggest spender leftmost: the heatmap scales each column to its own max, so order is the only
 	// remaining cue about relative size.
-	const total = (c: string) => (yd?.matrix ?? []).reduce((s, r) => s + (r.spent[c] ?? 0), 0);
+	const total = (c: string) => sumBy(yd?.matrix ?? [], (r) => r.spent[c] ?? 0);
 	const cats = [...present].sort((a, b) => total(b) - total(a));
 	const unit = MONEY(data.currency);
 

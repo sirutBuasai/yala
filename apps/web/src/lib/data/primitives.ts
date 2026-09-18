@@ -30,10 +30,10 @@ export function formatUnit(value: number, unit: Unit): string {
 			return `${Math.round(value)}%`;
 		case 'count':
 			return Math.round(value).toLocaleString();
-		// Bare digits: a grouped year reads as a quantity rather than a date.
+		// Ungrouped: a year with a thousands separator reads as a quantity rather than a date.
 		case 'year':
 			return String(Math.round(value));
-		// Durations keep a decimal: they are small enough that rounding changes the answer.
+		// A decimal, because a duration is small enough that rounding changes the answer.
 		case 'duration':
 			return `${value.toFixed(1)} ${unit.period === 'month' ? 'mo' : 'yr'}`;
 	}
@@ -44,8 +44,7 @@ export function formatUnitExact(value: number, unit: Unit): string {
 	return unit.kind === 'money' ? moneyExact(value) : formatUnit(value, unit);
 }
 
-/** For a box too narrow for the whole reading: the thousands abbreviated. Only these two units have any to
-    give up — a percentage or a duration is short already. */
+/** For a box too narrow for the whole reading. Only these two units have thousands to give up. */
 export function formatUnitCompact(value: number, unit: Unit): string {
 	if (unit.kind === 'money') return moneyCompact(value);
 	if (unit.kind === 'count') return numCompact(value);
@@ -59,9 +58,8 @@ export function formatDelta(value: number, unit: Unit): string {
 }
 
 /**
- * A magnitude held to `digits` digits, sign kept. What a reading falls back to where the box cannot hold the
- * figure: a percentage against a near-zero base has no bound, and a card does. The reading it stands in for
- * belongs in the tooltip beside it (see `formatUnitExact`).
+ * A magnitude held to `digits` digits, sign kept. A percentage against a near-zero base has no bound and a
+ * card does; the figure it stands in for belongs in the tooltip beside it.
  */
 export function capped(value: number, digits: number): number {
 	const ceiling = 10 ** digits - 1;
@@ -69,8 +67,8 @@ export function capped(value: number, digits: number): number {
 	return Math.abs(value) > ceiling ? Math.sign(value) * ceiling : value;
 }
 
-/** Digits a capped reading is held to. Nothing marks one as capped, so there is one ceiling rather than a
-    graded set: an intermediate cap would read as a figure somebody could act on. */
+/** Digits a capped reading is held to. One ceiling rather than a graded set: nothing marks a reading as
+    capped, so an intermediate cap would read as a figure somebody could act on. */
 export const CAP_DIGITS = 3;
 
 /** How much of a delta to show: `digits` caps its magnitude, `note` keeps what it is measured against. */
@@ -122,6 +120,19 @@ export interface Scalar {
 	target?: number;
 	/** What a card captions itself with (already localized). */
 	note?: Label;
+}
+
+/** Everything a scalar may carry beyond the four fields every one of them has. */
+export type ScalarDetail = Omit<Scalar, 'kind' | 'unit' | 'label' | 'value'>;
+
+/** The one way a `Scalar` is built, so no builder can forget a field or spell `kind` itself. */
+export function scalar(
+	unit: Unit,
+	label: Label,
+	value: number | null,
+	detail: ScalarDetail = {}
+): Scalar {
+	return { kind: 'scalar', unit, label, value, ...detail };
 }
 
 export interface CategoricalPoint {

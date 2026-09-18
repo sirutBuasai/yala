@@ -213,7 +213,8 @@ export const CHARTS: ChartDef[] = [
 					name: pt.key,
 					value: pt.value,
 					color: keyColor(pt.colorKey ?? pt.key, opts.colorBy)
-				}))
+				})),
+				unit: c.unit
 			};
 		}
 	}),
@@ -230,6 +231,7 @@ export const CHARTS: ChartDef[] = [
 					value: pt.value,
 					color: keyColor(pt.colorKey ?? pt.key, opts.colorBy)
 				})),
+				unit: c.unit,
 				total: opts.total
 			};
 		}
@@ -245,7 +247,7 @@ export const CHARTS: ChartDef[] = [
 			return {
 				labels,
 				series: toPlainSeries(list, opts),
-				percent: sm.unit.kind === 'percent',
+				unit: sm.unit,
 				altUnit: altUnitOf(list),
 				valueLabels: opts.valueLabels,
 				// A reference belongs to one series, so it only travels when there is only one.
@@ -259,12 +261,12 @@ export const CHARTS: ChartDef[] = [
 		accepts: ['series', 'multiseries'],
 		component: LineChart,
 		adapt(p, opts = {}) {
-			const { labels, list } = seriesOf(p as Series | MultiSeries);
-			const percent = (p as Series | MultiSeries).unit.kind === 'percent';
+			const sm = p as Series | MultiSeries;
+			const { labels, list } = seriesOf(sm);
 			return {
 				labels,
 				series: toLineSeries(list, opts),
-				percent,
+				unit: sm.unit,
 				log: opts.log,
 				endLabels: opts.endLabels,
 				ceiling: opts.ceiling
@@ -320,7 +322,8 @@ export const CHARTS: ChartDef[] = [
 					...n,
 					color: n.role === 'category' ? keyColor(n.label) : seriesColor(FLOW_ROLE_SERIES[n.role])
 				})),
-				links: f.links
+				links: f.links,
+				unit: f.unit
 			};
 		}
 	}),
@@ -364,7 +367,7 @@ export function chartsForKind(kind: PrimitiveKind): ChartDef[] {
 	return CHARTS.filter((c) => c.accepts.includes(kind));
 }
 
-/** The default chart for a primitive kind, or undefined if none accepts it. */
+/** The chart a kind is drawn with unless the board says otherwise: the first that accepts it. */
 export function defaultChart(kind: PrimitiveKind): ChartDef | undefined {
 	return chartsForKind(kind)[0];
 }

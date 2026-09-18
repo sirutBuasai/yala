@@ -11,7 +11,7 @@
 	import { useKpiBoard } from '$lib/kpi/context';
 	import KpiCards from '$lib/kpi/KpiCards.svelte';
 	import StatMatrix from '$lib/charts/StatMatrix.svelte';
-	import { cashFlowChain, cashFlowChanges, cashFlowHeading } from '$lib/data/catalog';
+	import { cashFlowChain, cashFlowChanges, columnHeading } from '$lib/data/catalog';
 	import { statCells } from '$lib/charts/statMatrix';
 
 	interface Props {
@@ -137,7 +137,7 @@
 	// two. Both rows compare against last year — the run-rate against last year's own run-rate, so a
 	// part-finished year is not read as a collapse.
 	const CHAIN = cashFlowChain(['income', 'spending', 'saved']);
-	const columns = CHAIN.map(cashFlowHeading);
+	const columns = CHAIN.map(columnHeading);
 
 	// The run-rate row carries no caption: every column divides by the same active months, so the matrix
 	// hoists that divisor under the label itself.

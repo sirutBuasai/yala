@@ -7,7 +7,7 @@
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import { figurePanes } from '$lib/layout/grid/figure';
 	import { live, words } from '$lib/ui/label';
-	import { CASH_FLOW_COLUMNS, cashFlowHeading } from '$lib/data/catalog';
+	import { CASH_FLOW_COLUMNS, columnHeading } from '$lib/data/catalog';
 	import { statCells } from '$lib/charts/statMatrix';
 	import FigurePane from '$lib/layout/grid/FigurePane.svelte';
 	import StatMatrix from '$lib/charts/StatMatrix.svelte';
@@ -90,7 +90,7 @@
 
 	// Headings and ids both come from the catalog's one ordered chain, so a heading cannot end up over
 	// another measure's figure.
-	const columns = CASH_FLOW_COLUMNS.map(cashFlowHeading);
+	const columns = CASH_FLOW_COLUMNS.map(columnHeading);
 	const cellsOf = (pick: (c: (typeof CASH_FLOW_COLUMNS)[number]) => string) =>
 		statCells(CASH_FLOW_COLUMNS.map(pick), all);
 

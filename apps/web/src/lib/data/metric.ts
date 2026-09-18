@@ -3,9 +3,9 @@
 
 import type { DashboardData, MonthPage, PaycheckOut, Txn } from '$lib/data/types';
 import type { Scalar, Tone } from './primitives';
-import { MONEY, PERCENT, COUNT } from './primitives';
+import { MONEY, PERCENT, COUNT, scalar } from './primitives';
 import { money } from '$lib/utils/format';
-import { sumValues } from '$lib/utils/num';
+import { sumBy, sumValues } from '$lib/utils/num';
 import { addMonths } from '$lib/utils/period';
 import { type Scope, latestYear, priorMonths, scopeYear, scopeKey } from './scope';
 import { labelText, live, words, type Label } from '$lib/ui/label';
@@ -159,8 +159,8 @@ function totals(data: DashboardData, scope: Scope): Totals {
 const isActive = (md: MonthPage): boolean => md.total_income > 0 || md.total_spent > 0;
 
 /**
- * The ONE divisor every run-rate divides by, whatever the measure: a row of run-rates has to reconcile, and
- * counting only the months a measure itself moved in gives each column its own denominator.
+ * The ONE divisor every run-rate uses, whatever the measure: counting only the months a measure itself moved
+ * in gives each column of a run-rate row its own denominator, and the row has to reconcile.
  *
  * 0 when nothing is logged in the scope, so callers floor it themselves.
  */
@@ -175,23 +175,27 @@ export const trackedYearsNote = (years: number): Label => live(`${years} tracked
 function categorySpend(data: DashboardData, scope: Scope, category: string): number {
 	if (scope.level === 'month') {
 		const items = scope.monthKey ? (data.months[scope.monthKey]?.by_category ?? []) : [];
-		return items.filter((c) => c.category === category).reduce((a, c) => a + c.amount, 0);
+		return sumBy(
+			items.filter((c) => c.category === category),
+			(c) => c.amount
+		);
 	}
 	if (scope.level === 'year') {
 		const yd = data.years[String(scopeYear(data, scope))];
-		return yd ? yd.matrix.reduce((s, row) => s + (row.spent[category] ?? 0), 0) : 0;
+		return yd ? sumBy(yd.matrix, (row) => row.spent[category] ?? 0) : 0;
 	}
-	return data.overview.all_time_by_category
-		.filter((c) => c.category === category)
-		.reduce((a, c) => a + c.amount, 0);
+	return sumBy(
+		data.overview.all_time_by_category.filter((c) => c.category === category),
+		(c) => c.amount
+	);
 }
 
 /** Resolve any measure to a raw number at a scope. Shared so callers reuse the memoized aggregates. */
 export function measureValue(data: DashboardData, scope: Scope, m: Measure): number {
 	if (typeof m === 'string') return totals(data, scope)[m];
-	return scopePaychecks(data, scope).reduce(
-		(a, p) => a + ((m.group === 'deductions' ? p.deductions : p.contributions)[m.key] ?? 0),
-		0
+	return sumBy(
+		scopePaychecks(data, scope),
+		(p) => (m.group === 'deductions' ? p.deductions : p.contributions)[m.key] ?? 0
 	);
 }
 
@@ -223,17 +227,18 @@ export function signed(s: Scalar): Scalar {
 // --- builders ---
 
 export function amount(data: DashboardData, scope: Scope, m: Measure, opts: Opts = {}): Scalar {
-	return {
-		kind: 'scalar',
-		unit: MONEY(data.currency),
-		label: opts.label ?? words(measureLabel(m)),
-		value: measureValue(data, scope, m),
-		note: opts.note
-	};
+	return scalar(
+		MONEY(data.currency),
+		opts.label ?? words(measureLabel(m)),
+		measureValue(data, scope, m),
+		{
+			note: opts.note
+		}
+	);
 }
 
-/** Period-over-period badge. Undefined when the base is 0, which an untracked period also reads as.
-    Tone is the caller's: which direction is good news depends on what is being compared. */
+/** Period-over-period badge. Undefined when the base is 0, which an untracked period also reads as. Tone
+    is the caller's: which direction is good news depends on what is being compared. */
 export function percentDelta(
 	now: number,
 	before: number,
@@ -260,10 +265,8 @@ function perMonth(
 	return { rate: measureValue(data, scope, m) / divisor, divisor };
 }
 
-/**
- * Average of a measure. `per: 'year'` divides the lifetime total by tracked years; `per: 'month'`
- * divides by active months, never a flat 12, so a partial year isn't understated.
- */
+/** `per: 'year'` divides the lifetime total by tracked years; `per: 'month'` by active months, never a
+    flat twelve, so a partial year isn't understated. */
 export function average(
 	data: DashboardData,
 	m: Measure,
@@ -276,37 +279,35 @@ export function average(
 
 	if (per === 'year') {
 		const years = data.overview.by_year.length || 1;
-		return {
-			kind: 'scalar',
+		return scalar(
 			unit,
-			label: opts.label ?? words(`Avg ${name} / year`),
-			value: measureValue(data, { level: 'all' }, m) / years,
-			note: opts.note ?? trackedYearsNote(years)
-		};
+			opts.label ?? words(`Avg ${name} / year`),
+			measureValue(data, { level: 'all' }, m) / years,
+			{
+				note: opts.note ?? trackedYearsNote(years)
+			}
+		);
 	}
 
 	if (scope.level === 'all') {
 		const months = activeMonthsIn(data, scope) || 1;
-		return {
-			kind: 'scalar',
+		return scalar(
 			unit,
-			label: opts.label ?? words(`Avg ${name} / month`),
-			value: measureValue(data, { level: 'all' }, m) / months,
-			note: opts.note ?? activeMonthsNote(months)
-		};
+			opts.label ?? words(`Avg ${name} / month`),
+			measureValue(data, { level: 'all' }, m) / months,
+			{
+				note: opts.note ?? activeMonthsNote(months)
+			}
+		);
 	}
 
 	const y = scope.year ?? latestYear(data);
 	const now = perMonth(data, m, y);
-	return {
-		kind: 'scalar',
-		unit,
-		label: opts.label ?? words(`Avg ${name} / month`),
-		value: now.rate,
+	return scalar(unit, opts.label ?? words(`Avg ${name} / month`), now.rate, {
 		// Rate against rate: the levels divide by different active-month counts.
 		delta: deltaOf(m, now.rate, perMonth(data, m, y - 1).rate, 'YoY'),
 		note: opts.note ?? activeMonthsNote(now.divisor)
-	};
+	});
 }
 
 /** A percentage of one measure over another at a scope; `null` (em dash) when the base is 0. */
@@ -319,13 +320,14 @@ export function ratio(
 ): Scalar {
 	const n = measureValue(data, scope, num);
 	const d = measureValue(data, scope, den);
-	return {
-		kind: 'scalar',
-		unit: PERCENT,
-		label: opts.label ?? words(`${measureLabel(num)} / ${measureLabel(den)}`),
-		value: d ? (n / d) * 100 : null,
-		note: opts.note
-	};
+	return scalar(
+		PERCENT,
+		opts.label ?? words(`${measureLabel(num)} / ${measureLabel(den)}`),
+		d ? (n / d) * 100 : null,
+		{
+			note: opts.note
+		}
+	);
 }
 
 export function categoryAmount(
@@ -334,13 +336,14 @@ export function categoryAmount(
 	category: string,
 	opts: Opts = {}
 ): Scalar {
-	return {
-		kind: 'scalar',
-		unit: MONEY(data.currency),
-		label: opts.label ?? words(category),
-		value: categorySpend(data, scope, category),
-		note: opts.note
-	};
+	return scalar(
+		MONEY(data.currency),
+		opts.label ?? words(category),
+		categorySpend(data, scope, category),
+		{
+			note: opts.note
+		}
+	);
 }
 
 export function categoryShare(
@@ -351,13 +354,14 @@ export function categoryShare(
 	opts: Opts = {}
 ): Scalar {
 	const whole = totals(data, scope)[of];
-	return {
-		kind: 'scalar',
-		unit: PERCENT,
-		label: opts.label ?? words(`${category} share`),
-		value: whole ? (categorySpend(data, scope, category) / whole) * 100 : null,
-		note: opts.note ?? words(`of ${of}`)
-	};
+	return scalar(
+		PERCENT,
+		opts.label ?? words(`${category} share`),
+		whole ? (categorySpend(data, scope, category) / whole) * 100 : null,
+		{
+			note: opts.note ?? words(`of ${of}`)
+		}
+	);
 }
 
 export type Countable = 'transactions' | 'paychecks' | 'active_months' | 'categories';
@@ -388,13 +392,9 @@ function countValue(data: DashboardData, scope: Scope, of: Countable): number {
 }
 
 export function count(data: DashboardData, scope: Scope, of: Countable, opts: Opts = {}): Scalar {
-	return {
-		kind: 'scalar',
-		unit: COUNT,
-		label: opts.label ?? words(COUNT_LABEL[of]),
-		value: countValue(data, scope, of),
+	return scalar(COUNT, opts.label ?? words(COUNT_LABEL[of]), countValue(data, scope, of), {
 		note: opts.note
-	};
+	});
 }
 
 export type ExtremumOf = 'transaction' | 'category' | 'month';
@@ -444,19 +444,13 @@ export function extremum(
 		}
 	}
 
-	return {
-		kind: 'scalar',
-		unit: MONEY(data.currency),
-		label: opts.label ?? words(extremumLabel(mode, of)),
-		value,
+	return scalar(MONEY(data.currency), opts.label ?? words(extremumLabel(mode, of)), value, {
 		note: opts.note ?? live(name)
-	};
+	});
 }
 
-/**
- * A month against its own recent norm: the month minus the trailing average of the prior `window`
- * months with data. `null` without the history to form a norm.
- */
+/** A month against its own recent norm: the month less the trailing average of the prior `window` months
+    with data. `null` without the history to form one. */
 export function vsTypical(
 	data: DashboardData,
 	monthKey: string,
@@ -466,28 +460,21 @@ export function vsTypical(
 	const prior = priorMonths(data, monthKey, opts.window);
 	const label = opts.label ?? words(measureLabel(m));
 	if (!prior.length) {
-		return { kind: 'scalar', unit: MONEY(data.currency), label, value: null, note: opts.note };
+		return scalar(MONEY(data.currency), label, null, { note: opts.note });
 	}
 
 	const avg =
-		prior.reduce((a, k) => a + measureValue(data, { level: 'month', monthKey: k }, m), 0) /
-		prior.length;
+		sumBy(prior, (k) => measureValue(data, { level: 'month', monthKey: k }, m)) / prior.length;
 	const delta = measureValue(data, { level: 'month', monthKey }, m) - avg;
 
-	return {
-		kind: 'scalar',
-		unit: MONEY(data.currency),
-		label,
-		value: delta,
+	return scalar(MONEY(data.currency), label, delta, {
 		tone: toneOf(m, delta),
 		note: opts.note ?? live(`vs your ${money(avg)} / mo average`)
-	};
+	});
 }
 
-/**
- * A measure's level plus its change as a `delta`, against the prior year (`at` = a year, default
- * latest) or the prior month (`at` = a month key). Only the delta carries tone.
- */
+/** A measure's level plus its change as a `delta`, against the prior year (`at` = a year, default latest)
+    or the prior month (`at` = a month key). Only the delta carries tone. */
 export function change(
 	data: DashboardData,
 	m: Measure,
@@ -510,16 +497,12 @@ export function change(
 
 	const now = measureValue(data, cur, m);
 
-	return {
-		kind: 'scalar',
-		unit: MONEY(data.currency),
-		label: opts.label ?? words(measureLabel(m)),
-		value: now,
+	return scalar(MONEY(data.currency), opts.label ?? words(measureLabel(m)), now, {
 		delta: deltaOf(
 			m,
 			now,
 			measureValue(data, prev, m),
 			opts.note ? labelText(opts.note) : period === 'year' ? 'YoY' : 'MoM'
 		)
-	};
+	});
 }

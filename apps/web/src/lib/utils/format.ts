@@ -42,9 +42,8 @@ export function moneyExact(n: number | null | undefined): string {
 
 /**
  * An unsigned magnitude abbreviated to its tier: thousands as `k`, millions as `M`, one decimal until the
- * tier's tens so a label is never more than four digits wide.
- *
- * Both tiers, because a projection compounds past a million and `k` alone left the axis unreadable.
+ * tier's tens so a label is never more than four digits wide. Both tiers, because a projection compounds
+ * past a million and `k` alone left the axis unreadable.
  */
 function tiered(magnitude: number): string {
 	return magnitude >= 1e6
@@ -62,9 +61,8 @@ export function moneyCompact(n: number | null | undefined): string {
 	return Math.abs(n || 0) >= 1000 ? moneyK(n) : money(n);
 }
 
-/** The same abbreviation without the currency, for a grid of figures where a symbol per cell is noise
-    and the unit is already stated once. Rounds — pair it with `moneyExact` wherever the reader can ask
-    for the figure itself. */
+/** The same abbreviation without the currency, for a grid where a symbol per cell is noise and the unit is
+    stated once. Rounds, so pair it with `moneyExact` wherever the reader can ask for the figure. */
 export function numCompact(n: number | null | undefined): string {
 	const v = n || 0;
 	return Math.abs(v) >= 1000 ? (v < 0 ? '-' : '') + tiered(Math.abs(v)) : String(Math.round(v));
@@ -98,7 +96,7 @@ export function accountLeaf(name: string | null | undefined): string {
 }
 
 /** An account's display name. A lookup, not a computation: the API has applied the naming rule, and
-    deriving it here would put that rule in two languages. Falls back to the raw leaf. */
+    deriving it here would put that rule in two languages. */
 export function formatAccount(name: string | null | undefined): string {
 	if (!name) return '';
 
@@ -122,8 +120,8 @@ export function yearSpan(years: number[], empty = ''): string {
 	return years.length ? `${years[0]}–${years[years.length - 1]}` : empty;
 }
 
-/** An ISO date as it reads in prose, with the month named. Unparseable input is returned as it came,
-    since a date the app cannot read is still better shown than swallowed. */
+/** An ISO date as it reads in prose. Unparseable input is returned as it came: a date the app cannot read
+    is still better shown than swallowed. */
 export function dateLong(date: string | null | undefined): string {
 	const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date ?? '');
 

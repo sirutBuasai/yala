@@ -2,8 +2,7 @@
 	// Add / edit a bill payment (a transfer between your own accounts). Without `locator` it adds;
 	// with one it prefills that entry and saves an update or deletes it.
 	import { get } from 'svelte/store';
-	import type { AccountsInfo } from '$lib/data/load';
-	import { EntryForm } from '$lib/entries/entryForm.svelte';
+	import { EntryForm, type EntryFormProps } from '$lib/entries/entryForm.svelte';
 	import { formatAccount, money } from '$lib/utils/format';
 	import { lastEntryDate, lastTransferFrom, lastTransferTo, seed } from '$lib/utils/editPrefs';
 	import { problems, TEXT_MAX } from '$lib/forms/validate';
@@ -13,16 +12,7 @@
 	import Select from '$lib/forms/fields/Select.svelte';
 	import AmountInput from '$lib/ui/AmountInput.svelte';
 
-	interface Props {
-		accounts: AccountsInfo;
-		/** When set, edit that transfer; when absent, add a new one. */
-		locator?: string;
-		/** Add mode only: pre-fill the date field. */
-		presetDate?: string;
-		/** Called after a successful save or delete. */
-		onsaved: () => void;
-	}
-	let { accounts, locator, presetDate, onsaved }: Props = $props();
+	let { accounts, locator, presetDate, onsaved }: EntryFormProps = $props();
 
 	const editing = $derived(locator != null);
 

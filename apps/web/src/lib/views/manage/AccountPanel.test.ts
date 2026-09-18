@@ -6,10 +6,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
-import { setAccountDirectory } from '$lib/data/directory.svelte';
 import { live } from '$lib/data/load';
 import type { AccountInfo, AccountLists } from '$lib/data/types';
-import { makeAccounts } from '$lib/data/__fixtures__/dashboard';
+import { makeAccounts, setDirectory } from '$lib/data/__fixtures__/dashboard';
 import AccountPanel from '$lib/views/manage/AccountPanel.svelte';
 
 const KINDS = Object.fromEntries(makeAccounts().kinds.map((k) => [k.name, k])) as Record<
@@ -20,17 +19,6 @@ const KINDS = Object.fromEntries(makeAccounts().kinds.map((k) => [k.name, k])) a
 const BROKERAGE = 'Assets:Investments:Taxable:BrokerageA';
 const BANK = 'Assets:Cash:BankA';
 const CARD = 'Liabilities:CC:CardA';
-
-function directory(entries: Record<string, Partial<AccountInfo>>) {
-	setAccountDirectory(
-		Object.fromEntries(
-			Object.entries(entries).map(([account, info]) => [
-				account,
-				{ name: account.split(':').pop()!, ...info } as AccountInfo
-			])
-		)
-	);
-}
 
 /** `renamed` is the path the rename route reports back, which is the only authority on where a
     renamed account went. */
@@ -81,7 +69,7 @@ beforeEach(() => {
 
 describe('AccountPanel — a name is a field, and a rename is still a rename', () => {
 	it('renames a category by its one name', async () => {
-		directory({ 'Expenses:Grocery': { kind: 'category' } });
+		setDirectory({ 'Expenses:Grocery': { kind: 'category' } });
 		const fetchSpy = stubFetch();
 		panel('Expenses:Grocery');
 
@@ -96,7 +84,7 @@ describe('AccountPanel — a name is a field, and a rename is still a rename', (
 	});
 
 	it('renames a bank by its institution, which is its whole name', async () => {
-		directory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
+		setDirectory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
 		const fetchSpy = stubFetch();
 		panel(BANK);
 
@@ -111,7 +99,7 @@ describe('AccountPanel — a name is a field, and a rename is still a rename', (
 	});
 
 	it('renames a card by its product half, leaving the institution alone', async () => {
-		directory({
+		setDirectory({
 			[CARD]: {
 				kind: 'card',
 				institution_name: 'Bank of A',
@@ -133,7 +121,7 @@ describe('AccountPanel — a name is a field, and a rename is still a rename', (
 	});
 
 	it('shows each part as it was typed, not the shortened display name', () => {
-		directory({
+		setDirectory({
 			[CARD]: {
 				kind: 'card',
 				name: 'BoE Cash Rewards',
@@ -151,7 +139,7 @@ describe('AccountPanel — a name is a field, and a rename is still a rename', (
 	});
 
 	it('names the other accounts held at the same institution, which a rename carries along', () => {
-		directory({
+		setDirectory({
 			[BANK]: { kind: 'bank', institution_name: 'Bank of A', name: 'Bank A' },
 			[CARD]: { kind: 'card', institution_name: 'Bank of A', name: 'Card A' }
 		});
@@ -163,7 +151,7 @@ describe('AccountPanel — a name is a field, and a rename is still a rename', (
 	});
 
 	it('edits the short forms without touching the account path', async () => {
-		directory({
+		setDirectory({
 			[BANK]: { kind: 'bank', institution_name: 'Bank of A', institution_alias: 'BoA' }
 		});
 		const fetchSpy = stubFetch();
@@ -181,7 +169,7 @@ describe('AccountPanel — a name is a field, and a rename is still a rename', (
 	});
 
 	it('offers a bank no account short form, having no account half to shorten', () => {
-		directory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
+		setDirectory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
 		stubFetch();
 		panel(BANK);
 
@@ -190,7 +178,7 @@ describe('AccountPanel — a name is a field, and a rename is still a rename', (
 	});
 
 	it('offers a card both short forms', () => {
-		directory({ [CARD]: { kind: 'card', institution_name: 'Bank of A' } });
+		setDirectory({ [CARD]: { kind: 'card', institution_name: 'Bank of A' } });
 		stubFetch();
 		panel(CARD);
 
@@ -198,7 +186,7 @@ describe('AccountPanel — a name is a field, and a rename is still a rename', (
 	});
 
 	it('moves an investment between tax tiers, which is a rename of its path', async () => {
-		directory({
+		setDirectory({
 			[BROKERAGE]: {
 				kind: 'investment',
 				tier: 'Taxable',
@@ -222,7 +210,7 @@ describe('AccountPanel — a name is a field, and a rename is still a rename', (
 
 describe('AccountPanel — one Save, several writes, in one order', () => {
 	it('sends the short form and the sweep together, each to its own endpoint', async () => {
-		directory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
+		setDirectory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
 		const fetchSpy = stubFetch();
 		panel(BANK, { destinations: ['Assets:Cash:BankB'] });
 
@@ -244,7 +232,7 @@ describe('AccountPanel — one Save, several writes, in one order', () => {
 	// A meta edit addresses the account by its CURRENT path, so a rename in the same Save has to go
 	// last or the edit lands on a path that no longer exists.
 	it('renames last, after the edits that address the old path', async () => {
-		directory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
+		setDirectory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
 		const fetchSpy = stubFetch();
 		panel(BANK);
 
@@ -259,7 +247,7 @@ describe('AccountPanel — one Save, several writes, in one order', () => {
 	// Renaming moves the account to a new path, so the selection has to follow it or the view is left
 	// pointing at an account that no longer exists. Where it went is the API's answer, never a guess.
 	it('reports where a rename moved the account, before the dashboard reloads', async () => {
-		directory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
+		setDirectory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
 		stubFetch(0, 'Assets:Cash:BankZ');
 		const onrenamed = vi.fn();
 		const onchanged = vi.fn();
@@ -275,7 +263,7 @@ describe('AccountPanel — one Save, several writes, in one order', () => {
 	});
 
 	it('leaves the selection alone when nothing was renamed', async () => {
-		directory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
+		setDirectory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
 		stubFetch();
 		const onrenamed = vi.fn();
 		const onchanged = vi.fn();
@@ -289,7 +277,7 @@ describe('AccountPanel — one Save, several writes, in one order', () => {
 	});
 
 	it('cannot be saved until something differs', () => {
-		directory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
+		setDirectory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
 		stubFetch();
 		panel(BANK);
 
@@ -297,7 +285,7 @@ describe('AccountPanel — one Save, several writes, in one order', () => {
 	});
 
 	it('sends nothing for a field that was only read', async () => {
-		directory({
+		setDirectory({
 			[BANK]: { kind: 'bank', institution_name: 'Bank of A', institution_alias: 'BoA' }
 		});
 		const fetchSpy = stubFetch();
@@ -310,7 +298,7 @@ describe('AccountPanel — one Save, several writes, in one order', () => {
 	});
 
 	it('puts back what was typed when the edit is discarded', async () => {
-		directory({
+		setDirectory({
 			[BANK]: { kind: 'bank', institution_name: 'Bank of A', institution_alias: 'BoA' }
 		});
 		stubFetch();
@@ -325,7 +313,7 @@ describe('AccountPanel — one Save, several writes, in one order', () => {
 
 describe('AccountPanel — contribution options are rows, and editing one is a rename', () => {
 	const investment = (labels: string[]) => {
-		directory({
+		setDirectory({
 			[BROKERAGE]: {
 				kind: 'investment',
 				tier: 'Taxable',
@@ -412,7 +400,7 @@ describe('AccountPanel — contribution options are rows, and editing one is a r
 
 describe('AccountPanel — the end of a life', () => {
 	it('offers a close, which happens in its own overlay', async () => {
-		directory({ [CARD]: { kind: 'card', institution_name: 'Bank of A' } });
+		setDirectory({ [CARD]: { kind: 'card', institution_name: 'Bank of A' } });
 		stubFetch();
 		panel(CARD);
 
@@ -423,7 +411,7 @@ describe('AccountPanel — the end of a life', () => {
 	});
 
 	it('offers a closed account a reopen instead, and nothing to link', async () => {
-		directory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A', closed: true } });
+		setDirectory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A', closed: true } });
 		const fetchSpy = stubFetch();
 		panel(BANK, { destinations: ['Assets:Cash:BankB'] });
 

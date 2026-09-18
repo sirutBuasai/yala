@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from yala.catalog import setting_fields
 from yala.ledger.settings import SETTINGS_BY_KEY
 from yala.routes.common import ledger, ok, sink
-from yala.routes.errors import api_errors
+from yala.routes.errors import api_errors, invalid
 
 router = APIRouter()
 
@@ -40,7 +40,7 @@ def post_setting(body: SettingIn) -> dict:
     if spec is None:
         # A bad key is a malformed request, not a missing resource: the client sent a name no
         # version of this app defines, so 404 would suggest a setting that could exist.
-        raise HTTPException(status_code=422, detail=f"unknown setting: {body.key!r}")
+        raise invalid(f"unknown setting: {body.key!r}")
 
     with api_errors():
         stored = sink().set_setting(body.key, body.value)

@@ -3,9 +3,10 @@
 	// composition changes. Series stack in the order given, first at the bottom.
 	import { area, line } from 'd3-shape';
 	import { esc } from '$lib/utils/format';
-	import { formatUnit, formatUnitExact, type Unit } from '$lib/data/primitives';
+	import { type Unit } from '$lib/data/primitives';
+	import { chartFormat } from '$lib/charts/format';
 	import { showTip, hideTip, withAlt } from '$lib/utils/tooltip';
-	import { labelAnchor, labelIndices, moneyAxisFormat, plotSize } from '$lib/charts/axis';
+	import { labelAnchor, labelIndices, plotSize } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import Legend from '$lib/charts/Legend.svelte';
 	import { chartLabel } from '$lib/charts/aria';
@@ -61,8 +62,7 @@
 	// Quarters of the stacked total, which read cleanly for a share chart and reasonably for absolutes.
 	const ticks = $derived([0, 0.25, 0.5, 0.75, 1].map((f) => peak * f));
 
-	const moneyTick = $derived(moneyAxisFormat(ticks));
-	const tickFmt = (t: number) => (unit.kind === 'money' ? moneyTick(t) : formatUnit(t, unit));
+	const f = $derived(chartFormat(unit, ticks));
 
 	const paths = $derived(
 		stacks.map(({ band, lower, upper }) => {
@@ -80,7 +80,7 @@
 	const shown = $derived(new Set(labelIndices(n, iw, labels)));
 
 	const bandValue = (band: Band, i: number) =>
-		withAlt(formatUnitExact(band.values[i] ?? 0, unit), band.alt?.[i], altUnit);
+		withAlt(f.exact(band.values[i] ?? 0), band.alt?.[i], altUnit);
 
 	/** The point being hovered, which marks each band's boundary as well as filling the tooltip. */
 	let at = $state<number | null>(null);
@@ -108,7 +108,7 @@
 		<g class="axis" transform={`translate(${m.l},${m.t})`}>
 			{#each ticks as t (t)}
 				<line class="gridline" x1="0" y1={y(t)} x2={iw} y2={y(t)} />
-				<text x={-8} y={y(t) + 4} text-anchor="end">{tickFmt(t)}</text>
+				<text x={-8} y={y(t) + 4} text-anchor="end">{f.tick(t)}</text>
 			{/each}
 
 			{#each paths as p (p.band.name)}

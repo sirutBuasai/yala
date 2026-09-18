@@ -8,7 +8,7 @@
 	import type { Scope } from '$lib/data/scope';
 	import { pendingRows } from '$lib/data/pending';
 	import { latestMonthKey } from '$lib/data/scope';
-	import { MONTHS } from '$lib/utils/format';
+	import { dateShort } from '$lib/utils/format';
 	import { matching, Pref } from '$lib/utils/persist.svelte';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import Board from '$lib/layout/grid/Board.svelte';
@@ -76,11 +76,7 @@
 		modals.add();
 	}
 
-	const addTitle = $derived.by(() => {
-		if (!addDate) return 'Add entry';
-		const [, m, d] = addDate.split('-');
-		return `Add entry · ${MONTHS[Number(m) - 1]} ${Number(d)}`;
-	});
+	const addTitle = $derived(addDate ? `Add entry · ${dateShort(addDate)}` : 'Add entry');
 </script>
 
 <ViewHeader title="Home">

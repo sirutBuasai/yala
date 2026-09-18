@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import NamedTuple
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from yala.catalog import account_lists
@@ -20,6 +20,7 @@ from yala.routes.accounts.shared import (
     TierName,
     carries,
     labels_meta,
+    require_applies,
 )
 from yala.routes.common import (
     MAX_LEGS,
@@ -34,7 +35,7 @@ from yala.routes.common import (
     valid_segment,
     valid_typed_name,
 )
-from yala.routes.errors import api_errors
+from yala.routes.errors import api_errors, invalid
 from yala.sink import FileLedgerSink
 
 router = APIRouter()
@@ -42,15 +43,15 @@ router = APIRouter()
 
 @router.get("/api/accounts")
 def get_accounts() -> dict:
-    # One implementation, shared with the snapshot (see `yala.catalog.account_lists`): the frontend
-    # reads whichever source is up and must not be able to tell them apart.
+    # Shared with the snapshot: the frontend reads whichever source is up and must not be able to
+    # tell them apart.
     return account_lists(ledger()).model_dump(mode="json")
 
 
 @router.get("/api/investment/value")
 def get_investment_value(account: str, date: str | None = None) -> dict:
-    """USD value of an account's holdings as of ``date`` (today if omitted); 422 if a held ticker
-    has no price by then.
+    """USD value of an account's holdings as of ``date``, today if omitted. Refused when a held
+    ticker has no price by then.
 
     Dated because a retirement's legs must sum to the value *on the day it is dated*, so a form
     offering a past date has to ask for the figure that applies then.
@@ -65,12 +66,11 @@ def get_investment_value(account: str, date: str | None = None) -> dict:
 
 
 class NamedAccountIn(BaseModel):
-    """The naming half of any request that opens an account. Every form sends each part of the name
-    as a person writes it and the server composes the path from them, recording the parts, so the
-    display name and the stored name cannot disagree and either can be edited on its own later.
+    """The naming half of any request that opens an account.
 
-    ``name`` carries the whole name for a kind not named after where it is held; the other fields
-    are the same thing in parts.
+    Every form sends each part of the name as a person writes it and the server composes the path
+    from them, recording the parts, so the display name and the stored name cannot disagree.
+    ``name`` carries the whole name for a kind not named after where it is held.
     """
 
     name: OptionalText = None
@@ -81,8 +81,9 @@ class NamedAccountIn(BaseModel):
 
     @property
     def naming_meta(self) -> dict[str, str]:
-        """The name parts to record, dropping the ones the request left unset. Field name and meta
-        key are the same word, so nothing here has to translate between them."""
+        """The name parts to record, dropping the ones left unset. Field name and meta key are the
+        same word, so nothing here translates between them.
+        """
         typed = {field: getattr(self, field) for field in NAMING_FIELDS}
 
         return {field: valid_typed_name(value, field) for field, value in typed.items() if value}
@@ -103,7 +104,7 @@ class NamedAccountIn(BaseModel):
         if self.name:
             return valid_composed_leaf(self.name, "name")
 
-        raise HTTPException(status_code=422, detail="give either a name or an institution")
+        raise invalid("give either a name or an institution")
 
 
 class AccountIn(NamedAccountIn):
@@ -126,43 +127,36 @@ class _OpenPlan(NamedTuple):
 
 
 def _reject_inapplicable(body: AccountIn, kind: Kind) -> None:
-    """Report a field the named kind of account cannot carry.
-
-    Sent anyway, it is a mistake worth naming rather than dropping: the caller asked for something
-    the account it is opening has no room for.
-    """
-    unusable = {
-        "tier": not kind.tiered,
-        "employer": not kind.scopable,
-        "labels": not kind.labelled,
-        **{field: not carries(kind, field) for field in NAMING_FIELDS},
+    """Report a field the named kind of account cannot carry."""
+    applies = {
+        "tier": kind.tiered,
+        "employer": kind.scopable,
+        "labels": kind.labelled,
+        **{field: carries(kind, field) for field in NAMING_FIELDS},
     }
-    for field, forbidden in unusable.items():
-        if forbidden and field in body.model_fields_set:
-            raise HTTPException(
-                status_code=422, detail=f"{field} does not apply to a {kind.name} account"
-            )
+    for field, applicable in applies.items():
+        if field in body.model_fields_set:
+            require_applies(kind, field, applicable)
 
 
 def _reject_declared(led: Ledger, account: str) -> None:
     """Refuse a name the ledger already declares.
 
     Beancount rejects a second ``open``, so without this the strict reload fails and the caller gets
-    a parser message instead of the one thing it needs to know — that a closed account is reopened
-    rather than opened again.
+    a parser message instead of the one thing it needs to know: that a closed account is reopened.
     """
     if account not in led.declared_accounts():
         return
 
     reopen = "" if led.is_open(account) else "; reopen it with /api/account/reopen"
-    raise HTTPException(status_code=422, detail=f"{account} already exists{reopen}")
+    raise invalid(f"{account} already exists{reopen}")
 
 
 def _inherited_meta(led: Ledger, institution: str | None) -> dict[str, str]:
     """The shared name parts an account joining ``institution`` takes from the ones already there.
 
     A short form belongs to the institution, not to one account held at it, so a new account that
-    does not restate it would leave one institution reading two ways.
+    did not inherit it would leave one institution reading two ways.
     """
     if not institution:
         return {}
@@ -186,7 +180,7 @@ def _open_plan(body: AccountIn) -> _OpenPlan:
     _reject_inapplicable(body, kind)
 
     if kind.tiered and body.tier is None:
-        raise HTTPException(status_code=422, detail=f"tier is required for a {kind.name} account")
+        raise invalid(f"tier is required for a {kind.name} account")
 
     account = account_path(kind, body.stem(), body.tier)
 
@@ -213,8 +207,9 @@ def _open_plan(body: AccountIn) -> _OpenPlan:
 
 @router.post("/api/account")
 def post_account(body: AccountIn) -> dict:
-    """Open an account. The response carries the resolved display name so a form can confirm what
-    the account will be called rather than reimplementing the naming rule."""
+    """Open an account. The response carries the resolved display name, so a form can confirm what
+    the account will be called without reimplementing the naming rule.
+    """
     plan = _open_plan(body)
 
     with api_errors():

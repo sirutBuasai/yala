@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { fitFontSize } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
-	import { money, moneyExact, moneyK, esc } from '$lib/utils/format';
+	import { esc } from '$lib/utils/format';
+	import { chartFormat } from '$lib/charts/format';
+	import { type Unit } from '$lib/data/primitives';
 	import { clamp, sumBy } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Empty from '$lib/ui/Empty.svelte';
@@ -14,10 +16,14 @@
 	}
 	interface Props {
 		items: Item[];
+		/** The unit every row is read in. */
+		unit: Unit;
 		/** Total for tooltip percentages; defaults to the sum of values. */
 		total?: number;
 	}
-	let { items, total }: Props = $props();
+	let { items, unit, total }: Props = $props();
+
+	const f = $derived(chartFormat(unit));
 
 	const rows = $derived([...items].sort((a, b) => b.value - a.value));
 	const sum = $derived(total ?? sumBy(rows, (r) => r.value));
@@ -81,12 +87,12 @@
 					role="presentation"
 					onmousemove={(e) =>
 						showTip(
-							`<b>${esc(d.label)}</b><br>${moneyExact(d.value)} · ${sum ? Math.round((d.value / sum) * 100) : 0}%`,
+							`<b>${esc(d.label)}</b><br>${f.exact(d.value)} · ${sum ? Math.round((d.value / sum) * 100) : 0}%`,
 							e
 						)}
 					onmouseleave={hideTip}
 				/>
-				<text class="vlabel" x={m.l + bw + 8} y={yy + rowH / 2 + 4}>{moneyK(d.value)}</text>
+				<text class="vlabel" x={m.l + bw + 8} y={yy + rowH / 2 + 4}>{f.compact(d.value)}</text>
 			{/each}
 		</svg>
 	{:else}

@@ -6,7 +6,7 @@ own business (:data:`yala.ledger.accounts.KINDS`).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 
 from yala.ledger import Ledger
@@ -15,7 +15,7 @@ from yala.ledger.constants import SWEEP_META
 from yala.ledger.sweep import resolve_terminal, sweep_edges
 from yala.routes.accounts.shared import open_destination, resolve
 from yala.routes.common import ledger, ok, sink
-from yala.routes.errors import api_errors
+from yala.routes.errors import api_errors, invalid
 
 router = APIRouter()
 
@@ -30,9 +30,7 @@ def _valid_sweep_source(account: str) -> str:
     money sitting in the wrong place, and an investment's balance is the point of holding it."""
     _, kind = resolve(account)
     if not kind.sweeps:
-        raise HTTPException(
-            status_code=422, detail=f"only a cash account can be a passthrough: {account!r}"
-        )
+        raise invalid(f"only a cash account can be a passthrough: {account!r}")
     return account
 
 
@@ -40,10 +38,7 @@ def _valid_sweep_dest(led: Ledger, dest: str, account: str) -> str:
     """A sweep lands where money is meant to sit: another cash account, or an investment."""
     kind = kind_of(dest)
     if kind is None or not kind.sweep_target:
-        raise HTTPException(
-            status_code=422,
-            detail=f"a sweep destination must be a cash or investment account: {dest!r}",
-        )
+        raise invalid(f"a sweep destination must be a cash or investment account: {dest!r}")
     return open_destination(led, dest, account)
 
 
@@ -66,7 +61,7 @@ def post_account_sweep(body: SweepIn) -> dict:
     try:
         resolve_terminal(edges, account)
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise invalid(str(e))
 
     with api_errors():
         sink().set_account_meta(account, SWEEP_META, dest)

@@ -1,6 +1,5 @@
-// The figures the ledger can't derive, as one object. Every target and projection reads them through
-// here rather than off `data.settings`, which is what lets a preview be drawn against values that have
-// not been written yet.
+// The figures the ledger can't derive, as one object. Read through here rather than off `data.settings`,
+// which is what lets a preview be drawn against values not written yet.
 
 import type { DashboardData } from '$lib/data/types';
 
@@ -20,8 +19,8 @@ export interface Assumptions {
 	birthYear: number | null;
 	/** Yearly spending to plan against. Null falls back to what the ledger logged. */
 	plannedSpending: number | null;
-	/** Yearly investing beyond payroll contributions, which are always invested and so are not in this
-	    figure. Not held to what is left over after spending. Null falls back to the ledger's leftover. */
+	/** Yearly investing beyond payroll contributions, which are always invested and so excluded here. Not
+	    held to what is left after spending. Null falls back to the ledger's leftover. */
 	outOfPocket: number | null;
 }
 
@@ -57,8 +56,8 @@ export function assumptionsOf(data: DashboardData): Assumptions {
 }
 
 /**
- * The return every projection actually compounds at: the nominal return discounted by inflation, so a balance
- * and the spending it funds are both in today's purchasing power. Returned as a percentage.
+ * The rate every projection compounds at: the nominal return discounted by inflation, so a balance and the
+ * spending it funds are both in today's purchasing power. A percentage.
  *
  * The Fisher relation, `(1+real) = (1+nominal)/(1+inflation)`, NOT `nominal - inflation`: the shortcut
  * overstates the real rate, which compounds to a badly wrong balance over a lifetime horizon.
@@ -67,8 +66,8 @@ export function realRate(a: Assumptions): number {
 	return ((1 + a.nominalReturn / 100) / (1 + a.inflation / 100) - 1) * 100;
 }
 
-/** The assumption a setting feeds, for a form that holds its values by the ledger's key. Derived rather
-    than mapped: the two spellings differ only in casing, so a table of them would fall out of step. */
+/** The assumption a setting feeds, for a form holding its values by the ledger's key. Derived rather than
+    mapped: the two spellings differ only in casing, so a table of them would fall out of step. */
 export function assumptionKey(settingKey: string): keyof Assumptions {
 	return settingKey.replace(/-(\w)/g, (_, c: string) => c.toUpperCase()) as keyof Assumptions;
 }

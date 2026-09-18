@@ -5,21 +5,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent } from '@testing-library/dom';
-import { setAccountDirectory } from '$lib/data/directory.svelte';
 import type { AccountInfo } from '$lib/data/types';
+import { setDirectory } from '$lib/data/__fixtures__/dashboard';
 import AccountIndex from '$lib/views/manage/AccountIndex.svelte';
 
 const KINDS = ['bank', 'card', 'investment', 'category', 'employer', 'deduction'];
 
 function index(entries: Record<string, Partial<AccountInfo>>, selected: string | null = null) {
-	setAccountDirectory(
-		Object.fromEntries(
-			Object.entries(entries).map(([account, info]) => [
-				account,
-				{ name: account.split(':').pop()!, ...info } as AccountInfo
-			])
-		)
-	);
+	setDirectory(entries);
 	const onselect = vi.fn();
 	render(AccountIndex, { props: { kindNames: KINDS, selected, onselect } });
 	return onselect;

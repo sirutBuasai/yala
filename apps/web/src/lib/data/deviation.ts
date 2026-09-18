@@ -4,6 +4,7 @@ import type { DashboardData } from '$lib/data/types';
 import type { Deviation, DeviationRow } from './primitives';
 import { MONEY } from './primitives';
 import { priorMonths } from './scope';
+import { sum } from '$lib/utils/num';
 
 /**
  * Per-category spend for one month against the trailing months before it: the average as `base`, the
@@ -32,7 +33,7 @@ export function categoryDeviation(data: DashboardData, monthKey: string, window 
 			return {
 				label: cat,
 				value: spendOf(monthKey, cat),
-				base: history.reduce((a, b) => a + b, 0) / history.length,
+				base: sum(history) / history.length,
 				lo: Math.min(...history),
 				hi: Math.max(...history)
 			};

@@ -26,6 +26,7 @@ from yala.ledger.constants import (
     LABELS_META,
     SALARY,
     SWEEP_META,
+    meta_str,
 )
 from yala.ledger.naming import compose_stem
 from yala.ledger.paths import leaf
@@ -177,19 +178,17 @@ def employer_scope(meta: Mapping[str, object] | None) -> str | None:
 
     Optional by design: a shared deduction outlives any one job, and so does a retirement plan.
     """
-    value = (meta or {}).get(EMPLOYER_META)
-    return str(value) if value else None
+    return meta_str(meta, EMPLOYER_META)
 
 
 def labels_of(meta: Mapping[str, object] | None) -> list[str]:
     """The contribution labels an account offers, from its comma-joined ``labels`` meta."""
-    raw = (meta or {}).get(LABELS_META) or ""
-    return [s.strip() for s in str(raw).split(",") if s.strip()]
+    raw = meta_str(meta, LABELS_META) or ""
+    return [s.strip() for s in raw.split(",") if s.strip()]
 
 
 def sweep_destination(meta: Mapping[str, object] | None) -> str | None:
-    value = (meta or {}).get(SWEEP_META)
-    return str(value) if value else None
+    return meta_str(meta, SWEEP_META)
 
 
 # --- lifecycle facts ---

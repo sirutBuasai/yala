@@ -7,10 +7,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
-import { setAccountDirectory } from '$lib/data/directory.svelte';
 import { live } from '$lib/data/load';
 import type { AccountInfo, AccountLists } from '$lib/data/types';
-import { makeAccounts } from '$lib/data/__fixtures__/dashboard';
+import { makeAccounts, setDirectory } from '$lib/data/__fixtures__/dashboard';
 import CloseAccount from '$lib/views/manage/CloseAccount.svelte';
 
 const KINDS = Object.fromEntries(makeAccounts().kinds.map((k) => [k.name, k])) as Record<
@@ -21,17 +20,6 @@ const KINDS = Object.fromEntries(makeAccounts().kinds.map((k) => [k.name, k])) a
 const BROKERAGE = 'Assets:Investments:Taxable:BrokerageA';
 const BANK = 'Assets:Cash:BankA';
 const CARD = 'Liabilities:CC:CardA';
-
-function directory(entries: Record<string, Partial<AccountInfo>>) {
-	setAccountDirectory(
-		Object.fromEntries(
-			Object.entries(entries).map(([account, info]) => [
-				account,
-				{ name: account.split(':').pop()!, ...info } as AccountInfo
-			])
-		)
-	);
-}
 
 /** A GET for the account value plus a POST for the write; both go through the same fetch. */
 function stubFetch(value = 0) {
@@ -88,7 +76,7 @@ describe('CloseAccount — how many questions the kind needs', () => {
 	// A paid-off card moves nothing and links to nothing, so there is nothing to ask: the flow opens on
 	// the review. The date is a row there, as it is when opening an account.
 	it('asks a paid-off card nothing at all', () => {
-		directory({ [CARD]: { kind: 'card' } });
+		setDirectory({ [CARD]: { kind: 'card' } });
 		stubFetch();
 		flow(CARD, 'card');
 
@@ -106,7 +94,7 @@ describe('CloseAccount — how many questions the kind needs', () => {
 	] as const)(
 		'asks a %s where the money goes, one account by default',
 		async (kind, account, field) => {
-			directory({ [account]: { kind, tier: 'Taxable' } });
+			setDirectory({ [account]: { kind, tier: 'Taxable' } });
 			stubFetch(1500);
 			flow(account, kind, [CARD]);
 			await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
@@ -132,7 +120,7 @@ describe('CloseAccount — how many questions the kind needs', () => {
 
 	// An account with nothing in it is never asked where its nothing should go.
 	it('asks an empty account nothing, and sends nothing to move', async () => {
-		directory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
+		setDirectory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
 		const fetchSpy = stubFetch(0);
 		flow(BROKERAGE, 'investment', [BANK]);
 		await waitFor(() => expect(screen.getByText('Close it?')).toBeInTheDocument());
@@ -148,7 +136,7 @@ describe('CloseAccount — how many questions the kind needs', () => {
 	// where it went, and a card cannot move money — so the flow says so instead of walking to a button
 	// that will fail.
 	it('refuses a card that still owes, naming what to do instead', async () => {
-		directory({ [CARD]: { kind: 'card' } });
+		setDirectory({ [CARD]: { kind: 'card' } });
 		const fetchSpy = stubFetch();
 		flow(CARD, 'card', [], { balance: -1204.18 });
 
@@ -172,7 +160,7 @@ describe('CloseAccount — how many questions the kind needs', () => {
 
 describe('CloseAccount — the review is the confirmation', () => {
 	it('writes nothing while the review is only being read', async () => {
-		directory({ [BANK]: { kind: 'bank' } });
+		setDirectory({ [BANK]: { kind: 'bank' } });
 		const fetchSpy = stubFetch(500);
 		flow(BANK, 'bank', ['Assets:Cash:BankB']);
 		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
@@ -186,7 +174,7 @@ describe('CloseAccount — the review is the confirmation', () => {
 	});
 
 	it('closes a card, which holds nothing to move', async () => {
-		directory({ [CARD]: { kind: 'card' } });
+		setDirectory({ [CARD]: { kind: 'card' } });
 		const fetchSpy = stubFetch();
 		const onclosed = flow(CARD, 'card');
 
@@ -200,7 +188,7 @@ describe('CloseAccount — the review is the confirmation', () => {
 	// Said in prose, not as a row: it is the same sentence on every close, so it is not an answer
 	// anyone reviews — it is the reassurance that closing is not deleting.
 	it('says what is kept, so closing never reads as deleting', async () => {
-		directory({ [CARD]: { kind: 'card' } });
+		setDirectory({ [CARD]: { kind: 'card' } });
 		stubFetch();
 		flow(CARD, 'card');
 
@@ -212,7 +200,7 @@ describe('CloseAccount — the review is the confirmation', () => {
 
 describe('CloseAccount — where the money goes', () => {
 	it('refuses to leave the question with no destination picked', async () => {
-		directory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
+		setDirectory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
 		const fetchSpy = stubFetch(1500);
 		flow(BROKERAGE, 'investment', [BANK]);
 		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
@@ -228,7 +216,7 @@ describe('CloseAccount — where the money goes', () => {
 
 	// A bank's whole balance goes as a `destination`, which is what its route takes.
 	it('sends a bank one destination for the lot', async () => {
-		directory({ [BANK]: { kind: 'bank' } });
+		setDirectory({ [BANK]: { kind: 'bank' } });
 		const fetchSpy = stubFetch(500);
 		flow(BANK, 'bank', ['Assets:Cash:BankB']);
 		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
@@ -245,7 +233,7 @@ describe('CloseAccount — where the money goes', () => {
 	// An investment's route takes no destination, so "all to one account" is one leg for the whole
 	// value — the same act, in the only shape the API accepts.
 	it('sends an investment one leg for the lot', async () => {
-		directory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
+		setDirectory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
 		const fetchSpy = stubFetch(1500);
 		flow(BROKERAGE, 'investment', [BANK]);
 		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
@@ -263,7 +251,7 @@ describe('CloseAccount — where the money goes', () => {
 	});
 
 	it('refuses parts that do not add up to what it holds', async () => {
-		directory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
+		setDirectory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
 		stubFetch(1500);
 		flow(BROKERAGE, 'investment', [BANK]);
 		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
@@ -279,7 +267,7 @@ describe('CloseAccount — where the money goes', () => {
 	});
 
 	it('divides across several when asked to', async () => {
-		directory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
+		setDirectory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
 		const fetchSpy = stubFetch(1500);
 		flow(BROKERAGE, 'investment', [BANK, CARD]);
 		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
@@ -326,7 +314,7 @@ describe('CloseAccount — an employer decides about its linked accounts', () =>
 	function employer() {
 		// The display name reads as words while the `employer` meta stores the leaf, which is the pair
 		// the flow has to match on. A name that happened to equal its own leaf would hide that.
-		directory({
+		setDirectory({
 			[EMPLOYER]: { kind: 'employer', name: 'Employer 1' },
 			[DEDUCTION]: { kind: 'deduction', name: 'Parking', employer: 'Employer1' },
 			[PLAN]: { kind: 'investment', name: 'Employer 401k', employer: 'Employer1' }
@@ -377,7 +365,7 @@ describe('CloseAccount — an employer decides about its linked accounts', () =>
 	});
 
 	it('asks no such question for a kind nothing is linked to', () => {
-		directory({ 'Expenses:Grocery': { kind: 'category' } });
+		setDirectory({ 'Expenses:Grocery': { kind: 'category' } });
 		stubFetch();
 		flow('Expenses:Grocery', 'category');
 

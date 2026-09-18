@@ -1,15 +1,10 @@
 <script lang="ts">
 	import { line, area } from 'd3-shape';
-	import {
-		moneyYScale,
-		logYScale,
-		labelAnchor,
-		labelIndices,
-		moneyAxisFormat,
-		plotSize
-	} from '$lib/charts/axis';
+	import { moneyYScale, logYScale, labelAnchor, labelIndices, plotSize } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
-	import { money, moneyExact, esc } from '$lib/utils/format';
+	import { esc } from '$lib/utils/format';
+	import { chartFormat } from '$lib/charts/format';
+	import { type Unit } from '$lib/data/primitives';
 	import { clamp } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Legend from '$lib/charts/Legend.svelte';
@@ -27,8 +22,8 @@
 	interface Props {
 		labels: string[];
 		series: Series[];
-		/** Format the value axis + tooltip as percentages instead of money. */
-		percent?: boolean;
+		/** The unit every series is read in, which decides how the axis, labels and tooltips word it. */
+		unit: Unit;
 		/** Log-scale the value axis — for series spanning orders of magnitude. */
 		log?: boolean;
 		/** Label each line at its right end instead of using a legend. */
@@ -38,14 +33,7 @@
 		    figure. */
 		ceiling?: number;
 	}
-	let {
-		labels,
-		series,
-		percent = false,
-		log = false,
-		endLabels = false,
-		ceiling
-	}: Props = $props();
+	let { labels, series, unit, log = false, endLabels = false, ceiling }: Props = $props();
 
 	/** What is drawn: the readings, held to the ceiling. Everything the reader is TOLD comes off `series`,
 	    so the frame narrows the view without misreporting a figure. */
@@ -80,11 +68,9 @@
 	// A log axis can't place zero or negatives, so those points break the line instead.
 	const plottable = (v: number | null): v is number => v != null && (!log || v > 0);
 
-	const fmt = (v: number) => (percent ? `${Math.round(v)}%` : money(v));
-	// The hover carries the cents the end label rounds away.
-	const tipFmt = (v: number) => (percent ? `${Math.round(v)}%` : moneyExact(v));
-	const moneyTick = $derived(moneyAxisFormat(ticks));
-	const tickFmt = (v: number) => (percent ? `${v}%` : moneyTick(v));
+	const f = $derived(chartFormat(unit, ticks));
+	// An end label has the gutter to print the figure in full; the hover carries the cents it rounds away.
+	const fmt = (v: number) => f.plain(v);
 
 	const paths = $derived(
 		plotted.map((s) => {
@@ -148,7 +134,7 @@
 			.filter((s) => s.values[i] != null)
 			// Largest first, so a many-line tooltip reads top-down by magnitude.
 			.sort((a, b) => (b.values[i] as number) - (a.values[i] as number))
-			.map((s) => `${esc(s.name)}: ${tipFmt(s.values[i] as number)}`)
+			.map((s) => `${esc(s.name)}: ${f.exact(s.values[i] as number)}`)
 			.join('<br>');
 		showTip(`<b>${esc(labels[i])}</b><br>${lines}`, e);
 	}
@@ -179,7 +165,7 @@
 		<g class="axis" transform="translate({m.l},{m.t})">
 			{#each ticks as t (t)}
 				<line class="gridline" x1={0} x2={iw} y1={y(t)} y2={y(t)} />
-				<text x={-8} y={y(t) + 4} text-anchor="end">{tickFmt(t)}</text>
+				<text x={-8} y={y(t) + 4} text-anchor="end">{f.tick(t)}</text>
 			{/each}
 
 			{#each plotted as s, si (s.name)}

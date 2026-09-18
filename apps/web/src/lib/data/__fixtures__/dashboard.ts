@@ -1,11 +1,13 @@
 // A small, valid DashboardData factory for unit tests. Returns a fresh object
 // each call so tests can mutate freely.
 import type {
+	AccountInfo,
 	AccountLists,
 	DashboardData,
 	MonthMatrixRow,
 	NetWorthSnapshot
 } from '$lib/data/types';
+import { setAccountDirectory } from '$lib/data/directory.svelte';
 
 /** Every capability flag on a kind, so adding one to the contract is a single-line change here. */
 const KIND_FLAGS = [
@@ -48,6 +50,19 @@ const KINDS: AccountLists['kinds'] = Object.entries(KIND_TABLE).map(([name, { pr
 		boolean
 	>)
 }));
+
+/** Publish an account directory for a component test, each entry's display name defaulting to its
+    leaf. Shared, so a field added to `AccountInfo` is filled in one place. */
+export function setDirectory(entries: Record<string, Partial<AccountInfo>>): void {
+	setAccountDirectory(
+		Object.fromEntries(
+			Object.entries(entries).map(([account, info]) => [
+				account,
+				{ name: account.split(':').pop()!, ...info } as AccountInfo
+			])
+		)
+	);
+}
 
 /** The pickable account sets, as the API sends them — a factory so the shape is declared once. */
 export function makeAccounts(over: Partial<AccountLists> = {}): AccountLists {

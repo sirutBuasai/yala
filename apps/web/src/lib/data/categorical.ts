@@ -2,6 +2,7 @@
 
 import type { Categorical, CategoricalPoint, Unit } from './primitives';
 import { MONEY } from './primitives';
+import { sumBy } from '$lib/utils/num';
 
 export interface Amount {
 	category: string;
@@ -17,7 +18,7 @@ export function rollup(points: CategoricalPoint[], limit = 10): CategoricalPoint
 	if (sorted.length <= limit) return sorted;
 
 	const head = sorted.slice(0, limit - 1);
-	const rest = sorted.slice(limit - 1).reduce((a, p) => a + p.value, 0);
+	const rest = sumBy(sorted.slice(limit - 1), (p) => p.value);
 
 	return [...head, { key: 'Other', value: rest }];
 }

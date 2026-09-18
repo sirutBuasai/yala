@@ -12,7 +12,7 @@ from collections.abc import Callable
 from decimal import Decimal
 from typing import NamedTuple
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from yala.ledger import Ledger
@@ -28,7 +28,14 @@ from yala.ledger.plans import reopen_plan
 from yala.ledger.rewrite import ledger_files
 from yala.ledger.sweep import retire_passthrough
 from yala.money import round_cents
-from yala.routes.accounts.shared import open_destination, reject_referrers, require_open, resolve
+from yala.routes.accounts.shared import (
+    open_destination,
+    reject_referrers,
+    require_applies,
+    require_closed,
+    require_open,
+    resolve,
+)
 from yala.routes.common import (
     MAX_LEGS,
     Amount,
@@ -39,7 +46,7 @@ from yala.routes.common import (
     reconcile_sweeps,
     sink,
 )
-from yala.routes.errors import api_errors
+from yala.routes.errors import api_errors, invalid
 from yala.sink import FileLedgerSink
 
 router = APIRouter()
@@ -77,21 +84,15 @@ class _Closed(NamedTuple):
 def _reject_unusable(body: AccountCloseIn, kind: Kind) -> None:
     """Report a close field the kind has no use for, or two that contradict each other.
 
-    Which of them apply is the kind's own business, not the caller's: only a bank account carries a
-    standing balance one ``destination`` can absorb, and only an investment has a value to split
-    across ``legs``. A bank account can take either, but not both — one would silently win.
+    Which apply is the kind's business, not the caller's. A bank account can take either a
+    ``destination`` or ``legs``, but not both, since one would silently win.
     """
     for field, usable in (("destination", kind.drains), ("legs", kind.splits)):
-        if getattr(body, field) and not usable:
-            raise HTTPException(
-                status_code=422, detail=f"{field} does not apply to a {kind.name} account"
-            )
+        if getattr(body, field):
+            require_applies(kind, field, usable)
 
     if body.destination and body.legs:
-        raise HTTPException(
-            status_code=422,
-            detail="either one destination or split destinations are allowed",
-        )
+        raise invalid("either one destination or split destinations are allowed")
 
 
 def _close_with_plug(
@@ -118,8 +119,7 @@ def _reject_holdings(led: Ledger, account: str, date: dt.date) -> None:
     """Refuse to close an account that still holds value as a side effect of closing an employer.
 
     A bare ``close`` is not a write-off: beancount accepts it whatever the account holds, and the
-    value then drops off the balance sheet with no entry saying where it went. Retiring it names
-    where the money goes, so that is where it has to happen.
+    value then drops off the balance sheet with no entry saying where it went.
     """
     kind = kind_of(account)
     if kind is None or not (kind.drains or kind.splits):
@@ -127,12 +127,9 @@ def _reject_holdings(led: Ledger, account: str, date: dt.date) -> None:
 
     held = led.value(account, date) if kind.splits else led.balance(account, date)
     if held:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"{leaf(account)} still holds {held}: retire it on its own row first, which asks "
-                "where the money goes"
-            ),
+        raise invalid(
+            f"{leaf(account)} still holds {held}: retire it on its own row first, which asks "
+            "where the money goes"
         )
 
 
@@ -140,30 +137,23 @@ def _close_employer(body: AccountCloseIn, account: str) -> _Closed:
     """Close an employer, closing the accounts the request names with it and unlinking the rest.
 
     Nothing follows an employer out on its own: which of its deductions and plans close with it is
-    the caller's decision. One left open is *unlinked* — a job that has ended cannot go on scoping
-    payroll line items — but it keeps its name, since a name is not a link. Each close that does
-    follow records what triggered it, so reopening the employer undoes exactly those and leaves an
-    account closed on its own account alone.
+    the caller's decision. One left open is *unlinked* but keeps its name, a name being no link.
+    Each close that does follow records what triggered it, so reopening undoes exactly those.
     """
     date = parse_date(body.date)
     led = ledger()
     linked = employer_links(led, account)
 
     if linked and body.close_with is None:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"say which of these close with {leaf(account)}, or send an empty list to unlink "
-                f"them all: {', '.join(linked)}"
-            ),
+        raise invalid(
+            f"say which of these close with {leaf(account)}, or send an empty list to unlink "
+            f"them all: {', '.join(linked)}"
         )
 
     chosen = [resolve(a)[0] for a in (body.close_with or [])]
     stranger = [a for a in chosen if a not in linked]
     if stranger:
-        raise HTTPException(
-            status_code=422, detail=f"{', '.join(stranger)} is not linked to {leaf(account)}"
-        )
+        raise invalid(f"{', '.join(stranger)} is not linked to {leaf(account)}")
 
     for a in chosen:
         _reject_holdings(led, a, date)
@@ -187,19 +177,15 @@ def _split_legs(
 ) -> list[tuple[str, Decimal]]:
     """The legs a close splits ``value`` across, checked against it.
 
-    Shared by the two kinds that can be split: they differ in how the value is arrived at — a bank
-    holds it in USD already, an investment has to be valued at the day's prices — not in how it is
-    divided up.
+    Shared by the two kinds that can be split: they differ in how the value is arrived at, not in
+    how it is divided up.
     """
     for leg in body.legs:
         open_destination(led, leg.destination, account)
 
     total = round_cents(sum((dec(leg.amount) for leg in body.legs), Decimal(0)))
     if total != value:
-        raise HTTPException(
-            status_code=422,
-            detail=f"legs must sum to the account's USD value {value}; got {total}",
-        )
+        raise invalid(f"legs must sum to the account's USD value {value}; got {total}")
 
     return [(leg.destination, dec(leg.amount)) for leg in body.legs]
 
@@ -211,9 +197,8 @@ def _liquidate(
     date: dt.date,
     legs: list[tuple[str, Decimal]],
 ) -> None:
-    """Convert the account to USD, split it across ``legs``, and close it with its plug.
-
-    The plug is passed only while it is open, since it is what absorbs the sub-cent rounding gap.
+    """Convert the account to USD, split it across ``legs``, and close it with its plug, which is
+    what absorbs the sub-cent rounding gap.
     """
     plug = plug_account(account)
     s.liquidate_into(account, date, legs, plug if plug and led.is_open(plug) else None)
@@ -240,16 +225,10 @@ def _close_bank(body: AccountCloseIn, account: str) -> _Closed:
         return _Closed(f"drained and closed {account}", balance)
 
     if not body.destination:
-        # A bare close is not a write-off: beancount accepts `close` whatever the account holds, and
-        # the account then drops off the balance sheet carrying its value with it, with no entry
-        # saying where it went.
+        # A bare close is not a write-off: see `_reject_holdings`.
         if balance != 0:
-            raise HTTPException(
-                status_code=422,
-                detail=(
-                    f"{account} still holds {balance}; give a destination to move it to before "
-                    "closing"
-                ),
+            raise invalid(
+                f"{account} still holds {balance}; give a destination to move it to before closing"
             )
 
         _close_with_plug(s, led, account, date)
@@ -278,17 +257,14 @@ def _close_liability(body: AccountCloseIn, account: str) -> _Closed:
     """Close a card, which is refused while anything is still owed on it.
 
     A liability is discharged by paying it, and that payment is a real bill-pay entry with a date
-    and a funding account. Writing one as a side effect of closing would invent both.
+    and a funding account; writing one as a side effect of closing would invent both.
     """
     date = parse_date(body.date)
 
     owed = ledger().balance(account, date)
     if owed != 0:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"{account} still owes {abs(owed)}; pay it off with a bill payment before closing"
-            ),
+        raise invalid(
+            f"{account} still owes {abs(owed)}; pay it off with a bill payment before closing"
         )
 
     sink().close_account(account, date)
@@ -355,16 +331,13 @@ def post_account_reopen(body: AccountReopenIn) -> dict:
 
     The only operation the ledger cannot express as a further entry: beancount rejects a second
     ``open``, so the ``close`` directive is deleted instead. An employer brings back exactly the
-    accounts its own close closed with it. One that was unlinked instead stayed open and stays
-    unlinked: whether a past job's plan belongs to the next one is not something a reopen can know.
+    accounts its own close closed with it; one that was unlinked stays unlinked, since whether a
+    past job's plan belongs to the next is not something a reopen can know.
     """
     account, _ = resolve(body.account)
     led = ledger()
 
-    if account not in led.declared_accounts():
-        raise HTTPException(status_code=404, detail=f"unknown account: {account!r}")
-    if led.is_open(account):
-        raise HTTPException(status_code=422, detail=f"{account} is already open")
+    require_closed(led, account)
 
     with api_errors():
         files = ledger_files(sink().ledger_dir)

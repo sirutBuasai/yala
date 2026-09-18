@@ -4,7 +4,7 @@ import {
 	CASH_FLOW_COLUMNS,
 	cashFlowChain,
 	cashFlowChanges,
-	cashFlowHeading,
+	columnHeading,
 	categoryMetricDefs,
 	componentMetricDefs,
 	CATALOG,
@@ -188,7 +188,7 @@ describe('catalog integrity', () => {
 // up over another measure's figure. These pin what the views used to spell out by hand.
 describe('the cash-flow chain', () => {
 	it('heads each column with the name the catalog gives the measure', () => {
-		expect(CASH_FLOW_COLUMNS.map(cashFlowHeading)).toEqual([
+		expect(CASH_FLOW_COLUMNS.map(columnHeading)).toEqual([
 			'Gross',
 			'Deductions',
 			'Contributions',
@@ -200,7 +200,7 @@ describe('the cash-flow chain', () => {
 	});
 
 	it('narrows to the measures asked for, in that order', () => {
-		expect(cashFlowChain(['saved', 'income']).map(cashFlowHeading)).toEqual(['Saved', 'Income']);
+		expect(cashFlowChain(['saved', 'income']).map(columnHeading)).toEqual(['Saved', 'Income']);
 	});
 
 	it('refuses a measure the chain has no column for', () => {

@@ -3,7 +3,19 @@
 //
 // `.svelte.ts` because the strip is `$state` the footer reads.
 
-import { deleteTransaction, fetchEntry, postJson } from '$lib/data/load';
+import { deleteTransaction, fetchEntry, postJson, type AccountsInfo } from '$lib/data/load';
+
+/** What every add/edit entry form takes. Declared once: the three forms differ in what they ask
+    for, never in how they are opened. */
+export interface EntryFormProps {
+	accounts: AccountsInfo;
+	/** When set, edit that entry; when absent, add a new one. */
+	locator?: string;
+	/** Add mode only: pre-fill the date field. */
+	presetDate?: string;
+	/** Called after a successful save or delete (the parent refreshes data and closes the modal). */
+	onsaved: () => void;
+}
 
 /** One form's message strip. Every failure in a form goes through `fail`, so the footer has one source. */
 export class EntryMessage {

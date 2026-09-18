@@ -1,8 +1,7 @@
 """Read-side projections: a raw beancount entry → the editable-state dict a GET endpoint returns.
 
 Each function shapes one located entry (spending transaction, paycheck, or transfer) for the edit
-forms, and raises :class:`~fastapi.HTTPException` (422) when the entry doesn't match the expected
-shape.
+forms, and refuses one that doesn't match the expected shape.
 """
 
 from __future__ import annotations
@@ -10,11 +9,11 @@ from __future__ import annotations
 from decimal import Decimal
 
 from beancount.core import data
-from fastapi import HTTPException
 
 from yala.ledger import payroll
 from yala.ledger.constants import DEDUCTIONS, EXPENSES, INCOME
 from yala.ledger.locators import entry_locator
+from yala.routes.errors import invalid
 
 
 def _entry_legs(entry: data.Transaction) -> list[tuple[str, Decimal]]:
@@ -32,7 +31,7 @@ def txn_state(entry: data.Transaction) -> dict:
     expenses = [(a, n) for a, n in legs if a.startswith(EXPENSES) and not a.startswith(DEDUCTIONS)]
 
     if len(expenses) != 1:
-        raise HTTPException(status_code=422, detail="not a single-category spending transaction")
+        raise invalid("not a single-category spending transaction")
 
     non_expense = [(a, n) for a, n in legs if not a.startswith(EXPENSES)]
     # The funding leg is the most-negative non-expense leg, narrowed to the declared funding account
@@ -74,7 +73,7 @@ def paycheck_state(entry: data.Transaction, account_meta: dict[str, dict]) -> di
     round-trips.
     """
     if not any(p.account.startswith(INCOME) for p in entry.postings):
-        raise HTTPException(status_code=422, detail="not a paycheck")
+        raise invalid("not a paycheck")
 
     legs = (
         (p.account, p.units.number, (p.meta or {}).get("label"))
@@ -101,11 +100,11 @@ def transfer_state(entry: data.Transaction) -> dict:
     legs = _entry_legs(entry)
 
     if len(legs) != 2:
-        raise HTTPException(status_code=422, detail="not a two-leg transfer")
+        raise invalid("not a two-leg transfer")
 
     outflow, inflow = sorted(legs, key=lambda p: p[1])
     if outflow[1] >= 0 or inflow[1] <= 0:
-        raise HTTPException(status_code=422, detail="not a transfer")
+        raise invalid("not a transfer")
 
     return {
         "locator": entry_locator(entry),

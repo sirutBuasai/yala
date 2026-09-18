@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 
 from yala.ledger.accounts import plug_account
@@ -17,7 +17,7 @@ from yala.routes.common import (
     sink,
     valid_name,
 )
-from yala.routes.errors import api_errors
+from yala.routes.errors import api_errors, invalid
 
 router = APIRouter()
 
@@ -38,7 +38,7 @@ def post_balance(body: BalanceIn) -> dict:
     the mismatch is reported rather than padded away."""
     account = valid_name(body.account)
     if not account.startswith((CASH, INVESTMENTS, LIABILITIES)):
-        raise HTTPException(status_code=422, detail=f"not a balance-loggable account: {account!r}")
+        raise invalid(f"not a balance-loggable account: {account!r}")
 
     date = parse_date(body.date)
 
