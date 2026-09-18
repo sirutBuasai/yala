@@ -22,5 +22,5 @@
 	options={creditAccounts}
 	selectAriaLabel="credit account"
 	optionLabel={formatAccount}
-	nextValue={() => credits.at(-1)?.value || fundingAccount || creditAccounts[0] || ''}
+	firstValue={fundingAccount}
 />

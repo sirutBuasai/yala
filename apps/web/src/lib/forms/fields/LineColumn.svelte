@@ -20,8 +20,8 @@
 		options: string[];
 		selectAriaLabel: string;
 		optionLabel?: (v: string) => string;
-		/** Account a freshly added row starts on. Read at click time, so it can follow the form. */
-		nextValue?: () => string;
+		/** What the *first* row starts on, when there is no row above to follow. */
+		firstValue?: string;
 	}
 	let {
 		rows = $bindable(),
@@ -30,8 +30,12 @@
 		options,
 		selectAriaLabel,
 		optionLabel = (v) => v,
-		nextValue = () => options[0] ?? ''
+		firstValue = ''
 	}: Props = $props();
+
+	/** A row follows the one above it, so filling a column of related lines is one pick, not one per
+	    row. Read at click time so it tracks whatever the last row was changed to. */
+	const nextValue = () => rows.at(-1)?.value || firstValue || options[0] || '';
 </script>
 
 <RowColumn

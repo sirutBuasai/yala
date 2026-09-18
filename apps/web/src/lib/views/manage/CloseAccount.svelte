@@ -104,8 +104,12 @@
 		});
 	});
 
+	// A part follows the one above it, the way a credit row does: one pick, then only the figures.
 	const addLeg = () =>
-		(legs = [...legs, { destination: '', amount: remaining > 0 ? remaining : 0 }]);
+		(legs = [
+			...legs,
+			{ destination: legs.at(-1)?.destination ?? '', amount: remaining > 0 ? remaining : 0 }
+		]);
 	const removeLeg = (i: number) => (legs = legs.filter((_, j) => j !== i));
 
 	/** Every leg that moves money needs a destination and a positive figure, and the legs together must

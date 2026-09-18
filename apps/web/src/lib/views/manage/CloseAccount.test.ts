@@ -300,6 +300,22 @@ describe('CloseAccount — where the money goes', () => {
 			{ destination: CARD, amount: 500 }
 		]);
 	});
+
+	it('starts a further part on the destination above it', async () => {
+		directory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
+		stubFetch(1500);
+		flow(BROKERAGE, 'investment', [BANK, CARD]);
+		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
+
+		await fireEvent.click(
+			screen.getByRole('button', { name: /Transfer balance to multiple accounts/ })
+		);
+		await pick(screen.getByLabelText('Destination 1'), 'CardA');
+		await fireEvent.input(screen.getByLabelText('Amount 1'), { target: { value: '1000' } });
+		await fireEvent.click(screen.getByRole('button', { name: '+ Destination' }));
+
+		expect(screen.getByLabelText('Destination 2')).toHaveTextContent('CardA');
+	});
 });
 
 describe('CloseAccount — an employer decides about its linked accounts', () => {

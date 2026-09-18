@@ -51,3 +51,32 @@ describe('PaycheckForm (add) — same-label rows sum', () => {
 		expect(JSON.parse(opts.body).deductions).toEqual({ Tax: 300 });
 	});
 });
+
+describe('PaycheckForm (add) — a row follows the one above it', () => {
+	it('starts a further deduction on the type already picked', async () => {
+		const twoOptions = makeAccounts({
+			funding_accounts: ['Assets:Cash:BankA'],
+			employers: ['EmployerA'],
+			payroll_options: [
+				{ kind: 'deduction', label: 'Tax', employer: null, account: 'Expenses:Deductions:Tax' },
+				{
+					kind: 'deduction',
+					label: 'Dental',
+					employer: null,
+					account: 'Expenses:Deductions:Dental'
+				}
+			],
+			cash_accounts: ['Assets:Cash:BankA']
+		});
+		render(PaycheckForm, { props: { accounts: twoOptions, onsaved: vi.fn() } });
+
+		const addDeduction = screen.getAllByText('+ Row')[0]!;
+		await fireEvent.click(addDeduction);
+		// The column may already hold remembered rows, so the pick and the assertion both go on the last.
+		await fireEvent.click(screen.getAllByLabelText('deduction type').at(-1)!);
+		await fireEvent.click(screen.getByRole('option', { name: 'Dental' }));
+		await fireEvent.click(addDeduction);
+
+		expect(screen.getAllByLabelText('deduction type').at(-1)).toHaveTextContent('Dental');
+	});
+});
