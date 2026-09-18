@@ -14,6 +14,7 @@ from pathlib import Path
 from tests.conftest import CARD_A as CARD
 from tests.conftest import load_ledger as _loads_clean
 from yala.ledger import placement
+from yala.ledger.accounts import snapshot_plug
 from yala.sink import FileLedgerSink
 
 
@@ -153,7 +154,7 @@ def test_a_second_snapshot_in_a_month_joins_that_month(ledger_dir: Path):
 
 def test_a_liability_snapshot_lands_in_the_liability_file(ledger_dir: Path):
     owed = -_loads_clean(ledger_dir).holdings(CARD, dt.date(2026, 3, 1))["USD"]
-    FileLedgerSink(ledger_dir).verify_balance(CARD, owed, dt.date(2026, 3, 2))
+    FileLedgerSink(ledger_dir).log_balance(CARD, owed, dt.date(2026, 3, 2), snapshot_plug(CARD))
 
     text = (ledger_dir / "liabilities" / "2026.beancount").read_text()
     assert text.startswith("; ===== MAR 2026 =====\n")

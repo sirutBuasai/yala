@@ -1,8 +1,7 @@
-"""Writing net-worth snapshots: a padded assertion, a verify-only one, an edit, a liquidation.
+"""Writing net-worth snapshots: a padded assertion, an edit of one, a liquidation.
 
-A cash or investment account has an ``Equity:Adjustments:*`` plug, so its snapshot is a ``pad`` +
-``balance`` pair and the untracked delta lands there. A liability has no plug, so its snapshot
-carries its own correction entry for whatever spending or bill pay has not been entered yet.
+Every snapshot is a ``pad`` + ``balance`` pair: the figure asserted, and whatever the entries do not
+explain routed to the account's plug (see :func:`yala.ledger.accounts.snapshot_plug`).
 """
 
 from __future__ import annotations
@@ -16,8 +15,8 @@ from beancount.core.amount import Amount
 from beancount.parser import printer
 
 from yala.ledger import Ledger, directives, pads
-from yala.ledger.accounts import plug_account
-from yala.ledger.constants import BALANCE, DEFAULT_CURRENCY, OPENING_BALANCES, PAD
+from yala.ledger.accounts import open_entry
+from yala.ledger.constants import BALANCE, DEFAULT_CURRENCY, PAD
 from yala.ledger.locators import find_balance, source_of
 from yala.ledger.paths import leaf
 from yala.ledger.rewrite import reamount
@@ -97,6 +96,23 @@ class BalanceWrites(AccountWrites):
         if plug is not None:
             self.close_account(plug, date)
 
+    def _ensure_plug(self, account: str, plug: str) -> None:
+        """Open ``plug`` if the ledger has none, dated with the account it serves.
+
+        An asset is opened together with its plug, but a card was opened before it had one, so the
+        plug arrives the first time that card is snapshotted. Dated from the account so a back-dated
+        snapshot still finds it active.
+        """
+        ledger = Ledger(self.main_ledger, strict=True).load()
+        if open_entry(ledger, plug) is not None:
+            return
+
+        opened = open_entry(ledger, account)
+        if opened is None:
+            return  # no such account: the active-accounts check is what reports that
+
+        self.open_account(plug, opened.date)
+
     def log_balance(
         self, account: str, amount: Decimal, date: dt.date, counter_account: str
     ) -> str:
@@ -109,9 +125,10 @@ class BalanceWrites(AccountWrites):
         pad it does not need, so emitting one unconditionally would make an unchanged balance
         impossible to log. Share lots are reclassified to USD first, net-worth-neutrally, so the
         single USD assertion is authoritative."""
-        # Through the shared sign rule, so both snapshot paths refuse a negative asset in one place.
+        # Through the shared sign rule: a liability is inverted, and a negative asset refused.
         amount = directives.stored_amount(account, round_cents(amount))
         pad_date = date - dt.timedelta(days=1)
+        self._ensure_plug(account, counter_account)
         self._assert_accounts_active(date, [account, counter_account])
 
         ledger = Ledger(self.main_ledger, strict=True).load()
@@ -156,58 +173,6 @@ class BalanceWrites(AccountWrites):
         self._insert(directives.balance_subdir(account), date, "\n\n".join(blocks))
         return entry_id
 
-    def _correction(self, account: str, gap: Decimal, date: dt.date) -> data.Transaction:
-        """The entry that makes a verify-only snapshot hold: the gap, against opening balances.
-
-        Named for what a gap on a liability always means — spending or a bill payment that has not
-        been entered — so the ledger says so rather than leaving an unexplained figure.
-        """
-        return data.Transaction(
-            {"id": str(uuid.uuid4())},
-            date,
-            "*",
-            None,
-            f"unlogged activity on {leaf(account)}",
-            frozenset(),
-            frozenset(),
-            [
-                directives.posting(account, gap),
-                directives.posting(OPENING_BALANCES, -gap),
-            ],
-        )
-
-    def verify_balance(self, account: str, amount: Decimal, date: dt.date) -> str:
-        """Snapshot an account that has no adjustment plug: ``balance`` only, never a ``pad``.
-
-        A liability cannot be padded, so a figure that disagrees with what the entries add up to is
-        carried by a dated correction against ``Equity:Opening-Balances`` instead. The statement is
-        the authority on what is owed, so the snapshot is written either way; the correction is what
-        makes the gap visible and addressable later.
-
-        ``amount`` reads as a statement does — owed positive, a credit negative — and is stored
-        inverted."""
-        amount = directives.stored_amount(account, round_cents(amount))
-        # A start-of-day assertion is checked against the close of the day before — the same
-        # instant log_balance pads at.
-        as_of = date - dt.timedelta(days=1)
-
-        ledger = Ledger(self.main_ledger, strict=True).load()
-        standing = ledger.holdings(account, as_of).get(ledger.currency, Decimal(0))
-        gap = amount - standing
-
-        needed = [account] if gap == 0 else [account, OPENING_BALANCES]
-        self._assert_accounts_active(date, needed)
-
-        blocks: list[str] = []
-        if gap != 0:
-            blocks.append(printer.format_entry(self._correction(account, gap, as_of)).rstrip("\n"))
-
-        entry_id = str(uuid.uuid4())
-        blocks.append(directives.balance_directive(date, account, amount, entry_id))
-
-        self._insert(directives.balance_subdir(account), date, "\n\n".join(blocks))
-        return entry_id
-
     def update_balance(self, locator: str, amount: Decimal) -> tuple[str, dt.date, str]:
         """Rewrite the amount on the existing ``balance`` assertion at ``locator``, reconciling its
         ``pad`` so the edited figure still loads. Returns ``(account, date, locator)``.
@@ -244,10 +209,5 @@ class BalanceWrites(AccountWrites):
             entry_id = str(uuid.uuid4())
             lines[i + 1 : i + 1] = [f'  id: "{entry_id}"\n']
 
-        if plug_account(account) is None:
-            # Nothing to absorb a difference, so the edited figure simply has to hold; the commit
-            # rolls back if it doesn't.
-            self._commit(path, "".join(lines))
-        else:
-            pads.settle(self.main_ledger, account, {path: lines}, {path: original})
+        pads.settle(self.main_ledger, account, {path: lines}, {path: original})
         return account, date, f"id:{entry_id}"

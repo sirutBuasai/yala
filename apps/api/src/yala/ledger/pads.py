@@ -15,7 +15,7 @@ from beancount.ops.balance import BalanceError
 from beancount.ops.pad import PadError
 
 from yala.ledger import files
-from yala.ledger.accounts import plug_account
+from yala.ledger.accounts import snapshot_plug
 from yala.ledger.constants import PAD
 from yala.ledger.core import Ledger
 
@@ -78,7 +78,7 @@ def _apply_one(account: str, errors: list, work: Work, originals: Originals) -> 
         if isinstance(e, BalanceError):
             pad_date = entry.date - dt.timedelta(days=1)
             at = insert_index(lines, pad_date, n)
-            lines[at:at] = [f"{pad_date} {PAD} {account} {plug_account(account)}\n", "\n"]
+            lines[at:at] = [f"{pad_date} {PAD} {account} {snapshot_plug(account)}\n", "\n"]
             return True
 
     return False

@@ -233,10 +233,10 @@ class NetWorth:
         return self._snapshotable(during), during(LIABILITIES)
 
     def loggable_liabilities(self) -> list[str]:
-        """Active liability accounts, which are snapshot-able but *verify-only*.
+        """Active liability accounts, which are snapshot-able.
 
-        They carry no ``Equity:Adjustments:*`` plug on purpose: a liability balance is fully
-        determined by the entries already made, so a figure that disagrees means one is missing
-        rather than that money moved untracked, and :meth:`FileLedgerSink.verify_balance` refuses
-        to pad it."""
+        A liability balance is fully determined by the entries already made, so a figure that
+        disagrees means one is missing rather than that money moved untracked. Until statement-cycle
+        tracking can say which entry, the difference pads to the card's own plug, which is created
+        on first use (see :func:`yala.ledger.accounts.snapshot_plug`)."""
         return self._led.active_accounts(LIABILITIES)

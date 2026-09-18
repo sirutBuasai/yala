@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from yala.ledger.accounts import plug_account
+from yala.ledger.accounts import snapshot_plug
 from yala.ledger.constants import CASH, INVESTMENTS, LIABILITIES
 from yala.routes.common import (
     SignedAmount,
@@ -30,12 +30,12 @@ class BalanceIn(BaseModel):
 
 @router.post("/api/balance")
 def post_balance(body: BalanceIn) -> dict:
-    """Log a USD balance snapshot.
+    """Log a USD balance snapshot as a ``pad`` + ``balance`` pair, routing whatever the entries do
+    not explain to the account's plug (see :func:`snapshot_plug`).
 
-    A cash or investment account gets a ``pad`` + ``balance`` pair routing the untracked delta to
-    its ``Equity:Adjustments:*`` plug. A liability has no plug, so it is verify-only: the figure
-    must match what the ledger already computes, otherwise spending or a bill payment is missing and
-    the mismatch is reported rather than padded away."""
+    The statement is the authority on what an account holds, so a figure is never refused for
+    disagreeing. On a liability the difference is spending or a bill payment that has not been
+    entered, and the pane says so on the row."""
     account = valid_name(body.account)
     if not account.startswith((CASH, INVESTMENTS, LIABILITIES)):
         raise invalid(f"not a balance-loggable account: {account!r}")
@@ -43,11 +43,8 @@ def post_balance(body: BalanceIn) -> dict:
     date = parse_date(body.date)
 
     with api_errors():
-        if account.startswith(LIABILITIES):
-            # Verify-only. Signed as a statement reads it: owed positive, a credit negative.
-            entry_id = sink().verify_balance(account, dec(body.amount), date)
-        else:
-            entry_id = sink().log_balance(account, dec(body.amount), date, plug_account(account))
+        # Signed as a statement reads it: on a liability, owed positive and a credit negative.
+        entry_id = sink().log_balance(account, dec(body.amount), date, snapshot_plug(account))
         reconcile_sweeps(date)
 
     # the locator lets the client edit what it just logged without refetching the whole month

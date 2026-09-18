@@ -24,6 +24,7 @@ from yala.ledger.constants import (
     INVEST_ADJUSTMENTS,
     INVESTMENTS,
     LABELS_META,
+    LIABILITIES,
     SALARY,
     SWEEP_META,
     meta_str,
@@ -161,6 +162,24 @@ def plug_account(account: str) -> str | None:
     if account.startswith(INVESTMENTS):
         return INVEST_ADJUSTMENTS + account[len(INVESTMENTS) :]
     return None
+
+
+def snapshot_plug(account: str) -> str:
+    """Where a snapshot of ``account`` pads the difference it cannot explain.
+
+    The same per-account plug an asset uses, extended to liabilities: a card's gap is the spending
+    or bill pay not entered yet, and giving it its own plug keeps that drift reportable per card
+    rather than pooled. A liability is opened before it has one, so the plug is created the first
+    time the card is snapshotted.
+    """
+    if account.startswith(LIABILITIES):
+        return ADJUSTMENTS + account[len(LIABILITIES) :]
+
+    plug = plug_account(account)
+    if plug is None:
+        raise ValueError(f"not a snapshot-able account: {account!r}")
+
+    return plug
 
 
 # --- metadata reads ---

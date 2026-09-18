@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from tests.conftest import PASSTHROUGH, SAVINGS, append_accounts
 from tests.conftest import load_ledger as _load
 from yala.ledger import Ledger
-from yala.ledger.accounts import plug_account
+from yala.ledger.accounts import plug_account, snapshot_plug
 from yala.sink import FileLedgerSink
 
 SEP = dt.date(2026, 9, 1)
@@ -66,9 +66,15 @@ def test_plug_account_keeps_the_tax_tier():
 
 
 def test_plug_account_is_none_where_there_is_no_plug():
-    """A liability is verify-only and a category holds nothing, so neither has a plug."""
+    """Neither a liability nor a category carries a plug of its own."""
     assert plug_account("Liabilities:CC:CardA") is None
     assert plug_account("Expenses:Grocery") is None
+
+
+def test_snapshot_plug_gives_a_card_its_own_plug():
+    """The same per-account shape an asset gets, so a card's drift is reportable per card."""
+    assert snapshot_plug("Liabilities:CC:CardA") == "Equity:Adjustments:CC:CardA"
+    assert snapshot_plug("Assets:Cash:BankA") == "Equity:Adjustments:BankA"
 
 
 # --- log_balance: USD account (no conversion) ---
@@ -565,8 +571,9 @@ def test_post_liability_balance_stores_the_owed_figure_negative(client: TestClie
     assert at["logged"][CARD]["amount"] == -CARD_OWED
 
 
-def test_post_liability_balance_writes_no_pad(client: TestClient):
-    """A card has no adjustment plug, so a snapshot must never pad — only assert."""
+def test_post_liability_balance_that_agrees_writes_no_pad(client: TestClient):
+    """The figure the entries already add up to needs nothing absorbed, and beancount rejects a pad
+    it does not need."""
     assert _post_balance(client, CARD, CARD_OWED).status_code == 200
     root = client.ledger_dir / "liabilities"  # type: ignore[attr-defined]
     text = "".join(p.read_text() for p in root.glob("*.beancount"))
@@ -574,9 +581,9 @@ def test_post_liability_balance_writes_no_pad(client: TestClient):
     assert "pad" not in text
 
 
-def test_post_liability_balance_carries_a_mismatch_as_a_correction(client: TestClient):
+def test_post_liability_balance_pads_a_mismatch_to_its_own_plug(client: TestClient):
     """The statement is the authority on what is owed, so a figure that disagrees is logged and the
-    gap written as its own entry — named for the spending or bill pay that has not been entered."""
+    difference padded, exactly as a bank account's would be."""
     r = _post_balance(client, CARD, 500.0)
     assert r.status_code == 200, r.text
 
@@ -588,21 +595,20 @@ def test_post_liability_balance_carries_a_mismatch_as_a_correction(client: TestC
         p.read_text()
         for p in (client.ledger_dir / "liabilities").glob("*.beancount")  # type: ignore[attr-defined]
     )
-    assert "unlogged activity on CardA" in text
-    assert "Equity:Opening-Balances" in text
-    # Never a pad: a liability has no plug, so the correction is an ordinary entry.
-    assert "pad" not in text
+    assert f"pad {CARD} Equity:Adjustments:CC:CardA" in text
+    # The plug is opened on first use, since the card was opened before it had one.
+    accounts = (client.ledger_dir / "accounts.beancount").read_text()  # type: ignore[attr-defined]
+    assert "open Equity:Adjustments:CC:CardA" in accounts
 
 
 def test_patch_liability_balance_keeps_the_owed_sign(client: TestClient):
     assert _post_balance(client, CARD, CARD_OWED).status_code == 200
     locator = _networth_at(client)["logged"][CARD]["locator"]
 
-    # editing to a figure that no longer holds is refused
+    # An edit pads what it cannot explain, as the first log does, and owed stays owed.
     edit = client.post("/api/balance/update", json={"locator": locator, "amount": 999.0})
-    assert edit.status_code >= 400
-    at = _networth_at(client)
-    assert _value_of(at, CARD) == -CARD_OWED
+    assert edit.status_code == 200, edit.text
+    assert _value_of(_networth_at(client), CARD) == -999.0
 
 
 def test_loggable_in_month_hides_an_account_opened_later(ledger_dir: Path):
