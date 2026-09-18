@@ -33,3 +33,7 @@ make test-api    # backend only (pytest)
 make test-web    # frontend only (vitest)
 make clean       # remove build artifacts
 ```
+
+## License
+
+[MIT](LICENSE)
