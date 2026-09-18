@@ -290,7 +290,7 @@ describe('CloseAccount — where the money goes', () => {
 	});
 
 	it('starts a further part on the destination above it', async () => {
-		directory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
+		setDirectory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
 		stubFetch(1500);
 		flow(BROKERAGE, 'investment', [BANK, CARD]);
 		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());

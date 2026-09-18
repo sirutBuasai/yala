@@ -66,6 +66,19 @@ describe('Credits', () => {
 		expect(screen.getAllByLabelText('credit account')[1]).toHaveTextContent('Card A');
 	});
 
+	it('falls back to the first option when the funding account is no longer on offer', async () => {
+		render(Credits, {
+			props: {
+				credits: reactive([]),
+				creditAccounts: accts,
+				fundingAccount: 'Assets:Cash:Closed'
+			}
+		});
+		await fireEvent.click(screen.getByText('+ Credit'));
+
+		expect(screen.getByLabelText('credit account')).toHaveTextContent('Wallet');
+	});
+
 	it('labels account options with the name from the account directory', async () => {
 		render(Credits, {
 			props: {

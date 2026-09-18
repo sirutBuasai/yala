@@ -11,6 +11,7 @@
 	import RowColumn from '$lib/forms/fields/RowColumn.svelte';
 	import Select from '$lib/forms/fields/Select.svelte';
 	import AmountInput from '$lib/ui/AmountInput.svelte';
+	import { seed } from '$lib/utils/editPrefs';
 
 	interface Props {
 		rows: AmountRow[];
@@ -34,8 +35,9 @@
 	}: Props = $props();
 
 	/** A row follows the one above it, so filling a column of related lines is one pick, not one per
-	    row. Read at click time so it tracks whatever the last row was changed to. */
-	const nextValue = () => rows.at(-1)?.value || firstValue || options[0] || '';
+	    row. Read at click time so it tracks whatever the last row was changed to, and seeded so a
+	    value the options no longer carry falls back to one they do. */
+	const nextValue = () => seed(rows.at(-1)?.value || firstValue, options);
 </script>
 
 <RowColumn
