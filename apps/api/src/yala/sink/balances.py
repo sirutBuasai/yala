@@ -1,8 +1,8 @@
 """Writing net-worth snapshots: a padded assertion, a verify-only one, an edit, a liquidation.
 
 A cash or investment account has an ``Equity:Adjustments:*`` plug, so its snapshot is a ``pad`` +
-``balance`` pair and the untracked delta lands there. A liability has no plug, so its snapshot is
-verify-only: a figure that disagrees means an entry is missing.
+``balance`` pair and the untracked delta lands there. A liability has no plug, so its snapshot
+carries its own correction entry for whatever spending or bill pay has not been entered yet.
 """
 
 from __future__ import annotations
@@ -17,15 +17,21 @@ from beancount.parser import printer
 
 from yala.ledger import Ledger, directives, pads
 from yala.ledger.accounts import plug_account
-from yala.ledger.constants import BALANCE, DEFAULT_CURRENCY, PAD
+from yala.ledger.constants import BALANCE, DEFAULT_CURRENCY, OPENING_BALANCES, PAD
 from yala.ledger.locators import find_balance, source_of
 from yala.ledger.paths import leaf
 from yala.ledger.rewrite import reamount
 from yala.money import round_cents
+from yala.sink.accounts import AccountWrites
 
 
-class BalanceWrites:
-    """Snapshot writes, mixed into :class:`~yala.sink.FileLedgerSink`."""
+class BalanceWrites(AccountWrites):
+    """Snapshot writes, mixed into :class:`~yala.sink.FileLedgerSink`.
+
+    Over ``AccountWrites`` because retiring an account closes it, and over the file machinery
+    through it: the bases state which writes this one is built on rather than relying on the
+    composition in :class:`~yala.sink.FileLedgerSink` to supply them.
+    """
 
     def _liquidate_postings(
         self, ledger: Ledger, account: str, date: dt.date
@@ -150,33 +156,56 @@ class BalanceWrites:
         self._insert(directives.balance_subdir(account), date, "\n\n".join(blocks))
         return entry_id
 
+    def _correction(self, account: str, gap: Decimal, date: dt.date) -> data.Transaction:
+        """The entry that makes a verify-only snapshot hold: the gap, against opening balances.
+
+        Named for what a gap on a liability always means — spending or a bill payment that has not
+        been entered — so the ledger says so rather than leaving an unexplained figure.
+        """
+        return data.Transaction(
+            {"id": str(uuid.uuid4())},
+            date,
+            "*",
+            None,
+            f"unlogged activity on {leaf(account)}",
+            frozenset(),
+            frozenset(),
+            [
+                directives.posting(account, gap),
+                directives.posting(OPENING_BALANCES, -gap),
+            ],
+        )
+
     def verify_balance(self, account: str, amount: Decimal, date: dt.date) -> str:
         """Snapshot an account that has no adjustment plug: ``balance`` only, never a ``pad``.
 
-        With nothing to absorb a difference the figure has to agree with what the ledger computes,
-        so a mismatch is raised naming the gap and nothing is written. ``amount`` reads as a
-        statement does — owed positive, a credit negative — and is stored inverted."""
-        amount = directives.stored_amount(account, round_cents(amount))
-        self._assert_accounts_active(date, [account])
+        A liability cannot be padded, so a figure that disagrees with what the entries add up to is
+        carried by a dated correction against ``Equity:Opening-Balances`` instead. The statement is
+        the authority on what is owed, so the snapshot is written either way; the correction is what
+        makes the gap visible and addressable later.
 
-        ledger = Ledger(self.main_ledger, strict=True).load()
+        ``amount`` reads as a statement does — owed positive, a credit negative — and is stored
+        inverted."""
+        amount = directives.stored_amount(account, round_cents(amount))
         # A start-of-day assertion is checked against the close of the day before — the same
         # instant log_balance pads at.
-        standing = ledger.holdings(account, date - dt.timedelta(days=1)).get(
-            ledger.currency, Decimal(0)
-        )
-        if standing != amount:
-            raise ValueError(
-                f"{leaf(account)} computes to {standing} on {date.isoformat()}, not {amount}: "
-                f"enter the missing {abs(amount - standing)} of spending or bill pay first"
-            )
+        as_of = date - dt.timedelta(days=1)
+
+        ledger = Ledger(self.main_ledger, strict=True).load()
+        standing = ledger.holdings(account, as_of).get(ledger.currency, Decimal(0))
+        gap = amount - standing
+
+        needed = [account] if gap == 0 else [account, OPENING_BALANCES]
+        self._assert_accounts_active(date, needed)
+
+        blocks: list[str] = []
+        if gap != 0:
+            blocks.append(printer.format_entry(self._correction(account, gap, as_of)).rstrip("\n"))
 
         entry_id = str(uuid.uuid4())
-        self._insert(
-            directives.balance_subdir(account),
-            date,
-            directives.balance_directive(date, account, amount, entry_id),
-        )
+        blocks.append(directives.balance_directive(date, account, amount, entry_id))
+
+        self._insert(directives.balance_subdir(account), date, "\n\n".join(blocks))
         return entry_id
 
     def update_balance(self, locator: str, amount: Decimal) -> tuple[str, dt.date, str]:

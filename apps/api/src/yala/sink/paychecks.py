@@ -15,10 +15,10 @@ from yala.ledger import directives
 from yala.ledger.constants import LABEL_META
 from yala.money import round_cents
 from yala.sink.types import ContributionLeg, DeductionLeg
-from yala.sink.writer import Carried
+from yala.sink.writer import Carried, LedgerWriter
 
 
-class PaycheckWrites:
+class PaycheckWrites(LedgerWriter):
     """Paycheck writes, mixed into :class:`~yala.sink.FileLedgerSink`."""
 
     def _paycheck_entry(

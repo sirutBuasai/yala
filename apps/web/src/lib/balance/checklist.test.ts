@@ -120,14 +120,16 @@ describe('isBlocked', () => {
 		expect(isBlocked(asset, 1200, 1000)).toBe(false);
 	});
 
-	it('blocks an impossible figure, naming it apart from a missing entry', () => {
+	it('blocks an impossible figure on an asset only', () => {
 		expect(blockReason(asset, -5, 1000)).toBe('negative');
-		expect(blockReason(card, -1200, -1000)).toBe('missing-entry');
 		expect(blockReason(asset, 1200, 1000)).toBeNull();
+		// A liability is typed owed-positive and stored negative, so its stored figure is not
+		// "impossible"; a credit is a real state.
+		expect(blockReason(card, -1200, -1000)).toBeNull();
 	});
 
-	it('blocks a liability whose figure disagrees with the ledger', () => {
-		expect(isBlocked(card, -1200, -1000)).toBe(true);
+	it('does not block a liability that disagrees — the gap is carried as a correction', () => {
+		expect(isBlocked(card, -1200, -1000)).toBe(false);
 	});
 
 	it('does not block a liability that agrees', () => {
@@ -146,13 +148,6 @@ describe('isBlocked', () => {
 
 	it('leaves a share-snapshot row alone until something is typed in it', () => {
 		expect(isBlocked(asset, null, 1000, false)).toBe(false);
-	});
-});
-
-describe('missingEntryKind', () => {
-	it('reads a shortfall as unlogged spending and a surplus as an unlogged bill pay', () => {
-		expect(missingEntryKind(-50)).toBe('spending');
-		expect(missingEntryKind(50)).toBe('bill pay');
 	});
 });
 
@@ -184,5 +179,12 @@ describe('signedForLedger', () => {
 		// The ledger holds a credit positive; the field shows it the way it was typed.
 		expect(asTyped(card, 898)).toBe(-898);
 		expect(asTyped(card, -556.69)).toBe(556.69);
+	});
+});
+
+describe('missingEntryKind', () => {
+	it('reads a shortfall as unlogged spending and a surplus as an unlogged bill pay', () => {
+		expect(missingEntryKind(-50)).toBe('spending');
+		expect(missingEntryKind(50)).toBe('bill pay');
 	});
 });

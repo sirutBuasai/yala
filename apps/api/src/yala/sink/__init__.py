@@ -91,8 +91,10 @@ class FileLedgerSink(
     SpendingWrites,
     PaycheckWrites,
     TransferWrites,
-    AccountWrites,
+    # Before AccountWrites, which BalanceWrites derives from: a base has to follow what derives
+    # from it, or there is no consistent MRO.
     BalanceWrites,
+    AccountWrites,
     LedgerWriter,
     LedgerSink,
 ):

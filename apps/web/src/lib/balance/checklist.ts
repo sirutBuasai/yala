@@ -72,15 +72,16 @@ export function agrees(check: number | null): boolean {
 }
 
 /**
- * `negative` is an impossible figure; `missing-entry` is a liability that disagrees with the ledger;
- * `share-snapshot` is a month already snapshotted in shares, which is not a balance to rewrite.
+ * `negative` is an impossible figure; `share-snapshot` is a month already snapshotted in shares,
+ * which is not a balance to rewrite.
  */
-export type BlockReason = 'negative' | 'missing-entry' | 'share-snapshot';
+export type BlockReason = 'negative' | 'share-snapshot';
 
 /**
- * Assets may drift, so their gap becomes an `Equity:Adjustments:*` plug. A liability's balance is
- * fully determined by the entries already logged, so a gap there means an entry is MISSING and must
- * block rather than be plugged over. Neither may be negative.
+ * An asset's gap becomes an `Equity:Adjustments:*` plug and may not be negative. A liability's gap
+ * means spending or a bill payment has not been entered, which is reported rather than blocked: the
+ * statement is the authority on what is owed, and the ledger carries the difference as a correction
+ * until the missing entry turns up.
  *
  * `correctable` false means the month's snapshot is share-based, which no typed USD figure replaces.
  */
@@ -92,20 +93,18 @@ export function blockReason(
 ): BlockReason | null {
 	if (typed == null) return null;
 	if (!correctable) return 'share-snapshot';
-	if (row.liability) {
-		return agrees(checkOf(typed, expected)) ? null : 'missing-entry';
-	}
-	return typed < 0 ? 'negative' : null;
-}
 
-/** Whether there is a reason at all, for a caller that does not need to word it. */
-export function isBlocked(...args: Parameters<typeof blockReason>): boolean {
-	return blockReason(...args) !== null;
+	return !row.liability && typed < 0 ? 'negative' : null;
 }
 
 /** Which kind of entry a liability's gap says is missing. */
 export function missingEntryKind(gap: number): 'spending' | 'bill pay' {
 	return gap < 0 ? 'spending' : 'bill pay';
+}
+
+/** Whether there is a reason at all, for a caller that does not need to word it. */
+export function isBlocked(...args: Parameters<typeof blockReason>): boolean {
+	return blockReason(...args) !== null;
 }
 
 /**

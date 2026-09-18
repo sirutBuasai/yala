@@ -158,16 +158,17 @@
 	 * two can't drift apart.
 	 */
 	function blockedPredicate(row: Row): string {
-		const why = whyBlocked(row);
-		if (why === 'share-snapshot') {
+		if (whyBlocked(row) === 'share-snapshot') {
 			return `was snapshotted in shares in ${monthLabel(monthKey)}. Only backfilling shares is allowed.`;
 		}
-		if (why === 'negative') {
-			return "can't hold a negative balance, please enter a positive figure.";
-		}
+		return "can't hold a negative balance, please enter a positive figure.";
+	}
+
+	/** A card that disagrees still saves, so this reports rather than refuses. */
+	function driftPredicate(row: Row): string {
 		const gap = check(row) ?? 0;
 
-		return `is off by ${moneyExact(Math.abs(gap))}, please log the missing ${missingEntryKind(gap)} first.`;
+		return `is off by ${moneyExact(Math.abs(gap))}. Please verify logged ${missingEntryKind(gap)}.`;
 	}
 
 	// `entered` is what Save writes; `settled` is what the month has a figure for either way, and so
@@ -176,6 +177,7 @@
 	const settled = $derived(rows.filter((r) => standing(r) != null));
 	const blocked = $derived(rows.filter(blockedRow));
 	const savable = $derived(entered.filter((r) => !blockedRow(r)));
+	const drifting = $derived(entered.filter((r) => r.liability && !blockedRow(r) && !matches(r)));
 
 	const effective = (row: Row) =>
 		standing(row) ?? expected(row.account) ?? previous(row.account) ?? 0;
@@ -357,6 +359,17 @@
 						<span class="bl">
 							<b>{formatAccount(row.account)}</b>
 							{blockedPredicate(row)}
+						</span>
+					{/each}
+				</p>
+			{/if}
+
+			{#if drifting.length}
+				<p class="driftmsg" role="status">
+					{#each drifting as row (row.account)}
+						<span class="bl">
+							<b>{formatAccount(row.account)}</b>
+							{driftPredicate(row)}
 						</span>
 					{/each}
 				</p>
@@ -551,13 +564,17 @@
 		font-size: var(--text-secondary);
 		font-variant-numeric: tabular-nums;
 	}
-	.blockmsg {
+	.blockmsg,
+	.driftmsg {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-2);
 		margin: 0;
 		font-size: var(--text-secondary);
 		color: var(--ink-2);
+	}
+	.driftmsg {
+		color: var(--gold-text);
 	}
 	.bl b {
 		color: var(--ink);

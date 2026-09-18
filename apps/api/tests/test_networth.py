@@ -574,13 +574,24 @@ def test_post_liability_balance_writes_no_pad(client: TestClient):
     assert "pad" not in text
 
 
-def test_post_liability_balance_rejects_a_mismatch(client: TestClient):
-    """A figure that disagrees means an entry is missing; it is reported, not padded away."""
+def test_post_liability_balance_carries_a_mismatch_as_a_correction(client: TestClient):
+    """The statement is the authority on what is owed, so a figure that disagrees is logged and the
+    gap written as its own entry — named for the spending or bill pay that has not been entered."""
     r = _post_balance(client, CARD, 500.0)
-    assert r.status_code == 422, r.text
-    assert "spending or bill pay" in r.json()["detail"]
+    assert r.status_code == 200, r.text
 
-    assert CARD not in _networth_at(client)["logged"]
+    at = _networth_at(client)
+    assert _value_of(at, CARD) == -500.0
+    assert at["logged"][CARD]["amount"] == -500.0
+
+    text = "".join(
+        p.read_text()
+        for p in (client.ledger_dir / "liabilities").glob("*.beancount")  # type: ignore[attr-defined]
+    )
+    assert "unlogged activity on CardA" in text
+    assert "Equity:Opening-Balances" in text
+    # Never a pad: a liability has no plug, so the correction is an ordinary entry.
+    assert "pad" not in text
 
 
 def test_patch_liability_balance_keeps_the_owed_sign(client: TestClient):

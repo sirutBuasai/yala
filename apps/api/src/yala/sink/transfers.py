@@ -13,10 +13,10 @@ from beancount.core import data
 
 from yala.ledger import directives
 from yala.money import round_cents
-from yala.sink.writer import Carried, flag_for
+from yala.sink.writer import Carried, LedgerWriter, flag_for
 
 
-class TransferWrites:
+class TransferWrites(LedgerWriter):
     """Transfer writes, mixed into :class:`~yala.sink.FileLedgerSink`."""
 
     def _transfer_entry(

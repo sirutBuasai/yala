@@ -18,12 +18,13 @@ from yala.ledger.accounts import open_entry
 from yala.ledger.constants import BALANCE, CLOSE, DEFAULT_CURRENCY, OPEN
 from yala.ledger.locators import source_of
 from yala.ledger.settings import SETTING_TYPE, SETTINGS_BY_KEY, coerce, format_value
+from yala.sink.writer import LedgerWriter
 
 #: Settings-directive file, relative to the ledger dir.
 SETTINGS_FILE = "settings.beancount"
 
 
-class AccountWrites:
+class AccountWrites(LedgerWriter):
     """Account and settings directives, mixed into :class:`~yala.sink.FileLedgerSink`."""
 
     def open_account(

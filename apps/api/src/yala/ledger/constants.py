@@ -21,6 +21,7 @@ CREDIT_CARDS = LIABILITIES + "CC:"
 # Per-account plugs that absorb the delta when a balance is re-asserted.
 ADJUSTMENTS = EQUITY + "Adjustments:"
 INVEST_ADJUSTMENTS = ADJUSTMENTS + "Investments:"
+OPENING_BALANCES = EQUITY + "Opening-Balances"
 
 # Currency written onto new account directives.
 DEFAULT_CURRENCY = "USD"

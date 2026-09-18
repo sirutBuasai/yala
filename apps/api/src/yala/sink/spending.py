@@ -16,10 +16,10 @@ from yala.ledger import directives
 from yala.ledger.constants import DEFAULT_CURRENCY, EXPENSES
 from yala.money import round_cents
 from yala.sink.types import Credit
-from yala.sink.writer import Carried, flag_for
+from yala.sink.writer import Carried, LedgerWriter, flag_for
 
 
-class SpendingWrites:
+class SpendingWrites(LedgerWriter):
     """Spending writes, mixed into :class:`~yala.sink.FileLedgerSink`."""
 
     def _spending_entry(
