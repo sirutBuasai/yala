@@ -239,6 +239,25 @@ class Ledger:
             and (prefix is None or a.startswith(prefix))
         )
 
+    def accounts_open_during(
+        self, start: dt.date, end: dt.date, prefix: str | None = None
+    ) -> list[str]:
+        """Accounts whose life overlaps ``start``..``end``, inclusive at both ends.
+
+        A window rather than a single day, so an account that opened or closed part-way through a
+        period still belongs to that period: the period is what the caller reports on. Closing on
+        ``start`` still counts, since the account was held going into it.
+        """
+        opened, closed = self.open_close_dates()
+
+        return sorted(
+            a
+            for a, date in opened.items()
+            if date <= end
+            and not (a in closed and closed[a] < start)
+            and (prefix is None or a.startswith(prefix))
+        )
+
     def is_open(self, account: str) -> bool:
         return account in self.active_accounts()
 

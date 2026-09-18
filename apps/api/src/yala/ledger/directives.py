@@ -30,8 +30,17 @@ MONTHLY = frozenset({"assets", "liabilities"})
 def stored_amount(account: str, amount: Decimal) -> Decimal:
     """The signed figure a ``balance`` assertion carries for ``account``.
 
-    Liabilities are passed in as the amount *owed*, positive, but beancount keeps them negative."""
-    return -abs(amount) if account.startswith(LIABILITIES) else amount
+    A liability is passed in the way a statement reads it — owed positive, a credit negative — and
+    beancount keeps that inverted, so the sign is flipped rather than forced. Forcing it made a
+    credit impossible to state: an overpaid card or a tax refund due came back as more owed.
+
+    Raises for a negative asset, which has no meaning: an account cannot hold less than nothing.
+    """
+    if account.startswith(LIABILITIES):
+        return -amount
+    if amount < 0:
+        raise ValueError(f"{account} cannot hold a negative balance ({amount})")
+    return amount
 
 
 def posting(account: str, number: Decimal, meta: dict | None = None) -> data.Posting:

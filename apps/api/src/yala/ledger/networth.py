@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 from beancount.core import data
 
+from yala.dates import month_bounds
 from yala.ledger.accounts import sweep_destination, tier_of
 from yala.ledger.constants import (
     ADJUSTMENTS,
@@ -202,16 +203,36 @@ class NetWorth:
             for a in self._led.declared_accounts(ADJUSTMENTS)
         ]
 
-    def loggable_accounts(self) -> list[str]:
-        """Active cash + investment accounts whose balance can be snapshotted.
+    def _snapshotable(self, candidates: list[str]) -> list[str]:
+        """``candidates`` minus the passthroughs.
 
-        Every one of them is opened with a plug to pad into, so the rule is stated rather than
+        Every loggable account is opened with a plug to pad into, so the rule is stated rather than
         inferred from a plug's presence: what is excluded is a passthrough, whose balance is swept
         to its destination and so belongs there.
         """
         meta = self._led.account_meta()
-        candidates = self._led.active_accounts(CASH) + self._led.active_accounts(INVESTMENTS)
         return [a for a in candidates if sweep_destination(meta.get(a)) is None]
+
+    def loggable_accounts(self) -> list[str]:
+        """Active cash + investment accounts whose balance can be snapshotted."""
+        return self._snapshotable(
+            self._led.active_accounts(CASH) + self._led.active_accounts(INVESTMENTS)
+        )
+
+    def loggable_in_month(self, any_day: dt.date) -> tuple[list[str], list[str]]:
+        """``(assets, liabilities)`` snapshot-able in ``any_day``'s month.
+
+        Membership is the month's, not today's: an account opened part-way through it belongs to it,
+        one closed part-way through belongs to it but not to the month after, and one opened later
+        does not appear at all. Without this a month showed every account the ledger holds today,
+        including cards not opened yet."""
+        start, end = month_bounds(any_day)
+        during = self._led.accounts_open_during
+
+        return (
+            self._snapshotable(during(start, end, CASH) + during(start, end, INVESTMENTS)),
+            during(start, end, LIABILITIES),
+        )
 
     def loggable_liabilities(self) -> list[str]:
         """Active liability accounts, which are snapshot-able but *verify-only*.

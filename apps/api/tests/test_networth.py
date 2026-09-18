@@ -191,6 +191,42 @@ def test_logged_in_month_rewrites_a_lone_usd_snapshot_in_place(ledger_dir: Path)
     assert _load(ledger_dir).net_worth.logged_in_month(SEP)[account].locator == f"id:{entry_id}"
 
 
+def test_log_balance_zero_pads_when_it_empties_an_account(ledger_dir: Path):
+    """Zero is a figure to log, not a blank to skip. Emptying an account is a change, so it takes a
+    pad like any other."""
+    account = "Assets:Cash:BankA"
+    plug = plug_account(account)
+    sink = FileLedgerSink(ledger_dir)
+    sink.log_balance(account, Decimal("1000.00"), dt.date(2026, 9, 1), plug)
+
+    sink.log_balance(account, Decimal("0.00"), dt.date(2026, 10, 1), plug)
+
+    led = _load(ledger_dir)
+    assert led.balance(account, dt.date(2026, 10, 1)) == Decimal("0.00")
+    pads = sorted(e.date for e in led.entries if isinstance(e, data.Pad) and e.account == account)
+    assert dt.date(2026, 9, 30) in pads  # the day before, absorbing the drop to zero
+
+
+def test_log_balance_zero_writes_no_pad_when_already_zero(ledger_dir: Path):
+    """An unchanged zero still gets its assertion, but no pad: beancount rejects one it does not
+    need, so emitting it unconditionally would make an unchanged balance impossible to log."""
+    account = "Assets:Cash:BankA"
+    plug = plug_account(account)
+    sink = FileLedgerSink(ledger_dir)
+    sink.log_balance(account, Decimal("0.00"), dt.date(2026, 9, 1), plug)
+
+    sink.log_balance(account, Decimal("0.00"), dt.date(2026, 10, 1), plug)
+
+    led = _load(ledger_dir)  # strict: an unused pad raises here
+    asserted = sorted(
+        e.date for e in led.entries if isinstance(e, data.Balance) and e.account == account
+    )
+    assert dt.date(2026, 10, 1) in asserted  # the assertion is still written
+    assert dt.date(2026, 9, 30) not in [
+        e.date for e in led.entries if isinstance(e, data.Pad) and e.account == account
+    ]
+
+
 def test_a_share_month_does_not_block_the_next_month(ledger_dir: Path):
     """A share snapshot refuses correction in its OWN month only. The month after has nothing logged
     yet, so it stays loggable in USD: the pad reclassifies the lots and the assertion stands."""
@@ -556,3 +592,75 @@ def test_patch_liability_balance_keeps_the_owed_sign(client: TestClient):
     assert edit.status_code >= 400
     at = client.get("/api/networth?date=2026-09-01").json()
     assert dict((a["account"], a["value"]) for a in at["accounts"])[CARD] == -CARD_OWED
+
+
+def test_loggable_in_month_hides_an_account_opened_later(ledger_dir: Path):
+    """A card opened in August is not offered in January: the month's roster is the month's, not
+    today's."""
+    account = "Liabilities:CC:LateCard"
+    append_accounts(ledger_dir, f"\n2026-08-14 open {account} USD\n")
+
+    _, jan = _load(ledger_dir).net_worth.loggable_in_month(dt.date(2026, 1, 1))
+    _, aug = _load(ledger_dir).net_worth.loggable_in_month(dt.date(2026, 8, 1))
+    assert account not in jan
+    assert account in aug
+
+
+def test_loggable_in_month_keeps_the_month_an_account_opened_or_closed_in(ledger_dir: Path):
+    """Opening or closing part-way through a month still belongs to that month, and the one after
+    drops it."""
+    account = "Liabilities:CC:BriefCard"
+    append_accounts(ledger_dir, f"\n2026-03-14 open {account} USD\n2026-05-20 close {account}\n")
+
+    nw = _load(ledger_dir).net_worth
+    shown = {m: account in nw.loggable_in_month(dt.date(2026, m, 1))[1] for m in (2, 3, 4, 5, 6)}
+    assert shown == {2: False, 3: True, 4: True, 5: True, 6: False}
+
+
+def test_loggable_in_month_still_excludes_a_passthrough(ledger_dir: Path):
+    """Scoping to a month must not smuggle back an account whose balance belongs to its sweep
+    destination rather than to itself."""
+    passthrough = "Assets:Cash:Venmo"
+    append_accounts(
+        ledger_dir,
+        f'\n2026-01-01 open {passthrough} USD\n  sweep_to: "Assets:Cash:BankA"\n',
+    )
+
+    nw = _load(ledger_dir).net_worth
+    assets, _ = nw.loggable_in_month(SEP)
+    assert passthrough not in assets
+    assert passthrough not in nw.loggable_accounts()  # and the undated list agrees
+    assert "Assets:Cash:BankA" in assets  # its destination is still offered
+
+
+def test_post_liability_balance_accepts_a_credit(client: TestClient):
+    """A card or tax account can stand in credit. Sent negative the way a statement reads it, it is
+    stored positive; forcing the sign reported a refund due as more owed."""
+    credit = "Liabilities:TaxesOwed"
+    append_accounts(client.ledger_dir, f"\n2026-01-01 open {credit} USD\n")  # type: ignore[attr-defined]
+    # a refund landing in the account leaves it in credit
+    append_accounts(
+        client.ledger_dir,  # type: ignore[attr-defined]
+        f"""
+        2026-08-15 * "tax refund"
+          {credit}  898.00 USD
+          Assets:Cash:BankA  -898.00 USD
+        """,
+    )
+
+    r = client.post(
+        "/api/balance", json={"account": credit, "amount": -898.0, "date": "2026-09-01"}
+    )
+    assert r.status_code == 200, r.text
+
+    at = client.get("/api/networth?date=2026-09-01").json()
+    assert at["logged"][credit]["amount"] == 898.0  # stored as a credit, not as owed
+    assert dict((a["account"], a["value"]) for a in at["accounts"])[credit] == 898.0
+
+
+def test_post_asset_balance_still_refuses_a_negative(client: TestClient):
+    """Only a liability may go below zero. An account cannot hold less than nothing."""
+    r = client.post(
+        "/api/balance", json={"account": "Assets:Cash:BankA", "amount": -5.0, "date": "2026-09-01"}
+    )
+    assert r.status_code == 422, r.text

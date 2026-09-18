@@ -8,11 +8,11 @@ and is safe to repeat, since a sweep's own legs are excluded from the net it is 
 
 from __future__ import annotations
 
-import calendar
 import datetime as dt
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from yala.dates import last_day
 from yala.ledger import Ledger, LedgerError
 from yala.ledger.accounts import sweep_destination
 from yala.ledger.constants import SWEEP_META
@@ -71,10 +71,6 @@ def is_sweep(accounts: list[str], ledger: Ledger) -> bool:
 
 
 # --- reconciliation ---
-
-
-def _last_day(year: int, month: int) -> dt.date:
-    return dt.date(year, month, calendar.monthrange(year, month)[1])
 
 
 def _sweeps_in(
@@ -186,7 +182,7 @@ def reconcile_month(sink: "FileLedgerSink", year: int, month: int) -> None:
     """Reconcile every passthrough's sweep for the month. Passthroughs are independent, so one
     failure is isolated and surfaced as an aggregated error rather than aborting the rest."""
     ledger = Ledger(sink.main_ledger, strict=True).load()
-    date = _last_day(year, month)
+    date = last_day(year, month)
     active = set(ledger.active_accounts(as_of=date))
 
     failures: list[str] = []

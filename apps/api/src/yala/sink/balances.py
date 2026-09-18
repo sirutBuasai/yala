@@ -103,7 +103,8 @@ class BalanceWrites:
         pad it does not need, so emitting one unconditionally would make an unchanged balance
         impossible to log. Share lots are reclassified to USD first, net-worth-neutrally, so the
         single USD assertion is authoritative."""
-        amount = round_cents(amount)
+        # Through the shared sign rule, so both snapshot paths refuse a negative asset in one place.
+        amount = directives.stored_amount(account, round_cents(amount))
         pad_date = date - dt.timedelta(days=1)
         self._assert_accounts_active(date, [account, counter_account])
 
@@ -153,8 +154,8 @@ class BalanceWrites:
         """Snapshot an account that has no adjustment plug: ``balance`` only, never a ``pad``.
 
         With nothing to absorb a difference the figure has to agree with what the ledger computes,
-        so a mismatch is raised naming the gap and nothing is written. ``amount`` is the figure owed
-        as a positive number; it is stored negative."""
+        so a mismatch is raised naming the gap and nothing is written. ``amount`` reads as a
+        statement does — owed positive, a credit negative — and is stored inverted."""
         amount = directives.stored_amount(account, round_cents(amount))
         self._assert_accounts_active(date, [account])
 

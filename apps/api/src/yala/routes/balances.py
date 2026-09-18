@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from yala.ledger.accounts import plug_account
 from yala.ledger.constants import CASH, INVESTMENTS, LIABILITIES
 from yala.routes.common import (
-    NonNegAmount,
+    SignedAmount,
     dec,
     ledger,
     ok,
@@ -24,7 +24,7 @@ router = APIRouter()
 
 class BalanceIn(BaseModel):
     account: str
-    amount: NonNegAmount
+    amount: SignedAmount
     date: str | None = None
 
 
@@ -44,7 +44,7 @@ def post_balance(body: BalanceIn) -> dict:
 
     with api_errors():
         if account.startswith(LIABILITIES):
-            # Verify-only: the client sends what is owed; the sink stores it negative.
+            # Verify-only. Signed as a statement reads it: owed positive, a credit negative.
             entry_id = sink().verify_balance(account, dec(body.amount), date)
         else:
             entry_id = sink().log_balance(account, dec(body.amount), date, plug_account(account))
@@ -61,7 +61,7 @@ def post_balance(body: BalanceIn) -> dict:
 
 class BalanceEditIn(BaseModel):
     locator: str
-    amount: NonNegAmount
+    amount: SignedAmount
 
 
 @router.post("/api/balance/update")
@@ -90,7 +90,11 @@ def get_networth_at(date: str) -> dict:
     and offer the handle to correct them in place."""
     as_of = parse_date(date)
     nw = ledger().net_worth
+    month_assets, month_liabilities = nw.loggable_in_month(as_of)
     return {
+        # Which accounts the MONTH had, so a pane does not offer one opened later or closed earlier.
+        "balance_accounts": month_assets,
+        "liability_accounts": month_liabilities,
         "accounts": [{"account": a.account, "value": float(a.value)} for a in nw.accounts(as_of)],
         "adjustments": [
             {"account": a.account, "value": float(a.value)} for a in nw.adjustments(as_of)

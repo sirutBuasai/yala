@@ -160,9 +160,13 @@ describe('signedForLedger', () => {
 	const asset: Row = { account: 'Assets:Cash:A', group: 'Liquid', liability: false };
 	const card: Row = { account: 'Liabilities:CC:B', group: 'Liabilities', liability: true };
 
-	it('stores a liability negative however it was typed', () => {
+	it('inverts a liability: owed typed positive is stored negative', () => {
 		expect(signedForLedger(card, 500)).toBe(-500);
-		expect(signedForLedger(card, -500)).toBe(-500);
+	});
+
+	it('keeps a liability credit a credit rather than forcing it to owed', () => {
+		// Forcing the sign made an overpaid card or a tax refund due read as more owed.
+		expect(signedForLedger(card, -800)).toBe(800);
 	});
 
 	it("leaves an asset's sign alone", () => {
@@ -172,6 +176,13 @@ describe('signedForLedger', () => {
 
 	it('round-trips a stored figure back to what the field takes', () => {
 		expect(asTyped(card, signedForLedger(card, 500))).toBe(500);
+		expect(asTyped(card, signedForLedger(card, -800))).toBe(-800);
 		expect(asTyped(asset, signedForLedger(asset, -20))).toBe(-20);
+	});
+
+	it('ghosts a stored liability credit back as a negative figure', () => {
+		// The ledger holds a credit positive; the field shows it the way it was typed.
+		expect(asTyped(card, 898)).toBe(-898);
+		expect(asTyped(card, -556.69)).toBe(556.69);
 	});
 });

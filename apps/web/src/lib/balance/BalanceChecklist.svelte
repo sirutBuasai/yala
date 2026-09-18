@@ -45,8 +45,17 @@
 	}
 	let { id, data, accounts, onsaved, monthKey }: Props = $props();
 
+	/**
+	 * Which accounts the shown month had, once the dated read lands. The props are today's lists, so
+	 * they stand in only until then: on their own they offer a card opened months later.
+	 */
+	let monthRoster = $state<{ assets: string[]; liabilities: string[] } | null>(null);
 	const rows = $derived(
-		buildRows(accounts?.balance_accounts ?? [], accounts?.liability_accounts ?? [], formatAccount)
+		buildRows(
+			monthRoster?.assets ?? accounts?.balance_accounts ?? [],
+			monthRoster?.liabilities ?? accounts?.liability_accounts ?? [],
+			formatAccount
+		)
 	);
 
 	/** Empty until the parent has resolved a month, so the fetch below can skip that first render. */
@@ -77,6 +86,7 @@
 			adjPrev = new Map();
 			prevVals = new Map();
 			logged = new Map();
+			monthRoster = null;
 			return;
 		}
 		loading = true;
@@ -85,6 +95,7 @@
 			atNow = toMap(now.accounts);
 			adjNow = toMap(now.adjustments);
 			logged = new Map(Object.entries(now.logged ?? {}));
+			monthRoster = { assets: now.balance_accounts, liabilities: now.liability_accounts };
 		}
 		if (before) {
 			prevVals = toMap(before.accounts);
@@ -121,6 +132,11 @@
 	 * makes a logged month read as done — the field is empty, but the balance is not unknown.
 	 */
 	const standing = (row: Row) => parsed(row) ?? onRecord(row.account);
+
+	// The figure COLUMNS stay in the ledger's sign, where a liability is negative because that is how
+	// it bears on net worth. Only the entry field and its ghost invert (see `asTyped`), so logging an
+	// ordinary balance owed does not mean typing a minus every time. The two conventions differ on
+	// purpose; a row is read across, but only one cell of it is typed into.
 
 	/**
 	 * Where a typed figure goes: over this month's own snapshot, or onto the first when the month
@@ -176,14 +192,16 @@
 			effective
 		)
 	);
-	// Liabilities are stored negative; the tally shows what is owed.
+	// Inverted because the tally prints its own minus, so this is the magnitude owed. Inverted rather
+	// than made absolute, so a credit subtracts from the total instead of adding to it.
 	const liabilities = $derived(
 		sumBy(
 			rows.filter((r) => r.liability),
-			(r) => Math.abs(effective(r))
+			(r) => asTyped(r, effective(r))
 		)
 	);
 
+	// In the ledger's sign, like the column it sits in: the Liabilities group subtotals negative.
 	const subtotal = (group: Group) =>
 		sumBy(
 			rows.filter((r) => r.group === group),
@@ -203,8 +221,8 @@
 		for (const row of savable) {
 			const value = parsed(row);
 			if (value == null) continue;
-			// Liabilities go over the wire as the owed figure; the API stores the sign.
-			const amount = row.liability ? Math.abs(value) : value;
+			// Sent in the convention it was typed in; the API applies the ledger's sign.
+			const amount = asTyped(row, value);
 			const where = target(row);
 			if (where == null) continue; // blocked, so never in `savable`
 			const { error } =

@@ -72,6 +72,9 @@ def _clean_optional_text(value: object) -> str | None:
 # but never negative. Both are finite and bounded (see MAX_AMOUNT).
 Amount = Annotated[float, Field(gt=0, le=MAX_AMOUNT, allow_inf_nan=False)]
 NonNegAmount = Annotated[float, Field(ge=0, le=MAX_AMOUNT, allow_inf_nan=False)]
+# A balance may be negative, but only for a liability: that is how a credit is stated. Which
+# accounts may go below zero is `stored_amount`'s rule, so the bound here is only the magnitude.
+SignedAmount = Annotated[float, Field(ge=-MAX_AMOUNT, le=MAX_AMOUNT, allow_inf_nan=False)]
 Text = Annotated[str, AfterValidator(_clean_text)]
 # The optional counterpart: blank or missing both arrive as None.
 OptionalText = Annotated[str | None, BeforeValidator(_clean_optional_text)]

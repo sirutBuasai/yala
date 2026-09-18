@@ -113,12 +113,22 @@ export function missingEntryKind(gap: number): 'spending' | 'bill pay' {
 	return gap < 0 ? 'spending' : 'bill pay';
 }
 
-/** Liabilities are typed as the amount owed but stored negative, the sign the ledger keeps. */
+/**
+ * A liability is typed the way a statement reads it — owed positive, a credit negative — and the
+ * ledger keeps that inverted. The sign is flipped, not forced: forcing it made a credit impossible
+ * to enter, so an overpaid card or a tax refund due came back as more owed.
+ */
 export function signedForLedger(row: Row, typed: number): number {
-	return row.liability ? -Math.abs(typed) : typed;
+	return row.liability ? -typed : typed;
 }
 
-/** The inverse: a stored figure as the field would take it, owed positive. */
+/**
+ * The inverse, for showing a stored figure in the field it was typed in.
+ *
+ * Only the entry field and its ghost use this. The figure columns beside them stay in the ledger's
+ * sign, where a liability is negative because that is how it bears on net worth: the two differ so
+ * that logging an ordinary balance owed does not mean typing a minus every time.
+ */
 export function asTyped(row: Row, stored: number): number {
-	return row.liability ? Math.abs(stored) : stored;
+	return row.liability ? -stored : stored;
 }

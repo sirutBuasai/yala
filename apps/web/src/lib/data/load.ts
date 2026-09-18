@@ -387,6 +387,10 @@ export async function updateBalance(
 
 /** Per-account USD values + adjustment plugs as of a date (for the month-aware balance pane). */
 export interface NetWorthAt {
+	/** Snapshot-able accounts as the MONTH had them, not as today has them: one opened later or
+	    closed earlier is absent, and the month it opened or closed in still counts. */
+	balance_accounts: string[];
+	liability_accounts: string[];
 	accounts: { account: string; value: number }[];
 	adjustments: { account: string; value: number }[];
 	/** account -> what its latest snapshot in the date's MONTH stands at. `locator` is present only
