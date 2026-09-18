@@ -2,22 +2,35 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
 import PaycheckForm from '$lib/entries/paycheck/PaycheckForm.svelte';
+import type { AccountLists } from '$lib/data/types';
 import { makeAccounts } from '$lib/data/__fixtures__/dashboard';
+import { pick } from '$lib/forms/__fixtures__/listbox';
 
-const accounts = makeAccounts({
-	funding_accounts: ['Assets:Cash:BankA'],
-	employers: ['EmployerA'],
-	payroll_options: [
-		{ kind: 'deduction', label: 'Tax', employer: null, account: 'Expenses:Deductions:Tax' },
-		{
-			kind: 'contribution',
-			label: 'Roth401k',
-			employer: 'EmployerA',
-			account: 'Assets:Investments:TaxAdvantaged:PlanA'
-		}
-	],
-	cash_accounts: ['Assets:Cash:BankA']
-});
+/** These cases differ only in what payroll lines are on offer, so the rest of the sets is stated once. */
+const offering = (payroll_options: AccountLists['payroll_options']) =>
+	makeAccounts({
+		funding_accounts: ['Assets:Cash:BankA'],
+		employers: ['EmployerA'],
+		payroll_options,
+		cash_accounts: ['Assets:Cash:BankA']
+	});
+
+const TAX = {
+	kind: 'deduction',
+	label: 'Tax',
+	employer: null,
+	account: 'Expenses:Deductions:Tax'
+} as const;
+
+const accounts = offering([
+	TAX,
+	{
+		kind: 'contribution',
+		label: 'Roth401k',
+		employer: 'EmployerA',
+		account: 'Assets:Investments:TaxAdvantaged:PlanA'
+	}
+]);
 
 function okFetch() {
 	return vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true }) });
@@ -54,27 +67,21 @@ describe('PaycheckForm (add) — same-label rows sum', () => {
 
 describe('PaycheckForm (add) — a row follows the one above it', () => {
 	it('starts a further deduction on the type already picked', async () => {
-		const twoOptions = makeAccounts({
-			funding_accounts: ['Assets:Cash:BankA'],
-			employers: ['EmployerA'],
-			payroll_options: [
-				{ kind: 'deduction', label: 'Tax', employer: null, account: 'Expenses:Deductions:Tax' },
-				{
-					kind: 'deduction',
-					label: 'Dental',
-					employer: null,
-					account: 'Expenses:Deductions:Dental'
-				}
-			],
-			cash_accounts: ['Assets:Cash:BankA']
-		});
+		const twoOptions = offering([
+			TAX,
+			{
+				kind: 'deduction',
+				label: 'Dental',
+				employer: null,
+				account: 'Expenses:Deductions:Dental'
+			}
+		]);
 		render(PaycheckForm, { props: { accounts: twoOptions, onsaved: vi.fn() } });
 
 		const addDeduction = screen.getAllByText('+ Row')[0]!;
 		await fireEvent.click(addDeduction);
 		// The column may already hold remembered rows, so the pick and the assertion both go on the last.
-		await fireEvent.click(screen.getAllByLabelText('deduction type').at(-1)!);
-		await fireEvent.click(screen.getByRole('option', { name: 'Dental' }));
+		await pick(screen.getAllByLabelText('deduction type').at(-1)!, 'Dental');
 		await fireEvent.click(addDeduction);
 
 		expect(screen.getAllByLabelText('deduction type').at(-1)).toHaveTextContent('Dental');

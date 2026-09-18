@@ -10,6 +10,7 @@ import { fireEvent, waitFor } from '@testing-library/dom';
 import { live } from '$lib/data/load';
 import type { AccountInfo, AccountLists } from '$lib/data/types';
 import { makeAccounts, setDirectory } from '$lib/data/__fixtures__/dashboard';
+import { pick } from '$lib/forms/__fixtures__/listbox';
 import CloseAccount from '$lib/views/manage/CloseAccount.svelte';
 
 const KINDS = Object.fromEntries(makeAccounts().kinds.map((k) => [k.name, k])) as Record<
@@ -38,12 +39,6 @@ const closes = (fetchSpy: ReturnType<typeof vi.fn>) =>
 	fetchSpy.mock.calls.filter(([url]) => String(url) === '/api/account/close');
 const body = (fetchSpy: ReturnType<typeof vi.fn>) => JSON.parse(closes(fetchSpy)[0]![1].body);
 
-/** Drive the on-brand listbox: open the trigger, then click the option. */
-async function pick(trigger: HTMLElement, option: string) {
-	await fireEvent.click(trigger);
-	await fireEvent.click(screen.getByRole('option', { name: option }));
-}
-
 function flow(
 	account: string,
 	kind: string,
@@ -66,6 +61,23 @@ const step = () => screen.queryByText(/Close account · step/)?.textContent ?? '
 /** Answer every question, leaving the review on screen. */
 async function toReview() {
 	while (screen.queryByRole('button', { name: 'Next' })) await next();
+}
+
+/** A value arrives asynchronously, so a flow that reports one is not answerable until it lands. */
+const valued = () =>
+	waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
+
+/** An investment's close flow, valued and switched to splitting across several destinations. */
+async function splitFlow(destinations: string[], value = 1500) {
+	setDirectory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
+	const fetchSpy = stubFetch(value);
+	flow(BROKERAGE, 'investment', destinations);
+	await valued();
+	await fireEvent.click(
+		screen.getByRole('button', { name: /Transfer balance to multiple accounts/ })
+	);
+
+	return fetchSpy;
 }
 
 beforeEach(() => {
@@ -97,7 +109,7 @@ describe('CloseAccount — how many questions the kind needs', () => {
 			setDirectory({ [account]: { kind, tier: 'Taxable' } });
 			stubFetch(1500);
 			flow(account, kind, [CARD]);
-			await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
+			await valued();
 
 			expect(
 				screen.getByText('Transfer the closing account balance to one or more accounts')
@@ -163,7 +175,7 @@ describe('CloseAccount — the review is the confirmation', () => {
 		setDirectory({ [BANK]: { kind: 'bank' } });
 		const fetchSpy = stubFetch(500);
 		flow(BANK, 'bank', ['Assets:Cash:BankB']);
-		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
+		await valued();
 
 		await pick(screen.getByLabelText('Closing account balance destination for BankA'), 'BankB');
 		await next();
@@ -203,7 +215,7 @@ describe('CloseAccount — where the money goes', () => {
 		setDirectory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
 		const fetchSpy = stubFetch(1500);
 		flow(BROKERAGE, 'investment', [BANK]);
-		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
+		await valued();
 
 		await next();
 
@@ -219,7 +231,7 @@ describe('CloseAccount — where the money goes', () => {
 		setDirectory({ [BANK]: { kind: 'bank' } });
 		const fetchSpy = stubFetch(500);
 		flow(BANK, 'bank', ['Assets:Cash:BankB']);
-		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
+		await valued();
 
 		await pick(screen.getByLabelText('Closing account balance destination for BankA'), 'BankB');
 		await toReview();
@@ -236,7 +248,7 @@ describe('CloseAccount — where the money goes', () => {
 		setDirectory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
 		const fetchSpy = stubFetch(1500);
 		flow(BROKERAGE, 'investment', [BANK]);
-		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
+		await valued();
 
 		await pick(
 			screen.getByLabelText('Closing account balance destination for BrokerageA'),
@@ -251,14 +263,7 @@ describe('CloseAccount — where the money goes', () => {
 	});
 
 	it('refuses parts that do not add up to what it holds', async () => {
-		setDirectory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
-		stubFetch(1500);
-		flow(BROKERAGE, 'investment', [BANK]);
-		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
-
-		await fireEvent.click(
-			screen.getByRole('button', { name: /Transfer balance to multiple accounts/ })
-		);
+		await splitFlow([BANK]);
 		await pick(screen.getByLabelText('Destination 1'), 'BankA');
 		await fireEvent.input(screen.getByLabelText('Amount 1'), { target: { value: '1000' } });
 		await next();
@@ -267,14 +272,7 @@ describe('CloseAccount — where the money goes', () => {
 	});
 
 	it('divides across several when asked to', async () => {
-		setDirectory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
-		const fetchSpy = stubFetch(1500);
-		flow(BROKERAGE, 'investment', [BANK, CARD]);
-		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
-
-		await fireEvent.click(
-			screen.getByRole('button', { name: /Transfer balance to multiple accounts/ })
-		);
+		const fetchSpy = await splitFlow([BANK, CARD]);
 		await pick(screen.getByLabelText('Destination 1'), 'BankA');
 		await fireEvent.input(screen.getByLabelText('Amount 1'), { target: { value: '1000' } });
 		await fireEvent.click(screen.getByRole('button', { name: '+ Destination' }));
@@ -290,14 +288,7 @@ describe('CloseAccount — where the money goes', () => {
 	});
 
 	it('starts a further part on the destination above it', async () => {
-		setDirectory({ [BROKERAGE]: { kind: 'investment', tier: 'Taxable' } });
-		stubFetch(1500);
-		flow(BROKERAGE, 'investment', [BANK, CARD]);
-		await waitFor(() => expect(screen.queryByText('Valuing...')).not.toBeInTheDocument());
-
-		await fireEvent.click(
-			screen.getByRole('button', { name: /Transfer balance to multiple accounts/ })
-		);
+		await splitFlow([BANK, CARD]);
 		await pick(screen.getByLabelText('Destination 1'), 'CardA');
 		await fireEvent.input(screen.getByLabelText('Amount 1'), { target: { value: '1000' } });
 		await fireEvent.click(screen.getByRole('button', { name: '+ Destination' }));

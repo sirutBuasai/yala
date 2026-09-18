@@ -9,6 +9,7 @@ import { fireEvent, waitFor } from '@testing-library/dom';
 import { live } from '$lib/data/load';
 import type { AccountInfo, AccountLists } from '$lib/data/types';
 import { makeAccounts, setDirectory } from '$lib/data/__fixtures__/dashboard';
+import { pick } from '$lib/forms/__fixtures__/listbox';
 import AccountPanel from '$lib/views/manage/AccountPanel.svelte';
 
 const KINDS = Object.fromEntries(makeAccounts().kinds.map((k) => [k.name, k])) as Record<
@@ -47,12 +48,6 @@ const bodyOf = (fetchSpy: ReturnType<typeof vi.fn>, url: string) =>
 /** The write endpoints hit, in the order they were called. */
 const order = (fetchSpy: ReturnType<typeof vi.fn>) =>
 	fetchSpy.mock.calls.map(([url]) => String(url)).filter((url) => url.startsWith('/api/account/'));
-
-/** Drive the on-brand listbox: open the trigger, then click the option. */
-async function pick(trigger: HTMLElement, option: string) {
-	await fireEvent.click(trigger);
-	await fireEvent.click(screen.getByRole('option', { name: option }));
-}
 
 function panel(account: string, props: Record<string, unknown> = {}) {
 	render(AccountPanel, { props: { account, kinds: KINDS, onchanged: vi.fn(), ...props } });

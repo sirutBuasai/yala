@@ -6,6 +6,7 @@ import { setAccountDirectory } from '$lib/data/directory.svelte';
 import { lastCategory, lastFundingAccount } from '$lib/utils/editPrefs';
 import TransactionForm from '$lib/entries/transaction/TransactionForm.svelte';
 import { makeAccounts } from '$lib/data/__fixtures__/dashboard';
+import { pick } from '$lib/forms/__fixtures__/listbox';
 
 const accounts = makeAccounts({
 	spending_categories: ['Grocery', 'Takeouts'],
@@ -134,8 +135,7 @@ describe('TransactionForm (add)', () => {
 
 		await fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'x' } });
 		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '5' } });
-		await fireEvent.click(screen.getByLabelText('Account'));
-		await fireEvent.click(screen.getByRole('option', { name: 'Bank A' })); // Assets:Cash:BankA
+		await pick(screen.getByLabelText('Account'), 'Bank A'); // Assets:Cash:BankA
 		await fireEvent.click(screen.getByText('+ Add'));
 		await waitFor(() => expect(get(lastFundingAccount)).toBe('Assets:Cash:BankA'));
 		unmount();
@@ -152,8 +152,7 @@ describe('TransactionForm (add)', () => {
 		// pick a category other than the default (the first one offered), then submit
 		await fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'x' } });
 		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '5' } });
-		await fireEvent.click(screen.getByLabelText('Category')); // open the listbox
-		await fireEvent.click(screen.getByRole('option', { name: 'Takeouts' }));
+		await pick(screen.getByLabelText('Category'), 'Takeouts');
 		await fireEvent.click(screen.getByText('+ Add'));
 		await waitFor(() => expect(get(lastCategory)).toBe('Takeouts'));
 		unmount();
