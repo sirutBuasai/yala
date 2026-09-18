@@ -4,12 +4,20 @@
 	// skipped.
 	import type { DashboardData } from '$lib/data/types';
 	import { NO_VALUE } from '$lib/copy';
-	import { type AccountsInfo, live, logBalance, networthAt, updateBalance } from '$lib/data/load';
-	import { formatAccount, money, moneyExact } from '$lib/utils/format';
+	import {
+		type AccountsInfo,
+		type NetWorthAt,
+		live,
+		logBalance,
+		networthAt,
+		updateBalance
+	} from '$lib/data/load';
+	import { amountExact, formatAccount, money, moneyExact, monthLabel } from '$lib/utils/format';
 	import { accountVar } from '$lib/utils/theme';
 	import { addMonths } from '$lib/utils/period';
 	import {
 		agrees,
+		asTyped,
 		blockReason,
 		buildRows,
 		checkOf,
@@ -52,7 +60,8 @@
 	let adjNow = $state<Map<string, number>>(new Map());
 	let adjPrev = $state<Map<string, number>>(new Map());
 	let prevVals = $state<Map<string, number>>(new Map());
-	let locators = $state<Map<string, string>>(new Map());
+	/** What this month already holds per account: the figure to ghost, and where a correction goes. */
+	let logged = $state<Map<string, NetWorthAt['logged'][string]>>(new Map());
 	let loading = $state(false);
 
 	const toMap = (list: { account: string; value: number }[]) =>
@@ -67,7 +76,7 @@
 			adjNow = toMap(data.networth?.adjustments ?? []);
 			adjPrev = new Map();
 			prevVals = new Map();
-			locators = new Map();
+			logged = new Map();
 			return;
 		}
 		loading = true;
@@ -75,7 +84,7 @@
 		if (now) {
 			atNow = toMap(now.accounts);
 			adjNow = toMap(now.adjustments);
-			locators = new Map(Object.entries(now.logged ?? {}));
+			logged = new Map(Object.entries(now.logged ?? {}));
 		}
 		if (before) {
 			prevVals = toMap(before.accounts);
@@ -90,8 +99,11 @@
 	});
 
 	const expected = (account: string) =>
-		expectedAt(account, atNow, adjNow, adjPrev, locators.has(account));
+		expectedAt(account, atNow, adjNow, adjPrev, logged.has(account));
 	const previous = (account: string) => prevVals.get(account) ?? null;
+	/** What this month's latest snapshot puts the account at, in the ledger's sign. Zero is a figure,
+	    so this is null only when the month holds nothing for the account. */
+	const onRecord = (account: string) => logged.get(account)?.amount ?? null;
 
 	// Keyed by month so switching months never carries an entry across. Liabilities are typed as the
 	// amount owed and stored negative.
@@ -104,10 +116,32 @@
 		return signedForLedger(row, n);
 	}
 
+	/**
+	 * The figure a row stands at: what was typed, else what the month already asserts. This is what
+	 * makes a logged month read as done — the field is empty, but the balance is not unknown.
+	 */
+	const standing = (row: Row) => parsed(row) ?? onRecord(row.account);
+
+	/**
+	 * Where a typed figure goes: over this month's own snapshot, or onto the first when the month
+	 * holds none. Null when the month's snapshot is share-based — that is refused rather than
+	 * rewritten. A share-based month blocks only itself; the next month has its own snapshot to log.
+	 */
+	function target(row: Row): { locator: string } | { date: string } | null {
+		const rec = logged.get(row.account);
+		if (!rec) return { date: shownDate };
+
+		return rec.locator ? { locator: rec.locator } : null;
+	}
+
+	// Blocking and the gap are about a figure being ENTERED: an assertion already in the ledger loads,
+	// so it cannot be blocked, and its gap was settled when it was written.
 	const check = (row: Row) => checkOf(parsed(row), expected(row.account));
 	const matches = (row: Row) => agrees(check(row));
-	const whyBlocked = (row: Row) => blockReason(row, parsed(row), expected(row.account));
-	const blockedRow = (row: Row) => isBlocked(row, parsed(row), expected(row.account));
+	const whyBlocked = (row: Row) =>
+		blockReason(row, parsed(row), expected(row.account), target(row) != null);
+	const blockedRow = (row: Row) =>
+		isBlocked(row, parsed(row), expected(row.account), target(row) != null);
 
 	/**
 	 * Why a row can't be saved, phrased to FOLLOW the account name: the footer note puts the name in
@@ -115,19 +149,27 @@
 	 * two can't drift apart.
 	 */
 	function blockedPredicate(row: Row): string {
+		const why = whyBlocked(row);
+		if (why === 'share-snapshot') {
+			return `was snapshotted in shares in ${monthLabel(monthKey)}. Only backfilling shares is allowed.`;
+		}
+		if (why === 'negative') {
+			return "can't hold a negative balance, please enter a positive figure.";
+		}
 		const gap = check(row) ?? 0;
 
-		return whyBlocked(row) === 'negative'
-			? "can't hold a negative balance, please enter a positive figure."
-			: `is off by ${moneyExact(Math.abs(gap))}, please log the missing ${missingEntryKind(gap)} first.`;
+		return `is off by ${moneyExact(Math.abs(gap))}, please log the missing ${missingEntryKind(gap)} first.`;
 	}
 
-	const filled = $derived(rows.filter((r) => parsed(r) != null));
+	// `entered` is what Save writes; `settled` is what the month has a figure for either way, and so
+	// what the progress count is about.
+	const entered = $derived(rows.filter((r) => parsed(r) != null));
+	const settled = $derived(rows.filter((r) => standing(r) != null));
 	const blocked = $derived(rows.filter(blockedRow));
-	const savable = $derived(filled.filter((r) => !blockedRow(r)));
+	const savable = $derived(entered.filter((r) => !blockedRow(r)));
 
 	const effective = (row: Row) =>
-		parsed(row) ?? expected(row.account) ?? previous(row.account) ?? 0;
+		standing(row) ?? expected(row.account) ?? previous(row.account) ?? 0;
 	const assets = $derived(
 		sumBy(
 			rows.filter((r) => !r.liability),
@@ -163,10 +205,12 @@
 			if (value == null) continue;
 			// Liabilities go over the wire as the owed figure; the API stores the sign.
 			const amount = row.liability ? Math.abs(value) : value;
-			const existing = locators.get(row.account);
-			const { error } = existing
-				? await updateBalance(existing, amount)
-				: await logBalance(row.account, amount, shownDate);
+			const where = target(row);
+			if (where == null) continue; // blocked, so never in `savable`
+			const { error } =
+				'locator' in where
+					? await updateBalance(where.locator, amount)
+					: await logBalance(row.account, amount, where.date);
 			if (error) failures.push(`${formatAccount(row.account)}: ${error}`);
 			else delete typed[cellKey(row.account)];
 		}
@@ -185,7 +229,7 @@
 >
 	{#snippet actions()}
 		{#if rows.length}
-			<span class="progress">{filled.length}/{rows.length}</span>
+			<span class="progress">{settled.length}/{rows.length}</span>
 		{/if}
 	{/snippet}
 
@@ -232,7 +276,8 @@
 								<td colspan="4"></td>
 							</tr>
 							{#each members as row (row.account)}
-								{@const value = parsed(row)}
+								{@const value = standing(row)}
+								{@const rec = onRecord(row.account)}
 								{@const prev = previous(row.account)}
 								{@const exp = expected(row.account)}
 								{@const chk = check(row)}
@@ -246,9 +291,11 @@
 									<td class="num muted">{prev == null ? NO_VALUE : moneyExact(prev)}</td>
 									<td class="num muted">{exp == null ? NO_VALUE : moneyExact(exp)}</td>
 									<td class="entrycell">
+										<!-- A logged month ghosts its own figure, so stepping back to one shows what it
+										     holds without prefilling a field that would then look edited. -->
 										<AmountInput
 											prefix="$"
-											placeholder={NO_VALUE}
+											placeholder={rec == null ? NO_VALUE : amountExact(asTyped(row, rec))}
 											signed
 											disabled={busy}
 											ariaLabel={`Balance for ${formatAccount(row.account)}`}
@@ -259,16 +306,20 @@
 										>{value == null || prev == null ? NO_VALUE : moneyExact(value - prev)}</td
 									>
 									<td class="num">
-										{#if chk == null}
+										{#if chk == null && rec != null}
+											<Badge tone="good" filled title="Logged for this month">✓</Badge>
+										{:else if chk == null}
 											{NO_VALUE}
-										{:else if matches(row)}
-											<Badge tone="good" filled title="Matches the ledger">✓</Badge>
 										{:else if blockedRow(row)}
+											<!-- Ahead of `matches`: a figure the month cannot take is blocked even when it
+											     agrees, and a green tick on a row that will not save reads as saved. -->
 											<Badge
 												tone="crit"
 												filled
 												title={`${formatAccount(row.account)} ${blockedPredicate(row)}`}>✕</Badge
 											>
+										{:else if matches(row)}
+											<Badge tone="good" filled title="Matches the ledger">✓</Badge>
 										{:else}
 											<Badge
 												tone="warn"
@@ -305,7 +356,7 @@
 
 			<div class="actions">
 				<button class="btn-primary" onclick={saveAll} disabled={busy || !savable.length}>
-					{busy ? 'Saving...' : savable.length ? `Save ${savable.length}` : 'Save'}
+					{busy ? 'Saving...' : 'Save'}
 				</button>
 			</div>
 		</div>

@@ -1,0 +1,19 @@
+; A ledger whose newest event is a logged snapshot, in a month with nothing else in it.
+option "operating_currency" "USD"
+
+2020-01-01 commodity USD
+2020-01-01 open Assets:Cash:BankA USD
+2020-01-01 open Expenses:Grocery USD
+2020-01-01 open Equity:Adjustments:BankA USD
+2020-01-01 open Equity:Opening-Balances USD
+
+2026-07-10 * "store" "groceries"
+  Expenses:Grocery      40.00 USD
+  Assets:Cash:BankA    -40.00 USD
+
+2026-07-01 pad Assets:Cash:BankA Equity:Adjustments:BankA
+2026-07-02 balance Assets:Cash:BankA  1000.00 USD
+
+; August holds no entries at all — only this snapshot.
+2026-08-25 pad Assets:Cash:BankA Equity:Adjustments:BankA
+2026-08-26 balance Assets:Cash:BankA  1500.00 USD

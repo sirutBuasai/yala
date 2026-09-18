@@ -10,6 +10,7 @@ import pytest
 from beancount.core import data
 from fastapi.testclient import TestClient
 
+from tests.conftest import append_accounts
 from tests.conftest import load_ledger as _load
 from yala.ledger import Ledger
 from yala.ledger.accounts import plug_account
@@ -70,7 +71,156 @@ def test_log_balance_stamps_an_id_for_later_editing(ledger_dir: Path):
     )
 
     assert f'id: "{entry_id}"' in (ledger_dir / "assets" / "2026.beancount").read_text()
-    assert _load(ledger_dir).net_worth.logged_at(SEP)[account] == f"id:{entry_id}"
+    assert _load(ledger_dir).net_worth.logged_in_month(SEP)[account].locator == f"id:{entry_id}"
+
+
+def test_logged_in_month_reports_the_asserted_figure(ledger_dir: Path):
+    """The pane ghosts a logged month's own figure, so it reads the assertion rather than the
+    account's value at that date, which would fold in anything posted on the day itself."""
+    account = "Assets:Cash:BankA"
+    FileLedgerSink(ledger_dir).log_balance(account, Decimal("1234.56"), SEP, plug_account(account))
+
+    assert _load(ledger_dir).net_worth.logged_in_month(SEP)[account].amount == Decimal("1234.56")
+
+
+def test_logged_in_month_reports_a_zero_balance(ledger_dir: Path):
+    """Zero is a figure, not a blank: an account swept empty was logged and must count as logged."""
+    account = "Assets:Cash:BankA"
+    FileLedgerSink(ledger_dir).log_balance(account, Decimal("0.00"), SEP, plug_account(account))
+
+    assert _load(ledger_dir).net_worth.logged_in_month(SEP)[account].amount == Decimal("0.00")
+
+
+def test_logged_in_month_omits_a_month_with_no_assertion(ledger_dir: Path):
+    account = "Assets:Cash:BankA"
+    FileLedgerSink(ledger_dir).log_balance(account, Decimal("1000.00"), SEP, plug_account(account))
+
+    assert account not in _load(ledger_dir).net_worth.logged_in_month(dt.date(2026, 10, 1))
+
+
+def test_logged_in_month_finds_a_snapshot_on_any_day_of_it(ledger_dir: Path):
+    """A snapshot need not land on the first: the month is what is asked for, not the date."""
+    account = "Assets:Cash:BankA"
+    late = dt.date(2026, 9, 26)
+    FileLedgerSink(ledger_dir).log_balance(account, Decimal("777.00"), late, plug_account(account))
+
+    found = _load(ledger_dir).net_worth.logged_in_month(SEP)[account]
+    assert (found.date, found.amount) == (late, Decimal("777.00"))
+
+
+def test_logged_in_month_takes_each_accounts_own_latest_snapshot(ledger_dir: Path):
+    """Two snapshots in one month, covering different accounts: each account reports the later of
+    its own, not the later of the month's."""
+    bank = "Assets:Cash:BankA"
+    other = "Assets:Cash:BankB"
+    late = dt.date(2026, 9, 26)
+    sink = FileLedgerSink(ledger_dir)
+    sink.log_balance(bank, Decimal("100.00"), SEP, plug_account(bank))
+    sink.log_balance(other, Decimal("200.00"), late, plug_account(other))
+
+    logged = _load(ledger_dir).net_worth.logged_in_month(SEP)
+    assert (logged[bank].date, logged[bank].amount) == (SEP, Decimal("100.00"))
+    assert (logged[other].date, logged[other].amount) == (late, Decimal("200.00"))
+
+
+def test_logged_in_month_values_a_share_snapshot_at_its_own_prices(ledger_dir: Path):
+    """A share-based snapshot is worth its legs summed at that date's prices, and is not a balance
+    this pane can rewrite, so it offers no locator."""
+    account = "Assets:Investments:Taxable:BrokerA"
+    append_accounts(
+        ledger_dir,
+        f"""
+        2020-01-01 commodity TICKA
+        2020-01-01 commodity TICKB
+        2026-01-01 open {account}
+        2026-09-26 price TICKA 10.00 USD
+        2026-09-26 price TICKB 4.00 USD
+        2026-01-05 * "buy"
+          {account}  3 TICKA @ 10.00 USD
+          {account}  5 TICKB @ 4.00 USD
+          Assets:Cash:BankA  -50.00 USD
+        2026-09-26 balance {account}  3 TICKA
+        2026-09-26 balance {account}  5 TICKB
+        """,
+    )
+
+    found = _load(ledger_dir).net_worth.logged_in_month(SEP)[account]
+    assert found.amount == Decimal("50.00")  # 3 x 10 + 5 x 4
+    assert found.locator is None  # the lots are the balance; there is no figure to rewrite
+
+
+def test_logged_in_month_never_reaches_back_past_the_snapshot_it_shows(ledger_dir: Path):
+    """A month can assert USD early and shares later. Offering the earlier USD assertion as the
+    handle would rewrite a date the displayed figure never came from, restating that date and
+    plugging the difference."""
+    account = "Assets:Investments:Taxable:BrokerA"
+    append_accounts(
+        ledger_dir,
+        f"""
+        2020-01-01 commodity TICKA
+        2026-01-01 open {account}
+        2020-01-01 open {plug_account(account)}
+        2026-09-26 price TICKA 10.00 USD
+        """,
+    )
+    FileLedgerSink(ledger_dir).log_balance(account, Decimal("500.00"), SEP, plug_account(account))
+    append_accounts(
+        ledger_dir,
+        f"""
+        2026-09-20 * "buy"
+          {account}  3 TICKA @ 10.00 USD
+          Assets:Cash:BankA  -30.00 USD
+        2026-09-26 balance {account}  500.00 USD
+        2026-09-26 balance {account}  3 TICKA
+        """,
+    )
+
+    found = _load(ledger_dir).net_worth.logged_in_month(SEP)[account]
+    assert found.date == dt.date(2026, 9, 26)
+    assert found.amount == Decimal("530.00")  # the USD leg plus 3 x 10
+    assert found.locator is None  # NOT the lone USD assertion back on the 1st
+
+
+def test_logged_in_month_rewrites_a_lone_usd_snapshot_in_place(ledger_dir: Path):
+    """The ordinary case: one USD snapshot, corrected on its own line."""
+    account = "Assets:Cash:BankA"
+    entry_id = FileLedgerSink(ledger_dir).log_balance(
+        account, Decimal("1000.00"), SEP, plug_account(account)
+    )
+
+    assert _load(ledger_dir).net_worth.logged_in_month(SEP)[account].locator == f"id:{entry_id}"
+
+
+def test_a_share_month_does_not_block_the_next_month(ledger_dir: Path):
+    """A share snapshot refuses correction in its OWN month only. The month after has nothing logged
+    yet, so it stays loggable in USD: the pad reclassifies the lots and the assertion stands."""
+    account = "Assets:Investments:Taxable:BrokerA"
+    plug = plug_account(account)
+    append_accounts(
+        ledger_dir,
+        f"""
+        2020-01-01 commodity TICKA
+        2026-01-01 open {account}
+        2020-01-01 open {plug}
+        2026-01-05 price TICKA 10.00 USD
+        2026-08-26 price TICKA 10.00 USD
+        2026-01-06 * "buy"
+          {account}  3 TICKA @ 10.00 USD
+          Assets:Cash:BankA  -30.00 USD
+        2026-08-26 balance {account}  3 TICKA
+        """,
+    )
+    august = _load(ledger_dir).net_worth.logged_in_month(dt.date(2026, 8, 1))[account]
+    assert august.locator is None  # August itself refuses
+    assert account not in _load(ledger_dir).net_worth.logged_in_month(SEP)
+
+    FileLedgerSink(ledger_dir).log_balance(account, Decimal("35.00"), SEP, plug)
+
+    led = _load(ledger_dir)
+    assert led.net_worth.logged_in_month(SEP)[account].amount == Decimal("35.00")
+    # August's own snapshot is untouched, and only the real difference plugged
+    assert led.net_worth.logged_in_month(dt.date(2026, 8, 1))[account].amount == Decimal("30.00")
+    assert led.balance(plug) == Decimal("-5.00")
 
 
 def test_log_balance_monthly_history_skips_unneeded_pads(ledger_dir: Path):
@@ -114,7 +264,7 @@ def test_update_balance_edits_the_located_assertion_in_place(ledger_dir: Path):
     )
 
     led = _load(ledger_dir)
-    locator = led.net_worth.logged_at(dt.date(2026, 9, 1))[account]
+    locator = led.net_worth.logged_in_month(dt.date(2026, 9, 1))[account].locator
     FileLedgerSink(ledger_dir).update_balance(locator, Decimal("1250.00"))
 
     led = _load(ledger_dir)
@@ -149,11 +299,11 @@ def test_update_balance_adds_then_drops_pads_as_the_figure_requires(ledger_dir: 
     seeded = pads()  # the first month's own pad, which seeded the balance
     seeded_plug = _load(ledger_dir).balance(plug)
 
-    locator = _load(ledger_dir).net_worth.logged_at(dt.date(2026, 9, 1))[account]
+    locator = _load(ledger_dir).net_worth.logged_in_month(dt.date(2026, 9, 1))[account].locator
     sink.update_balance(locator, Decimal("1250.00"))
     assert pads() == sorted([*seeded, dt.date(2026, 9, 30)])  # re-pins October
 
-    locator = _load(ledger_dir).net_worth.logged_at(dt.date(2026, 9, 1))[account]
+    locator = _load(ledger_dir).net_worth.logged_in_month(dt.date(2026, 9, 1))[account].locator
     sink.update_balance(locator, Decimal("1000.00"))
     assert pads() == seeded  # the extra pad is gone again
     # the round trip left no residue in the plug
@@ -172,7 +322,7 @@ def test_update_balance_stamps_an_id_on_a_migrated_assertion(ledger_dir: Path):
     path = ledger_dir / "assets" / "2026.beancount"
     path.write_text(path.read_text().replace(f'  id: "{entry_id}"\n', ""))
 
-    line_locator = _load(ledger_dir).net_worth.logged_at(SEP)[account]
+    line_locator = _load(ledger_dir).net_worth.logged_in_month(SEP)[account].locator
     assert line_locator.startswith("line:")
 
     _, _, stable = sink.update_balance(line_locator, Decimal("1200.00"))
@@ -318,7 +468,7 @@ def test_patch_balance_edits_the_locator_from_networth_at(client: TestClient):
     )
 
     at = client.get("/api/networth?date=2026-09-01").json()
-    locator = at["logged"][account]
+    locator = at["logged"][account]["locator"]
 
     r = client.post("/api/balance/update", json={"locator": locator, "amount": 1234.56})
     assert r.status_code == 200, r.text
@@ -366,7 +516,7 @@ def test_post_liability_balance_stores_the_owed_figure_negative(client: TestClie
 
     at = client.get("/api/networth?date=2026-09-01").json()
     assert dict((a["account"], a["value"]) for a in at["accounts"])[CARD] == -CARD_OWED
-    assert CARD in at["logged"]
+    assert at["logged"][CARD]["amount"] == -CARD_OWED
 
 
 def test_post_liability_balance_writes_no_pad(client: TestClient):
@@ -399,7 +549,7 @@ def test_patch_liability_balance_keeps_the_owed_sign(client: TestClient):
         ).status_code
         == 200
     )
-    locator = client.get("/api/networth?date=2026-09-01").json()["logged"][CARD]
+    locator = client.get("/api/networth?date=2026-09-01").json()["logged"][CARD]["locator"]
 
     # editing to a figure that no longer holds is refused
     edit = client.post("/api/balance/update", json={"locator": locator, "amount": 999.0})

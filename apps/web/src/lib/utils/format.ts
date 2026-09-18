@@ -25,12 +25,19 @@ export function money(n: number | null | undefined): string {
 	return (r < 0 ? '-$' : '$') + Math.abs(r).toLocaleString();
 }
 
-/** Money to the cent, for reconciliation figures the user has to match exactly. */
-export function moneyExact(n: number | null | undefined): string {
+/** Exact cents without the currency, for a field that already shows the symbol itself. */
+export function amountExact(n: number | null | undefined): string {
 	const v = n || 0;
 	const digits = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
 
-	return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString(undefined, digits);
+	return (v < 0 ? '-' : '') + Math.abs(v).toLocaleString(undefined, digits);
+}
+
+/** Money to the cent, for reconciliation figures the user has to match exactly. */
+export function moneyExact(n: number | null | undefined): string {
+	const v = n || 0;
+
+	return (v < 0 ? '-$' : '$') + amountExact(Math.abs(v));
 }
 
 /**

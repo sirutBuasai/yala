@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	agrees,
+	asTyped,
 	blockReason,
 	buildRows,
 	checkOf,
@@ -136,6 +137,16 @@ describe('isBlocked', () => {
 	it('does not block a row with nothing typed in it', () => {
 		expect(isBlocked(card, null, -1000)).toBe(false);
 	});
+
+	it("blocks a figure over a month's share snapshot, whatever was typed", () => {
+		expect(blockReason(asset, 1000, 1000, false)).toBe('share-snapshot');
+		// even an otherwise-valid figure, and even one that agrees
+		expect(blockReason(card, -1000, -1000, false)).toBe('share-snapshot');
+	});
+
+	it('leaves a share-snapshot row alone until something is typed in it', () => {
+		expect(isBlocked(asset, null, 1000, false)).toBe(false);
+	});
 });
 
 describe('missingEntryKind', () => {
@@ -157,5 +168,10 @@ describe('signedForLedger', () => {
 	it("leaves an asset's sign alone", () => {
 		expect(signedForLedger(asset, 500)).toBe(500);
 		expect(signedForLedger(asset, -20)).toBe(-20);
+	});
+
+	it('round-trips a stored figure back to what the field takes', () => {
+		expect(asTyped(card, signedForLedger(card, 500))).toBe(500);
+		expect(asTyped(asset, signedForLedger(asset, -20))).toBe(-20);
 	});
 });

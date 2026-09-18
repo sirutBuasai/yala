@@ -71,28 +71,41 @@ export function agrees(check: number | null): boolean {
 	return check != null && Math.abs(check) < EPSILON;
 }
 
-/** `negative` is an impossible figure; `missing-entry` is a liability that disagrees with the ledger. */
-export type BlockReason = 'negative' | 'missing-entry';
+/**
+ * `negative` is an impossible figure; `missing-entry` is a liability that disagrees with the ledger;
+ * `share-snapshot` is a month already snapshotted in shares, which is not a balance to rewrite.
+ */
+export type BlockReason = 'negative' | 'missing-entry' | 'share-snapshot';
 
 /**
  * Assets may drift, so their gap becomes an `Equity:Adjustments:*` plug. A liability's balance is
  * fully determined by the entries already logged, so a gap there means an entry is MISSING and must
  * block rather than be plugged over. Neither may be negative.
+ *
+ * `correctable` is false when the month's own snapshot is share-based; that blocks whatever was
+ * typed, since no USD figure can replace it.
  */
 export function blockReason(
 	row: Row,
 	typed: number | null,
-	expected: number | null
+	expected: number | null,
+	correctable = true
 ): BlockReason | null {
 	if (typed == null) return null;
+	if (!correctable) return 'share-snapshot';
 	if (row.liability) {
 		return agrees(checkOf(typed, expected)) ? null : 'missing-entry';
 	}
 	return typed < 0 ? 'negative' : null;
 }
 
-export function isBlocked(row: Row, typed: number | null, expected: number | null): boolean {
-	return blockReason(row, typed, expected) !== null;
+export function isBlocked(
+	row: Row,
+	typed: number | null,
+	expected: number | null,
+	correctable = true
+): boolean {
+	return blockReason(row, typed, expected, correctable) !== null;
 }
 
 /** Which kind of entry a liability's gap says is missing. */
@@ -103,4 +116,9 @@ export function missingEntryKind(gap: number): 'spending' | 'bill pay' {
 /** Liabilities are typed as the amount owed but stored negative, the sign the ledger keeps. */
 export function signedForLedger(row: Row, typed: number): number {
 	return row.liability ? -Math.abs(typed) : typed;
+}
+
+/** The inverse: a stored figure as the field would take it, owed positive. */
+export function asTyped(row: Row, stored: number): number {
+	return row.liability ? Math.abs(stored) : stored;
 }

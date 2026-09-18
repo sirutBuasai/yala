@@ -276,9 +276,17 @@ def build(ledger: Ledger) -> DashboardData:
     all_transfers = transfers.transactions()
     income_months = {(p.date.year, p.date.month) for p in income.paychecks()}
     transfer_months = {(t.date.year, t.date.month) for t in all_transfers}
-    all_months = sorted(set(spending.months()) | income_months | transfer_months)
+    # A logged snapshot makes a month real on its own: a month can carry no entries at all and still
+    # be the one a balance was logged in, and leaving it out filed that balance under the month
+    # before it.
+    snapshot_dates = networth.snapshot_dates()
+    snapshot_months = {(d.year, d.month) for d in snapshot_dates}
+    all_months = sorted(set(spending.months()) | income_months | transfer_months | snapshot_months)
     all_years = sorted(
-        set(spending.years()) | set(income.years()) | {t.date.year for t in all_transfers}
+        set(spending.years())
+        | set(income.years())
+        | {t.date.year for t in all_transfers}
+        | {d.year for d in snapshot_dates}
     )
 
     networth_section = _networth(networth)

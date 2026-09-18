@@ -3,11 +3,13 @@ import { setAccountDirectory } from '$lib/data/directory.svelte';
 import {
 	MONTHS,
 	accountLeaf,
+	amountExact,
 	dateShort,
 	esc,
 	formatAccount,
 	money,
 	moneyCompact,
+	moneyExact,
 	moneyK,
 	monthDay,
 	monthLabel,
@@ -35,6 +37,24 @@ describe('money', () => {
 	it('does not render a negative zero', () => {
 		// Math.round(-0.4) is -0, which must still print as "$0".
 		expect(money(-0.4)).toBe('$0');
+	});
+});
+
+describe('amountExact', () => {
+	it('keeps both cents and drops the currency', () => {
+		expect(amountExact(1234.5)).toBe('1,234.50');
+		expect(amountExact(0)).toBe('0.00');
+	});
+
+	it('keeps a negative sign without a symbol', () => {
+		expect(amountExact(-83.2)).toBe('-83.20');
+	});
+});
+
+describe('moneyExact', () => {
+	it('puts the symbol inside the sign', () => {
+		expect(moneyExact(1234.5)).toBe('$1,234.50');
+		expect(moneyExact(-83.2)).toBe('-$83.20');
 	});
 });
 

@@ -55,6 +55,20 @@ class AccountValue:
     value: Decimal
 
 
+@dataclass(frozen=True)
+class LoggedBalance:
+    """What a month already holds for one account, and whether it can be corrected.
+
+    ``amount`` is as stored, so a liability's is negative."""
+
+    #: The snapshot the figure came from — not necessarily the month's first day.
+    date: dt.date
+    #: USD at ``date``; share lots valued at that date's prices.
+    amount: Decimal
+    #: Handle to rewrite ``date``'s assertion, or None when it is share-based and so not rewritable.
+    locator: str | None
+
+
 @dataclass
 class NetWorthSnapshot:
     """One logged date's figures; ``liabilities`` is positive drag."""
@@ -122,7 +136,7 @@ class NetWorth:
 
         return out
 
-    def _snapshot_dates(self) -> list[dt.date]:
+    def snapshot_dates(self) -> list[dt.date]:
         """Every distinct ``balance``-assertion date — the trusted snapshot points.
 
         One point per logged *day*, not per month: a month may carry several snapshots, and
@@ -137,25 +151,49 @@ class NetWorth:
         the snapshot day and drift the trend away from the asserted figures."""
         return [
             replace(self.totals(d - dt.timedelta(days=1)), date=d.isoformat())
-            for d in self._snapshot_dates()
+            for d in self.snapshot_dates()
         ]
 
-    def logged_at(self, date: dt.date) -> dict[str, str]:
-        """Locator of each account's editable ``balance`` assertion dated ``date``.
+    def logged_in_month(self, any_day: dt.date) -> dict[str, LoggedBalance]:
+        """What each account's snapshot stands at within ``any_day``'s month.
 
-        Listed only when the day holds exactly one USD assertion for the account — the shape
-        :meth:`FileLedgerSink.update_balance` can rewrite. A share-based snapshot is omitted, since
-        changing one leg of it is not a balance edit."""
-        by_account: dict[str, list[data.Balance]] = {}
+        A month may carry several snapshot dates covering different accounts — cash asserted in USD
+        on the first, a brokerage asserted in shares later — so the latest date carrying *that
+        account* wins rather than the latest date in the month. Share legs are summed at their own
+        date's prices, which is the figure the account was snapshotted to.
+
+        Only that latest snapshot is offered for correction, and only when it is a lone USD
+        assertion. Reaching back to an earlier USD one in the same month would rewrite a date the
+        displayed figure did not come from, silently restating it and plugging the difference; a
+        share-based one is left alone entirely, since rewriting one leg of it is not a balance edit.
+        A *later* month is unaffected — it has its own snapshot to log, whatever this one holds."""
+        in_month: dict[str, list[data.Balance]] = {}
         for e in self._led.entries:
-            if isinstance(e, data.Balance) and e.date == date:
-                by_account.setdefault(e.account, []).append(e)
+            if isinstance(e, data.Balance) and (e.date.year, e.date.month) == (
+                any_day.year,
+                any_day.month,
+            ):
+                in_month.setdefault(e.account, []).append(e)
 
-        return {
-            account: locator_of(entries[0].meta)
-            for account, entries in by_account.items()
-            if len(entries) == 1 and entries[0].amount.currency == DEFAULT_CURRENCY
-        }
+        out: dict[str, LoggedBalance] = {}
+        for account, entries in in_month.items():
+            latest = max(e.date for e in entries)
+            at_latest = [e for e in entries if e.date == latest]
+
+            held: dict[str, Decimal] = {}
+            for e in at_latest:
+                held[e.amount.currency] = held.get(e.amount.currency, Decimal(0)) + (
+                    e.amount.number or Decimal(0)
+                )
+
+            rewritable = len(at_latest) == 1 and at_latest[0].amount.currency == DEFAULT_CURRENCY
+            out[account] = LoggedBalance(
+                date=latest,
+                amount=self._led.value_of(held, latest),
+                locator=locator_of(at_latest[0].meta) if rewritable else None,
+            )
+
+        return out
 
     def adjustments(self, as_of: dt.date | None = None) -> list[Adjustment]:
         """Cumulative balance of each ``Equity:Adjustments:*`` plug."""

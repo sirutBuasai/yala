@@ -85,9 +85,9 @@ def post_balance_update(body: BalanceEditIn) -> dict:
 
 @router.get("/api/networth")
 def get_networth_at(date: str) -> dict:
-    """Per-account USD values, adjustment-plug balances, and editable-assertion locators as of
-    ``date``. This is what lets the balance pane show a past month's own figures, and offer the
-    handle to correct them in place."""
+    """Per-account USD values and adjustment-plug balances as of ``date``, plus what ``date``'s own
+    month already has logged. This is what lets the balance pane show a past month's own figures,
+    and offer the handle to correct them in place."""
     as_of = parse_date(date)
     nw = ledger().net_worth
     return {
@@ -95,6 +95,10 @@ def get_networth_at(date: str) -> dict:
         "adjustments": [
             {"account": a.account, "value": float(a.value)} for a in nw.adjustments(as_of)
         ],
-        # account -> locator, present only where that date already holds an editable USD assertion
-        "logged": nw.logged_at(as_of),
+        # account -> what its latest snapshot in this month stands at, with a locator only where
+        # that snapshot can be rewritten. Amounts are as stored, so a liability's is negative.
+        "logged": {
+            account: {"date": b.date.isoformat(), "amount": float(b.amount), "locator": b.locator}
+            for account, b in nw.logged_in_month(as_of).items()
+        },
     }

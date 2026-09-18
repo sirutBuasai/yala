@@ -389,8 +389,10 @@ export async function updateBalance(
 export interface NetWorthAt {
 	accounts: { account: string; value: number }[];
 	adjustments: { account: string; value: number }[];
-	/** account -> locator, only where that date already holds an editable USD assertion. */
-	logged: Record<string, string>;
+	/** account -> what its latest snapshot in the date's MONTH stands at. `locator` is present only
+	    where that snapshot can be rewritten; a share-based one cannot. `amount` is as stored, so a
+	    liability's is negative. */
+	logged: Record<string, { date: string; amount: number; locator: string | null }>;
 }
 
 export async function networthAt(date: string): Promise<NetWorthAt | null> {

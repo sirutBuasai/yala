@@ -168,12 +168,15 @@ class Ledger:
             self._price_cache = prices.build_price_map(self._entries)
         return self._price_cache
 
-    def value(self, account: str, as_of: dt.date | None = None) -> Decimal:
-        """USD value of ``account``'s holdings at ``as_of`` (latest price on/before). Raises
-        :class:`LedgerError` if a held ticker has no price."""
+    def value_of(self, held: dict[str, Decimal], as_of: dt.date | None = None) -> Decimal:
+        """USD value of a commodity -> quantity map at ``as_of`` (latest price on/before).
+
+        Takes the quantities rather than an account, so a figure a ``balance`` directive asserts can
+        be valued as it was written instead of re-derived from postings. Raises
+        :class:`LedgerError` if a commodity has no price."""
         usd = self.currency
         total = Decimal(0)
-        for cur, qty in self.holdings(account, as_of).items():
+        for cur, qty in held.items():
             if cur == usd:
                 total += qty
                 continue
@@ -182,6 +185,11 @@ class Ledger:
                 raise LedgerError(f"no price for {cur} on or before {as_of}")
             total += qty * priced[1]
         return round_cents(total)
+
+    def value(self, account: str, as_of: dt.date | None = None) -> Decimal:
+        """USD value of ``account``'s holdings at ``as_of`` (latest price on/before). Raises
+        :class:`LedgerError` if a held ticker has no price."""
+        return self.value_of(self.holdings(account, as_of), as_of)
 
     def declared_accounts(self, prefix: str | None = None) -> list[str]:
         """Every opened account name, whether or not it was later closed."""

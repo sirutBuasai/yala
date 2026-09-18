@@ -155,3 +155,12 @@ def test_income_only_month_still_produces_a_month_page():
     assert jan.total_spent == 0
     assert jan.transactions == []
     assert jan.paychecks  # the paycheck still lands on the page
+
+
+def test_snapshot_only_month_is_a_month():
+    """A month whose only event is a logged snapshot is still a month. Without it the August
+    snapshot had no month to belong to and read as July's."""
+    d = build(Ledger(Path(__file__).parent / "fixtures" / "snapshot_only_month.beancount").load())
+
+    assert "2026-08" in d.meta.month_keys
+    assert d.meta.month_keys[-1] == "2026-08"
