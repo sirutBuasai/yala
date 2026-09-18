@@ -10,13 +10,37 @@ import pytest
 from beancount.core import data
 from fastapi.testclient import TestClient
 
-from tests.conftest import append_accounts
+from tests.conftest import PASSTHROUGH, SAVINGS, append_accounts
 from tests.conftest import load_ledger as _load
 from yala.ledger import Ledger
 from yala.ledger.accounts import plug_account
 from yala.sink import FileLedgerSink
 
 SEP = dt.date(2026, 9, 1)
+
+
+def _snapshot(ledger_dir: Path, account: str, amount: str, date: dt.date = SEP) -> str:
+    """Log ``amount`` for ``account`` straight through the sink, returning the entry id."""
+    return FileLedgerSink(ledger_dir).log_balance(
+        account, Decimal(amount), date, plug_account(account)
+    )
+
+
+def _networth_at(client: TestClient, date: dt.date = SEP) -> dict:
+    """The dated read the balance pane makes."""
+    return client.get(f"/api/networth?date={date.isoformat()}").json()
+
+
+def _value_of(at: dict, account: str) -> float:
+    """One account's figure out of a ``/api/networth`` body."""
+    return {a["account"]: a["value"] for a in at["accounts"]}[account]
+
+
+def _post_balance(client: TestClient, account: str, amount: float, date: dt.date = SEP):
+    """Snapshot ``account`` through the endpoint, the way a balance pane does."""
+    return client.post(
+        "/api/balance", json={"account": account, "amount": amount, "date": date.isoformat()}
+    )
 
 
 # --- plug_account mapping (pure) ---
@@ -52,7 +76,7 @@ def test_plug_account_is_none_where_there_is_no_plug():
 
 def test_log_balance_usd_account_pads_to_asserted_value(ledger_dir: Path):
     account = "Assets:Cash:BankA"
-    FileLedgerSink(ledger_dir).log_balance(account, Decimal("1000.00"), SEP, plug_account(account))
+    _snapshot(ledger_dir, account, "1000.00")
 
     led = _load(ledger_dir)
     assert led.balance(account, SEP) == Decimal("1000.00")
@@ -66,9 +90,7 @@ def test_log_balance_usd_account_pads_to_asserted_value(ledger_dir: Path):
 
 def test_log_balance_stamps_an_id_for_later_editing(ledger_dir: Path):
     account = "Assets:Cash:BankA"
-    entry_id = FileLedgerSink(ledger_dir).log_balance(
-        account, Decimal("1000.00"), SEP, plug_account(account)
-    )
+    entry_id = _snapshot(ledger_dir, account, "1000.00")
 
     assert f'id: "{entry_id}"' in (ledger_dir / "assets" / "2026.beancount").read_text()
     assert _load(ledger_dir).net_worth.logged_in_month(SEP)[account].locator == f"id:{entry_id}"
@@ -78,7 +100,7 @@ def test_logged_in_month_reports_the_asserted_figure(ledger_dir: Path):
     """The pane ghosts a logged month's own figure, so it reads the assertion rather than the
     account's value at that date, which would fold in anything posted on the day itself."""
     account = "Assets:Cash:BankA"
-    FileLedgerSink(ledger_dir).log_balance(account, Decimal("1234.56"), SEP, plug_account(account))
+    _snapshot(ledger_dir, account, "1234.56")
 
     assert _load(ledger_dir).net_worth.logged_in_month(SEP)[account].amount == Decimal("1234.56")
 
@@ -86,14 +108,14 @@ def test_logged_in_month_reports_the_asserted_figure(ledger_dir: Path):
 def test_logged_in_month_reports_a_zero_balance(ledger_dir: Path):
     """Zero is a figure, not a blank: an account swept empty was logged and must count as logged."""
     account = "Assets:Cash:BankA"
-    FileLedgerSink(ledger_dir).log_balance(account, Decimal("0.00"), SEP, plug_account(account))
+    _snapshot(ledger_dir, account, "0.00")
 
     assert _load(ledger_dir).net_worth.logged_in_month(SEP)[account].amount == Decimal("0.00")
 
 
 def test_logged_in_month_omits_a_month_with_no_assertion(ledger_dir: Path):
     account = "Assets:Cash:BankA"
-    FileLedgerSink(ledger_dir).log_balance(account, Decimal("1000.00"), SEP, plug_account(account))
+    _snapshot(ledger_dir, account, "1000.00")
 
     assert account not in _load(ledger_dir).net_worth.logged_in_month(dt.date(2026, 10, 1))
 
@@ -102,7 +124,7 @@ def test_logged_in_month_finds_a_snapshot_on_any_day_of_it(ledger_dir: Path):
     """A snapshot need not land on the first: the month is what is asked for, not the date."""
     account = "Assets:Cash:BankA"
     late = dt.date(2026, 9, 26)
-    FileLedgerSink(ledger_dir).log_balance(account, Decimal("777.00"), late, plug_account(account))
+    _snapshot(ledger_dir, account, "777.00", late)
 
     found = _load(ledger_dir).net_worth.logged_in_month(SEP)[account]
     assert (found.date, found.amount) == (late, Decimal("777.00"))
@@ -163,7 +185,7 @@ def test_logged_in_month_never_reaches_back_past_the_snapshot_it_shows(ledger_di
         2026-09-26 price TICKA 10.00 USD
         """,
     )
-    FileLedgerSink(ledger_dir).log_balance(account, Decimal("500.00"), SEP, plug_account(account))
+    _snapshot(ledger_dir, account, "500.00")
     append_accounts(
         ledger_dir,
         f"""
@@ -184,9 +206,7 @@ def test_logged_in_month_never_reaches_back_past_the_snapshot_it_shows(ledger_di
 def test_logged_in_month_rewrites_a_lone_usd_snapshot_in_place(ledger_dir: Path):
     """The ordinary case: one USD snapshot, corrected on its own line."""
     account = "Assets:Cash:BankA"
-    entry_id = FileLedgerSink(ledger_dir).log_balance(
-        account, Decimal("1000.00"), SEP, plug_account(account)
-    )
+    entry_id = _snapshot(ledger_dir, account, "1000.00")
 
     assert _load(ledger_dir).net_worth.logged_in_month(SEP)[account].locator == f"id:{entry_id}"
 
@@ -250,7 +270,7 @@ def test_a_share_month_does_not_block_the_next_month(ledger_dir: Path):
     assert august.locator is None  # August itself refuses
     assert account not in _load(ledger_dir).net_worth.logged_in_month(SEP)
 
-    FileLedgerSink(ledger_dir).log_balance(account, Decimal("35.00"), SEP, plug)
+    _snapshot(ledger_dir, account, "35.00")
 
     led = _load(ledger_dir)
     assert led.net_worth.logged_in_month(SEP)[account].amount == Decimal("35.00")
@@ -476,10 +496,7 @@ def test_loggable_accounts_excludes_swept(ledger_dir: Path):
 
 
 def test_post_balance_logs_and_shows_in_data(client: TestClient):
-    r = client.post(
-        "/api/balance",
-        json={"account": "Assets:Cash:BankA", "amount": 1000.0, "date": "2026-09-01"},
-    )
+    r = _post_balance(client, "Assets:Cash:BankA", 1000.0)
     assert r.status_code == 200, r.text
     assert r.json()["ok"] is True
 
@@ -496,22 +513,17 @@ def test_post_balance_rejects_non_balance_sheet_account(client: TestClient):
 def test_patch_balance_edits_the_locator_from_networth_at(client: TestClient):
     """The pane's round trip: read a month's locator, update it, see the new figure."""
     account = "Assets:Cash:BankA"
-    assert (
-        client.post(
-            "/api/balance", json={"account": account, "amount": 1000.0, "date": "2026-09-01"}
-        ).status_code
-        == 200
-    )
+    assert _post_balance(client, account, 1000.0).status_code == 200
 
-    at = client.get("/api/networth?date=2026-09-01").json()
+    at = _networth_at(client)
     locator = at["logged"][account]["locator"]
 
     r = client.post("/api/balance/update", json={"locator": locator, "amount": 1234.56})
     assert r.status_code == 200, r.text
     assert r.json()["date"] == "2026-09-01"
 
-    after = client.get("/api/networth?date=2026-09-01").json()
-    assert dict((a["account"], a["value"]) for a in after["accounts"])[account] == 1234.56
+    after = _networth_at(client)
+    assert _value_of(after, account) == 1234.56
 
 
 def test_patch_balance_rejects_an_unknown_locator(client: TestClient):
@@ -545,24 +557,17 @@ def test_liability_accounts_listed_in_accounts(client: TestClient):
 
 def test_post_liability_balance_stores_the_owed_figure_negative(client: TestClient):
     """Owed goes in positive, the way a bank app shows it, and lands negative in the ledger."""
-    r = client.post(
-        "/api/balance", json={"account": CARD, "amount": CARD_OWED, "date": "2026-09-01"}
-    )
+    r = _post_balance(client, CARD, CARD_OWED)
     assert r.status_code == 200, r.text
 
-    at = client.get("/api/networth?date=2026-09-01").json()
-    assert dict((a["account"], a["value"]) for a in at["accounts"])[CARD] == -CARD_OWED
+    at = _networth_at(client)
+    assert _value_of(at, CARD) == -CARD_OWED
     assert at["logged"][CARD]["amount"] == -CARD_OWED
 
 
 def test_post_liability_balance_writes_no_pad(client: TestClient):
     """A card has no adjustment plug, so a snapshot must never pad — only assert."""
-    assert (
-        client.post(
-            "/api/balance", json={"account": CARD, "amount": CARD_OWED, "date": "2026-09-01"}
-        ).status_code
-        == 200
-    )
+    assert _post_balance(client, CARD, CARD_OWED).status_code == 200
     root = client.ledger_dir / "liabilities"  # type: ignore[attr-defined]
     text = "".join(p.read_text() for p in root.glob("*.beancount"))
     assert f"balance {CARD}" in text
@@ -571,27 +576,22 @@ def test_post_liability_balance_writes_no_pad(client: TestClient):
 
 def test_post_liability_balance_rejects_a_mismatch(client: TestClient):
     """A figure that disagrees means an entry is missing; it is reported, not padded away."""
-    r = client.post("/api/balance", json={"account": CARD, "amount": 500.0, "date": "2026-09-01"})
+    r = _post_balance(client, CARD, 500.0)
     assert r.status_code == 422, r.text
     assert "spending or bill pay" in r.json()["detail"]
 
-    assert CARD not in client.get("/api/networth?date=2026-09-01").json()["logged"]
+    assert CARD not in _networth_at(client)["logged"]
 
 
 def test_patch_liability_balance_keeps_the_owed_sign(client: TestClient):
-    assert (
-        client.post(
-            "/api/balance", json={"account": CARD, "amount": CARD_OWED, "date": "2026-09-01"}
-        ).status_code
-        == 200
-    )
-    locator = client.get("/api/networth?date=2026-09-01").json()["logged"][CARD]["locator"]
+    assert _post_balance(client, CARD, CARD_OWED).status_code == 200
+    locator = _networth_at(client)["logged"][CARD]["locator"]
 
     # editing to a figure that no longer holds is refused
     edit = client.post("/api/balance/update", json={"locator": locator, "amount": 999.0})
     assert edit.status_code >= 400
-    at = client.get("/api/networth?date=2026-09-01").json()
-    assert dict((a["account"], a["value"]) for a in at["accounts"])[CARD] == -CARD_OWED
+    at = _networth_at(client)
+    assert _value_of(at, CARD) == -CARD_OWED
 
 
 def test_loggable_in_month_hides_an_account_opened_later(ledger_dir: Path):
@@ -620,17 +620,12 @@ def test_loggable_in_month_keeps_the_month_an_account_opened_or_closed_in(ledger
 def test_loggable_in_month_still_excludes_a_passthrough(ledger_dir: Path):
     """Scoping to a month must not smuggle back an account whose balance belongs to its sweep
     destination rather than to itself."""
-    passthrough = "Assets:Cash:Venmo"
-    append_accounts(
-        ledger_dir,
-        f'\n2026-01-01 open {passthrough} USD\n  sweep_to: "Assets:Cash:BankA"\n',
-    )
-
     nw = _load(ledger_dir).net_worth
     assets, _ = nw.loggable_in_month(SEP)
-    assert passthrough not in assets
-    assert passthrough not in nw.loggable_accounts()  # and the undated list agrees
-    assert "Assets:Cash:BankA" in assets  # its destination is still offered
+
+    assert PASSTHROUGH not in assets
+    assert PASSTHROUGH not in nw.loggable_accounts()  # and the undated list agrees
+    assert SAVINGS in assets  # its destination is still offered
 
 
 def test_post_liability_balance_accepts_a_credit(client: TestClient):
@@ -648,19 +643,15 @@ def test_post_liability_balance_accepts_a_credit(client: TestClient):
         """,
     )
 
-    r = client.post(
-        "/api/balance", json={"account": credit, "amount": -898.0, "date": "2026-09-01"}
-    )
+    r = _post_balance(client, credit, -898.0)
     assert r.status_code == 200, r.text
 
-    at = client.get("/api/networth?date=2026-09-01").json()
+    at = _networth_at(client)
     assert at["logged"][credit]["amount"] == 898.0  # stored as a credit, not as owed
-    assert dict((a["account"], a["value"]) for a in at["accounts"])[credit] == 898.0
+    assert _value_of(at, credit) == 898.0
 
 
 def test_post_asset_balance_still_refuses_a_negative(client: TestClient):
     """Only a liability may go below zero. An account cannot hold less than nothing."""
-    r = client.post(
-        "/api/balance", json={"account": "Assets:Cash:BankA", "amount": -5.0, "date": "2026-09-01"}
-    )
+    r = _post_balance(client, "Assets:Cash:BankA", -5.0)
     assert r.status_code == 422, r.text

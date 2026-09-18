@@ -14,6 +14,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from yala.catalog import account_directory, account_lists, setting_fields
+from yala.dates import month_of
 from yala.ledger import Ledger
 from yala.ledger.income import Paycheck
 from yala.money import money
@@ -274,13 +275,13 @@ def build(ledger: Ledger) -> DashboardData:
     # known to the charts while the pickers stay active-only.
     categories = sorted(set(spending.categories()) | set(spending.by_category()))
     all_transfers = transfers.transactions()
-    income_months = {(p.date.year, p.date.month) for p in income.paychecks()}
-    transfer_months = {(t.date.year, t.date.month) for t in all_transfers}
+    income_months = {month_of(p.date) for p in income.paychecks()}
+    transfer_months = {month_of(t.date) for t in all_transfers}
     # A logged snapshot makes a month real on its own: a month can carry no entries at all and still
     # be the one a balance was logged in, and leaving it out filed that balance under the month
     # before it.
     snapshot_dates = networth.snapshot_dates()
-    snapshot_months = {(d.year, d.month) for d in snapshot_dates}
+    snapshot_months = {month_of(d) for d in snapshot_dates}
     all_months = sorted(set(spending.months()) | income_months | transfer_months | snapshot_months)
     all_years = sorted(
         set(spending.years())

@@ -12,7 +12,7 @@ import datetime as dt
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from yala.dates import last_day
+from yala.dates import Month, last_day
 from yala.ledger import Ledger, LedgerError
 from yala.ledger.accounts import sweep_destination
 from yala.ledger.constants import SWEEP_META
@@ -22,8 +22,6 @@ from yala.money import round_cents
 if TYPE_CHECKING:
     from yala.ledger.transfers import Transfer
     from yala.sink import FileLedgerSink
-
-Month = tuple[int, int]  # (year, month)
 
 
 # --- sweep configuration ---

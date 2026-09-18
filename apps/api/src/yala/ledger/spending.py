@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from yala.dates import Month, month_of
 from yala.ledger.constants import DEDUCTIONS, EXPENSES
 
 if TYPE_CHECKING:
@@ -106,8 +107,8 @@ class Spending:
     def years(self) -> list[int]:
         return sorted({t.date.year for t in self.transactions()})
 
-    def months(self) -> list[tuple[int, int]]:
-        return sorted({(t.date.year, t.date.month) for t in self.transactions()})
+    def months(self) -> list[Month]:
+        return sorted({month_of(t.date) for t in self.transactions()})
 
     def date_range(self) -> tuple[dt.date, dt.date] | None:
         dates = [t.date for t in self.transactions()]

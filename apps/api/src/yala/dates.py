@@ -5,6 +5,15 @@ from __future__ import annotations
 import calendar
 import datetime as dt
 
+#: A calendar month as ``(year, month)``. Months are keyed by this pair throughout, so the alias
+#: lives beside the arithmetic on it rather than in whichever module needed it first.
+Month = tuple[int, int]
+
+
+def month_of(date: dt.date) -> Month:
+    """The month ``date`` falls in."""
+    return (date.year, date.month)
+
 
 def last_day(year: int, month: int) -> dt.date:
     """The final day of ``month``."""

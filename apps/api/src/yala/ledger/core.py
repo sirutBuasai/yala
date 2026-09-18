@@ -171,9 +171,9 @@ class Ledger:
     def value_of(self, held: dict[str, Decimal], as_of: dt.date | None = None) -> Decimal:
         """USD value of a commodity -> quantity map at ``as_of`` (latest price on/before).
 
-        Takes the quantities rather than an account, so a figure a ``balance`` directive asserts can
-        be valued as it was written instead of re-derived from postings. Raises
-        :class:`LedgerError` if a commodity has no price."""
+        Takes the quantities rather than an account, so a figure a ``balance`` directive asserts is
+        valued as written instead of re-derived from postings. Raises :class:`LedgerError` if a
+        commodity has no price."""
         usd = self.currency
         total = Decimal(0)
         for cur, qty in held.items():
@@ -245,8 +245,8 @@ class Ledger:
         """Accounts whose life overlaps ``start``..``end``, inclusive at both ends.
 
         A window rather than a single day, so an account that opened or closed part-way through a
-        period still belongs to that period: the period is what the caller reports on. Closing on
-        ``start`` still counts, since the account was held going into it.
+        period still belongs to it. Closing on ``start`` counts, the account having been held going
+        into it.
         """
         opened, closed = self.open_close_dates()
 

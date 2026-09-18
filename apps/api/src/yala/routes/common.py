@@ -14,6 +14,7 @@ from typing import Annotated
 from pydantic import AfterValidator, BeforeValidator, Field
 
 from yala import config
+from yala.dates import month_of
 from yala.ledger import Ledger
 from yala.ledger.constants import ASSETS, LIABILITIES
 from yala.ledger.naming import compose
@@ -102,7 +103,7 @@ def ok(message: str, **extra) -> dict:
 
 def reconcile_sweeps(*dates: dt.date | None) -> None:
     """Re-derive passthrough sweeps for every month a just-written entry touched."""
-    months = {(d.year, d.month) for d in dates if d is not None}
+    months = {month_of(d) for d in dates if d is not None}
     if months:
         reconcile_months(sink(), months)
 

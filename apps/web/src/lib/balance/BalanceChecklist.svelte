@@ -23,7 +23,6 @@
 		checkOf,
 		expectedAt,
 		GROUP_ORDER,
-		isBlocked,
 		missingEntryKind,
 		signedForLedger,
 		type Group,
@@ -45,10 +44,8 @@
 	}
 	let { id, data, accounts, onsaved, monthKey }: Props = $props();
 
-	/**
-	 * Which accounts the shown month had, once the dated read lands. The props are today's lists, so
-	 * they stand in only until then: on their own they offer a card opened months later.
-	 */
+	/** Which accounts the shown month had, once the dated read lands. The props are today's lists, so
+	    they stand in only until then, and on their own would offer a card opened months later. */
 	let monthRoster = $state<{ assets: string[]; liabilities: string[] } | null>(null);
 	const rows = $derived(
 		buildRows(
@@ -133,15 +130,12 @@
 	 */
 	const standing = (row: Row) => parsed(row) ?? onRecord(row.account);
 
-	// The figure COLUMNS stay in the ledger's sign, where a liability is negative because that is how
-	// it bears on net worth. Only the entry field and its ghost invert (see `asTyped`), so logging an
-	// ordinary balance owed does not mean typing a minus every time. The two conventions differ on
-	// purpose; a row is read across, but only one cell of it is typed into.
+	// The figure COLUMNS stay in the ledger's sign; only the entry field and its ghost invert (see
+	// `asTyped`). The two conventions differ on purpose: a row is read across, but typed into once.
 
 	/**
-	 * Where a typed figure goes: over this month's own snapshot, or onto the first when the month
-	 * holds none. Null when the month's snapshot is share-based — that is refused rather than
-	 * rewritten. A share-based month blocks only itself; the next month has its own snapshot to log.
+	 * Where a typed figure goes: over this month's own snapshot, or onto the first when the month holds
+	 * none. Null when that snapshot is share-based, which is refused rather than rewritten.
 	 */
 	function target(row: Row): { locator: string } | { date: string } | null {
 		const rec = logged.get(row.account);
@@ -156,8 +150,7 @@
 	const matches = (row: Row) => agrees(check(row));
 	const whyBlocked = (row: Row) =>
 		blockReason(row, parsed(row), expected(row.account), target(row) != null);
-	const blockedRow = (row: Row) =>
-		isBlocked(row, parsed(row), expected(row.account), target(row) != null);
+	const blockedRow = (row: Row) => whyBlocked(row) !== null;
 
 	/**
 	 * Why a row can't be saved, phrased to FOLLOW the account name: the footer note puts the name in

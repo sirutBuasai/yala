@@ -32,9 +32,9 @@ def stored_amount(account: str, amount: Decimal) -> Decimal:
 
     A liability is passed in the way a statement reads it — owed positive, a credit negative — and
     beancount keeps that inverted, so the sign is flipped rather than forced. Forcing it made a
-    credit impossible to state: an overpaid card or a tax refund due came back as more owed.
+    credit impossible to state: an overpaid card came back as more owed.
 
-    Raises for a negative asset, which has no meaning: an account cannot hold less than nothing.
+    Raises for a negative asset, which has no meaning.
     """
     if account.startswith(LIABILITIES):
         return -amount

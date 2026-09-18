@@ -9,13 +9,14 @@ sanity check on flows never entered as transactions.
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from beancount.core import data
 
-from yala.dates import month_bounds
+from yala.dates import month_bounds, month_of
 from yala.ledger.accounts import sweep_destination, tier_of
 from yala.ledger.constants import (
     ADJUSTMENTS,
@@ -32,6 +33,10 @@ from yala.money import round_cents
 if TYPE_CHECKING:
     from yala.ledger.core import Ledger
 
+
+#: The asset subtrees a balance can be snapshotted in, stated once so every reader of them agrees
+#: on which accounts a balance pane may offer.
+SNAPSHOT_ASSETS = (CASH, INVESTMENTS)
 
 # Allocation buckets, in display order: how an asset account contributes to the asset split.
 BUCKETS = ("Liquid", "Taxable", "Tax-advantaged")
@@ -158,22 +163,17 @@ class NetWorth:
     def logged_in_month(self, any_day: dt.date) -> dict[str, LoggedBalance]:
         """What each account's snapshot stands at within ``any_day``'s month.
 
-        A month may carry several snapshot dates covering different accounts — cash asserted in USD
-        on the first, a brokerage asserted in shares later — so the latest date carrying *that
-        account* wins rather than the latest date in the month. Share legs are summed at their own
-        date's prices, which is the figure the account was snapshotted to.
+        A month may carry several snapshot dates covering different accounts, so the latest date
+        carrying *that account* wins rather than the latest date in the month. Share legs are summed
+        at their own date's prices, the figure the account was snapshotted to.
 
         Only that latest snapshot is offered for correction, and only when it is a lone USD
-        assertion. Reaching back to an earlier USD one in the same month would rewrite a date the
-        displayed figure did not come from, silently restating it and plugging the difference; a
-        share-based one is left alone entirely, since rewriting one leg of it is not a balance edit.
-        A *later* month is unaffected — it has its own snapshot to log, whatever this one holds."""
+        assertion: reaching back to an earlier one would rewrite a date the displayed figure did not
+        come from, silently restating it and plugging the difference, and rewriting one leg of a
+        share-based snapshot is not a balance edit."""
         in_month: dict[str, list[data.Balance]] = {}
         for e in self._led.entries:
-            if isinstance(e, data.Balance) and (e.date.year, e.date.month) == (
-                any_day.year,
-                any_day.month,
-            ):
+            if isinstance(e, data.Balance) and month_of(e.date) == month_of(any_day):
                 in_month.setdefault(e.account, []).append(e)
 
         out: dict[str, LoggedBalance] = {}
@@ -203,36 +203,34 @@ class NetWorth:
             for a in self._led.declared_accounts(ADJUSTMENTS)
         ]
 
-    def _snapshotable(self, candidates: list[str]) -> list[str]:
-        """``candidates`` minus the passthroughs.
+    def _snapshotable(self, pick: Callable[[str], list[str]]) -> list[str]:
+        """The snapshot-able accounts ``pick`` finds under each asset subtree, passthroughs removed.
 
         Every loggable account is opened with a plug to pad into, so the rule is stated rather than
         inferred from a plug's presence: what is excluded is a passthrough, whose balance is swept
         to its destination and so belongs there.
         """
         meta = self._led.account_meta()
-        return [a for a in candidates if sweep_destination(meta.get(a)) is None]
+        found = [a for prefix in SNAPSHOT_ASSETS for a in pick(prefix)]
+
+        return [a for a in found if sweep_destination(meta.get(a)) is None]
 
     def loggable_accounts(self) -> list[str]:
         """Active cash + investment accounts whose balance can be snapshotted."""
-        return self._snapshotable(
-            self._led.active_accounts(CASH) + self._led.active_accounts(INVESTMENTS)
-        )
+        return self._snapshotable(self._led.active_accounts)
 
     def loggable_in_month(self, any_day: dt.date) -> tuple[list[str], list[str]]:
         """``(assets, liabilities)`` snapshot-able in ``any_day``'s month.
 
-        Membership is the month's, not today's: an account opened part-way through it belongs to it,
-        one closed part-way through belongs to it but not to the month after, and one opened later
-        does not appear at all. Without this a month showed every account the ledger holds today,
-        including cards not opened yet."""
+        Membership is the month's, not today's: an account opened part-way through it belongs to
+        it, one closed part-way through does not belong to the month after, and one opened later
+        does not appear at all."""
         start, end = month_bounds(any_day)
-        during = self._led.accounts_open_during
 
-        return (
-            self._snapshotable(during(start, end, CASH) + during(start, end, INVESTMENTS)),
-            during(start, end, LIABILITIES),
-        )
+        def during(prefix: str) -> list[str]:
+            return self._led.accounts_open_during(start, end, prefix)
+
+        return self._snapshotable(during), during(LIABILITIES)
 
     def loggable_liabilities(self) -> list[str]:
         """Active liability accounts, which are snapshot-able but *verify-only*.

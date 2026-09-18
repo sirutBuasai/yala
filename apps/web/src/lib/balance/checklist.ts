@@ -82,8 +82,7 @@ export type BlockReason = 'negative' | 'missing-entry' | 'share-snapshot';
  * fully determined by the entries already logged, so a gap there means an entry is MISSING and must
  * block rather than be plugged over. Neither may be negative.
  *
- * `correctable` is false when the month's own snapshot is share-based; that blocks whatever was
- * typed, since no USD figure can replace it.
+ * `correctable` false means the month's snapshot is share-based, which no typed USD figure replaces.
  */
 export function blockReason(
 	row: Row,
@@ -99,13 +98,9 @@ export function blockReason(
 	return typed < 0 ? 'negative' : null;
 }
 
-export function isBlocked(
-	row: Row,
-	typed: number | null,
-	expected: number | null,
-	correctable = true
-): boolean {
-	return blockReason(row, typed, expected, correctable) !== null;
+/** Whether there is a reason at all, for a caller that does not need to word it. */
+export function isBlocked(...args: Parameters<typeof blockReason>): boolean {
+	return blockReason(...args) !== null;
 }
 
 /** Which kind of entry a liability's gap says is missing. */
@@ -116,19 +111,16 @@ export function missingEntryKind(gap: number): 'spending' | 'bill pay' {
 /**
  * A liability is typed the way a statement reads it — owed positive, a credit negative — and the
  * ledger keeps that inverted. The sign is flipped, not forced: forcing it made a credit impossible
- * to enter, so an overpaid card or a tax refund due came back as more owed.
+ * to enter, so an overpaid card came back as more owed.
+ *
+ * A flip is its own inverse, so `asTyped` is this same rule read the other way.
  */
 export function signedForLedger(row: Row, typed: number): number {
 	return row.liability ? -typed : typed;
 }
 
 /**
- * The inverse, for showing a stored figure in the field it was typed in.
- *
- * Only the entry field and its ghost use this. The figure columns beside them stay in the ledger's
- * sign, where a liability is negative because that is how it bears on net worth: the two differ so
- * that logging an ordinary balance owed does not mean typing a minus every time.
+ * A stored figure in the convention it was typed in. Only the entry field and its ghost use it: the
+ * figure columns stay in the ledger's sign, so logging an ordinary balance owed takes no minus.
  */
-export function asTyped(row: Row, stored: number): number {
-	return row.liability ? -stored : stored;
-}
+export const asTyped = signedForLedger;

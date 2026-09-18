@@ -19,25 +19,40 @@ export const MONTHS = [
 	'Dec'
 ];
 
+/**
+ * A rendered magnitude with its sign put back on, ahead of any currency symbol rather than between
+ * the symbol and the digits.
+ *
+ * `value` is what decides the sign, and is the caller's already-rounded figure where it rounds: a
+ * magnitude under half a unit reads as zero, and signing the raw input would print a minus in front
+ * of it.
+ */
+function withSign(value: number, magnitude: string, prefix = ''): string {
+	return (value < 0 ? '-' : '') + prefix + magnitude;
+}
+
+const CENTS = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+
+const cents = (magnitude: number): string => magnitude.toLocaleString(undefined, CENTS);
+
 export function money(n: number | null | undefined): string {
 	const r = Math.round(n || 0);
 
-	return (r < 0 ? '-$' : '$') + Math.abs(r).toLocaleString();
+	return withSign(r, Math.abs(r).toLocaleString(), '$');
 }
 
 /** Exact cents without the currency, for a field that already shows the symbol itself. */
 export function amountExact(n: number | null | undefined): string {
 	const v = n || 0;
-	const digits = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
 
-	return (v < 0 ? '-' : '') + Math.abs(v).toLocaleString(undefined, digits);
+	return withSign(v, cents(Math.abs(v)));
 }
 
 /** Money to the cent, for reconciliation figures the user has to match exactly. */
 export function moneyExact(n: number | null | undefined): string {
 	const v = n || 0;
 
-	return (v < 0 ? '-$' : '$') + amountExact(Math.abs(v));
+	return withSign(v, cents(Math.abs(v)), '$');
 }
 
 /**
@@ -52,8 +67,9 @@ function tiered(magnitude: number): string {
 }
 
 export function moneyK(n: number | null | undefined): string {
-	n = n || 0;
-	return (n < 0 ? '-$' : '$') + tiered(Math.abs(n));
+	const v = n || 0;
+
+	return withSign(v, tiered(Math.abs(v)), '$');
 }
 
 /** Compact money for tight spaces: abbreviate thousands, keep smaller figures exact. */
@@ -65,7 +81,8 @@ export function moneyCompact(n: number | null | undefined): string {
     stated once. Rounds, so pair it with `moneyExact` wherever the reader can ask for the figure. */
 export function numCompact(n: number | null | undefined): string {
 	const v = n || 0;
-	return Math.abs(v) >= 1000 ? (v < 0 ? '-' : '') + tiered(Math.abs(v)) : String(Math.round(v));
+
+	return Math.abs(v) >= 1000 ? withSign(v, tiered(Math.abs(v))) : String(Math.round(v));
 }
 
 export function pct(part: number, whole: number): string {
