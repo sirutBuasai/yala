@@ -20,6 +20,8 @@
 		options: string[];
 		selectAriaLabel: string;
 		optionLabel?: (v: string) => string;
+		/** Account a freshly added row starts on. Read at click time, so it can follow the form. */
+		nextValue?: () => string;
 	}
 	let {
 		rows = $bindable(),
@@ -27,7 +29,8 @@
 		addLabel,
 		options,
 		selectAriaLabel,
-		optionLabel = (v) => v
+		optionLabel = (v) => v,
+		nextValue = () => options[0] ?? ''
 	}: Props = $props();
 </script>
 
@@ -35,7 +38,7 @@
 	bind:rows
 	{header}
 	{addLabel}
-	blank={() => ({ value: options[0] ?? '', amount: null })}
+	blank={() => ({ value: nextValue(), amount: null })}
 	noun="line"
 >
 	{#snippet row(item)}

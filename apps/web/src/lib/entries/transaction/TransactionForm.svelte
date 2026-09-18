@@ -142,7 +142,11 @@
 </FormSection>
 
 <FormSection label="Reimbursements">
-	<Credits bind:credits creditAccounts={accounts.funding_accounts} />
+	<Credits
+		bind:credits
+		creditAccounts={accounts.funding_accounts}
+		fundingAccount={funding_account}
+	/>
 </FormSection>
 
 <EntryFooter

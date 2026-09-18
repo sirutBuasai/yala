@@ -40,6 +40,32 @@ describe('Credits', () => {
 		expect(screen.getAllByPlaceholderText('0')).toHaveLength(1);
 	});
 
+	it('starts the first credit on the funding account, not the first option', async () => {
+		render(Credits, {
+			props: {
+				credits: reactive([]),
+				creditAccounts: accts,
+				fundingAccount: 'Liabilities:CC:CardA'
+			}
+		});
+		await fireEvent.click(screen.getByText('+ Credit'));
+
+		expect(screen.getByLabelText('credit account')).toHaveTextContent('Card A');
+	});
+
+	it('starts a further credit on the previous credit account', async () => {
+		render(Credits, {
+			props: {
+				credits: reactive([{ value: 'Liabilities:CC:CardA', amount: 20 }]),
+				creditAccounts: accts,
+				fundingAccount: 'Assets:Cash:Wallet'
+			}
+		});
+		await fireEvent.click(screen.getByText('+ Credit'));
+
+		expect(screen.getAllByLabelText('credit account')[1]).toHaveTextContent('Card A');
+	});
+
 	it('labels account options with the name from the account directory', async () => {
 		render(Credits, {
 			props: {

@@ -9,8 +9,10 @@
 	interface Props {
 		credits: AmountRow[];
 		creditAccounts: string[];
+		/** The transaction's funding account, which the first credit starts on. */
+		fundingAccount?: string;
 	}
-	let { credits = $bindable(), creditAccounts }: Props = $props();
+	let { credits = $bindable(), creditAccounts, fundingAccount = '' }: Props = $props();
 </script>
 
 <LineColumn
@@ -20,4 +22,5 @@
 	options={creditAccounts}
 	selectAriaLabel="credit account"
 	optionLabel={formatAccount}
+	nextValue={() => credits.at(-1)?.value || fundingAccount || creditAccounts[0] || ''}
 />
