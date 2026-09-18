@@ -71,6 +71,26 @@ describe('TransactionForm (add)', () => {
 		});
 	});
 
+	// A standalone refund is logged as a negative bill: nothing to reimburse, money coming back.
+	it('posts a negative bill, and refuses only a zero one', async () => {
+		const fetchSpy = okFetch();
+		vi.stubGlobal('fetch', fetchSpy);
+		render(TransactionForm, { props: { accounts, onsaved: vi.fn() } });
+
+		await fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'returned shoes' } });
+		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '0' } });
+		await fireEvent.click(screen.getByText('+ Add'));
+
+		expect(screen.getByText('Total bill must be non-zero.')).toBeInTheDocument();
+		expect(fetchSpy).not.toHaveBeenCalled();
+
+		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '-40' } });
+		await fireEvent.click(screen.getByText('+ Add'));
+
+		await waitFor(() => expect(fetchSpy).toHaveBeenCalledOnce());
+		expect(JSON.parse(fetchSpy.mock.calls[0]![1].body).amount).toBe(-40);
+	});
+
 	it('shows the API error detail and does not call onsaved on failure', async () => {
 		vi.stubGlobal(
 			'fetch',

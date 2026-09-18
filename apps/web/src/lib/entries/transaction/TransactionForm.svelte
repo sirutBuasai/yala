@@ -60,7 +60,7 @@
 		// A net share below zero is a valid net refund, not an error; the summary flags it anyway.
 		const problem = problems()
 			.require(payee, 'Title')
-			.positive(total, 'Total bill')
+			.nonZero(total, 'Total bill')
 			.require(category, 'Category')
 			.require(funding_account, 'Account')
 			.add(validateRows(credits, 'reimbursement'))
@@ -101,7 +101,7 @@
 		</div>
 		<div class="field">
 			<label for="tx-amt">Total bill</label>
-			<AmountInput id="tx-amt" bind:value={total} />
+			<AmountInput id="tx-amt" bind:value={total} signed />
 		</div>
 	</div>
 </FormSection>

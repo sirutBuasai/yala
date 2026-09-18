@@ -12,6 +12,7 @@ from yala.ledger.locators import find_entry
 from yala.routes.common import (
     MAX_LEGS,
     Amount,
+    NonZeroAmount,
     Text,
     dec,
     ledger,
@@ -37,7 +38,7 @@ class CreditIn(BaseModel):
 class TransactionIn(BaseModel):
     date: str | None = None
     payee: Text
-    amount: Amount
+    amount: NonZeroAmount
     category: str
     funding_account: str
     pending: bool = False

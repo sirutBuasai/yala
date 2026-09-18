@@ -73,6 +73,16 @@ describe('problems', () => {
 		expect(problems().nonNegative(null, 'Balance').message()).toBe('Balance is required.');
 		expect(problems().nonNegative(-1, 'Balance').message()).toBe('Balance must be 0 or more.');
 	});
+
+	it('lets a non-zero amount take either sign, but not zero or missing', () => {
+		expect(problems().nonZero(-40, 'Total bill').message()).toBe('');
+		expect(problems().nonZero(40, 'Total bill').message()).toBe('');
+		expect(problems().nonZero(0, 'Total bill').message()).toBe('Total bill must be non-zero.');
+		expect(problems().nonZero(null, 'Total bill').message()).toBe('Total bill is required.');
+		expect(problems().nonZero(Infinity, 'Total bill').message()).toBe(
+			'Total bill must be non-zero.'
+		);
+	});
 });
 
 describe('validateLabel', () => {

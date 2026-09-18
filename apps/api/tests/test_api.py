@@ -540,6 +540,24 @@ def test_new_category_is_usable_by_a_transaction(client: TestClient):
     assert r.status_code == 200
 
 
+def test_post_transaction_takes_a_negative_amount(client: TestClient):
+    """A refund with nothing to reimburse is a negative bill, so the sign round-trips."""
+    r = client.post(
+        "/api/transaction",
+        json={
+            "payee": "returned shoes",
+            "amount": -40.0,
+            "category": "Takeouts",
+            "funding_account": "Liabilities:CC:CardA",
+        },
+    )
+    assert r.status_code == 200
+
+    state = client.get("/api/transaction", params={"locator": f"id:{r.json()['id']}"}).json()
+    assert state["amount"] == -40.0
+    assert state["funding_account"] == "Liabilities:CC:CardA"
+
+
 def test_post_transaction_before_open_date_is_422_with_clear_detail(client: TestClient):
     r = client.post(
         "/api/transaction",
@@ -907,9 +925,9 @@ def _txn_body(**overrides) -> dict:
     return body
 
 
-@pytest.mark.parametrize("bad_amount", [0, -5.0])
-def test_post_transaction_non_positive_amount_is_422(client: TestClient, bad_amount: float):
-    r = client.post("/api/transaction", json=_txn_body(amount=bad_amount))
+def test_post_transaction_zero_amount_is_422(client: TestClient):
+    """Either sign is a transaction; nothing at all is not."""
+    r = client.post("/api/transaction", json=_txn_body(amount=0))
     assert r.status_code == 422
 
 
@@ -1025,7 +1043,7 @@ def test_validation_detail_is_a_readable_string(client: TestClient):
     """A pydantic body-validation failure is flattened to one labeled sentence, not a raw list."""
     r = client.post("/api/transaction", json=_txn_body(amount=0))
     assert r.status_code == 422
-    assert r.json()["detail"] == "Amount must be greater than 0"
+    assert r.json()["detail"] == "Amount must be non-zero"
 
 
 def test_post_transaction_amount_above_ceiling_is_422(client: TestClient):

@@ -7,9 +7,19 @@ import { sentenceCase } from '$lib/utils/format';
 export const TEXT_MAX = 200;
 export const LEAF_MAX = 60;
 
-function amountProblem(value: number, label: string, allowZero: boolean): string | null {
-	if (Number.isFinite(value) && (allowZero ? value >= 0 : value > 0)) return null;
-	return allowZero ? `${label} must be 0 or more.` : `${label} must be greater than 0.`;
+/** What an amount is allowed to be: its test, and how the field says so when it isn't. */
+const AMOUNT_RULES = {
+	positive: { ok: (v: number) => v > 0, wording: 'must be greater than 0' },
+	nonNegative: { ok: (v: number) => v >= 0, wording: 'must be 0 or more' },
+	nonZero: { ok: (v: number) => v !== 0, wording: 'must be non-zero' }
+};
+
+type AmountRule = keyof typeof AMOUNT_RULES;
+
+function amountProblem(value: number, label: string, rule: AmountRule): string | null {
+	const { ok, wording } = AMOUNT_RULES[rule];
+
+	return Number.isFinite(value) && ok(value) ? null : `${label} ${wording}.`;
 }
 
 const NAME_RE = /^[A-Za-z0-9 ]+$/;
@@ -92,6 +102,8 @@ interface Problems {
 	require(value: string, label: string): Problems;
 	positive(value: number | null, label: string): Problems;
 	nonNegative(value: number | null, label: string): Problems;
+	/** Either sign, but not nothing: a refund is a negative bill. */
+	nonZero(value: number | null, label: string): Problems;
 	/** Any other check that already produced a full-sentence message (or null). */
 	add(message: string | null): Problems;
 	/** The combined message, or '' when everything passed. */
@@ -105,21 +117,20 @@ interface Problems {
 export function problems(): Problems {
 	const missing: string[] = [];
 	const other: string[] = [];
+	// An amount that was never typed is a missing field, whatever the rule would have said about it.
+	const amount = (rule: AmountRule) => (value: number | null, label: string) => {
+		if (value == null) missing.push(label);
+		else api.add(amountProblem(value, label, rule));
+		return api;
+	};
 	const api: Problems = {
 		require(value, label) {
 			if (!value.trim()) missing.push(label);
 			return api;
 		},
-		positive(value, label) {
-			if (value == null) missing.push(label);
-			else api.add(amountProblem(value, label, false));
-			return api;
-		},
-		nonNegative(value, label) {
-			if (value == null) missing.push(label);
-			else api.add(amountProblem(value, label, true));
-			return api;
-		},
+		positive: amount('positive'),
+		nonNegative: amount('nonNegative'),
+		nonZero: amount('nonZero'),
 		add(message) {
 			if (message) other.push(message);
 			return api;
