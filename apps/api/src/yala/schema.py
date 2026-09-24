@@ -58,6 +58,8 @@ class AccountInfo(_Base):
     employer: str | None = None  # scoping employer leaf; null = serves every employer
     labels: list[str] = []  # contribution line items this account offers
     sweep_to: str | None = None  # set on a passthrough, which holds no balance of its own
+    # Whether the bank app's balance counts pending charges; null where the kind is not reconciled.
+    includes_pending: bool | None = None
 
 
 class Meta(_Base):
@@ -214,6 +216,7 @@ class AccountKind(_Base):
     splits: bool
     sweeps: bool
     sweep_target: bool
+    reconciled: bool
 
 
 class AccountLists(_Base):
@@ -235,7 +238,7 @@ class AccountLists(_Base):
     deduction_accounts: list[str]
     payroll_options: list[PayrollOption]
     balance_accounts: list[str]  # snapshot-able: active cash + investments, passthroughs excluded
-    liability_accounts: list[str]  # snapshot-able but verify-only: no plug to pad into
+    liability_accounts: list[str]
     sweeps: dict[str, str]  # passthrough account -> its sweep destination
 
 

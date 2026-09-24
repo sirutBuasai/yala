@@ -27,6 +27,7 @@ export type Opened = string | null;
 export type Employer = string | null;
 export type Labels = string[];
 export type SweepTo = string | null;
+export type IncludesPending = boolean | null;
 export type Spending = boolean;
 export type Income = boolean;
 export type Networth = boolean;
@@ -123,6 +124,7 @@ export type Drains = boolean;
 export type Splits = boolean;
 export type Sweeps = boolean;
 export type SweepTarget = boolean;
+export type Reconciled = boolean;
 export type Kinds = AccountKind[];
 export type SpendingCategories = string[];
 export type FundingAccounts = string[];
@@ -188,6 +190,7 @@ export interface AccountInfo {
 	employer?: Employer;
 	labels?: Labels;
 	sweep_to?: SweepTo;
+	includes_pending?: IncludesPending;
 }
 /**
  * Which domains carry data.
@@ -385,6 +388,7 @@ export interface AccountKind {
 	splits: Splits;
 	sweeps: Sweeps;
 	sweep_target: SweepTarget;
+	reconciled: Reconciled;
 }
 /**
  * One selectable paycheck line, scoped to an employer (null = offered by every employer). A

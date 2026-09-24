@@ -13,6 +13,13 @@ export const SWEEPS_INTO = 'Sweeps into';
     the employer is, which is not the same as having none. */
 export const EVERY_EMPLOYER = 'Every employer';
 
+/** Whether a card's bank app counts pending charges in its current balance. */
+export const PENDING = {
+	label: 'Current balance includes pending charges',
+	yes: 'Includes pending charges',
+	no: 'Excludes pending charges'
+} as const;
+
 /** The rename warning, generic on purpose: it is true of every part of every kind's name. */
 export const RENAME_HINT = 'Renaming would also change every entry that mentions it.';
 
@@ -55,6 +62,14 @@ export const ADD = {
 		why: {
 			Taxable: 'An individual brokerage account.',
 			TaxAdvantaged: '401k, IRA, HSA, and tax-advantaged accounts.'
+		}
+	},
+	pending: {
+		q: "Does the card's current balance include pending charges?",
+		sub: 'Current balance shown on the banking application used for balance reconciliation and verification.',
+		why: {
+			no: 'Pending charges appear only once they post. Most cards work this way.',
+			yes: 'Pending charges count toward the balance as soon as they appear.'
 		}
 	},
 	payroll: {

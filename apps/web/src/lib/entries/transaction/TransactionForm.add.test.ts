@@ -71,6 +71,27 @@ describe('TransactionForm (add)', () => {
 		});
 	});
 
+	it('offers awaiting a reimbursement only on a pending transaction', async () => {
+		const fetchSpy = okFetch();
+		vi.stubGlobal('fetch', fetchSpy);
+		const onsaved = vi.fn();
+		render(TransactionForm, { props: { accounts, onsaved } });
+		const awaiting = () => screen.queryByLabelText(/Awaiting reimbursement/);
+
+		expect(awaiting()).toBeNull();
+		await fireEvent.click(screen.getByLabelText('Pending'));
+		await fireEvent.click(awaiting()!);
+		await fireEvent.input(screen.getByLabelText('Title'), { target: { value: 'flight' } });
+		await fireEvent.input(screen.getByLabelText('Total bill'), { target: { value: '400' } });
+		await fireEvent.click(screen.getByText('+ Add'));
+
+		await waitFor(() => expect(onsaved).toHaveBeenCalledOnce());
+		expect(JSON.parse(fetchSpy.mock.calls[0]![1].body)).toMatchObject({
+			pending: true,
+			awaiting_reimbursement: true
+		});
+	});
+
 	// A standalone refund is logged as a negative bill: nothing to reimburse, money coming back.
 	it('posts a negative bill, and refuses only a zero one', async () => {
 		const fetchSpy = okFetch();

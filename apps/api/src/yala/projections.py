@@ -11,7 +11,7 @@ from decimal import Decimal
 from beancount.core import data
 
 from yala.ledger import payroll
-from yala.ledger.constants import DEDUCTIONS, EXPENSES, INCOME
+from yala.ledger.constants import DEDUCTIONS, EXPENSES, INCOME, awaits_reimbursement
 from yala.ledger.locators import entry_locator
 from yala.routes.errors import invalid
 
@@ -56,6 +56,7 @@ def txn_state(entry: data.Transaction) -> dict:
         "date": entry.date.isoformat(),
         "payee": entry.payee or entry.narration or "",
         "pending": entry.flag == "!",
+        "awaiting_reimbursement": awaits_reimbursement(entry.meta),
         "category": expenses[0][0].split(":", 1)[1],
         # ``amount`` is the whole bill; ``net_expense`` is what counts toward the category total.
         "amount": float(total),

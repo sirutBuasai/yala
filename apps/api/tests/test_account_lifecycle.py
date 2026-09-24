@@ -24,6 +24,7 @@ from tests.conftest import (
     SCOPED_DEDUCTION,
     load_ledger,
 )
+from yala.catalog import account_directory
 
 TODAY = dt.date.today().isoformat()
 
@@ -330,6 +331,7 @@ def test_linking_to_an_unknown_employer_is_refused(client: TestClient):
         (BANK_A, "employer", "Employer1"),
         (BANK_A, "labels", ["OptionA"]),
         (BANK_A, "account_alias", "Checking"),
+        (BANK_A, "includes_pending", True),
         (EMPLOYER, "institution_alias", "E1"),
     ],
 )
@@ -340,6 +342,39 @@ def test_metadata_the_kind_cannot_carry_is_refused(
 
     assert r.status_code == 422
     assert f"{field} does not apply" in r.json()["detail"]
+
+
+def _includes_pending(client: TestClient, account: str) -> bool | None:
+    return account_directory(_led(client))[account].includes_pending
+
+
+def test_a_card_opens_excluding_pending_charges_unless_told(client: TestClient):
+    """Most bank apps leave pending charges out of the current balance, so that is the default and
+    only the exception is written."""
+    plain = _open(client, "card", institution_name="Bank Z", account_name="Plain")
+    counting = _open(
+        client, "card", institution_name="Bank Z", account_name="Counting", includes_pending=True
+    )
+
+    assert _includes_pending(client, plain.json()["account"]) is False
+    assert _includes_pending(client, counting.json()["account"]) is True
+    assert _includes_pending(client, BANK_A) is None
+
+
+def test_a_card_pending_setting_can_be_ticked_and_unticked(client: TestClient):
+    assert _meta(client, CARD_A, includes_pending=True).status_code == 200
+    assert _includes_pending(client, CARD_A) is True
+
+    assert _meta(client, CARD_A, includes_pending=False).status_code == 200
+    assert _includes_pending(client, CARD_A) is False
+    assert "balance_includes_pending" not in _open_entry(client, CARD_A).meta
+
+
+def test_opening_a_bank_with_a_pending_setting_is_refused(client: TestClient):
+    r = _open(client, "bank", institution_name="Bank Z", includes_pending=True)
+
+    assert r.status_code == 422
+    assert "includes_pending does not apply" in r.json()["detail"]
 
 
 def test_an_empty_metadata_edit_is_refused(client: TestClient):

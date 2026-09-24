@@ -14,6 +14,7 @@ from tests.conftest import PASSTHROUGH, SAVINGS, append_accounts
 from tests.conftest import load_ledger as _load
 from yala.ledger import Ledger
 from yala.ledger.accounts import plug_account, snapshot_plug
+from yala.ledger.cards import baseline
 from yala.sink import FileLedgerSink
 
 SEP = dt.date(2026, 9, 1)
@@ -71,9 +72,11 @@ def test_plug_account_is_none_where_there_is_no_plug():
     assert plug_account("Expenses:Grocery") is None
 
 
-def test_snapshot_plug_gives_a_card_its_own_plug():
-    """The same per-account shape an asset gets, so a card's drift is reportable per card."""
-    assert snapshot_plug("Liabilities:CC:CardA") == "Equity:Adjustments:CC:CardA"
+def test_snapshot_plug_pads_a_card_into_opening_balances():
+    """A card only pads the history before its baseline, which is migration rather than drift, so it
+    gets no plug of its own. Any other liability still does."""
+    assert snapshot_plug("Liabilities:CC:CardA") == "Equity:Opening-Balances"
+    assert snapshot_plug("Liabilities:TaxesOwed") == "Equity:Adjustments:TaxesOwed"
     assert snapshot_plug("Assets:Cash:BankA") == "Equity:Adjustments:BankA"
 
 
@@ -547,7 +550,33 @@ def test_balance_accounts_listed_in_accounts(client: TestClient):
 # --- liability balances: verify-only, no plug ---
 
 CARD = "Liabilities:CC:CardA"
-CARD_OWED = 83.20  # what the fixture ledger's spending leaves standing on 2026-09-01
+CARD_LEDGER = 83.20  # what the fixture's entries leave standing on 2026-09-01
+CARD_OWED = 76.70  # the same less the fixture's one pending charge, as the bank app shows it
+LATER = dt.date(2026, 9, 8)
+
+
+def _app_owed(client: TestClient, date: dt.date) -> float:
+    """What the card's app should show for a reading asserted on ``date``, owed positive."""
+    return -_networth_at(client, date - dt.timedelta(days=1))["cards"][CARD]["expected"]
+
+
+def _append_pending(
+    client: TestClient, amount: int, meta: str = "", other: str = "Expenses:Takeouts"
+) -> None:
+    """A pending entry on the card: a charge of ``amount``, or a credit when it is negative."""
+    append_accounts(
+        client.ledger_dir,  # type: ignore[attr-defined]
+        f"""
+        2026-08-20 ! "pending entry"{meta}
+          {other}   {amount:.2f} USD
+          {CARD}  {-amount:.2f} USD
+        """,
+    )
+
+
+def _liability_text(client: TestClient) -> str:
+    root = client.ledger_dir / "liabilities"  # type: ignore[attr-defined]
+    return "".join(p.read_text() for p in root.glob("*.beancount"))
 
 
 def test_loggable_liabilities_lists_active_cards(ledger_dir: Path):
@@ -562,53 +591,171 @@ def test_liability_accounts_listed_in_accounts(client: TestClient):
 
 
 def test_post_liability_balance_stores_the_owed_figure_negative(client: TestClient):
-    """Owed goes in positive, the way a bank app shows it, and lands negative in the ledger."""
+    """Owed goes in positive, the way a bank app shows it, and lands negative in the ledger with the
+    pending charge the app leaves out added back."""
     r = _post_balance(client, CARD, CARD_OWED)
     assert r.status_code == 200, r.text
 
     at = _networth_at(client)
-    assert _value_of(at, CARD) == -CARD_OWED
-    assert at["logged"][CARD]["amount"] == -CARD_OWED
+    assert _value_of(at, CARD) == -CARD_LEDGER
+    assert at["logged"][CARD]["amount"] == -CARD_LEDGER
 
 
 def test_post_liability_balance_that_agrees_writes_no_pad(client: TestClient):
     """The figure the entries already add up to needs nothing absorbed, and beancount rejects a pad
     it does not need."""
     assert _post_balance(client, CARD, CARD_OWED).status_code == 200
-    root = client.ledger_dir / "liabilities"  # type: ignore[attr-defined]
-    text = "".join(p.read_text() for p in root.glob("*.beancount"))
+    text = _liability_text(client)
     assert f"balance {CARD}" in text
     assert "pad" not in text
 
 
-def test_post_liability_balance_pads_a_mismatch_to_its_own_plug(client: TestClient):
-    """The statement is the authority on what is owed, so a figure that disagrees is logged and the
-    difference padded, exactly as a bank account's would be."""
+def test_first_card_snapshot_pads_into_opening_balances_and_sets_the_baseline(
+    client: TestClient,
+):
+    """The first reading is the starting point: whatever history leaves unexplained is opening
+    balance, and the card is reconciled from that date on."""
     r = _post_balance(client, CARD, 500.0)
     assert r.status_code == 200, r.text
 
     at = _networth_at(client)
-    assert _value_of(at, CARD) == -500.0
-    assert at["logged"][CARD]["amount"] == -500.0
+    assert at["cards"][CARD]["expected"] == -500.0
+    assert baseline(_load(client.ledger_dir), CARD) == SEP  # type: ignore[attr-defined]
+    assert _networth_at(client, LATER)["cards"][CARD]["must_agree"]
 
-    text = "".join(
-        p.read_text()
-        for p in (client.ledger_dir / "liabilities").glob("*.beancount")  # type: ignore[attr-defined]
-    )
-    assert f"pad {CARD} Equity:Adjustments:CC:CardA" in text
-    # The plug is opened on first use, since the card was opened before it had one.
+    assert f"pad {CARD} Equity:Opening-Balances" in _liability_text(client)
     accounts = (client.ledger_dir / "accounts.beancount").read_text()  # type: ignore[attr-defined]
-    assert "open Equity:Adjustments:CC:CardA" in accounts
+    assert "Equity:Adjustments:CC" not in accounts
+
+
+def test_card_snapshot_after_the_baseline_must_agree(client: TestClient):
+    """Past the baseline there is nothing to pad into, so a gap names the missing entry instead."""
+    assert _post_balance(client, CARD, CARD_OWED).status_code == 200
+
+    owed = _app_owed(client, LATER)
+    refused = _post_balance(client, CARD, owed + 10, LATER)
+    assert refused.status_code == 422
+    assert "off by 10.00" in refused.text and "spending" in refused.text
+
+    assert _post_balance(client, CARD, owed, LATER).status_code == 200
+    assert "pad" not in _liability_text(client)
+
+
+def test_card_edit_after_the_baseline_must_agree(client: TestClient):
+    assert _post_balance(client, CARD, CARD_OWED).status_code == 200
+    owed = _app_owed(client, LATER)
+    assert _post_balance(client, CARD, owed, LATER).status_code == 200
+    locator = _networth_at(client, LATER)["logged"][CARD]["locator"]
+    before = _liability_text(client)
+
+    edit = client.post("/api/balance/update", json={"locator": locator, "amount": owed - 5})
+    assert edit.status_code == 422
+    assert "bill pay" in edit.text
+    assert _liability_text(client) == before
+
+
+def test_card_edit_before_the_baseline_never_pads_past_it(client: TestClient):
+    """Re-pinning an earlier snapshot shifts every balance after it; one past the baseline must not
+    be padded back into place, since that is exactly the drift reconciling rules out."""
+    aug = dt.date(2026, 8, 1)
+    owed_aug = _app_owed(client, aug)
+    assert _post_balance(client, CARD, owed_aug, aug).status_code == 200
+    assert _post_balance(client, CARD, CARD_OWED, SEP).status_code == 200
+    locator = _networth_at(client, aug)["logged"][CARD]["locator"]
+    before = _liability_text(client)
+
+    edit = client.post("/api/balance/update", json={"locator": locator, "amount": owed_aug + 50})
+    assert edit.status_code == 422
+    assert _liability_text(client) == before
+
+
+def test_card_backfill_that_would_shift_a_later_reading_is_refused(client: TestClient):
+    """A reading is only re-synced after an entry edit; a backfilled reading padding history under a
+    later one would silently rewrite what the app showed then."""
+    assert _post_balance(client, CARD, CARD_OWED, SEP).status_code == 200
+    before = _liability_text(client)
+
+    aug = dt.date(2026, 8, 1)
+    assert _post_balance(client, CARD, _app_owed(client, aug) + 50, aug).status_code == 422
+    assert _liability_text(client) == before
+
+
+def test_a_card_never_padded_holds_every_snapshot_after_its_first(client: TestClient):
+    """A first reading the entries already explain writes no pad, and is still where the card
+    started agreeing."""
+    assert _networth_at(client, SEP - dt.timedelta(days=1))["cards"][CARD]["must_agree"] is False
+    assert _post_balance(client, CARD, CARD_OWED).status_code == 200
+    assert baseline(_load(client.ledger_dir), CARD) == SEP  # type: ignore[attr-defined]
+
+    refused = _post_balance(client, CARD, _app_owed(client, LATER) + 1, LATER)
+    assert refused.status_code == 422
+
+
+def test_card_reading_is_resynced_when_an_earlier_entry_is_edited(client: TestClient):
+    """Deleting a charge dated before a reading leaves that reading true and only its recorded
+    figure stale, so the write goes through and the figure follows the entries."""
+    assert _post_balance(client, CARD, CARD_OWED).status_code == 200
+    ledger_dir = client.ledger_dir  # type: ignore[attr-defined]
+    charge = next(
+        t
+        for t in _load(ledger_dir).transactions()
+        if t.date < SEP and not t.pending and any(p.account == CARD for p in t.postings)
+    )
+    freed = -sum(p.amount for p in charge.postings if p.account == CARD)
+
+    FileLedgerSink(ledger_dir).delete_entry(charge.locator)
+
+    led = _load(ledger_dir)
+    assertion = next(e for e in led.entries if isinstance(e, data.Balance) and e.account == CARD)
+    assert -assertion.amount.number == Decimal(str(CARD_LEDGER)) - freed
+
+
+def test_card_whose_bank_hides_pending_is_read_without_it(client: TestClient):
+    """By default the app's figure leaves a pending charge out, and the assertion adds it back so
+    the ledger still holds every entry."""
+    shown = _app_owed(client, SEP)
+    _append_pending(client, 20)
+
+    assert _app_owed(client, SEP) == shown
+    assert _post_balance(client, CARD, shown).status_code == 200
+    assert "pad" not in _liability_text(client)
+    assert _value_of(_networth_at(client), CARD) == -(CARD_LEDGER + 20)
+
+
+def test_a_pending_payment_already_lowers_what_the_app_shows(client: TestClient):
+    """A bank applies a payment as soon as it is made; only a charge waits to post."""
+    shown = _app_owed(client, SEP)
+    _append_pending(client, -30, other="Assets:Cash:BankA")
+
+    assert _app_owed(client, SEP) == pytest.approx(shown - 30)
+
+
+def test_a_charge_awaiting_reimbursement_counts_as_posted(client: TestClient):
+    """Pending only on a friend paying back: the bank posted it, so the app shows it."""
+    shown = _app_owed(client, SEP)
+    _append_pending(client, 20, meta='\n          awaiting: "reimbursement"')
+
+    assert _app_owed(client, SEP) == pytest.approx(shown + 20)
+
+
+def test_card_whose_bank_counts_pending_is_read_with_it(client: TestClient):
+    FileLedgerSink(client.ledger_dir).set_account_meta(  # type: ignore[attr-defined]
+        CARD, "balance_includes_pending", "TRUE"
+    )
+    assert _app_owed(client, SEP) == CARD_LEDGER
+
+    _append_pending(client, 20)
+    assert _app_owed(client, SEP) == CARD_LEDGER + 20
 
 
 def test_patch_liability_balance_keeps_the_owed_sign(client: TestClient):
     assert _post_balance(client, CARD, CARD_OWED).status_code == 200
     locator = _networth_at(client)["logged"][CARD]["locator"]
 
-    # An edit pads what it cannot explain, as the first log does, and owed stays owed.
+    # An edit before the baseline pads what it cannot explain, as the first log does.
     edit = client.post("/api/balance/update", json={"locator": locator, "amount": 999.0})
     assert edit.status_code == 200, edit.text
-    assert _value_of(_networth_at(client), CARD) == -999.0
+    assert _app_owed(client, SEP) == 999.0
 
 
 def test_loggable_in_month_hides_an_account_opened_later(ledger_dir: Path):

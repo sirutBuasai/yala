@@ -32,6 +32,7 @@
 		title?: Label;
 		count?: number;
 		caption?: Label;
+		captionAfter?: Snippet;
 		actions?: Snippet;
 		tone?: 'default' | 'attention';
 		density?: 'figure' | 'panel';
@@ -41,8 +42,18 @@
 		affordances?: Snippet;
 		children: Snippet;
 	}
-	let { id, title, count, caption, actions, tone, density, affordances, children }: Props =
-		$props();
+	let {
+		id,
+		title,
+		count,
+		caption,
+		captionAfter,
+		actions,
+		tone,
+		density,
+		affordances,
+		children
+	}: Props = $props();
 
 	const env = getGridEnv();
 	const arrangement = getArrangement();
@@ -248,6 +259,7 @@
 		title={shownTitle}
 		{count}
 		caption={shownCaption}
+		{captionAfter}
 		frozen={arranging}
 		nameable={!!title}
 		rename={arranging && title ? (slot, text) => labels.set(id, slot, text) : undefined}

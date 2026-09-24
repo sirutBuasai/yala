@@ -5,6 +5,7 @@ import {
 	blockReason,
 	buildRows,
 	checkOf,
+	defaultReadOn,
 	expectedAt,
 	groupOf,
 	isBlocked,
@@ -12,6 +13,14 @@ import {
 	signedForLedger,
 	type Row
 } from '$lib/balance/checklist';
+
+const asset: Row = { account: 'Assets:Cash:A', group: 'Liquid', liability: false, card: false };
+const card: Row = {
+	account: 'Liabilities:CC:B',
+	group: 'Liabilities',
+	liability: true,
+	card: true
+};
 
 describe('groupOf', () => {
 	it('files a liability under Liabilities', () => {
@@ -54,6 +63,14 @@ describe('buildRows', () => {
 		expect(rows.map((r) => r.liability)).toEqual([false, true]);
 	});
 
+	it('marks only a credit card as reconciled, not every liability', () => {
+		const rows = buildRows([], ['Liabilities:CC:B', 'Liabilities:TaxesOwed'], label);
+		expect(rows.map((r) => [label(r.account), r.card])).toEqual([
+			['B', true],
+			['TaxesOwed', false]
+		]);
+	});
+
 	it('copes with either list being empty', () => {
 		expect(buildRows([], [], label)).toEqual([]);
 		expect(buildRows([], ['Liabilities:CC:B'], label)).toHaveLength(1);
@@ -63,11 +80,11 @@ describe('buildRows', () => {
 describe('expectedAt', () => {
 	const atNow = new Map([['A', 1000]]);
 
-	it('is the ledger figure when nothing has been logged for this month yet', () => {
+	it('is the ledger figure when nothing has been logged on the reading yet', () => {
 		expect(expectedAt('A', atNow, new Map(), new Map(), false)).toBe(1000);
 	});
 
-	it('backs out THIS month’s adjustment when a snapshot already stands on the date', () => {
+	it('backs out the reading’s own adjustment when a snapshot already stands on it', () => {
 		const adjNow = new Map([['A', 120]]);
 		const adjPrev = new Map([['A', 100]]);
 		expect(expectedAt('A', atNow, adjNow, adjPrev, true)).toBe(980);
@@ -113,9 +130,6 @@ describe('checkOf / agrees', () => {
 });
 
 describe('isBlocked', () => {
-	const asset: Row = { account: 'Assets:Cash:A', group: 'Liquid', liability: false };
-	const card: Row = { account: 'Liabilities:CC:B', group: 'Liabilities', liability: true };
-
 	it('does not block an asset that drifted — that is what the adjustment plug is for', () => {
 		expect(isBlocked(asset, 1200, 1000)).toBe(false);
 	});
@@ -128,8 +142,13 @@ describe('isBlocked', () => {
 		expect(blockReason(card, -1200, -1000)).toBeNull();
 	});
 
-	it('does not block a liability that disagrees — the gap is carried as a correction', () => {
+	it('does not block a card that disagrees before its baseline — the gap is its starting balance', () => {
 		expect(isBlocked(card, -1200, -1000)).toBe(false);
+	});
+
+	it('blocks a card past its baseline until its entries explain the figure', () => {
+		expect(blockReason(card, -1200, -1000, true, true)).toBe('unreconciled');
+		expect(blockReason(card, -1000, -1000, true, true)).toBeNull();
 	});
 
 	it('does not block a liability that agrees', () => {
@@ -152,9 +171,6 @@ describe('isBlocked', () => {
 });
 
 describe('signedForLedger', () => {
-	const asset: Row = { account: 'Assets:Cash:A', group: 'Liquid', liability: false };
-	const card: Row = { account: 'Liabilities:CC:B', group: 'Liabilities', liability: true };
-
 	it('inverts a liability: owed typed positive is stored negative', () => {
 		expect(signedForLedger(card, 500)).toBe(-500);
 	});
@@ -186,5 +202,16 @@ describe('missingEntryKind', () => {
 	it('reads a shortfall as unlogged spending and a surplus as an unlogged bill pay', () => {
 		expect(missingEntryKind(-50)).toBe('spending');
 		expect(missingEntryKind(50)).toBe('bill pay');
+	});
+});
+
+describe('defaultReadOn', () => {
+	it('reads today in the current month', () => {
+		expect(defaultReadOn('2026-09', '2026-09-23')).toBe('2026-09-23');
+	});
+
+	it('reads a past month on the day before its first, so the snapshot lands on that first', () => {
+		expect(defaultReadOn('2026-08', '2026-09-23')).toBe('2026-07-31');
+		expect(defaultReadOn('2026-01', '2026-09-23')).toBe('2025-12-31');
 	});
 });

@@ -33,6 +33,7 @@
 		INSTITUTION_ALIAS,
 		NAME,
 		OPTIONS,
+		PENDING,
 		RENAME_HINT,
 		SWEEPS_INTO,
 		TAX_TREATMENT
@@ -96,6 +97,7 @@
 	let employer = $state('');
 	let sweepSel = $state('');
 	let options = $state<TextRow[]>([]);
+	let includesPending = $state(false);
 	let closing = $state(false);
 
 	/** Every box back to what the ledger says. Also the discard. */
@@ -109,6 +111,7 @@
 		employer = info?.employer ?? '';
 		sweepSel = info?.sweep_to ?? '';
 		options = textRows(info?.labels ?? []);
+		includesPending = info?.includes_pending ?? false;
 		save.reset();
 	}
 
@@ -172,6 +175,8 @@
 		if (kind?.scopable && (employer || null) !== (info?.employer ?? null))
 			out.employer = employer || null;
 		if (kind?.labelled && !sameList(labels, info?.labels ?? [])) out.labels = labels;
+		if (kind?.reconciled && includesPending !== (info?.includes_pending ?? false))
+			out.includes_pending = includesPending;
 		return out;
 	});
 
@@ -335,6 +340,16 @@
 					</section>
 				{/if}
 
+				{#if kind.reconciled && !closed}
+					<section class="block">
+						<h3>Balance</h3>
+						<label class="chk">
+							<input type="checkbox" bind:checked={includesPending} disabled={save.busy} />
+							{PENDING.label}
+						</label>
+					</section>
+				{/if}
+
 				<footer>
 					<SaveFeedback {save} />
 					<div class="acts">
@@ -469,6 +484,13 @@
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
 		gap: var(--gap-field);
+	}
+	.chk {
+		display: flex;
+		align-items: center;
+		gap: var(--gap-inline);
+		font-size: var(--text-control);
+		color: var(--ink-2);
 	}
 	.hint {
 		font-size: var(--text-caption);

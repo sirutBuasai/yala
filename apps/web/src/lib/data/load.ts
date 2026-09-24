@@ -237,6 +237,7 @@ export interface AccountExtras {
 	tier?: AccountTier;
 	employer?: string | null;
 	labels?: string[];
+	includes_pending?: boolean;
 }
 
 /** Open an account and refresh the lists. A bare string is the name as typed. */
@@ -329,6 +330,7 @@ export interface AccountMeta {
 	account_alias?: string | null;
 	employer?: string | null;
 	labels?: string[];
+	includes_pending?: boolean;
 }
 
 export async function setAccountMeta(account: string, meta: AccountMeta): Promise<string | null> {
@@ -397,6 +399,9 @@ export interface NetWorthAt {
 	    where that snapshot can be rewritten; a share-based one cannot. `amount` is as stored, so a
 	    liability's is negative. */
 	logged: Record<string, { date: string; amount: number; locator: string | null }>;
+	/** card -> what its bank app should read at the END of the date, as stored (owed negative), and
+	    whether a reading then must match it rather than set the card's starting balance. */
+	cards: Record<string, { expected: number; must_agree: boolean }>;
 }
 
 export async function networthAt(date: string): Promise<NetWorthAt | null> {

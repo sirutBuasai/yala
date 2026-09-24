@@ -11,6 +11,9 @@
 		/** A tally rendered beside the title. */
 		count?: number;
 		caption?: Label;
+		/** Rendered after the caption, so a control can read as part of it while staying outside what a
+		    rename edits. */
+		captionAfter?: Snippet;
 		/** Hook from whoever stores renames; absent leaves these labels the app's to name. Given only while
 		    the board is being edited. */
 		rename?: (slot: Slot, text: string) => void;
@@ -39,6 +42,7 @@
 		title,
 		count,
 		caption,
+		captionAfter,
 		rename,
 		shipped,
 		actions,
@@ -62,6 +66,11 @@
 	// so the click moved the pane. Such a body holds figures, never controls, so there is nothing to freeze.
 	const freezeBody = $derived(frozen && !!heading);
 </script>
+
+{#snippet afterCaption()}
+	<!-- Inert while the board is edited, like the actions: a press on the card belongs to the drag. -->
+	{' '}<span inert={frozen || undefined}>{@render captionAfter?.()}</span>
+{/snippet}
 
 <section
 	class="card"
@@ -98,6 +107,7 @@
 							{nameable}
 							shipped={shipped?.caption}
 							onrename={rename && ((t) => rename('caption', t))}
+							after={captionAfter && afterCaption}
 						/>
 					</p>
 				{/if}

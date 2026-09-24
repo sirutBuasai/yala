@@ -125,6 +125,50 @@ describe('NewAccount — the kind decides what is asked', () => {
 	});
 });
 
+describe('NewAccount — a card says how its bank counts pending charges', () => {
+	async function toPending() {
+		await pickKind('Card');
+		await type('Institution', 'Bank of Example');
+		await next();
+		await type('Card product', 'Example Rewards');
+		await next();
+	}
+
+	it('asks, defaulting to excluding them', async () => {
+		const fetchSpy = flow();
+
+		await toPending();
+		expect(
+			screen.getByText("Does the card's current balance include pending charges?")
+		).toBeInTheDocument();
+		await toReview();
+		await add();
+
+		await waitFor(() => expect(posted(fetchSpy).includes_pending).toBe(false));
+	});
+
+	it('sends the answer when the bank counts them', async () => {
+		const fetchSpy = flow();
+
+		await toPending();
+		await fireEvent.click(screen.getByRole('button', { name: /^Includes pending charges/ }));
+		await toReview();
+		await add();
+
+		await waitFor(() => expect(posted(fetchSpy).includes_pending).toBe(true));
+	});
+
+	it('does not ask a bank', async () => {
+		flow();
+
+		await pickKind('Bank');
+		await type('Institution', 'Bank of Example');
+		await next();
+
+		expect(screen.queryByText(/include pending charges/)).toBeNull();
+	});
+});
+
 describe('NewAccount — the gate in front of the POST', () => {
 	it('will not leave a question its answer is missing', async () => {
 		const fetchSpy = flow();

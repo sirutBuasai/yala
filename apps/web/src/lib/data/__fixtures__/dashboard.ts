@@ -20,7 +20,8 @@ const KIND_FLAGS = [
 	'drains',
 	'splits',
 	'sweeps',
-	'sweep_target'
+	'sweep_target',
+	'reconciled'
 ] as const;
 
 type KindName = AccountLists['kinds'][number]['name'];
@@ -32,7 +33,7 @@ const KIND_TABLE: Record<KindName, { prefix: string; on: (typeof KIND_FLAGS)[num
 		prefix: 'Assets:Cash:',
 		on: ['named', 'plugged', 'drains', 'splits', 'sweeps', 'sweep_target']
 	},
-	card: { prefix: 'Liabilities:CC:', on: ['named', 'product'] },
+	card: { prefix: 'Liabilities:CC:', on: ['named', 'product', 'reconciled'] },
 	investment: {
 		prefix: 'Assets:Investments:',
 		on: ['tiered', 'named', 'product', 'scopable', 'labelled', 'plugged', 'splits', 'sweep_target']

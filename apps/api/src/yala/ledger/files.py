@@ -13,6 +13,7 @@ import tempfile
 from collections.abc import Mapping
 from pathlib import Path
 
+from yala.ledger.cards import resynced
 from yala.ledger.core import Ledger
 
 
@@ -46,8 +47,36 @@ def snapshot(paths) -> dict[Path, str | None]:
     return {path: (path.read_text() if path.exists() else None) for path in paths}
 
 
+def load_checked(main_ledger: Path, *, resync: bool = True) -> None:
+    """Load ``main_ledger`` strictly, raising if it is broken.
+
+    With ``resync``, a card assertion an earlier edit left stale is re-set first (see
+    :func:`yala.ledger.cards.resynced`), and put back if the ledger still fails to load. A write
+    that logs a card reading passes False: its own figure is the one being checked.
+    """
+    if resync:
+        loaded = Ledger(main_ledger, strict=False).load()
+        if not loaded.errors:
+            return
+        fixes = resynced(loaded)
+    else:
+        fixes = {}
+
+    originals = snapshot(fixes)
+    try:
+        for path, content in fixes.items():
+            atomic_write(path, content)
+
+        Ledger(main_ledger, strict=True).load()
+
+    except Exception:
+        for path, before in originals.items():
+            restore(path, before)
+        raise
+
+
 def commit(main_ledger: Path, changes: Mapping[Path, str]) -> None:
-    """Write every file in ``changes``, then roll the whole set back and re-raise if the strict
+    """Write every file in ``changes``, then roll the whole set back and re-raise if the checked
     reload of ``main_ledger`` fails."""
     originals = snapshot(changes)
 
@@ -55,7 +84,7 @@ def commit(main_ledger: Path, changes: Mapping[Path, str]) -> None:
         for path, content in changes.items():
             atomic_write(path, content)
 
-        Ledger(main_ledger, strict=True).load()
+        load_checked(main_ledger)
 
     except Exception:
         for path, before in originals.items():

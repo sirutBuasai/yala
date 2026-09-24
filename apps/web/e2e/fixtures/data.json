@@ -1070,7 +1070,8 @@
 				"drains": false,
 				"splits": false,
 				"sweeps": false,
-				"sweep_target": false
+				"sweep_target": false,
+				"reconciled": false
 			},
 			{
 				"name": "employer",
@@ -1084,7 +1085,8 @@
 				"drains": false,
 				"splits": false,
 				"sweeps": false,
-				"sweep_target": false
+				"sweep_target": false,
+				"reconciled": false
 			},
 			{
 				"name": "card",
@@ -1098,7 +1100,8 @@
 				"drains": false,
 				"splits": false,
 				"sweeps": false,
-				"sweep_target": false
+				"sweep_target": false,
+				"reconciled": true
 			},
 			{
 				"name": "investment",
@@ -1112,7 +1115,8 @@
 				"drains": false,
 				"splits": true,
 				"sweeps": false,
-				"sweep_target": true
+				"sweep_target": true,
+				"reconciled": false
 			},
 			{
 				"name": "bank",
@@ -1126,7 +1130,8 @@
 				"drains": true,
 				"splits": true,
 				"sweeps": true,
-				"sweep_target": true
+				"sweep_target": true,
+				"reconciled": false
 			},
 			{
 				"name": "category",
@@ -1140,7 +1145,8 @@
 				"drains": false,
 				"splits": false,
 				"sweeps": false,
-				"sweep_target": false
+				"sweep_target": false,
+				"reconciled": false
 			}
 		],
 		"spending_categories": ["Grocery", "Subscription", "Takeouts"],

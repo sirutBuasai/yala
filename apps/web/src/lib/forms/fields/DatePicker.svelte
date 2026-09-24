@@ -10,7 +10,8 @@
 	// On-brand replacement for <input type="date">: a Popup-hosted calendar. Keyboard: arrows move
 	// the day, Enter selects, Esc closes.
 	import { untrack } from 'svelte';
-	import { MONTHS, dateLong } from '$lib/utils/format';
+	import { MONTHS, dateLong, dateShort } from '$lib/utils/format';
+	import { isoOf } from '$lib/utils/period';
 	import { onKey } from '$lib/utils/keys';
 	import Popup from '$lib/overlay/Popup.svelte';
 	import Chevron from '$lib/icons/Chevron.svelte';
@@ -23,8 +24,17 @@
 		/** Overrides the empty state. Defaults to today's date, since that is what leaving it blank
 		    means: every route this feeds dates an entry today when no date is sent. */
 		placeholder?: string;
+		/** Reads as a word in running text, such as a caption, rather than a boxed field. It always
+		    states a date, so it offers no Clear. */
+		inline?: boolean;
 	}
-	let { value = $bindable(''), id, ariaLabel = 'Date', placeholder }: Props = $props();
+	let {
+		value = $bindable(''),
+		id,
+		ariaLabel = 'Date',
+		placeholder,
+		inline = false
+	}: Props = $props();
 
 	const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -42,9 +52,7 @@
 		const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
 		return m ? { y: +m[1]!, m: +m[2]! - 1, d: +m[3]! } : null;
 	}
-	function iso(y: number, m: number, d: number) {
-		return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-	}
+	const iso = (y: number, m: number, d: number) => isoOf(new Date(y, m, d));
 	/** The empty state, read the same way a chosen date is — so it says what blank will mean rather
 	    than spelling out a format nobody types into this. */
 	const empty = $derived.by(() => {
@@ -133,22 +141,25 @@
 	activeDescendant={active ? dayId(active) : undefined}
 	onopen={seedView}
 	{onkeynav}
+	triggerClass={inline ? 'trigger-inline' : undefined}
 >
 	{#snippet trigger()}
-		<span class="val" class:placeholder={!value}>{value ? dateLong(value) : empty}</span>
-		<svg class="cal" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
-			<rect
-				x="2"
-				y="3"
-				width="12"
-				height="11"
-				rx="2"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.3"
-			/>
-			<path d="M2 6h12M5 1.5v3M11 1.5v3" fill="none" stroke="currentColor" stroke-width="1.3" />
-		</svg>
+		<span class="val" class:placeholder={!value}
+			>{value ? (inline ? dateShort(value) : dateLong(value)) : empty}</span
+		>
+		{#if !inline}<svg class="cal" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+				<rect
+					x="2"
+					y="3"
+					width="12"
+					height="11"
+					rx="2"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.3"
+				/>
+				<path d="M2 6h12M5 1.5v3M11 1.5v3" fill="none" stroke="currentColor" stroke-width="1.3" />
+			</svg>{/if}
 	{/snippet}
 
 	{#snippet children()}
@@ -185,7 +196,9 @@
 			</div>
 			<div class="cal-foot">
 				<button type="button" class="btn-mini" onclick={today}>Today</button>
-				<button type="button" class="btn-mini" onclick={clear}>Clear</button>
+				{#if !inline}
+					<button type="button" class="btn-mini" onclick={clear}>Clear</button>
+				{/if}
 			</div>
 		</div>
 	{/snippet}

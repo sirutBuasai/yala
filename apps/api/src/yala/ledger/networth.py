@@ -17,11 +17,13 @@ from typing import TYPE_CHECKING
 from beancount.core import data
 
 from yala.dates import month_bounds, month_of
+from yala.ledger import cards
 from yala.ledger.accounts import sweep_destination, tier_of
 from yala.ledger.constants import (
     ADJUSTMENTS,
     ASSETS,
     CASH,
+    CREDIT_CARDS,
     DEFAULT_CURRENCY,
     INVESTMENTS,
     LIABILITIES,
@@ -73,6 +75,16 @@ class LoggedBalance:
     amount: Decimal
     #: Handle to rewrite ``date``'s assertion, or None when it is share-based and so not rewritable.
     locator: str | None
+
+
+@dataclass(frozen=True)
+class CardCheck:
+    """What a card's bank app should show at the end of a day, and whether a reading taken then must
+    match it (see :func:`yala.ledger.cards.must_agree`)."""
+
+    #: In the ledger's sign, so an amount owed is negative.
+    expected: Decimal
+    must_agree: bool
 
 
 @dataclass
@@ -196,6 +208,17 @@ class NetWorth:
 
         return out
 
+    def card_checks(self, as_of: dt.date) -> dict[str, CardCheck]:
+        """Every card's :class:`CardCheck` for a reading taken at the end of ``as_of``, which is
+        asserted the day after."""
+        asserted = as_of + dt.timedelta(days=1)
+        return {
+            a: CardCheck(
+                cards.app_balance(self._led, a, as_of), cards.must_agree(self._led, a, asserted)
+            )
+            for a in self._led.declared_accounts(CREDIT_CARDS)
+        }
+
     def adjustments(self, as_of: dt.date | None = None) -> list[Adjustment]:
         """Cumulative balance of each ``Equity:Adjustments:*`` plug."""
         return [
@@ -233,10 +256,6 @@ class NetWorth:
         return self._snapshotable(during), during(LIABILITIES)
 
     def loggable_liabilities(self) -> list[str]:
-        """Active liability accounts, which are snapshot-able.
-
-        A liability balance is fully determined by the entries already made, so a figure that
-        disagrees means one is missing rather than that money moved untracked. Until statement-cycle
-        tracking can say which entry, the difference pads to the card's own plug, which is created
-        on first use (see :func:`yala.ledger.accounts.snapshot_plug`)."""
+        """Active liability accounts, which are snapshot-able (see
+        :func:`yala.ledger.accounts.snapshot_plug` for where a gap goes)."""
         return self._led.active_accounts(LIABILITIES)

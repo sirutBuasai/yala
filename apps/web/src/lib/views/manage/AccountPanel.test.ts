@@ -180,6 +180,36 @@ describe('AccountPanel — a name is a field, and a rename is still a rename', (
 		expect(screen.getByLabelText('Card product alias')).toBeInTheDocument();
 	});
 
+	it('ticks whether a card counts pending charges, as a metadata edit', async () => {
+		setDirectory({
+			[CARD]: {
+				kind: 'card',
+				institution_name: 'Bank of A',
+				account_name: 'Rewards',
+				includes_pending: false
+			}
+		});
+		const fetchSpy = stubFetch();
+		panel(CARD);
+
+		await fireEvent.click(screen.getByLabelText('Current balance includes pending charges'));
+		await save();
+
+		await waitFor(() => expect(postsTo(fetchSpy, '/api/account/meta')).toHaveLength(1));
+		expect(bodyOf(fetchSpy, '/api/account/meta')).toEqual({
+			account: CARD,
+			includes_pending: true
+		});
+	});
+
+	it('offers a bank no pending setting', () => {
+		setDirectory({ [BANK]: { kind: 'bank' } });
+		stubFetch();
+		panel(BANK);
+
+		expect(screen.queryByLabelText('Current balance includes pending charges')).toBeNull();
+	});
+
 	it('moves an investment between tax tiers, which is a rename of its path', async () => {
 		setDirectory({
 			[BROKERAGE]: {

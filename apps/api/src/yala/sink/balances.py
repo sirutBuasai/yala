@@ -1,7 +1,8 @@
 """Writing net-worth snapshots: a padded assertion, an edit of one, a liquidation.
 
-Every snapshot is a ``pad`` + ``balance`` pair: the figure asserted, and whatever the entries do not
-explain routed to the account's plug (see :func:`yala.ledger.accounts.snapshot_plug`).
+A snapshot is a ``pad`` + ``balance`` pair: the figure asserted, and whatever the entries do not
+explain routed to the account's plug (see :func:`yala.ledger.accounts.snapshot_plug`). A card pads
+only up to its baseline; after it the figure must agree (see :mod:`yala.ledger.cards`).
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from beancount.core import data, prices
 from beancount.core.amount import Amount
 from beancount.parser import printer
 
-from yala.ledger import Ledger, directives, pads
+from yala.ledger import Ledger, cards, directives, pads
 from yala.ledger.accounts import open_entry
 from yala.ledger.constants import BALANCE, DEFAULT_CURRENCY, PAD
 from yala.ledger.locators import find_balance, source_of
@@ -124,7 +125,11 @@ class BalanceWrites(AccountWrites):
         at start of day) and only written when the projected balance differs: beancount rejects a
         pad it does not need, so emitting one unconditionally would make an unchanged balance
         impossible to log. Share lots are reclassified to USD first, net-worth-neutrally, so the
-        single USD assertion is authoritative."""
+        single USD assertion is authoritative.
+
+        A card's ``amount`` is its bank app's figure, so pending charges the app leaves out are
+        added back. Past its baseline the snapshot is refused unless the entries already explain
+        it."""
         # Through the shared sign rule: a liability is inverted, and a negative asset refused.
         amount = directives.stored_amount(account, round_cents(amount))
         pad_date = date - dt.timedelta(days=1)
@@ -133,6 +138,10 @@ class BalanceWrites(AccountWrites):
 
         ledger = Ledger(self.main_ledger, strict=True).load()
         usd = ledger.currency
+        card = cards.is_card(account)
+        if card:
+            amount += cards.unshown_pending(ledger, account, pad_date)
+
         drain, _ = self._liquidate_postings(ledger, account, pad_date)
         share_legs = [p for p in drain if p.price is not None]  # non-USD legs carry an @ price
 
@@ -164,13 +173,15 @@ class BalanceWrites(AccountWrites):
             projected += usd_add
 
         if projected != amount:
+            if card and cards.must_agree(ledger, account, date):
+                cards.refuse_gap(account, amount, projected, date)
             blocks.append(f"{pad_date.isoformat()} {PAD} {account} {counter_account}")
         entry_id = str(uuid.uuid4())
         blocks.append(directives.balance_directive(date, account, amount, entry_id))
 
         # The pad is dated the day before the assertion, so the pair is placed as one block by the
         # assertion's date — splitting them would file the pad in the month before it belongs to.
-        self._insert(directives.balance_subdir(account), date, "\n\n".join(blocks))
+        self._insert(directives.balance_subdir(account), date, "\n\n".join(blocks), resync=False)
         return entry_id
 
     def update_balance(self, locator: str, amount: Decimal) -> tuple[str, dt.date, str]:
@@ -179,10 +190,20 @@ class BalanceWrites(AccountWrites):
 
         Editing an assertion can flip whether a pad is required in either direction, and beancount
         rejects both an unexplained delta and an unused pad. An assertion with no ``id`` is stamped
-        with one, so the returned locator is the stable handle from then on."""
-        entry = find_balance(Ledger(self.main_ledger, strict=True).load().entries, locator)
+        with one, so the returned locator is the stable handle from then on. A card is held to the
+        same baseline rule as :meth:`log_balance`."""
+        ledger = Ledger(self.main_ledger, strict=True).load()
+        entry = find_balance(ledger.entries, locator)
         account, date = entry.account, entry.date
         amount = directives.stored_amount(account, round_cents(amount))
+
+        pad_through = None
+        if cards.is_card(account):
+            as_of = date - dt.timedelta(days=1)
+            amount += cards.unshown_pending(ledger, account, as_of)
+            if cards.must_agree(ledger, account, date):
+                cards.refuse_gap(account, amount, ledger.balance(account, as_of), date)
+            pad_through = cards.baseline(ledger, account)
 
         if entry.amount.currency != DEFAULT_CURRENCY:
             raise ValueError(
@@ -209,5 +230,5 @@ class BalanceWrites(AccountWrites):
             entry_id = str(uuid.uuid4())
             lines[i + 1 : i + 1] = [f'  id: "{entry_id}"\n']
 
-        pads.settle(self.main_ledger, account, {path: lines}, {path: original})
+        pads.settle(self.main_ledger, account, {path: lines}, {path: original}, pad_through)
         return account, date, f"id:{entry_id}"

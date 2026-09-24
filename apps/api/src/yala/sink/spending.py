@@ -13,7 +13,12 @@ from beancount.core import data
 from beancount.core.amount import Amount
 
 from yala.ledger import directives
-from yala.ledger.constants import DEFAULT_CURRENCY, EXPENSES
+from yala.ledger.constants import (
+    AWAITING_META,
+    AWAITING_REIMBURSEMENT,
+    DEFAULT_CURRENCY,
+    EXPENSES,
+)
 from yala.money import round_cents
 from yala.sink.types import Credit
 from yala.sink.writer import Carried, LedgerWriter, flag_for
@@ -32,9 +37,12 @@ class SpendingWrites(LedgerWriter):
         funding_account: str,
         entry_id: str,
         pending: bool,
+        awaiting: bool,
         credits: list[Credit] | None,
         carried: Carried | None,
     ) -> data.Transaction:
+        """``awaiting`` marks a pending entry as posted at the bank, pending only on a
+        reimbursement; it means nothing on a settled one."""
         legs = [(a, round_cents(Decimal(amt))) for a, amt in (credits or [])]
         self._assert_accounts_active(
             date, [f"{EXPENSES}{category}", funding_account, *(a for a, _ in legs)]
@@ -47,6 +55,8 @@ class SpendingWrites(LedgerWriter):
         meta: dict = {"id": entry_id, "funding": funding_account}
         if credit_postings:
             meta["bill"] = Amount(total, DEFAULT_CURRENCY)
+        if pending and awaiting:
+            meta[AWAITING_META] = AWAITING_REIMBURSEMENT
         meta |= carried.meta if carried else {}
 
         postings = [
@@ -84,6 +94,7 @@ class SpendingWrites(LedgerWriter):
         funding_account: str,
         pending: bool = False,
         credits: list[Credit] | None = None,
+        awaiting: bool = False,
     ) -> str:
         return self.append_built(
             "spending",
@@ -95,6 +106,7 @@ class SpendingWrites(LedgerWriter):
                 funding_account=funding_account,
                 entry_id=entry_id,
                 pending=pending,
+                awaiting=awaiting,
                 credits=credits,
                 carried=carried,
             ),
@@ -111,6 +123,7 @@ class SpendingWrites(LedgerWriter):
         date: dt.date | None = None,
         pending: bool = False,
         credits: list[Credit] | None = None,
+        awaiting: bool = False,
     ) -> str:
         return self.update_built(
             "spending",
@@ -124,6 +137,7 @@ class SpendingWrites(LedgerWriter):
                 funding_account=funding_account,
                 entry_id=entry_id,
                 pending=pending,
+                awaiting=awaiting,
                 credits=credits,
                 carried=carried,
             ),

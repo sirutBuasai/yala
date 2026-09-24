@@ -14,13 +14,14 @@
 	} from '$lib/data/load';
 	import { amountExact, formatAccount, money, moneyExact, monthLabel } from '$lib/utils/format';
 	import { accountVar } from '$lib/utils/theme';
-	import { addMonths } from '$lib/utils/period';
+	import { addDays, addMonths, todayIso } from '$lib/utils/period';
 	import {
 		agrees,
 		asTyped,
 		blockReason,
 		buildRows,
 		checkOf,
+		defaultReadOn,
 		expectedAt,
 		GROUP_ORDER,
 		missingEntryKind,
@@ -30,6 +31,7 @@
 	} from '$lib/balance/checklist';
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import AmountInput from '$lib/ui/AmountInput.svelte';
+	import DatePicker from '$lib/forms/fields/DatePicker.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import { sumBy } from '$lib/utils/num';
 	import { words } from '$lib/ui/label';
@@ -60,12 +62,23 @@
 	const shownDate = $derived(firstDayOf(monthKey));
 	const prevDate = $derived(monthKey ? firstDayOf(addMonths(monthKey, -1)) : '');
 
-	// Two dated reads: this month's snapshot and the previous one. The difference between their
-	// adjustment totals is what isolates this month's figure.
-	let atNow = $state<Map<string, number>>(new Map());
-	let adjNow = $state<Map<string, number>>(new Map());
-	let adjPrev = $state<Map<string, number>>(new Map());
+	/** The day every balance was read off its app, in one sitting. */
+	let readOn = $state('');
+	$effect(() => {
+		readOn = defaultReadOn(monthKey, todayIso());
+	});
+	// An assertion is checked at the start of its day, so a figure read at the end of `readOn`
+	// asserts on the day after.
+	const snapshotDate = $derived(readOn ? addDays(readOn, 1) : '');
+
+	// Four dated reads: the shown month, for its roster and what it has logged; the end of the reading
+	// day and of the day before it, whose adjustment difference isolates a snapshot already standing on
+	// the reading; and the previous month, for the Previous column.
+	let atRead = $state<Map<string, number>>(new Map());
+	let adjRead = $state<Map<string, number>>(new Map());
+	let adjBefore = $state<Map<string, number>>(new Map());
 	let prevVals = $state<Map<string, number>>(new Map());
+	let cardChecks = $state<Map<string, NetWorthAt['cards'][string]>>(new Map());
 	/** What this month already holds per account: the figure to ghost, and where a correction goes. */
 	let logged = $state<Map<string, NetWorthAt['logged'][string]>>(new Map());
 	let loading = $state(false);
@@ -74,40 +87,52 @@
 		new Map(list.map((a) => [a.account, a.value]));
 
 	async function refresh() {
-		if (!shownDate || !prevDate) return;
-		// Without the API nothing can serve the dated reads, so the two-date columns read as unavailable
+		if (!shownDate || !prevDate || !readOn) return;
+		// Without the API nothing can serve the dated reads, so the dated columns read as unavailable
 		// rather than as wrong.
 		if (!$live) {
-			atNow = toMap((data.networth?.accounts ?? []).map((a) => ({ ...a })));
-			adjNow = toMap(data.networth?.adjustments ?? []);
-			adjPrev = new Map();
+			atRead = toMap((data.networth?.accounts ?? []).map((a) => ({ ...a })));
+			adjRead = toMap(data.networth?.adjustments ?? []);
+			adjBefore = new Map();
 			prevVals = new Map();
+			cardChecks = new Map();
 			logged = new Map();
 			monthRoster = null;
 			return;
 		}
 		loading = true;
-		const [now, before] = await Promise.all([networthAt(shownDate), networthAt(prevDate)]);
-		if (now) {
-			atNow = toMap(now.accounts);
-			adjNow = toMap(now.adjustments);
-			logged = new Map(Object.entries(now.logged ?? {}));
-			monthRoster = { assets: now.balance_accounts, liabilities: now.liability_accounts };
+		const [month, read, before, prev] = await Promise.all([
+			networthAt(shownDate),
+			networthAt(readOn),
+			networthAt(addDays(readOn, -1)),
+			networthAt(prevDate)
+		]);
+		if (month) {
+			logged = new Map(Object.entries(month.logged ?? {}));
+			monthRoster = { assets: month.balance_accounts, liabilities: month.liability_accounts };
 		}
-		if (before) {
-			prevVals = toMap(before.accounts);
-			adjPrev = toMap(before.adjustments);
+		if (read) {
+			atRead = toMap(read.accounts);
+			adjRead = toMap(read.adjustments);
+			cardChecks = new Map(Object.entries(read.cards ?? {}));
 		}
+		if (before) adjBefore = toMap(before.adjustments);
+		if (prev) prevVals = toMap(prev.accounts);
 		loading = false;
 	}
 	$effect(() => {
 		shownDate;
+		readOn;
 		$live;
 		void refresh();
 	});
 
-	const expected = (account: string) =>
-		expectedAt(account, atNow, adjNow, adjPrev, logged.has(account));
+	const loggedOnReading = (account: string) => logged.get(account)?.date === snapshotDate;
+	const expected = (row: Row) =>
+		row.card
+			? (cardChecks.get(row.account)?.expected ?? null)
+			: expectedAt(row.account, atRead, adjRead, adjBefore, loggedOnReading(row.account));
+	const mustAgree = (row: Row) => row.card && (cardChecks.get(row.account)?.must_agree ?? false);
 	const previous = (account: string) => prevVals.get(account) ?? null;
 	/** What this month's latest snapshot puts the account at, in the ledger's sign. Zero is a figure,
 	    so this is null only when the month holds nothing for the account. */
@@ -134,22 +159,22 @@
 	// `asTyped`). The two conventions differ on purpose: a row is read across, but typed into once.
 
 	/**
-	 * Where a typed figure goes: over this month's own snapshot, or onto the first when the month holds
-	 * none. Null when that snapshot is share-based, which is refused rather than rewritten.
+	 * Where a typed figure goes: over the snapshot already standing on the reading, else a new one.
+	 * Null when that snapshot is share-based, which is refused rather than rewritten.
 	 */
 	function target(row: Row): { locator: string } | { date: string } | null {
-		const rec = logged.get(row.account);
-		if (!rec) return { date: shownDate };
+		if (!loggedOnReading(row.account)) return { date: snapshotDate };
+		const locator = logged.get(row.account)?.locator;
 
-		return rec.locator ? { locator: rec.locator } : null;
+		return locator ? { locator } : null;
 	}
 
 	// Blocking and the gap are about a figure being ENTERED: an assertion already in the ledger loads,
 	// so it cannot be blocked, and its gap was settled when it was written.
-	const check = (row: Row) => checkOf(parsed(row), expected(row.account));
+	const check = (row: Row) => checkOf(parsed(row), expected(row));
 	const matches = (row: Row) => agrees(check(row));
 	const whyBlocked = (row: Row) =>
-		blockReason(row, parsed(row), expected(row.account), target(row) != null);
+		blockReason(row, parsed(row), expected(row), target(row) != null, mustAgree(row));
 	const blockedRow = (row: Row) => whyBlocked(row) !== null;
 
 	/**
@@ -158,17 +183,24 @@
 	 * two can't drift apart.
 	 */
 	function blockedPredicate(row: Row): string {
-		if (whyBlocked(row) === 'share-snapshot') {
+		const why = whyBlocked(row);
+		if (why === 'share-snapshot') {
 			return `was snapshotted in shares in ${monthLabel(monthKey)}. Only backfilling shares is allowed.`;
+		}
+		if (why === 'unreconciled') {
+			return `is off by ${gapWords(row)}. Please log the missing ${missingEntryKind(check(row) ?? 0)} first.`;
 		}
 		return "can't hold a negative balance, please enter a positive figure.";
 	}
 
-	/** A card that disagrees still saves, so this reports rather than refuses. */
-	function driftPredicate(row: Row): string {
-		const gap = check(row) ?? 0;
+	const gapWords = (row: Row) => moneyExact(Math.abs(check(row) ?? 0));
 
-		return `is off by ${moneyExact(Math.abs(gap))}. Please verify logged ${missingEntryKind(gap)}.`;
+	/** A liability that disagrees but still saves, so this reports rather than refuses. */
+	function driftPredicate(row: Row): string {
+		if (row.card)
+			return `sets its starting balance; the ${gapWords(row)} gap goes to opening balances.`;
+
+		return `is off by ${gapWords(row)}. Please verify logged ${missingEntryKind(check(row) ?? 0)}.`;
 	}
 
 	// `entered` is what Save writes; `settled` is what the month has a figure for either way, and so
@@ -179,8 +211,7 @@
 	const savable = $derived(entered.filter((r) => !blockedRow(r)));
 	const drifting = $derived(entered.filter((r) => r.liability && !blockedRow(r) && !matches(r)));
 
-	const effective = (row: Row) =>
-		standing(row) ?? expected(row.account) ?? previous(row.account) ?? 0;
+	const effective = (row: Row) => standing(row) ?? expected(row) ?? previous(row.account) ?? 0;
 	const assets = $derived(
 		sumBy(
 			rows.filter((r) => !r.liability),
@@ -235,11 +266,10 @@
 	}
 </script>
 
-<Pane
-	{id}
-	title={words('Log balances')}
-	caption={words("monthly snapshot of each account's balance")}
->
+<Pane {id} title={words('Log balances')} caption={words("snapshot of each account's balance on")}>
+	{#snippet captionAfter()}
+		<DatePicker inline ariaLabel="Logging date" bind:value={readOn} />
+	{/snippet}
 	{#snippet actions()}
 		{#if rows.length}
 			<span class="progress">{settled.length}/{rows.length}</span>
@@ -292,7 +322,7 @@
 								{@const value = standing(row)}
 								{@const rec = onRecord(row.account)}
 								{@const prev = previous(row.account)}
-								{@const exp = expected(row.account)}
+								{@const exp = expected(row)}
 								{@const chk = check(row)}
 								<tr class:done={value != null && !blockedRow(row)} class:bad={blockedRow(row)}>
 									<td class="nm">
@@ -337,7 +367,9 @@
 											<Badge
 												tone="warn"
 												filled
-												title="Untracked transfers this month will post as an adjustment"
+												title={row.card
+													? 'Becomes the starting balance'
+													: 'Untracked transfers this month will post as an adjustment'}
 												>{moneyExact(chk)}</Badge
 											>
 										{/if}

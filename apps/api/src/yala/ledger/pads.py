@@ -50,11 +50,13 @@ def _working(path: Path, work: Work, originals: Originals) -> list[str]:
     return work[path]
 
 
-def _apply_one(account: str, errors: list, work: Work, originals: Originals) -> bool:
+def _apply_one(
+    account: str, errors: list, work: Work, originals: Originals, pad_through: dt.date | None
+) -> bool:
     """Add or drop one of ``account``'s pads in response to ``errors``; True if anything moved.
 
     Only this account's pads are touched — an unrelated complaint is left for the caller to surface
-    rather than papered over with a plug.
+    rather than papered over with a plug. Neither is an assertion dated after ``pad_through``.
     """
     for e in errors:
         source = getattr(e, "source", None) or {}
@@ -76,6 +78,8 @@ def _apply_one(account: str, errors: list, work: Work, originals: Originals) -> 
             return True
 
         if isinstance(e, BalanceError):
+            if pad_through is not None and entry.date > pad_through:
+                continue
             pad_date = entry.date - dt.timedelta(days=1)
             at = insert_index(lines, pad_date, n)
             lines[at:at] = [f"{pad_date} {PAD} {account} {snapshot_plug(account)}\n", "\n"]
@@ -84,8 +88,15 @@ def _apply_one(account: str, errors: list, work: Work, originals: Originals) -> 
     return False
 
 
-def settle(main_ledger: Path, account: str, work: Work, originals: Originals) -> None:
-    """Write ``work``, then add or drop ``account``'s pads until the ledger loads clean.
+def settle(
+    main_ledger: Path,
+    account: str,
+    work: Work,
+    originals: Originals,
+    pad_through: dt.date | None = None,
+) -> None:
+    """Write ``work``, then add or drop ``account``'s pads until the ledger loads clean, padding no
+    assertion dated after ``pad_through`` (None: any).
 
     Any error other than a pad this account can fix, or exhausting :data:`MAX_ROUNDS`, restores
     every touched file and re-raises.
@@ -99,7 +110,7 @@ def settle(main_ledger: Path, account: str, work: Work, originals: Originals) ->
             if not errors:
                 return
 
-            if not _apply_one(account, errors, work, originals):
+            if not _apply_one(account, errors, work, originals, pad_through):
                 break
 
         Ledger(main_ledger, strict=True).load()  # unresolved: surface beancount's own text

@@ -19,6 +19,21 @@ export function isoDate(monthKey: string, day: number): string {
 	return `${monthKey}-${String(day).padStart(2, '0')}`;
 }
 
+/** A local date as "YYYY-MM-DD"; `toISOString` would give the UTC day instead. */
+export function isoOf(d: Date): string {
+	return isoDate(monthKey(d.getFullYear(), d.getMonth() + 1), d.getDate());
+}
+
+export function todayIso(): string {
+	return isoOf(new Date());
+}
+
+/** Numeric Date args, so month and year rollover work and the UTC parse pitfall is avoided. */
+export function addDays(iso: string, delta: number): string {
+	const [y = 0, m = 1, d = 1] = iso.split('-').map(Number);
+	return isoOf(new Date(y, m - 1, d + delta));
+}
+
 /** Numeric Date args, so year rollover works and the string form's UTC parse pitfall is avoided. */
 export function addMonths(key: string, delta: number): string {
 	const [y = 0, m = 1] = key.split('-').map(Number);

@@ -27,6 +27,7 @@
 		INSTITUTION_ALIAS,
 		NAME,
 		OPTIONS,
+		PENDING,
 		TAX_TREATMENT
 	} from '$lib/views/manage/copy';
 	import {
@@ -65,6 +66,7 @@
 	let tier = $state<AccountTier>('Taxable');
 	let employer = $state('');
 	let options = $state<TextRow[]>([]);
+	let includesPending = $state(false);
 	let date = $state('');
 
 	const kind = $derived<AccountKind | undefined>(kinds[kindName]);
@@ -81,6 +83,7 @@
 			employer = '';
 			tier = 'Taxable';
 			options = [];
+			includesPending = false;
 		}
 		kindName = picked;
 		at = 1;
@@ -168,6 +171,10 @@
 			list.push({ key: 'tier', q: ADD.tier.q, sub: ADD.tier.sub, body: askTier });
 		}
 
+		if (kind.reconciled) {
+			list.push({ key: 'pending', q: ADD.pending.q, sub: ADD.pending.sub, body: askPending });
+		}
+
 		if (kind.scopable) {
 			list.push({
 				key: 'payroll',
@@ -203,6 +210,13 @@
 			list.push(typed(NAME, name, 'name'));
 		}
 		if (kind.tiered) list.push({ label: TAX_TREATMENT, value: tierLabel(tier), step: 'tier' });
+		if (kind.reconciled) {
+			list.push({
+				label: 'Current balance',
+				value: includesPending ? PENDING.yes : PENDING.no,
+				step: 'pending'
+			});
+		}
 		if (kind.scopable) {
 			list.push({
 				label: EMPLOYER,
@@ -244,6 +258,7 @@
 		if (kind?.tiered) extra.tier = tier;
 		if (kind?.scopable) extra.employer = employer || null;
 		if (kind?.labelled) extra.labels = labels;
+		if (kind?.reconciled) extra.includes_pending = includesPending;
 		return extra;
 	}
 
@@ -338,6 +353,23 @@
 				onpick={() => (tier = value as AccountTier)}
 			/>
 		{/each}
+	</div>
+{/snippet}
+
+{#snippet askPending()}
+	<div class="stack">
+		<Choice
+			label={PENDING.no}
+			why={ADD.pending.why.no}
+			selected={!includesPending}
+			onpick={() => (includesPending = false)}
+		/>
+		<Choice
+			label={PENDING.yes}
+			why={ADD.pending.why.yes}
+			selected={includesPending}
+			onpick={() => (includesPending = true)}
+		/>
 	</div>
 {/snippet}
 

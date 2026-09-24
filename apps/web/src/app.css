@@ -831,6 +831,21 @@ input[type='checkbox']:checked {
 .trigger .val.placeholder {
 	color: var(--ink-3);
 }
+/* A picker read as a word in running text: the value alone, marked as clickable. */
+.trigger-inline {
+	display: inline;
+	padding: 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	color: var(--lav-text);
+	text-decoration: underline dotted;
+	text-underline-offset: 3px;
+	cursor: pointer;
+}
+.trigger-inline:hover {
+	text-decoration-style: solid;
+}
 
 /* --- SVG chart primitives --- */
 svg.chart {

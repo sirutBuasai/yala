@@ -25,6 +25,7 @@ from yala.ledger.constants import (
     INVESTMENTS,
     LABELS_META,
     LIABILITIES,
+    OPENING_BALANCES,
     SALARY,
     SWEEP_META,
     meta_str,
@@ -72,6 +73,8 @@ class Kind:
     sweeps: bool = False
     #: May receive a sweep — an account money is meant to sit in.
     sweep_target: bool = False
+    #: Reconciled against its bank app, whose balance may or may not count pending charges.
+    reconciled: bool = False
 
 
 #: The fields the wire contract ships for each kind. Everything but ``currency``, which is a detail
@@ -82,7 +85,7 @@ KIND_FIELDS: tuple[str, ...] = tuple(f.name for f in fields(Kind) if f.name != "
 KINDS: tuple[Kind, ...] = (
     Kind("deduction", DEDUCTIONS, scopable=True),
     Kind("employer", SALARY),
-    Kind("card", CREDIT_CARDS, named=True, product=True),
+    Kind("card", CREDIT_CARDS, named=True, product=True, reconciled=True),
     Kind(
         "investment",
         INVESTMENTS,
@@ -167,11 +170,12 @@ def plug_account(account: str) -> str | None:
 def snapshot_plug(account: str) -> str:
     """Where a snapshot of ``account`` pads the difference it cannot explain.
 
-    The same per-account plug an asset uses, extended to liabilities: a card's gap is the spending
-    or bill pay not entered yet, and giving it its own plug keeps that drift reportable per card
-    rather than pooled. A liability is opened before it has one, so the plug is created the first
-    time the card is snapshotted.
+    A card pads into opening balances, and only up to its baseline (see
+    :func:`yala.ledger.cards.must_agree`). Any other liability gets a per-account plug like an
+    asset's, created the first time it is snapshotted.
     """
+    if account.startswith(CREDIT_CARDS):
+        return OPENING_BALANCES
     if account.startswith(LIABILITIES):
         return ADJUSTMENTS + account[len(LIABILITIES) :]
 

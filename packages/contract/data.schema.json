@@ -152,6 +152,18 @@
           ],
           "default": null,
           "title": "Sweep To"
+        },
+        "includes_pending": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Includes Pending"
         }
       },
       "required": [
@@ -219,6 +231,10 @@
         "sweep_target": {
           "title": "Sweep Target",
           "type": "boolean"
+        },
+        "reconciled": {
+          "title": "Reconciled",
+          "type": "boolean"
         }
       },
       "required": [
@@ -233,7 +249,8 @@
         "drains",
         "splits",
         "sweeps",
-        "sweep_target"
+        "sweep_target",
+        "reconciled"
       ],
       "title": "AccountKind",
       "type": "object"

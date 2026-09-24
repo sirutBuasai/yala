@@ -1,6 +1,8 @@
 // The balance checklist's rules as pure functions: whether a typed figure agrees with the ledger,
 // and what happens when it doesn't.
 
+import { addDays } from '$lib/utils/period';
+
 export type Group = 'Liquid' | 'Taxable' | 'Tax-advantaged' | 'Liabilities';
 export const GROUP_ORDER: Group[] = ['Liquid', 'Taxable', 'Tax-advantaged', 'Liabilities'];
 
@@ -8,7 +10,11 @@ export interface Row {
 	account: string;
 	group: Group;
 	liability: boolean;
+	/** Reconciled against its bank app from a baseline on, rather than padded month to month. */
+	card: boolean;
 }
+
+const CARD_PREFIX = 'Liabilities:CC:';
 
 /** Agreement tolerance in cents — floats never land exactly on zero. */
 const EPSILON = 0.005;
@@ -28,11 +34,17 @@ export function buildRows(
 	label: (account: string) => string
 ): Row[] {
 	const rows: Row[] = [
-		...assetAccounts.map((account) => ({ account, group: groupOf(account), liability: false })),
+		...assetAccounts.map((account) => ({
+			account,
+			group: groupOf(account),
+			liability: false,
+			card: false
+		})),
 		...liabilityAccounts.map((account) => ({
 			account,
 			group: 'Liabilities' as Group,
-			liability: true
+			liability: true,
+			card: account.startsWith(CARD_PREFIX)
 		}))
 	];
 
@@ -44,25 +56,26 @@ export function buildRows(
 }
 
 /**
- * What the ledger computes for an account at this month's snapshot, BEFORE anything new is logged.
- * An assertion already standing on this date has its own adjustment baked into the ledger's figure,
- * so it must be backed out or the comparison reports agreement with itself.
+ * What the ledger computes for an account at the end of the reading day, BEFORE anything new is
+ * logged. A snapshot already standing on the reading has its own adjustment baked into the ledger's
+ * figure, dated the reading day, so it must be backed out or the comparison reports agreement with
+ * itself.
  */
 export function expectedAt(
 	account: string,
-	atNow: Map<string, number>,
-	adjNow: Map<string, number>,
-	adjPrev: Map<string, number>,
+	atRead: Map<string, number>,
+	adjRead: Map<string, number>,
+	adjBefore: Map<string, number>,
 	alreadyLogged: boolean
 ): number | null {
-	const value = atNow.get(account);
+	const value = atRead.get(account);
 	if (value == null) return null;
 
-	const thisMonthAdj = (adjNow.get(account) ?? 0) - (adjPrev.get(account) ?? 0);
-	return alreadyLogged ? value - thisMonthAdj : value;
+	const ownAdj = (adjRead.get(account) ?? 0) - (adjBefore.get(account) ?? 0);
+	return alreadyLogged ? value - ownAdj : value;
 }
 
-/** The adjustment this month's snapshot would post on its own. */
+/** The adjustment a new snapshot would post on its own. */
 export function checkOf(typed: number | null, expected: number | null): number | null {
 	return typed == null || expected == null ? null : typed - expected;
 }
@@ -73,15 +86,15 @@ export function agrees(check: number | null): boolean {
 
 /**
  * `negative` is an impossible figure; `share-snapshot` is a month already snapshotted in shares,
- * which is not a balance to rewrite.
+ * which is not a balance to rewrite; `unreconciled` is a card past its baseline whose figure its
+ * entries do not explain.
  */
-export type BlockReason = 'negative' | 'share-snapshot';
+export type BlockReason = 'negative' | 'share-snapshot' | 'unreconciled';
 
 /**
- * An asset's gap becomes an `Equity:Adjustments:*` plug and may not be negative. A liability's gap
- * means spending or a bill payment has not been entered, which is reported rather than blocked: the
- * statement is the authority on what is owed, and the ledger carries the difference as a correction
- * until the missing entry turns up.
+ * An asset's gap becomes an `Equity:Adjustments:*` plug and may not be negative. A card's gap before
+ * its baseline becomes opening balance; past it there is nothing to absorb one, so `mustAgree` blocks
+ * any gap until the missing spending or bill pay is entered.
  *
  * `correctable` false means the month's snapshot is share-based, which no typed USD figure replaces.
  */
@@ -89,12 +102,22 @@ export function blockReason(
 	row: Row,
 	typed: number | null,
 	expected: number | null,
-	correctable = true
+	correctable = true,
+	mustAgree = false
 ): BlockReason | null {
 	if (typed == null) return null;
 	if (!correctable) return 'share-snapshot';
+	if (mustAgree && !agrees(checkOf(typed, expected))) return 'unreconciled';
 
 	return !row.liability && typed < 0 ? 'negative' : null;
+}
+
+/**
+ * The day balances are read on by default: today in the current month, else the day before the
+ * shown month's first, whose snapshot lands on that first.
+ */
+export function defaultReadOn(monthKey: string, today: string): string {
+	return today.startsWith(monthKey) ? today : addDays(`${monthKey}-01`, -1);
 }
 
 /** Which kind of entry a liability's gap says is missing. */

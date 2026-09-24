@@ -10,7 +10,7 @@ import datetime as dt
 from dataclasses import dataclass, field
 from decimal import Decimal
 
-from yala.ledger.constants import EXPENSES
+from yala.ledger.constants import EXPENSES, awaits_reimbursement
 from yala.ledger.locators import locator_of
 
 
@@ -62,5 +62,10 @@ class Transaction:
 
     @property
     def pending(self) -> bool:
-        """True for the beancount ``!`` flag — entered but not bank-confirmed."""
+        """True for the beancount ``!`` flag — entered but not settled."""
         return self.flag == "!"
+
+    @property
+    def bank_pending(self) -> bool:
+        """Pending because the bank has not posted it, rather than awaiting a reimbursement."""
+        return self.pending and not awaits_reimbursement(self.meta)

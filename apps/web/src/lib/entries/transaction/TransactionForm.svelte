@@ -23,6 +23,9 @@
 	let category = $state('');
 	let funding_account = $state('');
 	let pending = $state(false);
+	/** Posted at the bank and pending only until a reimbursement lands, so it still counts toward
+	    the card's balance. */
+	let awaiting = $state(false);
 	let credits = $state<Credit[]>([]);
 
 	const form = new EntryForm('transaction', () => onsaved());
@@ -45,6 +48,7 @@
 			category = s.category ?? '';
 			funding_account = s.funding_account ?? '';
 			pending = !!s.pending;
+			awaiting = !!s.awaiting_reimbursement;
 			credits = (s.credits ?? []).map((x: { account: string; amount: number }) => ({
 				value: x.account,
 				amount: x.amount
@@ -73,6 +77,7 @@
 			category,
 			funding_account,
 			pending,
+			awaiting_reimbursement: pending && awaiting,
 			credits: credits
 				.filter((s) => s.value && s.amount != null)
 				.map((s) => ({ account: s.value, amount: s.amount as number }))
@@ -128,6 +133,11 @@
 			/>
 		</div>
 		<label class="chk"><input type="checkbox" bind:checked={pending} /> Pending</label>
+		{#if pending}
+			<label class="chk awaiting"
+				><input type="checkbox" bind:checked={awaiting} /> Awaiting reimbursement</label
+			>
+		{/if}
 	</div>
 </FormSection>
 
@@ -164,6 +174,15 @@
 		align-items: center;
 		gap: var(--gap-inline);
 		padding-bottom: var(--gap-row);
+	}
+	/* Pending is the last of its row's cells, so the last column is Pending's: the box drops under it
+	   there, or sits beside it when Pending wrapped to a row of its own. Sharing Pending's cell instead
+	   grew that bottom-aligned cell upward and pushed Pending up. */
+	.awaiting {
+		grid-column: -2 / -1;
+		/* Cancels the grid's row gap when it drops under Pending, so the two read as one group. Beside
+		   Pending it changes nothing: the row aligns cells by their bottom edge. */
+		margin-top: calc(-1 * var(--gap-field));
 	}
 	.share {
 		color: var(--ink-2);

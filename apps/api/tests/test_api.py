@@ -177,6 +177,30 @@ def test_update_transaction_flow(client: TestClient):
     assert detail2["credits"] == [{"account": "Assets:Cash:Wallet", "amount": 25.0}]
 
 
+def test_awaiting_reimbursement_round_trips_and_clears_once_settled(client: TestClient):
+    """The marker rides on a pending entry only: settling it drops the marker with the flag."""
+    body = {
+        "date": "2026-02-01",
+        "payee": "fronted flight",
+        "amount": 400.0,
+        "category": "Takeouts",
+        "funding_account": "Liabilities:CC:CardA",
+        "pending": True,
+        "awaiting_reimbursement": True,
+    }
+    locator = f"id:{client.post('/api/transaction', json=body).json()['id']}"
+    assert client.get("/api/transaction", params={"locator": locator}).json()[
+        "awaiting_reimbursement"
+    ]
+
+    settled = body | {"locator": locator, "pending": False}
+    assert client.post("/api/transaction/update", json=settled).status_code == 200
+    detail = client.get("/api/transaction", params={"locator": locator}).json()
+    assert detail["awaiting_reimbursement"] is False
+    spending = client.ledger_dir / "spending" / "2026.beancount"  # type: ignore[attr-defined]
+    assert "awaiting" not in spending.read_text()
+
+
 def test_txn_detail_when_funding_and_credit_share_account(client: TestClient):
     # Regression: funding account == credit account (all Assets:Cash:BankA).
     # The prefill must still identify the outflow (-total) as funding, not a credit.

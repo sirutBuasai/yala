@@ -4,6 +4,16 @@ import { fireEvent } from '@testing-library/dom';
 import DatePicker from '$lib/forms/fields/DatePicker.svelte';
 
 describe('DatePicker', () => {
+	it('reads inline as a short date, and always keeps one', async () => {
+		render(DatePicker, { props: { value: '2026-09-23', ariaLabel: 'Logging date', inline: true } });
+		const trigger = screen.getByLabelText('Logging date');
+
+		expect(trigger).toHaveTextContent(/^Sep 23$/);
+		await fireEvent.click(trigger);
+		expect(screen.getByRole('button', { name: 'Today' })).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull();
+	});
+
 	it('shows the placeholder when empty and a friendly date when set', () => {
 		const { unmount } = render(DatePicker, {
 			props: { value: '', ariaLabel: 'Date', placeholder: 'pick a date' }

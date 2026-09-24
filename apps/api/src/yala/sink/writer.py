@@ -230,9 +230,10 @@ class LedgerWriter:
 
         return entry_id
 
-    def _insert(self, subdir: str, date: dt.date, block: str) -> None:
+    def _insert(self, subdir: str, date: dt.date, block: str, *, resync: bool = True) -> None:
         """Write one dated block into ``<subdir>/<year>.beancount``, creating the year file and its
         include when the year is new, and rolling every touched file back if the result won't load.
+        ``resync`` is as :func:`yala.ledger.files.load_checked` takes it.
         """
         year_file = self.ledger_dir / subdir / f"{date.year}.beancount"
         include_line = f'include "{subdir}/{date.year}.beancount"'
@@ -252,7 +253,7 @@ class LedgerWriter:
 
             files.atomic_write(year_file, self._placed(subdir, year_file, date, block))
 
-            Ledger(self.main_ledger, strict=True).load()
+            files.load_checked(self.main_ledger, resync=resync)
 
         except Exception:
             if year_before is None:

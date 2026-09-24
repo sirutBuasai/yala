@@ -11,9 +11,9 @@ from __future__ import annotations
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from yala.ledger import Ledger
+from yala.ledger import Ledger, cards
 from yala.ledger.accounts import Kind, account_path, labels_of, named_path, stem_of, tier_of
-from yala.ledger.constants import EMPLOYER_META, LABELS_META
+from yala.ledger.constants import EMPLOYER_META, INCLUDES_PENDING_META, LABELS_META
 from yala.ledger.naming import (
     ACCOUNT_NAME_META,
     INSTITUTION_NAME_META,
@@ -72,12 +72,13 @@ class AccountMetaIn(BaseModel):
     account_alias: OptionalText = None
     employer: OptionalText = None
     labels: list[str] | None = None
+    includes_pending: bool | None = None
 
 
 @router.post("/api/account/meta")
 def post_account_meta(body: AccountMetaIn) -> dict:
     """Set an account's descriptive metadata: how its name shortens, which employer it is scoped to,
-    and which contribution labels it offers.
+    which contribution labels it offers, and whether its bank's balance counts pending charges.
 
     A short form belonging to the institution is set on every account held there, which is what
     keeps one institution from reading two ways.
@@ -106,6 +107,10 @@ def post_account_meta(body: AccountMetaIn) -> dict:
     if body.labels is not None:
         require_applies(kind, "labels", kind.labelled)
         values[LABELS_META] = labels_meta(body.labels) or None
+
+    if body.includes_pending is not None:
+        require_applies(kind, "includes_pending", kind.reconciled)
+        values[INCLUDES_PENDING_META] = cards.pending_meta(body.includes_pending)
 
     if not parts and not values:
         raise invalid("no metadata given to change")

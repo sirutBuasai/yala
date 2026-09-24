@@ -42,6 +42,8 @@ class TransactionIn(BaseModel):
     category: str
     funding_account: str
     pending: bool = False
+    #: Posted at the bank, pending only until a reimbursement lands.
+    awaiting_reimbursement: bool = False
     credits: list[CreditIn] = Field(default=[], max_length=MAX_LEGS)
 
 
@@ -77,6 +79,7 @@ def post_transaction(body: TransactionIn) -> dict:
             category=body.category,
             funding_account=body.funding_account,
             pending=body.pending,
+            awaiting=body.awaiting_reimbursement,
             credits=_credits(body.credits),
         )
         reconcile_sweeps(date)
@@ -100,6 +103,7 @@ def post_transaction_update(body: TransactionUpdateIn) -> dict:
             category=body.category,
             funding_account=body.funding_account,
             pending=body.pending,
+            awaiting=body.awaiting_reimbursement,
             credits=_credits(body.credits),
         )
         reconcile_sweeps(old_date, new_date or old_date)

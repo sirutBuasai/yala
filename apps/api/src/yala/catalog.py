@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from beancount.core import data
 
-from yala.ledger import Ledger, accounts, payroll
+from yala.ledger import Ledger, accounts, cards, payroll
 from yala.ledger.constants import CASH, CREDIT_CARDS, DEDUCTIONS, INVESTMENTS
 from yala.ledger.institutions import colors as institution_colors
 from yala.ledger.naming import NAME_PARTS, account_name, institution_of
@@ -45,6 +45,7 @@ def account_directory(ledger: Ledger) -> dict[str, AccountInfo]:
             employer=accounts.employer_scope(meta),
             labels=accounts.labels_of(meta),
             sweep_to=accounts.sweep_destination(meta),
+            includes_pending=cards.includes_pending(meta) if kind and kind.reconciled else None,
         )
 
     return {account: info(account, meta) for account, meta in sorted(account_meta.items())}

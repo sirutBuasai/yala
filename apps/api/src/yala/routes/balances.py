@@ -33,9 +33,9 @@ def post_balance(body: BalanceIn) -> dict:
     """Log a USD balance snapshot as a ``pad`` + ``balance`` pair, routing whatever the entries do
     not explain to the account's plug (see :func:`snapshot_plug`).
 
-    The statement is the authority on what an account holds, so a figure is never refused for
-    disagreeing. On a liability the difference is spending or a bill payment that has not been
-    entered, and the pane says so on the row."""
+    A card past its baseline (see :func:`yala.ledger.cards.baseline`) has nothing to pad into, so a
+    figure that disagrees is refused naming the gap: spending or a bill payment has not been
+    entered."""
     account = valid_name(body.account)
     if not account.startswith((CASH, INVESTMENTS, LIABILITIES)):
         raise invalid(f"not a balance-loggable account: {account!r}")
@@ -84,7 +84,9 @@ def post_balance_update(body: BalanceEditIn) -> dict:
 def get_networth_at(date: str) -> dict:
     """Per-account USD values and adjustment-plug balances as of ``date``, plus what ``date``'s own
     month already has logged. This is what lets the balance pane show a past month's own figures,
-    and offer the handle to correct them in place."""
+    and offer the handle to correct them in place.
+
+    ``cards`` is what each card's bank app should read at the end of ``date``, as stored."""
     as_of = parse_date(date)
     nw = ledger().net_worth
     month_assets, month_liabilities = nw.loggable_in_month(as_of)
@@ -101,5 +103,12 @@ def get_networth_at(date: str) -> dict:
         "logged": {
             account: {"date": b.date.isoformat(), "amount": float(b.amount), "locator": b.locator}
             for account, b in nw.logged_in_month(as_of).items()
+        },
+        "cards": {
+            account: {
+                "expected": float(c.expected),
+                "must_agree": c.must_agree,
+            }
+            for account, c in nw.card_checks(as_of).items()
         },
     }

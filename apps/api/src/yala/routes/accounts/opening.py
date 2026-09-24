@@ -9,9 +9,9 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from yala.catalog import account_lists
-from yala.ledger import Ledger
+from yala.ledger import Ledger, cards
 from yala.ledger.accounts import KINDS_BY_NAME, Kind, account_path, plug_account
-from yala.ledger.constants import EMPLOYER_META, LABELS_META
+from yala.ledger.constants import EMPLOYER_META, INCLUDES_PENDING_META, LABELS_META
 from yala.ledger.naming import account_name, compose_stem, shared_parts
 from yala.ledger.plans import institution_accounts
 from yala.routes.accounts.shared import (
@@ -116,6 +116,7 @@ class AccountIn(NamedAccountIn):
     tier: TierName | None = None
     employer: OptionalText = None
     labels: list[str] = Field(default=[], max_length=MAX_LEGS)
+    includes_pending: bool = False
 
 
 class _OpenPlan(NamedTuple):
@@ -132,6 +133,7 @@ def _reject_inapplicable(body: AccountIn, kind: Kind) -> None:
         "tier": kind.tiered,
         "employer": kind.scopable,
         "labels": kind.labelled,
+        "includes_pending": kind.reconciled,
         **{field: carries(kind, field) for field in NAMING_FIELDS},
     }
     for field, applicable in applies.items():
@@ -192,6 +194,9 @@ def _open_plan(body: AccountIn) -> _OpenPlan:
         meta[EMPLOYER_META] = valid_leaf(body.employer, "employer")
     if body.labels:
         meta[LABELS_META] = labels_meta(body.labels)
+    included = cards.pending_meta(body.includes_pending)
+    if included:
+        meta[INCLUDES_PENDING_META] = included
 
     date = parse_date(body.date)
     plug = plug_account(account) if kind.plugged else None
