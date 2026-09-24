@@ -36,7 +36,8 @@
 		inline = false
 	}: Props = $props();
 
-	const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+	/** Shown by initial, which alone is ambiguous (two T's, two S's), so each header is named in full. */
+	const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 	let open = $state(false);
 	let triggerEl = $state<HTMLButtonElement>();
@@ -46,6 +47,7 @@
 
 	const uid = untrack(() => id) ?? `date-${++seq}`;
 	const gridId = `${uid}-grid`;
+	const monthId = `${uid}-month`;
 	const dayId = (isoStr: string) => `${uid}-day-${isoStr}`;
 
 	function parse(v: string): { y: number; m: number; d: number } | null {
@@ -104,6 +106,12 @@
 		for (let d = 1; d <= days; d++) cells.push(iso(viewY, viewM, d));
 		return cells;
 	});
+	// A grid's cells must sit in rows, or a screen reader has no row and column to announce.
+	const weeks = $derived(
+		Array.from({ length: Math.ceil(grid.length / DAYS_A_WEEK) }, (_, w) =>
+			grid.slice(w * DAYS_A_WEEK, (w + 1) * DAYS_A_WEEK)
+		)
+	);
 
 	function shiftActive(deltaDays: number) {
 		const p = parse(active) ?? { y: viewY, m: viewM, d: 1 };
@@ -168,30 +176,36 @@
 				<button type="button" class="nav" aria-label="Previous month" onclick={prevMonth}>
 					<Chevron dir="left" size={13} />
 				</button>
-				<span class="mlabel">{MONTHS[viewM]} {viewY}</span>
+				<span class="mlabel" id={monthId}>{MONTHS[viewM]} {viewY}</span>
 				<button type="button" class="nav" aria-label="Next month" onclick={nextMonth}>
 					<Chevron dir="right" size={13} />
 				</button>
 			</div>
-			<div class="dow">
-				{#each WEEKDAYS as w, i (i)}<span>{w}</span>{/each}
-			</div>
-			<div class="days" role="grid">
-				{#each grid as cell, i (i)}
-					{#if cell}
-						<button
-							type="button"
-							id={dayId(cell)}
-							class="day"
-							class:sel={cell === value}
-							class:hl={cell === active}
-							aria-current={cell === value ? 'date' : undefined}
-							onpointerenter={() => (active = cell)}
-							onclick={() => pick(cell)}>{+cell.slice(8)}</button
-						>
-					{:else}
-						<span class="day empty"></span>
-					{/if}
+			<div class="days" role="grid" id={gridId} aria-labelledby={monthId}>
+				<div class="week dow" role="row">
+					{#each WEEKDAYS as name (name)}
+						<span role="columnheader" aria-label={name}>{name[0]}</span>
+					{/each}
+				</div>
+				{#each weeks as week, w (w)}
+					<div class="week" role="row">
+						{#each week as cell, i (i)}
+							<span class="cell" role="gridcell">
+								{#if cell}
+									<button
+										type="button"
+										id={dayId(cell)}
+										class="day"
+										class:sel={cell === value}
+										class:hl={cell === active}
+										aria-current={cell === value ? 'date' : undefined}
+										onpointerenter={() => (active = cell)}
+										onclick={() => pick(cell)}>{+cell.slice(8)}</button
+									>
+								{/if}
+							</span>
+						{/each}
+					</div>
 				{/each}
 			</div>
 			<div class="cal-foot">
@@ -248,11 +262,18 @@
 		border-color: var(--lav);
 		color: var(--ink);
 	}
-	.dow,
 	.days {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+	}
+	.week {
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
 		gap: var(--space-1);
+	}
+	.cell {
+		display: flex;
 	}
 	.dow span {
 		text-align: center;
@@ -261,6 +282,7 @@
 		padding: var(--space-1) 0;
 	}
 	.day {
+		flex: 1;
 		aspect-ratio: 1;
 		display: inline-flex;
 		align-items: center;
@@ -272,9 +294,6 @@
 		font-size: var(--text-secondary);
 		font-family: inherit;
 		cursor: pointer;
-	}
-	.day.empty {
-		cursor: default;
 	}
 	.day.hl {
 		background: color-mix(in srgb, var(--lav) 20%, transparent);

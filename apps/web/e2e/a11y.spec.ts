@@ -33,6 +33,16 @@ test('an open modal has no accessibility violations', async ({ page }) => {
 	expect(found, JSON.stringify(found, null, 2)).toEqual([]);
 });
 
+test('an open date picker has no accessibility violations', async ({ page }) => {
+	await showTab(page, 'Activity');
+	await page.getByRole('button', { name: '+ Add entry' }).click();
+	await page.locator('dialog').getByRole('combobox', { name: 'Date' }).click();
+	await settle(page);
+	await expect(page.getByRole('grid')).toBeVisible();
+	const found = await violations(page);
+	expect(found, JSON.stringify(found, null, 2)).toEqual([]);
+});
+
 test('a board being arranged has no accessibility violations', async ({ page }) => {
 	await page.getByRole('button', { name: 'Edit' }).click();
 	await settle(page);
