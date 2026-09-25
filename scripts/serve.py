@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """End-product serve: clean -> generate data.json -> build site -> serve.
 
-serve.py web  [--port N] [--worktree DIR]   the built snapshot alone (npm preview; default 4173)
-serve.py api  [--port N] [--worktree DIR]   snapshot + the write API (FastAPI; default 8000)
+serve.py web  [--port N] [--worktree DIR] [--ledger DIR]   the built snapshot alone (default 4173)
+serve.py api  [--port N] [--worktree DIR] [--ledger DIR]   snapshot + the write API (default 8000)
 
 The frontend has no view/edit modes to pick between: it tries the API and falls back to the
 snapshot, reporting which it got. So the only difference here is whether an API is running —
@@ -10,6 +10,9 @@ snapshot, reporting which it got. So the only difference here is whether an API 
 
 --worktree points the whole pipeline (data.json, built site, and the yala python package) at a
 git worktree, so you can serve a feature branch without a full per-worktree install.
+
+--ledger points data.json and the API at another ledger directory, such as a throwaway worktree of
+the private data repo, so development edits never land in the real ledger.
 """
 
 from __future__ import annotations
@@ -62,6 +65,12 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         default=None,
         help="Serve a git worktree's build, data.json, and yala package instead of this checkout.",
     )
+    parser.add_argument(
+        "--ledger",
+        type=str,
+        default=None,
+        help="Ledger directory to read and write instead of $YALA_LEDGER_DIR or the default.",
+    )
     return parser.parse_args(argv)
 
 
@@ -96,6 +105,12 @@ def main(argv: list[str]) -> None:
     port = args.port if args.port is not None else DEFAULT_PORTS[mode]
 
     root = _prepare_worktree(Path(args.worktree)) if args.worktree else ROOT
+    if args.ledger:
+        ledger = Path(args.ledger).resolve()
+        if not (ledger / "main.beancount").is_file():
+            sys.exit(f"not a ledger directory (no main.beancount under {ledger})")
+        os.environ["YALA_LEDGER_DIR"] = str(ledger)
+        print(f"==> Ledger {ledger}")
     web = root / "apps" / "web"
 
     print("==> Clean")
