@@ -71,8 +71,7 @@ Every graphic mark is SVG (`charts/marks`: Dot, Swatch, Bands). Category by mont
 | Category by month cell | Move to that month and filter to that category | `month`, `category` | The previous month, unfiltered |
 | Category by month column header | Move to that month | `month` | The previous month |
 | Calendar day | List that day | `day` | No day |
-| A row, in a wide list | Edit inline, with More for the rest of the form (D7, D10) | `entry` | Editor closed |
-| A row, in the day list or a narrow pane | Edit in a modal (D7, D11) | `entry` | Editor closed |
+| A row, anywhere | Edit in the entry modal (D16) | none yet | Editor closed |
 | Filter chip `×` | Clear that filter | removes it | The filter back |
 | Sort menu | Reorder the history | none: a preference, kept in the browser | |
 
@@ -89,7 +88,7 @@ Rows shown on other pages open the same editor in place (D8); nothing there rout
 
 1. **The page (built).** The icon rail (D13), every carried pane on the board with arranging on, the focus month's row marked in Category by month, `month` and `day` in the URL, and the page's `+ Add entry` offering Transaction, Paycheck and Bill pay. Rows edit in the current modals.
 2. **Drill-ins.** The click map's filters: donut slices, Unusual this month rows and Category by month cells set `category` (and `month`), with a filter chip on the lists.
-3. **Inline editing.** The measured inline editor with its More section (D7, D10, D11), opened rows kept in `entry`.
+3. ~~Inline editing.~~ Dropped: every edit opens in the modal (D16).
 
 Each step is dogfooded before the next.
 

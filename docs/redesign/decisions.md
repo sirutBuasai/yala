@@ -74,10 +74,13 @@ Supersedes the suggestion to arrange only on Dashboard. Arranging exists so the 
 
 The page for reading trends across months and years is called Analytics, at `/analytics`. Earlier docs that say Cash flow mean this page.
 
+### D16 · Every edit opens in a modal (2026-09-25)
+
+Supersedes D7, D10 and D11. There is one editing surface: the existing entry modal, wherever a row appears. No inline row editor, no More section, no side panel. D8 stands, since the modal opens over whatever page the row is on.
+
 ## Open
 
 - **Month from a year.** Moving from a year-level view to a month-level page: which month becomes the focus? Candidates are the previous focus month's calendar month within that year, or the latest month with data in that year.
-- **How a host picks its editing surface (D7).** Suggested: one editor measures the list's width with the existing `lib/ui/fit.ts` helpers (`levelThatFits` and the size watch) and picks inline when the row fits, otherwise modal, switching live on resize. No per-page setting and no breakpoint.
 - **URL names (D9).** The parameter names and value formats for the focus period, each filter and the open row, fixed once in the app shell spec.
 - **Typical month or budgets.** Suggested: trailing twelve-month median as "typical" now; budgets later if missed.
 - **Sankey placement.** Suggested: a toggle on Cash flow's breakdown for the selected period.
