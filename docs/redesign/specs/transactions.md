@@ -1,6 +1,6 @@
 # Transactions spec
 
-Status: draft, awaiting decisions · Branch: `redesign/transactions`
+Status: decided, building · Branch: `redesign/transactions`
 
 ## Job
 
@@ -31,18 +31,19 @@ Home's three-card strip (Income, Spent, Saved) is not carried: Activity · Month
 |---|---|---|
 | The month's rows: transactions, paychecks, bill pay, pending | Yes | |
 | The month's KPI cards, donut and deviation | Yes | Dashboard may show a headline that links here |
-| Category by month for the focus year | Decision 2 | |
+| Category by month for the focus year | Yes, as the month's category check | Whether Cash flow shows it too is decided in its spec |
 | Balances and their checks | No | Accounts (D12) |
 | Year totals, run-rates, multi-year trends, the Sankey | No | Cash flow |
 
 ## Layout
 
-Top to bottom, on the page's board:
+A board with arranging on (D14). The default below follows today's rectangles; the user's own arrangement replaces it once they have one.
 
 1. **Header:** `Transactions`, the month picker, `+ Add entry`, the theme toggle.
 2. **The month at a glance:** the two KPI chains, Where your income went, Unusual this month. The same row as Activity · Month today.
-3. **Category by month** for the focus month's year, the focus month's column marked.
-4. **The rows:** see decision 3.
+3. **Category by month** for the focus month's year. Its rows are months and its columns categories, with sums in every cell and Total rows and columns, so the focus month's row is the spreadsheet's Total row: how much each category has taken so far. The focus month's row is marked; that mark is the one visual change on this page.
+4. **Log activity** calendar with its day list and Pending transactions beside it, as on Home.
+5. **Transaction history**, then **Paychecks** and **Bill pay & transfers**, as on Activity · Month.
 
 ## Click map
 
@@ -64,19 +65,12 @@ Top to bottom, on the page's board:
 
 Rows shown on other pages open the same editor in place (D8); nothing there routes here to edit.
 
-## Decisions needed
+## Decisions (2026-09-24)
 
-1. **Board width beside the sidebar.** At a 1440px window, the docked sidebar leaves the page about 1,130px, and every board folds to two columns below 1,344px. To see it today, narrow the current app on port 8001 to about 1,180px wide. Options:
-   - **Icon rail.** The sidebar collapses to icons (about 48px) and expands on hover, so a 1440px window keeps the full board.
-   - **Fluid grid.** The board's unit scales with the width it gets instead of staying at 28px. The layout stays as designed at any width, with everything slightly smaller. Deepest change: the grid engine assumes a fixed unit.
-   - **Hideable sidebar.** Docked by default, with a toggle that hides it and gives the board full width.
-   - **Accept the fold.** Keep the two-column fold at common widths.
-2. **Where Category by month lives.** It is the verification tool while logging, and the outlier finder while analyzing. Suggested: here, next to the rows, so spotting an outlier and opening its rows happen on one page. Cash flow then keeps the trends (bars, rates, Sankey, category by year) and links here. The alternative puts it on Cash flow with a link here per cell.
-3. **The rows.** Today: a calendar with its day list on Home, and three separate lists on Activity (history, paychecks, bill pay) plus Pending. Showing both the calendar and the full history shows the same rows twice. Options:
-   - **Toggle.** One area switching between Calendar (calendar plus day list) and List (history, paychecks, bill pay), with Pending always shown. `view=calendar|list` in the URL.
-   - **Both, as today.** Calendar and day list, then the three lists below.
-   - **One merged list.** History, paychecks and bill pay in one list with type chips. A change from today's panes, so it would get its own mock first (D6).
-4. **Arranging on this page.** The open decision suggested arranging only on Dashboard. Suggested: this page uses the board for its sizing and fit, with arranging turned off.
+1. **Board width:** icon rail (D13), built first on this branch since this is the first page with a board.
+2. **Category by month:** on this page, as above. The user's need is an instant per-category sum while logging, which a donut does not give.
+3. **Rows:** both, as today: the calendar with its day list, then the three lists.
+4. **Arranging:** on (D14).
 
 ## Period and URL state
 
@@ -88,7 +82,7 @@ Balances (Accounts), multi-year trends (Cash flow), and any chart or copy change
 
 ## Tests to restore from `master`
 
-`entries.spec.ts`, the modal and date picker cases in `a11y.spec.ts`, the dropdown and popup cases in `overlay.spec.ts`, and the board suites (`charts`, `steady`, and `arrange` if arranging stays on) pointed at this page.
+`entries.spec.ts`, the modal and date picker cases in `a11y.spec.ts`, the dropdown and popup cases in `overlay.spec.ts`, and the board suites (`charts`, `steady`, `arrange`) pointed at this page.
 
 ## Dogfood checklist
 

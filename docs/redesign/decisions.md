@@ -62,12 +62,19 @@ Supersedes D7's side panel. No place in Yala suits one: the calendar already has
 
 There is no app-wide quick add. A page's own Add offers the entry kinds its context logs: Transactions offers a transaction, a bill pay and a paycheck; Accounts offers a balance.
 
+### D13 · Icon rail when space is short (2026-09-24)
+
+The sidebar never costs a board its designed layout. It shows in full when the page beside it still fits a full-width board, shrinks to an icon rail that expands on hover when only the rail fits, and folds into the hamburger sheet when even the rail would fold the board to one column. Every threshold is measured from the grid's own constants, never a breakpoint.
+
+### D14 · Every board keeps arranging (2026-09-24)
+
+Supersedes the suggestion to arrange only on Dashboard. Arranging exists so the user lays pages out themselves rather than describing a layout to an agent. Each page ships a reasonable default; once the user has arranged it, their stored arrangement (`yala-board-<key>-<version>` in localStorage) becomes the default.
+
 ## Open
 
 - **Month from a year.** Moving from a year-level view to a month-level page: which month becomes the focus? Candidates are the previous focus month's calendar month within that year, or the latest month with data in that year.
 - **How a host picks its editing surface (D7).** Suggested: one editor measures the list's width with the existing `lib/ui/fit.ts` helpers (`levelThatFits` and the size watch) and picks inline when the row fits, otherwise modal, switching live on resize. No per-page setting and no breakpoint.
 - **URL names (D9).** The parameter names and value formats for the focus period, each filter and the open row, fixed once in the app shell spec.
-- **Drag-to-arrange boards.** Suggested: keep only on Dashboard.
 - **Typical month or budgets.** Suggested: trailing twelve-month median as "typical" now; budgets later if missed.
 - **Sankey placement.** Suggested: a toggle on Cash flow's breakdown for the selected period.
 - **Phone layout.** Suggested: bottom tab bar with the four main pages and a floating add button.
