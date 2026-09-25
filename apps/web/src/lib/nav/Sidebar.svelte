@@ -13,7 +13,9 @@
 <div class="slot" style:width="{rail ? RAIL_W : SIDEBAR_W}px">
 	<aside class="sidebar" class:rail style:--open-w="{SIDEBAR_W}px" style:--rail-w="{RAIL_W}px">
 		<div class="lead">
-			<Brand />
+			<!-- The app's own icon, the same file as the favicon, stands in for the wordmark on the rail. -->
+			<img class="mark" src="/favicon.svg" alt="" width="20" height="20" />
+			<span class="brand"><Brand /></span>
 		</div>
 		<NavLinks links={PAGES} ariaLabel="Pages" />
 		<div class="foot">
@@ -52,16 +54,27 @@
 		width: var(--open-w);
 		box-shadow: var(--shadow);
 	}
-	/* Collapsed, a rail shows only its glyphs and the brand's dot. The text stays in the page, so every
-	   link keeps its accessible name. */
+	/* Collapsed, a rail shows only its glyphs and the app icon. The text stays in the page, so every link
+	   keeps its accessible name. */
 	.rail:not(:hover):not(:focus-within) :global(.label),
-	.rail:not(:hover):not(:focus-within) .lead :global(h1),
-	.rail:not(:hover):not(:focus-within) .lead :global(.cap) {
+	.rail:not(:hover):not(:focus-within) .brand {
 		opacity: 0;
 	}
 	.lead {
+		position: relative;
 		padding: 0 var(--space-9) var(--space-8);
 		white-space: nowrap;
+	}
+	/* Centred on the rail, where the glyphs below sit. */
+	.mark {
+		position: absolute;
+		top: 0;
+		left: calc((var(--rail-w) - 20px) / 2);
+		opacity: 0;
+		pointer-events: none;
+	}
+	.rail:not(:hover):not(:focus-within) .mark {
+		opacity: 1;
 	}
 	.foot {
 		margin-top: auto;
