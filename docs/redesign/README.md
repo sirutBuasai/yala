@@ -35,21 +35,26 @@ A figure has one owning page. Anywhere else it appears only as a headline that l
 
 ## Running against real data
 
-Never point a development build at `yala-private-data/ledger`. Make a throwaway worktree of the data repo and pass it with `LEDGER=`:
+Never point a development build at `yala-private-data/ledger`. Make a throwaway worktree of the data repo, install the web dependencies in the feature worktree (the primary checkout has none to link), and serve the feature worktree from the primary checkout on a port that is not the container's `8001`:
 
 ```bash
 git -C ../yala-private-data worktree add --detach .worktrees/<topic>
-make serve-api LEDGER=../yala-private-data/.worktrees/<topic>/ledger
+npm --prefix .worktrees/redesign-<topic>/apps/web install
+YALA_WEB_DIR=$PWD/.worktrees/redesign-<topic>/apps/web/build \
+  make serve-api PORT=8800 WORKTREE=$PWD/.worktrees/redesign-<topic> \
+  LEDGER=$PWD/../yala-private-data/.worktrees/<topic>/ledger
 ```
+
+`YALA_WEB_DIR` is needed because the API otherwise serves the primary checkout's build. Remove the data worktree when the branch merges.
 
 ## Status
 
 | Piece | Spec | Build | Dogfood |
 |---|---|---|---|
-| App shell (sidebar, routes, URL state) | [done](specs/app-shell.md) | in review | not started |
+| App shell (sidebar, routes, URL state) | [done](specs/app-shell.md) | merged | partial: month history waits for a page with a period |
 | Transactions | not started | not started | not started |
 | Cash flow | not started | not started | not started |
 | Accounts | not started | not started | not started |
 | Dashboard | not started | not started | not started |
 | Planning (moved) | not started | not started | not started |
-| Manage (moved) | not started | not started | not started |
+| Manage (moved) | not needed | moved in with the shell | not started |

@@ -108,3 +108,5 @@ Page content, charts and copy (D6), the Dashboard itself, the phone layout, and 
 - Read-only mode still shows its banner and refuses saves.
 
 ## Dogfood notes
+
+- 2026-09-24: Reviewed on port 8800 against real data. Sidebar, page links, the Development page and the theme toggle checked. Back and forward across month steps could not be tried, since no page has a period control yet; carry that item to the first page that does.
