@@ -23,12 +23,14 @@ API_SRC = ROOT / "apps" / "api" / "src"
 def run(*cmd: object, cwd: Path | None = None) -> None:
     """Echo and run a command; exit with its return code if it fails.
 
-    The backend source of *this* checkout leads PYTHONPATH, so a script run from a git worktree
-    builds that worktree's code rather than whatever the shared venv has installed.
+    The backend source of *this* checkout is on PYTHONPATH, so a script run from a git worktree
+    builds that worktree's code rather than whatever the shared venv has installed. It goes after
+    what the caller set: ahead of it, it shadowed the source ``serve.py --worktree`` points at, and a
+    worktree's API changes were never served.
     """
     where = f"  (in {cwd})" if cwd else ""
     env = dict(os.environ)
-    env["PYTHONPATH"] = os.pathsep.join([str(API_SRC), *filter(None, [env.get("PYTHONPATH", "")])])
+    env["PYTHONPATH"] = os.pathsep.join([*filter(None, [env.get("PYTHONPATH", "")]), str(API_SRC)])
     # flush so our echoed line stays ordered relative to the subprocess's own output.
     print(f"$ {' '.join(str(c) for c in cmd)}{where}", flush=True)
     result = subprocess.run(
