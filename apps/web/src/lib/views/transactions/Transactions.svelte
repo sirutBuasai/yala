@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Transactions: log a month and check it as you go (docs/redesign/specs/transactions.md). The layout
-	// here is only the default; what the user arranges is stored under this board's key.
+	// here is the user's own arrangement adopted as the default (D14); a later rearrangement is stored under
+	// this board's key.
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { DashboardData } from '$lib/data/types';
@@ -114,14 +115,14 @@
 			// The calendar is a chart: it scales to its pane. The day's entries and pending sit beside it at a
 			// set height, so each holds still between a quiet day and a busy one and scrolls instead.
 			calendar: { x: 0, y: 5, w: 31, h: 26, content: 'scale' },
-			pending: { x: 31, y: 5, w: 17, h: 10, content: 'flow', mode: 'fixed' },
-			day: { x: 31, y: 15, w: 17, h: 16, content: 'flow', mode: 'fixed' },
-			history: { x: 0, y: 31, w: 28, h: 26, content: 'flow', mode: 'fixed' },
+			pending: { x: 31, y: 5, w: 17, h: 11, content: 'flow', mode: 'fixed' },
+			day: { x: 31, y: 16, w: 17, h: 15, content: 'flow', mode: 'fixed' },
+			history: { x: 0, y: 31, w: 28, h: 29, content: 'flow', mode: 'fixed' },
 			categories: {
 				x: 28,
 				y: 31,
 				w: 20,
-				h: 26,
+				h: 16,
 				content: 'scale',
 				figure: {
 					figure: 'spending.vs_average',
@@ -132,10 +133,10 @@
 				}
 			},
 			donut: {
-				x: 0,
-				y: 57,
-				w: 18,
-				h: 18,
+				x: 28,
+				y: 47,
+				w: 20,
+				h: 13,
 				content: 'scale',
 				figure: {
 					figure: 'spending.where_it_went',
@@ -148,10 +149,10 @@
 			// The spreadsheet's month-by-category summary: the focus month's row is its Total row, how much
 			// each category has taken so far.
 			heatmap: {
-				x: 18,
-				y: 57,
-				w: 30,
-				h: 18,
+				x: 0,
+				y: 60,
+				w: 48,
+				h: 19,
 				content: 'scale',
 				figure: {
 					figure: 'spending.category_by_month',

@@ -112,3 +112,5 @@ Restored from `master` and pointed at this page: `entries`, `charts`, `steady`, 
 - Back and forward across month steps and filters (carried from the app shell).
 
 ## Dogfood notes
+
+- 2026-09-25: The user's arranged Transactions layout became the default (D14): Spending by category shortened beside the history, Where your income went under it, and Category by month full width at the bottom.
