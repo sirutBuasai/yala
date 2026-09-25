@@ -4,6 +4,7 @@ Yala is being reorganized from tabbed Month / Year / All time boards into Monarc
 
 ## Read first
 
+0. [HANDOFF.md](HANDOFF.md): where things stand and what is next.
 1. [proposal.md](proposal.md): the approved structure and principles.
 2. [decisions.md](decisions.md): what is settled and what is still open. Do not re-open a settled decision without the user.
 3. The spec for the page you are working on, under [specs/](specs/). New specs start from [specs/_template.md](specs/_template.md).

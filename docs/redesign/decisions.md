@@ -80,8 +80,14 @@ Supersedes D7, D10 and D11. There is one editing surface: the existing entry mod
 
 ## Open
 
-- **Month from a year.** Moving from a year-level view to a month-level page: which month becomes the focus? Candidates are the previous focus month's calendar month within that year, or the latest month with data in that year.
-- **URL names (D9).** The parameter names and value formats for the focus period, each filter and the open row, fixed once in the app shell spec.
-- **Typical month or budgets.** Suggested: trailing twelve-month median as "typical" now; budgets later if missed.
-- **Sankey placement.** Suggested: a toggle on Cash flow's breakdown for the selected period.
-- **Phone layout.** Suggested: bottom tab bar with the four main pages and a floating add button.
+- **Sankey placement.** Where "Where it all went" lands on Analytics. Suggested: a view of the selected period's breakdown.
+- **Category by month on Analytics too?** It lives on Transactions (see its spec). The user's hunch was both pages; decide in the Analytics spec without duplicating needlessly (D3).
+- **A card filter's figure.** When the history is filtered to one card, show "Charged to card" (full bills) beside Spent, so the gap reads as what was fronted? Or nothing. "Charged − paid" was rejected: it mostly reflects statement timing.
+- **The open entry in the URL (D9).** The modal's open entry is not in the URL yet, so back does not close it.
+- **Phone layout.** Suggested: bottom tab bar with the four main pages.
+
+## Resolved elsewhere
+
+- **Month from a year:** same calendar month in the new year, clamped to tracked months (specs/app-shell.md).
+- **URL names:** `month` (shared), and on Transactions `day`, `type`, `category`, `account`, `q` (the specs).
+- **Typical month or budgets:** "average" is the mean of up to twelve prior months with data (`vsAverage`, `categoryDeviation`); no budgets.
