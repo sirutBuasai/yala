@@ -90,10 +90,10 @@
 			{#each rows as r, i (r)}
 				<tr class:marked={r === mark} aria-current={r === mark ? 'true' : undefined}>
 					<th scope="row">
+						{r}
 						{#if onpick}
-							<button type="button" class="pick" onclick={() => onpick(r, null)}>{r}</button>
-						{:else}
-							{r}
+							<button type="button" class="pick" aria-label={r} onclick={() => onpick(r, null)}
+							></button>
 						{/if}
 					</th>
 					{#each cols as c, j (c)}
@@ -106,15 +106,14 @@
 								showTip(`<b>${esc(r)} · ${esc(c)}</b><br>${formatUnitExact(v, unit)}`, e)}
 							onmouseleave={hideTip}
 						>
+							{numCompact(v)}
 							{#if onpick}
 								<button
 									type="button"
 									class="pick"
 									aria-label={`${r} · ${c}`}
-									onclick={() => onpick(r, c)}>{numCompact(v)}</button
-								>
-							{:else}
-								{numCompact(v)}
+									onclick={() => onpick(r, c)}
+								></button>
 							{/if}
 						</td>
 					{/each}
@@ -181,10 +180,11 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
+	/* Centred, so the month sits in the middle of the ring its cell draws on hover and when marked. */
 	th[scope='row'] {
 		color: var(--ink-3);
 		font-weight: var(--fw-regular);
-		text-align: left;
+		text-align: center;
 		white-space: nowrap;
 	}
 	.cell {
@@ -219,15 +219,18 @@
 	tbody tr:hover th[scope='row'] {
 		color: var(--ink);
 	}
-	/* A pickable label or cell keeps the table's look: the button only takes the click and a ring on hover. */
+	/* A pickable label or cell keeps the table's look: an empty button laid over the whole cell takes the
+	   click and draws the hover ring, while the cell's own text keeps sizing the table. */
+	th[scope='row'],
+	.cell {
+		position: relative;
+	}
 	.pick {
 		all: unset;
-		box-sizing: border-box;
-		display: block;
-		width: 100%;
+		position: absolute;
+		inset: 0;
 		cursor: pointer;
 		border-radius: var(--tile-radius);
-		text-align: inherit;
 	}
 	.pick:hover {
 		box-shadow: inset 0 0 0 1.5px var(--ink-3);

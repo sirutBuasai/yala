@@ -185,15 +185,20 @@
 	}
 	const addTitle = $derived(addDate ? `Add entry · ${dateShort(addDate)}` : 'Add entry');
 
-	/** A Category by month row is a month of the focus year; a cell also names a category to filter by. */
+	/**
+	 * A Category by month row is a month of the focus year: picking it opens that month with the history
+	 * unfiltered. A cell also names a category, which becomes the history's only filter.
+	 */
 	function pickMonth(row: string, category: string | null) {
 		const m = MONTHS.indexOf(row);
 		if (m < 0) return;
-		const month = `${yearOf(monthKey)}-${String(m + 1).padStart(2, '0')}`;
 		navigate({
-			[MONTH_PARAM]: month,
+			[MONTH_PARAM]: `${yearOf(monthKey)}-${String(m + 1).padStart(2, '0')}`,
 			[P.day]: null,
-			...(category ? { [P.category]: category } : {})
+			[P.type]: null,
+			[P.category]: category,
+			[P.account]: null,
+			[P.search]: null
 		});
 	}
 

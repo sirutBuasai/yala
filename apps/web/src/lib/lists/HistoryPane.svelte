@@ -225,9 +225,10 @@
 	.tools {
 		justify-content: space-between;
 	}
+	/* Runs up to the sort control, so the row spans the pane like the filters above it. */
 	.search {
+		flex: 1 1 auto;
 		min-width: 0;
-		width: 14rem;
 	}
 	.summary {
 		display: flex;

@@ -36,3 +36,14 @@ test('a Category by month cell opens its month filtered to its category, and bac
 	await page.goBack();
 	await expect(page).not.toHaveURL(/category=/);
 });
+
+test('a Category by month label opens its month with the history unfiltered', async ({ page }) => {
+	await page.goto('/transactions?type=txn&category=Grocery&q=shop');
+	const label = page.locator('table th[scope=row] button.pick').first();
+	const month = (await label.getAttribute('aria-label'))!;
+
+	await label.click();
+	await settle(page);
+	await expect(page).not.toHaveURL(/type=|category=|q=/);
+	await expect(page.getByRole('combobox', { name: 'Month' })).toContainText(month);
+});
