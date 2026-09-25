@@ -52,6 +52,34 @@ test('a page reopens with its picks, moved to wherever the focus went since', as
 	await expect(page).toHaveURL(/category=Grocery/);
 });
 
+test('a page reopens at the scroll it was left at', async ({ page }) => {
+	await showPage(page, 'Transactions');
+	await page.evaluate(() => window.scrollTo(0, 600));
+	await showPage(page, 'Analytics');
+	expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+	await showPage(page, 'Transactions');
+	await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(600);
+});
+
+test('a click on a chart leaves no caret and selects no text', async ({ page }) => {
+	await page.goto('/analytics?month=2025-09');
+	await settle(page);
+	await page
+		.locator('rect.band')
+		.first()
+		.click({ position: { x: 2, y: 2 } });
+	await page.locator('.card h2').first().click();
+	const caret = await page.evaluate(() => {
+		const at = getSelection()?.anchorNode?.parentElement;
+		return at ? getComputedStyle(at).caretColor : 'none';
+	});
+	expect(caret).toBe('rgba(0, 0, 0, 0)');
+	expect(
+		await page.evaluate(() => getComputedStyle(document.querySelector('rect.band')!).userSelect)
+	).toBe('none');
+});
+
 test('a deep link opens its page directly', async ({ page }) => {
 	await page.goto('/manage');
 	await expect(page.getByRole('heading', { level: 2, name: 'Manage', exact: true })).toBeVisible();

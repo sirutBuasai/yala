@@ -1,9 +1,15 @@
-// Where each page was left in this tab, so reopening it from the sidebar restores its picks (D21). Session
-// storage rather than local: it is about this visit, not a preference, and it still survives a reload.
+// Where each page was left in this tab, so reopening it from the sidebar restores its picks and its scroll
+// (D21). Session storage rather than local: it is about this visit, not a preference, and it still survives
+// a reload.
 
 const KEY = 'yala-page-state';
 
-function read(): Record<string, string> {
+interface Left {
+	search: string;
+	scroll: number;
+}
+
+function read(): Record<string, Left> {
 	try {
 		return JSON.parse(sessionStorage.getItem(KEY) ?? '{}');
 	} catch {
@@ -11,15 +17,40 @@ function read(): Record<string, string> {
 	}
 }
 
-export function remember(url: URL): void {
+function write(pathname: string, patch: Partial<Left>): void {
 	try {
-		sessionStorage.setItem(KEY, JSON.stringify({ ...read(), [url.pathname]: url.search }));
+		const all = read();
+		all[pathname] = { search: '', scroll: 0, ...all[pathname], ...patch };
+		sessionStorage.setItem(KEY, JSON.stringify(all));
 	} catch {
 		// Storage refused: pages open fresh, which is the old behaviour.
 	}
 }
 
+export const remember = (url: URL) => write(url.pathname, { search: url.search });
+export const rememberScroll = (pathname: string, scroll: number) => write(pathname, { scroll });
+
 /** The query `pathname` was last left with, or nothing. */
-export function leftAt(pathname: string): string {
-	return read()[pathname] ?? '';
+export const leftAt = (pathname: string): string => read()[pathname]?.search ?? '';
+
+/** How far down, in CSS pixels, `pathname` was last left. */
+export const scrollAt = (pathname: string): number => read()[pathname]?.scroll ?? 0;
+
+/**
+ * Scroll back to `y` once the page is tall enough to hold it. A board's panes are measured over the frames
+ * after navigation, so scrolling at once would clamp short of `y`. Stops early if the reader scrolls first.
+ */
+export function restoreScroll(y: number, frames = 60): void {
+	if (y <= 0) return;
+	const started = window.scrollY;
+	const attempt = (left: number) => {
+		if (window.scrollY !== started) return;
+		const room = document.documentElement.scrollHeight - window.innerHeight;
+		if (room >= y || left === 0) {
+			window.scrollTo(0, Math.min(y, room));
+			return;
+		}
+		requestAnimationFrame(() => attempt(left - 1));
+	};
+	attempt(frames);
 }
