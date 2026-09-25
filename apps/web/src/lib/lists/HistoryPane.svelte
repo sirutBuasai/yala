@@ -110,20 +110,26 @@
 			onchange={(t) => onfilter({ type: t === 'all' ? null : t })}
 			ariaLabel="Entry type"
 		/>
-		<Select
-			ariaLabel="Category"
-			value={filter.category ?? ''}
-			options={categories}
-			optionLabel={(c) => c || 'Any category'}
-			onchange={(c) => onfilter({ category: c || null })}
-		/>
-		<Select
-			ariaLabel="Account"
-			value={filter.account ?? ''}
-			options={accounts}
-			optionLabel={(a) => (a ? formatAccount(a) : 'Any account')}
-			onchange={(a) => onfilter({ account: a || null })}
-		/>
+		<div class="menu">
+			<Select
+				ariaLabel="Category"
+				value={filter.category ?? ''}
+				options={categories}
+				optionLabel={(c) => c || 'Any category'}
+				onchange={(c) => onfilter({ category: c || null })}
+				placeholder="Any category"
+			/>
+		</div>
+		<div class="menu">
+			<Select
+				ariaLabel="Account"
+				value={filter.account ?? ''}
+				options={accounts}
+				optionLabel={(a) => (a ? formatAccount(a) : 'Any account')}
+				onchange={(a) => onfilter({ account: a || null })}
+				placeholder="Any account"
+			/>
+		</div>
 		<button
 			class="pill"
 			class:active={filter.pending}
@@ -197,6 +203,11 @@
 	}
 	.filters {
 		margin-bottom: var(--space-6);
+	}
+	/* Wide enough for most names; a longer one ellipsizes in the trigger and shows whole in the list. */
+	.menu {
+		width: 11rem;
+		flex: none;
 	}
 	.search {
 		margin-left: auto;
