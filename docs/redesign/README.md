@@ -15,10 +15,10 @@ Yala is being reorganized from tabbed Month / Year / All time boards into Monarc
 
 One page at a time, slowly. For each page:
 
-1. **Spec.** Write the page's job, the figures it owns, and a click map: every clickable element and where it routes. Review it with the user before any code.
-2. **Build.** In a feature branch off `redesign/main`, against a throwaway ledger (see below).
+1. **Spec.** On the page's own branch off `redesign/main` (see Branches), write the page's job, the figures it owns, and a click map: every clickable element and where it routes. Review it with the user before any code.
+2. **Build.** On the same branch, against a throwaway ledger (see below).
 3. **Dogfood.** The user logs and reviews real months with it and records friction in the spec's dogfood notes.
-4. **Revise.** Fold the findings into the spec and decisions, then merge and move to the next page.
+4. **Revise.** Fold the findings into the spec and decisions, then merge once the user says it is good, and move to the next page.
 
 A figure has one owning page. Anywhere else it appears only as a headline that links to its owner, never as a second full copy.
 
@@ -38,8 +38,8 @@ A figure has one owning page. Anywhere else it appears only as a headline that l
   git -C .worktrees/redesign worktree add ../redesign-<topic> -b redesign/<topic>
   ```
 
-  Rebase onto `redesign/main` before merging back, so history stays linear. Remove the worktree and branch afterwards.
-- Doc-only changes (decisions, specs, dogfood notes) may be committed straight to `redesign/main`.
+  The spec is written on this branch too. Merge back only after the user says the work is good, rebasing onto `redesign/main` first so history stays linear. Remove the worktree and branch afterwards.
+- Doc-only changes outside a page's work, such as a decision recorded between pages, may be committed straight to `redesign/main`.
 
 ## Running against real data
 
@@ -61,7 +61,7 @@ YALA_WEB_DIR=$PWD/.worktrees/redesign-<topic>/apps/web/build \
 |---|---|---|---|
 | App shell (sidebar, routes, URL state) | [done](specs/app-shell.md) | merged | partial: month history waits for a page with a period |
 | Transactions | [done](specs/transactions.md) | merged | reviewed on 8800; keep logging real months |
-| Analytics (was Cash flow) | not started | not started | not started |
+| Analytics (was Cash flow) | [draft, in review](specs/analytics.md) | not started | not started |
 | Accounts | not started | not started | not started |
 | Dashboard | not started | not started | not started |
 | Planning (moved) | not started | not started | not started |
