@@ -87,10 +87,6 @@ describe('filterHistory', () => {
 		expect(ids({ account: CARD })).toEqual(['t1', 't2', 't4', 'x1']);
 	});
 
-	it('keeps pending entries only', () => {
-		expect(ids({ pending: true })).toEqual(['t2']);
-	});
-
 	it('searches titles and the accounts bill pay moves between', () => {
 		expect(ids({ search: 'payee t3' })).toEqual(['t3']);
 		expect(ids({ search: 'autopay' })).toEqual(['x1']);

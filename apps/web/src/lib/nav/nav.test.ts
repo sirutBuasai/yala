@@ -4,7 +4,7 @@ import { RAIL_W, SIDEBAR_W, sidebarMode } from './sidebar';
 import { CONTENT, ONE_COLUMN, WRAP_PAD } from '$lib/layout/grid/units';
 
 describe('withFocus', () => {
-	const at = (search: string) => new URL(`http://yala.local/cash-flow${search}`);
+	const at = (search: string) => new URL(`http://yala.local/analytics${search}`);
 
 	it('carries the focus month to the next page', () => {
 		expect(withFocus('/transactions', at('?month=2026-03&view=year'))).toBe(

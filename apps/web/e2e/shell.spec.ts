@@ -1,7 +1,7 @@
 // The app shell: one route per page, the focus month carried between them, and history that undoes a step.
 
-import { expect, test, type Page } from '@playwright/test';
-import { openApp, PAGE_LABELS, settle, showPage } from './app';
+import { expect, type Page } from '@playwright/test';
+import { openApp, PAGE_LABELS, settle, showPage, test } from './app';
 
 test.beforeEach(async ({ page }) => openApp(page));
 
@@ -31,7 +31,7 @@ test('back and forward move between pages', async ({ page }) => {
 });
 
 test('the focus month carries over to the next page', async ({ page }) => {
-	await page.goto('/cash-flow?month=2025-09&view=year');
+	await page.goto('/analytics?month=2025-09&view=year');
 	await pages(page).getByRole('link', { name: 'Transactions', exact: true }).click();
 	await expect(page).toHaveURL(/\/transactions\?month=2025-09$/);
 });

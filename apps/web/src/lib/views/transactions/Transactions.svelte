@@ -44,7 +44,6 @@
 		type: 'type',
 		category: 'category',
 		account: 'account',
-		pending: 'pending',
 		search: 'q'
 	} as const;
 	const ENTRY_TYPES: EntryType[] = ['txn', 'pay', 'xfer'];
@@ -56,7 +55,6 @@
 		type: ENTRY_TYPES.find((t) => t === params.get(P.type)) ?? null,
 		category: params.get(P.category),
 		account: params.get(P.account),
-		pending: params.get(P.pending) === '1',
 		search: params.get(P.search) ?? ''
 	});
 
@@ -76,7 +74,6 @@
 				[P.type]: next.type,
 				[P.category]: next.category,
 				[P.account]: next.account,
-				[P.pending]: next.pending ? '1' : null,
 				[P.search]: next.search || null
 			},
 			'search' in patch

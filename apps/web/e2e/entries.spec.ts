@@ -1,8 +1,8 @@
 // The transaction form's pending boxes. Awaiting a reimbursement qualifies Pending, so its box sits beside
 // Pending, or directly under it when Pending's cell is too narrow for both, never in a grid cell of its own.
 
-import { expect, test, type Locator } from '@playwright/test';
-import { openApp, settle, showPage, violations, openAdd } from './app';
+import { expect, type Locator } from '@playwright/test';
+import { openAdd, openApp, settle, showPage, test, violations } from './app';
 
 test.beforeEach(async ({ page }) => openApp(page));
 

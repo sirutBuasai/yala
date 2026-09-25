@@ -16,7 +16,7 @@
 	const ICONS: Record<string, Component<{ size?: number }>> = {
 		'/': Grid,
 		'/transactions': Rows,
-		'/cash-flow': Bars,
+		'/analytics': Bars,
 		'/accounts': Bank,
 		'/planning': Flag,
 		'/manage': Sliders,

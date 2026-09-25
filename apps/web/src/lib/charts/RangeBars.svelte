@@ -34,9 +34,28 @@
 		`<br>usual ${fmt(r.base)} (${fmt(r.lo)}–${fmt(r.hi)})`;
 </script>
 
+<!-- The markers are SVG circles rather than CSS rings: a box-shadow ring snaps each edge to the pixel
+     grid on its own, so at a fractional position it drew thicker on one side than the other. -->
+{#snippet average()}
+	<svg class="mark" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+		<circle class="base" cx="5" cy="5" r="3.25" />
+	</svg>
+{/snippet}
+{#snippet current(color: string, out: boolean)}
+	<svg class="mark" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+		{#if out}
+			<circle class="ring" cx="9" cy="9" r="7.75" />
+			<circle class="gap" cx="9" cy="9" r="6.25" />
+		{/if}
+		<circle cx="9" cy="9" r="5" style:fill={color} />
+	</svg>
+{/snippet}
+
 <div class="bars">
 	<div class="row head" aria-hidden="true">
-		<span></span><span></span><span class="num">Total</span><span class="num">vs avg</span>
+		<span>Category</span><span></span><span class="num">Total</span><span class="num"
+			>Δ average</span
+		>
 	</div>
 	{#each rows as r (r.label)}
 		{@const delta = r.value - r.base}
@@ -55,13 +74,10 @@
 					style:--fill={r.color}
 				></span>
 				<span class="range" style:left={at(r.lo)} style:right={`calc(100% - ${at(r.hi)})`}></span>
-				<span class="base" style:left={at(r.base)}></span>
-				<span
-					class="now"
-					class:out={r.value > r.hi || r.value < r.lo}
-					style:left={at(r.value)}
-					style:--fill={r.color}
-				></span>
+				<span class="at" style:left={at(r.base)}>{@render average()}</span>
+				<span class="at" style:left={at(r.value)}>
+					{@render current(r.color, r.value > r.hi || r.value < r.lo)}
+				</span>
 			</div>
 			<span class="num total">{fmt(r.value)}</span>
 			<span class="num delta" class:over={delta > 0} class:under={delta < 0}>
@@ -70,8 +86,8 @@
 		</div>
 	{/each}
 	<div class="key" aria-hidden="true">
-		<span><i class="k-now"></i>this month</span>
-		<span><i class="k-base"></i>average</span>
+		<span>{@render current('var(--ink-3)', false)}this month</span>
+		<span>{@render average()}average</span>
 		<span><i class="k-range"></i>usual range</span>
 	</div>
 </div>
@@ -82,8 +98,6 @@
 	   rather than stacking at the top. */
 	.bars {
 		--lane-h: 14px;
-		--now-size: 10px;
-		--base-size: 8px;
 		--track-h: 4px;
 
 		display: grid;
@@ -130,32 +144,33 @@
 		border-radius: var(--radius-pill);
 		background: color-mix(in srgb, var(--ink-3) 45%, transparent);
 	}
-	/* Both markers are centred on their value, so the offset is half the dot. */
-	.base,
-	.now {
+	/* A zero-size anchor at the value; the marker centres on it, so no offset depends on its size. */
+	.at {
 		position: absolute;
-		border-radius: var(--radius-pill);
+		top: 50%;
+		width: 0;
+		height: 0;
+	}
+	.mark {
+		position: absolute;
+		left: 0;
+		top: 0;
+		transform: translate(-50%, -50%);
+		overflow: visible;
 	}
 	.base {
-		top: calc((var(--lane-h) - var(--base-size)) / 2);
-		width: var(--base-size);
-		height: var(--base-size);
-		margin-left: calc(var(--base-size) / -2);
-		background: var(--surface);
-		box-shadow: inset 0 0 0 1.5px var(--ink-2);
-	}
-	.now {
-		top: calc((var(--lane-h) - var(--now-size)) / 2);
-		width: var(--now-size);
-		height: var(--now-size);
-		margin-left: calc(var(--now-size) / -2);
-		background: var(--fill);
+		fill: var(--surface);
+		stroke: var(--ink-2);
+		stroke-width: 1.5;
 	}
 	/* Outside its own range: the one claim the markers make per row. */
-	.now.out {
-		box-shadow:
-			0 0 0 1.5px var(--surface),
-			0 0 0 3px var(--ink-3);
+	.ring {
+		fill: none;
+		stroke: var(--ink-3);
+		stroke-width: 1.5;
+	}
+	.gap {
+		fill: var(--surface);
 	}
 	.num {
 		text-align: right;
@@ -187,21 +202,13 @@
 		align-items: center;
 		gap: var(--gap-inline);
 	}
-	.key i {
-		display: inline-block;
-		border-radius: var(--radius-pill);
-	}
-	.k-now {
-		width: 10px;
-		height: 10px;
-		background: var(--ink-3);
-	}
-	.k-base {
-		width: 8px;
-		height: 8px;
-		box-shadow: inset 0 0 0 1.5px var(--ink-2);
+	.key .mark {
+		position: static;
+		transform: none;
 	}
 	.k-range {
+		display: inline-block;
+		border-radius: var(--radius-pill);
 		width: 18px;
 		height: 4px;
 		background: color-mix(in srgb, var(--ink-3) 45%, transparent);

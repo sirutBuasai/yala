@@ -2,8 +2,8 @@
 // pitched against (see the contrast notes in app.css), and its colour rules are the ones a redesign is
 // most likely to break silently.
 
-import { expect, test } from '@playwright/test';
-import { openApp, PAGE_LABELS, settle, showPage, violations, openAdd } from './app';
+import { expect } from '@playwright/test';
+import { openAdd, openApp, PAGE_LABELS, settle, showPage, test, violations } from './app';
 
 test.beforeEach(async ({ page }) => openApp(page));
 

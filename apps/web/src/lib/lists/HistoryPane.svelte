@@ -93,24 +93,19 @@
 
 <Pane {id} title={words('Transaction history')} {caption}>
 	{#snippet actions()}
-		<div class="pactions">
-			<SortMenu
-				fields={TXN_SORTS}
-				bind:sortKey={() => sort.value, (v) => (sort.value = v)}
-				bind:sortDir={() => sortDir.value, (v) => (sortDir.value = v)}
-			/>
-			<button class="btn-ghost" onclick={onadd}>+ Add</button>
-		</div>
+		<button class="btn-ghost" onclick={onadd}>+ Add</button>
 	{/snippet}
 
-	<div class="filters">
+	<!-- Pinned while the list scrolls under it. Bled to the card's edges so its background covers the rows
+	     sliding beneath, and padded back so its controls line up with the content. -->
+	<div class="filters bleed-x">
 		<Segmented
 			options={TYPES}
 			value={filter.type ?? 'all'}
 			onchange={(t) => onfilter({ type: t === 'all' ? null : t })}
 			ariaLabel="Entry type"
 		/>
-		<div class="menu">
+		<div class="menu first">
 			<Select
 				ariaLabel="Category"
 				value={filter.category ?? ''}
@@ -130,20 +125,6 @@
 				placeholder="Any account"
 			/>
 		</div>
-		<button
-			class="pill"
-			class:active={filter.pending}
-			aria-pressed={filter.pending}
-			onclick={() => onfilter({ pending: !filter.pending })}>Pending only</button
-		>
-		<input
-			class="field-input search"
-			type="search"
-			placeholder="Find an entry"
-			aria-label="Find an entry"
-			value={filter.search}
-			oninput={(e) => onfilter({ search: e.currentTarget.value })}
-		/>
 	</div>
 
 	{#if shown.length}
@@ -175,7 +156,25 @@
 				</div>
 			{/if}
 		</dl>
+	{/if}
 
+	<div class="tools">
+		<input
+			class="field-input search"
+			type="search"
+			placeholder="Find an entry"
+			aria-label="Find an entry"
+			value={filter.search}
+			oninput={(e) => onfilter({ search: e.currentTarget.value })}
+		/>
+		<SortMenu
+			fields={TXN_SORTS}
+			bind:sortKey={() => sort.value, (v) => (sort.value = v)}
+			bind:sortDir={() => sortDir.value, (v) => (sortDir.value = v)}
+		/>
+	</div>
+
+	{#if shown.length}
 		{#if groups}
 			{#each groups as g (g.date)}
 				{@const spent = spentOn(g.rows)}
@@ -194,25 +193,36 @@
 </Pane>
 
 <style>
-	.pactions,
-	.filters {
+	.filters,
+	.tools {
 		display: flex;
 		gap: var(--gap-row);
 		align-items: center;
 		flex-wrap: wrap;
 	}
 	.filters {
-		margin-bottom: var(--space-6);
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		padding: var(--space-3) var(--pad-card-x) var(--space-6);
+		background: var(--surface);
 	}
 	/* Wide enough for most names; a longer one ellipsizes in the trigger and shows whole in the list. */
 	.menu {
 		width: 11rem;
 		flex: none;
 	}
-	.search {
+	/* The menus hold the right edge while the type chips hold the left. */
+	.menu.first {
 		margin-left: auto;
+	}
+	.tools {
+		justify-content: space-between;
+		margin-bottom: var(--space-4);
+	}
+	.search {
 		min-width: 0;
-		width: 12rem;
+		width: 14rem;
 	}
 	.summary {
 		display: flex;

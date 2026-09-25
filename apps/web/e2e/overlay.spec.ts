@@ -1,7 +1,7 @@
 // The modal and the anchored popup: what the platform now owes us, and what a popup must never do.
 
-import { expect, test } from '@playwright/test';
-import { openApp, settle, showPage, openAdd } from './app';
+import { expect } from '@playwright/test';
+import { openAdd, openApp, settle, showPage, test } from './app';
 
 test.beforeEach(async ({ page }) => openApp(page));
 

@@ -468,7 +468,8 @@ export function vsAverage(
 	const delta = now - avg;
 
 	return scalar(unit, label, now, {
-		delta: { value: delta, unit, tone: toneOf(m, delta), note: 'vs avg' },
+		// No note on the badge: the caption already names the average it compares against.
+		delta: { value: delta, unit, tone: toneOf(m, delta) },
 		note: opts.note ?? live(`vs your ${money(avg)} / mo average`)
 	});
 }

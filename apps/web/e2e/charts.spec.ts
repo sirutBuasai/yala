@@ -2,8 +2,8 @@
 // the name it answers to. A chart that collapses to nothing still passes a bleed probe — there is no ink
 // to escape — so its geometry has to be asserted on its own.
 
-import { expect, test, type Page } from '@playwright/test';
-import { BOARD_PAGES, openApp, setContentWidth, settle, showPage } from './app';
+import { expect, type Page } from '@playwright/test';
+import { BOARD_PAGES, openApp, setContentWidth, settle, showPage, test } from './app';
 
 /** Either side of the fold, which is where a chart's box comes from a different rule. */
 const WIDTHS = [1392, 700] as const;

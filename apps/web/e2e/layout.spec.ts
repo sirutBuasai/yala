@@ -1,7 +1,15 @@
 // Nothing a card holds may paint outside it, and no label may be cut off, at any width the app folds to.
 
-import { test } from '@playwright/test';
-import { audit, expectClean, openApp, PAGE_LABELS, setContentWidth, showPage, WIDTHS } from './app';
+import {
+	audit,
+	expectClean,
+	openApp,
+	PAGE_LABELS,
+	setContentWidth,
+	showPage,
+	test,
+	WIDTHS
+} from './app';
 
 test.beforeEach(async ({ page }) => openApp(page));
 

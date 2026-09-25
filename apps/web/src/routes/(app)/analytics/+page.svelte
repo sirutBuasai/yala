@@ -2,4 +2,4 @@
 	import Rebuilding from '$lib/layout/Rebuilding.svelte';
 </script>
 
-<Rebuilding title="Cash flow" />
+<Rebuilding title="Analytics" />

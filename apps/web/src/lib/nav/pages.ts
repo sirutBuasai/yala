@@ -10,7 +10,7 @@ export interface NavLink {
 export const PAGES: readonly NavLink[] = [
 	{ href: '/', label: 'Dashboard' },
 	{ href: '/transactions', label: 'Transactions' },
-	{ href: '/cash-flow', label: 'Cash flow' },
+	{ href: '/analytics', label: 'Analytics' },
 	{ href: '/accounts', label: 'Accounts' },
 	{ href: '/planning', label: 'Planning' },
 	{ href: '/manage', label: 'Manage' }

@@ -70,6 +70,10 @@ The sidebar never costs a board its designed layout. It shows in full when the p
 
 Supersedes the suggestion to arrange only on Dashboard. Arranging exists so the user lays pages out themselves rather than describing a layout to an agent. Each page ships a reasonable default; once the user has arranged it, their stored arrangement (`yala-board-<key>-<version>` in localStorage) becomes the default.
 
+### D15 · Cash flow is named Analytics (2026-09-25)
+
+The page for reading trends across months and years is called Analytics, at `/analytics`. Earlier docs that say Cash flow mean this page.
+
 ## Open
 
 - **Month from a year.** Moving from a year-level view to a month-level page: which month becomes the focus? Candidates are the previous focus month's calendar month within that year, or the latest month with data in that year.

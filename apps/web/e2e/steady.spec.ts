@@ -4,8 +4,8 @@
 // rectangle to storage, so whichever period happened to carry the longest figures re-arranged the board for
 // every other period — and for every later visit.
 
-import { expect, test, type Page } from '@playwright/test';
-import { audit, BOARD_PAGES, expectClean, openApp, settle, showPage } from './app';
+import { expect, type Page } from '@playwright/test';
+import { audit, BOARD_PAGES, expectClean, openApp, settle, showPage, test } from './app';
 
 interface Cell {
 	x: number;

@@ -24,7 +24,6 @@ export interface HistoryFilter {
 	type: EntryType | null;
 	category: string | null;
 	account: string | null;
-	pending: boolean;
 	search: string;
 }
 
@@ -32,7 +31,6 @@ export const NO_FILTER: HistoryFilter = {
 	type: null,
 	category: null,
 	account: null,
-	pending: false,
 	search: ''
 };
 
@@ -69,8 +67,6 @@ export function accountsOf(e: HistoryEntry): string[] {
 	return [];
 }
 
-const pendingOf = (e: HistoryEntry) => e.type !== 'pay' && e.row.pending;
-
 /** What a search matches: the title, and for bill pay the accounts on either side. */
 function searchText(e: HistoryEntry): string {
 	return [e.row.payee, ...accountsOf(e).map(formatAccount)].join(' ').toLowerCase();
@@ -83,7 +79,6 @@ export function filterHistory(entries: HistoryEntry[], f: HistoryFilter): Histor
 			(!f.type || e.type === f.type) &&
 			(!f.category || (e.type === 'txn' && e.row.category === f.category)) &&
 			(!f.account || accountsOf(e).includes(f.account)) &&
-			(!f.pending || pendingOf(e)) &&
 			(!q || searchText(e).includes(q))
 	);
 }

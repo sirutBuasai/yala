@@ -1,7 +1,7 @@
 // Shared harness: serve the app the fixture snapshot, move between its pages, and read the audit back.
 
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, test as base, type Locator, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { auditPage, type Audit } from './audit';
@@ -21,6 +21,22 @@ const SNAPSHOT = readFileSync(
 	fileURLToPath(new URL('./fixtures/data.json', import.meta.url)),
 	'utf8'
 );
+
+/**
+ * The suite's `test`: every test also fails on an uncaught page error. An effect that retriggers itself is
+ * stopped by Svelte's loop guard with only a page error to show for it, while the page renders fine.
+ */
+export const test = base.extend<{ noPageErrors: void }>({
+	noPageErrors: [
+		async ({ page }, use) => {
+			const errors: string[] = [];
+			page.on('pageerror', (e) => errors.push(e.message));
+			await use();
+			expect(errors, errors.join('\n')).toEqual([]);
+		},
+		{ auto: true }
+	]
+});
 
 export const PAGE_LABELS = PAGES.map((p) => p.label);
 

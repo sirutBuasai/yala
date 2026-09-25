@@ -1,16 +1,17 @@
 // The board under abuse: random gestures and pathological labels, auditing after every one.
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import {
 	audit,
-	dragBy,
 	doGesture,
+	dragBy,
 	expectClean,
 	GESTURES,
 	openApp,
 	settle,
 	showPage,
-	startArranging
+	startArranging,
+	test
 } from './app';
 
 /** Long enough to outgrow any card, in both the shapes that behave differently: breakable and not. */
@@ -21,8 +22,6 @@ const LONG_RUN = 'W'.repeat(110);
 test.beforeEach(async ({ page }) => openApp(page));
 
 test('a pane grows for a long title and never shows it clipped', async ({ page }) => {
-	// Every keystroke re-measures a board this size, and two long titles are typed one key at a time.
-	test.setTimeout(90_000);
 	await showPage(page, 'Transactions');
 	await startArranging(page);
 
