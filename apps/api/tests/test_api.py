@@ -5,11 +5,43 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from yala import config
+
 
 def test_get_data_returns_contract(client: TestClient):
     r = client.get("/api/data")
     assert r.status_code == 200
     assert r.json()["schema_version"] == 1
+
+
+@pytest.fixture
+def site_build(tmp_path, monkeypatch):
+    build = tmp_path / "build"
+    build.mkdir()
+    (build / "200.html").write_text("")
+    monkeypatch.setattr(config, "WEB_DIR", build)
+
+
+def test_health_ok(client: TestClient, site_build):
+    assert client.get("/api/health").json() == {"status": "ok", "ledger_errors": 0}
+
+
+def test_health_counts_ledger_errors_without_failing(client: TestClient, site_build):
+    main = client.ledger_dir / "main.beancount"
+    main.write_text(main.read_text() + "\n2020-01-01 open Assets:Bogus NOTACURRENCY extra\n")
+    r = client.get("/api/health")
+    assert r.status_code == 200
+    assert r.json()["ledger_errors"] > 0
+
+
+def test_health_unavailable_without_ledger(client: TestClient, site_build, tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "MAIN_LEDGER", tmp_path / "missing" / "main.beancount")
+    assert client.get("/api/health").status_code == 503
+
+
+def test_health_unavailable_without_site_build(client: TestClient, tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "WEB_DIR", tmp_path / "missing")
+    assert client.get("/api/health").status_code == 503
 
 
 def test_get_accounts_keys(client: TestClient):

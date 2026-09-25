@@ -25,3 +25,9 @@ def test_paths_derive_from_ledger_dir_by_default(monkeypatch):
     cfg = _reload()
 
     assert cfg.MAIN_LEDGER == cfg.LEDGER_DIR / "main.beancount"
+
+
+def test_env_var_overrides_web_dir(monkeypatch, tmp_path):
+    monkeypatch.setenv("YALA_WEB_DIR", str(tmp_path))
+
+    assert _reload().WEB_DIR == tmp_path

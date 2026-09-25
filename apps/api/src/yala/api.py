@@ -6,8 +6,6 @@ Runs on localhost only — financial data never leaves the machine. Endpoints li
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -15,13 +13,13 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
 
+from yala import config
 from yala.builder import build_dict
+from yala.ledger.core import Ledger
 from yala.routes import ROUTERS
 from yala.routes.errors import humanize_error
 
 app = FastAPI(title="Yala")
-
-_WEB_DIR = Path(__file__).resolve().parents[4] / "apps" / "web" / "build"
 
 
 @app.exception_handler(RequestValidationError)
@@ -36,6 +34,20 @@ async def on_validation_error(_: Request, exc: RequestValidationError) -> JSONRe
 @app.get("/api/data")
 def get_data() -> dict:
     return build_dict()
+
+
+@app.get("/api/health")
+def get_health() -> JSONResponse:
+    """Container healthcheck: 503 when a restart or rollback could help, a ledger that fails to
+    load or a missing site build. Ledger errors are only counted, since restarting can't fix them
+    and a 503 would make the host restart the container forever."""
+    if not (config.WEB_DIR / "200.html").is_file():
+        return JSONResponse(status_code=503, content={"detail": "site build not found"})
+    try:
+        led = Ledger(config.MAIN_LEDGER, strict=False).load()
+    except Exception:
+        return JSONResponse(status_code=503, content={"detail": "ledger failed to load"})
+    return JSONResponse(content={"status": "ok", "ledger_errors": len(led.errors)})
 
 
 for router in ROUTERS:
@@ -73,10 +85,10 @@ class SPAStaticFiles(StaticFiles):
             return await super().get_response("200.html", scope)
 
 
-# Static frontend (the SvelteKit static-adapter build output, at _WEB_DIR) is mounted LAST so
+# Static frontend (the SvelteKit static-adapter build output, at config.WEB_DIR) is mounted LAST so
 # /api/* routes always win. Absence is tolerated (e.g. before `npm run build` in apps/web/).
-if _WEB_DIR.is_dir():
-    app.mount("/", SPAStaticFiles(directory=_WEB_DIR, html=True), name="web")
+if config.WEB_DIR.is_dir():
+    app.mount("/", SPAStaticFiles(directory=config.WEB_DIR, html=True), name="web")
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ import sys
 from decimal import Decimal
 from pathlib import Path
 
+from yala import config
 from yala.catalog import account_directory, account_lists, setting_fields
 from yala.dates import month_of
 from yala.ledger import Ledger
@@ -44,8 +45,7 @@ from yala.schema import (
 
 # The vite build copies the web app's static/ dir into its build output, so writing the snapshot
 # straight there needs no extra copy step.
-_REPO_ROOT = Path(__file__).resolve().parents[4]
-_DEFAULT_OUT = _REPO_ROOT / "apps" / "web" / "static" / "data.json"
+_DEFAULT_OUT = config.REPO_ROOT / "apps" / "web" / "static" / "data.json"
 
 
 def _now_rfc3339() -> str:
