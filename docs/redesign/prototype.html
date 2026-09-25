@@ -1,0 +1,1197 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head><body>
+<title>Yala Redesign</title>
+<style>
+:root {
+	--bg: #f0ebdd;
+	--surface: #faf6ec;
+	--surface-2: #f1ead9;
+	--inset: #ece4d2;
+	--border: #ddd2bb;
+	--grid: #e6ddca;
+	--ink: #2e2a22;
+	--ink-2: #5c5443;
+	--ink-3: #6e6652;
+	--lav: #6a49bd;
+	--salmon: #b33b54;
+	--green: #457124;
+	--teal: #1a6f88;
+	--gold: #806211;
+	--f-income: #9678d3;
+	--f-spend: #e8667f;
+	--f-save: #7fb24a;
+	--f-asset: #3f97b8;
+	--f-market: #c9952f;
+	--hot: 232, 102, 127;
+	--cool: 63, 151, 184;
+	--shadow: 0 1px 2px rgba(120, 90, 40, 0.06), 0 14px 34px -18px rgba(120, 90, 40, 0.28);
+	--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+	--sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		color-scheme: dark;
+		--bg: #16161f;
+		--surface: #1f1f2b;
+		--surface-2: #26263a;
+		--inset: #2a2a3c;
+		--border: #33334a;
+		--grid: #2a2a3c;
+		--ink: #e6e0c8;
+		--ink-2: #a8a28c;
+		--ink-3: #969380;
+		--lav: #bb9af7;
+		--salmon: #f7768e;
+		--green: #9ece6a;
+		--teal: #7dcfff;
+		--gold: #e0af68;
+		--f-income: #bb9af7;
+		--f-spend: #f7768e;
+		--f-save: #9ece6a;
+		--f-asset: #7dcfff;
+		--f-market: #e0af68;
+		--hot: 247, 118, 142;
+		--cool: 125, 207, 255;
+		--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+	}
+}
+:root[data-theme='dark'] {
+	color-scheme: dark;
+	--bg: #16161f;
+	--surface: #1f1f2b;
+	--surface-2: #26263a;
+	--inset: #2a2a3c;
+	--border: #33334a;
+	--grid: #2a2a3c;
+	--ink: #e6e0c8;
+	--ink-2: #a8a28c;
+	--ink-3: #969380;
+	--lav: #bb9af7;
+	--salmon: #f7768e;
+	--green: #9ece6a;
+	--teal: #7dcfff;
+	--gold: #e0af68;
+	--f-income: #bb9af7;
+	--f-spend: #f7768e;
+	--f-save: #9ece6a;
+	--f-asset: #7dcfff;
+	--f-market: #e0af68;
+	--hot: 247, 118, 142;
+	--cool: 125, 207, 255;
+	--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+}
+
+* { box-sizing: border-box; }
+body {
+	background: var(--bg);
+	color: var(--ink);
+	font-family: var(--sans);
+	font-size: 15px;
+	line-height: 1.55;
+	padding-inline: 20px;
+}
+.page { max-width: 1180px; margin: 0 auto; padding-block: 56px 112px; display: grid; gap: 72px; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(34px, 5vw, 48px); line-height: 1.08; }
+h2 { font-size: 27px; line-height: 1.2; }
+h3 { font-size: 18px; }
+p { margin: 0; }
+.prose { max-width: 68ch; display: grid; gap: 14px; color: var(--ink-2); }
+.prose strong { color: var(--ink); font-weight: 600; }
+.eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+section { display: grid; gap: 22px; }
+.head { display: grid; gap: 10px; }
+.num { font-variant-numeric: tabular-nums; }
+
+.hero { display: grid; gap: 18px; }
+.hero .lede { font-size: 18px; color: var(--ink-2); max-width: 62ch; }
+.brandline { display: flex; align-items: center; gap: 10px; }
+.bdot { width: 9px; height: 9px; border-radius: 9px; background: var(--f-income); box-shadow: 0 0 0 4px color-mix(in srgb, var(--f-income) 22%, transparent); }
+
+.map-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+table.map { width: 100%; border-collapse: collapse; min-width: 720px; font-size: 14px; }
+table.map th { text-align: left; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+table.map td { padding: 13px 16px; border-bottom: 1px solid var(--grid); vertical-align: top; color: var(--ink-2); }
+table.map tr:last-child td { border-bottom: 0; }
+table.map td:last-child { color: var(--ink); font-weight: 600; }
+table.map .sub { display: block; font-size: 12.5px; color: var(--ink-3); font-weight: 400; }
+
+.principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+.pr { padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); display: grid; gap: 8px; align-content: start; }
+.pr h3 { font-size: 17px; }
+.pr p { color: var(--ink-2); font-size: 14px; }
+
+.proto-bar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: baseline; justify-content: space-between; }
+.proto-bar .hint { color: var(--ink-3); font-size: 13.5px; }
+.frame-scroll { overflow-x: auto; border-radius: 14px; box-shadow: var(--shadow); }
+.frame { min-width: 1080px; display: grid; grid-template-columns: 196px 1fr; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); overflow: hidden; font-size: 13.5px; }
+
+.side { background: var(--surface); border-right: 1px solid var(--border); padding: 16px 12px; display: flex; flex-direction: column; gap: 6px; }
+.side .brand { display: flex; align-items: center; gap: 9px; padding: 4px 8px 12px; font-family: var(--serif); font-size: 19px; font-weight: 600; }
+.qa { margin: 0 4px 10px; }
+.nav { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--ink-2); background: none; border: 0; font: inherit; text-align: left; cursor: pointer; width: 100%; }
+.nav:hover { background: var(--surface-2); color: var(--ink); }
+.nav.on { background: color-mix(in srgb, var(--f-income) 16%, transparent); color: var(--ink); font-weight: 600; }
+.nav svg { width: 16px; height: 16px; flex: none; }
+.nav .soon { margin-left: auto; font-size: 10.5px; color: var(--ink-3); font-weight: 400; }
+.side .foot { margin-top: auto; padding: 10px; border-top: 1px solid var(--border); display: grid; gap: 4px; font-size: 12px; color: var(--ink-3); }
+.side .foot b { color: var(--ink); font-size: 13px; }
+
+.main { padding: 20px 24px 28px; display: grid; gap: 16px; align-content: start; min-height: 760px; }
+.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.top h2 { font-size: 24px; margin-right: auto; }
+.crumb { font-size: 12.5px; color: var(--lav); background: none; border: 0; padding: 0; cursor: pointer; font: inherit; }
+.crumb:hover { text-decoration: underline; }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+.stepper button { border: 0; background: none; color: var(--ink-2); width: 30px; height: 30px; cursor: pointer; font-size: 15px; border-radius: 999px; }
+.stepper button:hover:not(:disabled) { color: var(--ink); background: var(--surface-2); }
+.stepper button:disabled { opacity: 0.3; cursor: default; }
+.stepper span { min-width: 92px; text-align: center; font-weight: 600; }
+.seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--inset); gap: 2px; }
+.seg button { border: 0; background: none; font: inherit; font-size: 12.5px; color: var(--ink-2); padding: 5px 12px; border-radius: 999px; cursor: pointer; }
+.seg button.on { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
+.btn { border: 1px solid var(--border); background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.btn:hover { background: var(--surface-2); }
+.btn.accent { background: var(--f-income); border-color: transparent; color: #1a1522; font-weight: 600; }
+.btn.accent:hover { filter: brightness(1.06); }
+.btn.wide { width: 100%; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--lav); outline-offset: 2px; }
+
+.chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.chip { border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); font: inherit; font-size: 12.5px; padding: 4px 11px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.chip.on { border-color: color-mix(in srgb, var(--f-income) 60%, var(--border)); background: color-mix(in srgb, var(--f-income) 14%, var(--surface)); color: var(--ink); }
+.chip .x { color: var(--ink-3); }
+.search { margin-left: auto; border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12.5px; width: 190px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; align-content: start; }
+.card h4 { margin: 0; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+.card h4 .r { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.card.link { cursor: pointer; transition: border-color 0.15s; }
+.card.link:hover { border-color: color-mix(in srgb, var(--f-income) 55%, var(--border)); }
+
+.split { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.split.wide-right { grid-template-columns: minmax(0, 1fr) 340px; }
+.rail { display: grid; gap: 12px; }
+
+.list { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.dayh { display: flex; justify-content: space-between; padding: 8px 16px; background: var(--surface-2); font-size: 12px; color: var(--ink-3); font-weight: 600; border-top: 1px solid var(--grid); }
+.dayh:first-child { border-top: 0; }
+.tx { display: grid; grid-template-columns: 10px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.8fr) 104px; gap: 12px; align-items: center; padding: 9px 16px; border-top: 1px solid var(--grid); }
+.dayh + .tx { border-top: 0; }
+.tx:hover { background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
+.dot { width: 9px; height: 9px; border-radius: 9px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15); display: inline-block; flex: none; }
+.payee { font-weight: 500; display: flex; gap: 8px; align-items: center; min-width: 0; }
+.payee span.t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catpill { justify-self: start; border: 0; background: var(--inset); color: var(--ink-2); font: inherit; font-size: 12px; padding: 2px 9px; border-radius: 999px; cursor: pointer; }
+.catpill:hover { color: var(--ink); }
+.acct { color: var(--ink-3); font-size: 12.5px; }
+.amt { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+.amt.pos { color: var(--green); }
+.amt.mute { color: var(--ink-3); }
+.tag { font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--gold); flex: none; }
+.tag.new { background: color-mix(in srgb, var(--f-save) 22%, transparent); color: var(--green); }
+.tag.bad { background: color-mix(in srgb, var(--salmon) 16%, transparent); color: var(--salmon); }
+.tag.ok { background: color-mix(in srgb, var(--f-save) 18%, transparent); color: var(--green); }
+.tag.mute { background: var(--inset); color: var(--ink-3); }
+.empty { padding: 28px 16px; text-align: center; color: var(--ink-3); }
+
+.draft { display: grid; grid-template-columns: 70px minmax(0, 1.3fr) minmax(0, 1fr) 96px minmax(0, 0.8fr) auto; gap: 8px; padding: 12px 16px; background: color-mix(in srgb, var(--f-income) 9%, var(--surface)); border-bottom: 1px solid var(--border); align-items: center; }
+.draft input, .draft select { width: 100%; border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 7px; padding: 5px 8px; font: inherit; font-size: 12.5px; min-width: 0; }
+.draft .acts { display: flex; gap: 6px; }
+
+.kv { display: grid; grid-template-columns: 1fr auto auto; gap: 6px 10px; align-items: baseline; }
+.kv .l { color: var(--ink-2); }
+.kv .v { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.kv .d { font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; min-width: 52px; }
+.good { color: var(--green); }
+.bad { color: var(--salmon); }
+.muted { color: var(--ink-3); }
+.small { font-size: 12px; }
+
+.cats { display: grid; gap: 2px; }
+.catrow { display: grid; grid-template-columns: 9px 86px minmax(0, 1fr) 62px 44px; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 7px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; }
+.catrow:hover { background: var(--surface-2); }
+.catrow.on { background: color-mix(in srgb, var(--f-income) 13%, transparent); }
+.catrow .n { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.track { position: relative; height: 8px; border-radius: 4px; background: var(--inset); }
+.track i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+.track b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink-2); border-radius: 1px; }
+.catrow .v { font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+.catrow .d { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+
+.mini { display: grid; grid-template-columns: 70px repeat(12, 1fr); gap: 2px; font-size: 10.5px; }
+.mini .h { text-align: center; color: var(--ink-3); }
+.mini .h.on { color: var(--ink); font-weight: 700; }
+.mini .rl { color: var(--ink-3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-right: 4px; }
+.mini button { height: 14px; border-radius: 3px; border: 0; padding: 0; cursor: pointer; background: var(--inset); }
+.mini button.fut { background: transparent; box-shadow: inset 0 0 0 1px var(--grid); cursor: default; }
+.mini button.col { box-shadow: 0 0 0 1.5px var(--ink-2); }
+.mini button.cell { box-shadow: 0 0 0 2px var(--lav); }
+.legend { display: flex; gap: 12px; align-items: center; font-size: 11.5px; color: var(--ink-3); flex-wrap: wrap; }
+.legend i { display: inline-block; width: 18px; height: 8px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; padding: 14px; }
+.cal .wd { font-size: 11px; color: var(--ink-3); text-align: center; text-transform: uppercase; letter-spacing: 0.06em; }
+.cal button { min-height: 72px; border: 1px solid var(--grid); border-radius: 9px; background: var(--surface); color: var(--ink); font: inherit; text-align: left; padding: 6px 8px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; }
+.cal button:hover { border-color: var(--ink-3); }
+.cal button .dn { font-size: 12px; color: var(--ink-3); }
+.cal button .dv { font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cal button.fut { opacity: 0.45; cursor: default; }
+
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; display: grid; gap: 3px; }
+.stat .l { font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.stat .v { font-family: var(--serif); font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat .d { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+.chart { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--ink-3); font-size: 11px; font-family: var(--sans); }
+.chart .gl { stroke: var(--grid); stroke-width: 1; }
+.chart .hit { fill: transparent; cursor: pointer; }
+.chart .hit:hover { fill: color-mix(in srgb, var(--ink) 5%, transparent); }
+
+.heat-wrap { overflow-x: auto; }
+table.heat { border-collapse: separate; border-spacing: 2px; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums; }
+table.heat th { font-weight: 600; font-size: 11px; color: var(--ink-3); text-align: right; padding: 4px 6px; white-space: nowrap; }
+table.heat th:first-child { text-align: left; }
+table.heat th.on { color: var(--ink); }
+table.heat td { padding: 0; }
+table.heat td.lab { padding: 4px 6px; white-space: nowrap; color: var(--ink-2); }
+table.heat td.lab .dot { margin-right: 7px; }
+table.heat button { width: 100%; border: 0; font: inherit; color: var(--ink); text-align: right; padding: 5px 7px; border-radius: 5px; cursor: pointer; background: var(--inset); }
+table.heat button:hover { box-shadow: inset 0 0 0 1.5px var(--ink-3); }
+table.heat button.fut { background: transparent; color: var(--ink-3); cursor: default; box-shadow: inset 0 0 0 1px var(--grid); }
+table.heat td.col button { box-shadow: inset 0 0 0 1.5px var(--ink-2); }
+table.heat tr.hl td.lab { color: var(--ink); font-weight: 600; }
+table.heat tr.hl button { box-shadow: inset 0 0 0 1.5px var(--lav); }
+table.heat td.tot { text-align: right; padding: 5px 7px; color: var(--ink-2); white-space: nowrap; }
+table.heat tr.foot td { border-top: 1px solid var(--border); }
+table.heat tr.foot td.lab, table.heat tr.foot td.fv { font-weight: 600; color: var(--ink); }
+table.heat td.fv { text-align: right; padding: 5px 7px; white-space: nowrap; }
+table.heat tr.sep td { height: 6px; }
+
+.acc-group { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.acc-h { display: flex; justify-content: space-between; padding: 10px 16px; background: var(--surface-2); font-weight: 600; }
+.acc-h .v { font-variant-numeric: tabular-nums; }
+.acc { display: grid; grid-template-columns: minmax(0, 1.2fr) 100px minmax(0, 1fr) 110px 90px; gap: 12px; align-items: center; padding: 10px 16px; border-top: 1px solid var(--grid); }
+.acc .b { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.acc .c { text-align: right; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+
+.logp { background: var(--surface); border: 1px solid color-mix(in srgb, var(--f-income) 45%, var(--border)); border-radius: 12px; overflow: hidden; }
+.logp .lh { display: flex; align-items: baseline; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--f-income) 8%, var(--surface)); }
+.logp .lh h3 { font-size: 16px; margin-right: auto; }
+.logrow { display: grid; grid-template-columns: minmax(0, 1.2fr) 110px 130px 100px minmax(0, 1fr); gap: 12px; align-items: center; padding: 7px 16px; border-top: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+.logrow.hd { border-top: 0; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.logrow .r { text-align: right; }
+.logrow input { width: 100%; border: 1px solid var(--border); background: var(--bg); color: var(--ink); border-radius: 7px; padding: 5px 8px; font: inherit; text-align: right; font-variant-numeric: tabular-nums; }
+.logrow .grp { grid-column: 1 / -1; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding-top: 6px; }
+.logf { display: flex; gap: 20px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface-2); flex-wrap: wrap; }
+.logf .big { font-family: var(--serif); font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.logf .sp { margin-left: auto; display: flex; gap: 8px; }
+
+.dash3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.bigv { font-family: var(--serif); font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.att { display: grid; gap: 4px; }
+.att button { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: center; text-align: left; border: 0; background: none; color: var(--ink); font: inherit; padding: 8px 6px; border-radius: 8px; cursor: pointer; }
+.att button:hover { background: var(--surface-2); }
+.att .ic { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.att .go { color: var(--ink-3); }
+.mtx { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 2px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; border-radius: 6px; width: 100%; }
+.mtx:hover { background: var(--surface-2); }
+.mtx .s { display: block; font-size: 11.5px; color: var(--ink-3); }
+
+.placeholder { background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; padding: 40px; display: grid; gap: 10px; max-width: 620px; color: var(--ink-2); }
+
+.toast { position: absolute; right: 22px; top: 18px; background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 10px; font-size: 13px; max-width: 380px; box-shadow: var(--shadow); animation: toast 5s forwards; pointer-events: none; }
+@keyframes toast { 0% { opacity: 0; transform: translateY(6px); } 6%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+.flash { animation: flash 2.2s ease-out; }
+@keyframes flash { 0%, 30% { box-shadow: 0 0 0 3px var(--f-save); } 100% { box-shadow: 0 0 0 3px transparent; } }
+.tx.new { background: color-mix(in srgb, var(--f-save) 10%, transparent); }
+.mainwrap { position: relative; }
+
+.notes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 28px; padding: 22px 24px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.notes .job { display: grid; gap: 8px; align-content: start; }
+.notes .job h3 { font-size: 20px; }
+.notes .job .rep { font-size: 13px; color: var(--ink-3); }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; color: var(--ink-2); }
+.notes li::marker { color: var(--ink-3); }
+
+.cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.gone { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.gone li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; color: var(--ink-2); }
+.gone li::before { content: '−'; color: var(--salmon); font-weight: 700; }
+.gone.keep li::before { content: '+'; color: var(--green); }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; counter-reset: s; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 44px 1fr; gap: 14px; padding: 16px 0; border-top: 1px solid var(--border); }
+.steps li:last-child { border-bottom: 1px solid var(--border); }
+.steps li::before { content: counter(s); font-family: var(--serif); font-size: 26px; font-weight: 600; color: var(--ink-3); line-height: 1; }
+.steps b { display: block; margin-bottom: 3px; }
+.steps span { color: var(--ink-2); font-size: 14px; }
+.qs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.q { padding: 18px 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); display: grid; gap: 8px; align-content: start; }
+.q h3 { font-size: 16px; }
+.q p { color: var(--ink-2); font-size: 14px; }
+.q .rec { font-size: 13px; color: var(--ink); }
+.q .rec b { color: var(--green); font-weight: 600; }
+
+@media (max-width: 760px) {
+	.notes, .cols2 { grid-template-columns: 1fr; }
+	.page { gap: 56px; padding-block: 36px 80px; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.flash, .toast { animation: none; }
+}
+</style>
+
+<div class="page">
+	<header class="hero">
+		<div class="brandline"><span class="bdot"></span><span class="eyebrow">Yala · layout proposal · September 2026</span></div>
+		<h1>One focus month, every page in step</h1>
+		<p class="lede">A Monarch-style reorganization of Yala around the two jobs you actually do: logging and checking a month, and reading trends across months. The period you look at becomes a selection you click, not a tab you switch.</p>
+	</header>
+
+	<section>
+		<div class="head">
+			<span class="eyebrow">What goes wrong today</span>
+			<h2>The views are split by time range, the work is not</h2>
+		</div>
+		<div class="prose">
+			<p>Home, Activity and Net Worth each hold their own Month, Year and All time boards with their own remembered period. Logging a transaction on Home and then checking it means visiting <strong>Activity · Month</strong> for the list and <strong>Activity · Year</strong> for the category heatmap, then stepping the month by hand when an outlier shows up.</p>
+			<p>The spreadsheets never had that problem, because a month sheet and the year summary were one tab apart and the same numbers. The mapping below keeps each spreadsheet habit and gives it one home.</p>
+		</div>
+		<div class="map-wrap">
+			<table class="map">
+				<thead><tr><th>In the spreadsheets</th><th>In Yala today</th><th>Proposed</th></tr></thead>
+				<tbody>
+					<tr><td>Month sheet<span class="sub">rows, category totals, EARNING block, checksum</span></td><td>Home calendar, Activity · Month lists and figures</td><td>Transactions<span class="sub">one list plus a Month check rail</span></td></tr>
+					<tr><td>SUMMARY 2026<span class="sub">month × category table, income and spend by month</span></td><td>Activity · Year</td><td>Cash flow · Month view<span class="sub">bars and the category table for one year</span></td></tr>
+					<tr><td>OVERVIEW<span class="sub">year × category, by-year charts</span></td><td>Activity · All time</td><td>Cash flow · Year view</td></tr>
+					<tr><td>Net Worth 26-27<span class="sub">one row of balances per month, diffs, chart</span></td><td>Net Worth · Year and All time, Home balance checklist</td><td>Accounts<span class="sub">Log balances is one sheet row</span></td></tr>
+					<tr><td>Kept apart in two files</td><td>Separate tabs</td><td>Dashboard<span class="sub">net worth explained by cash flow</span></td></tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+
+	<section>
+		<div class="head">
+			<span class="eyebrow">Principles</span>
+			<h2>Four rules the layout follows</h2>
+		</div>
+		<div class="principles">
+			<div class="pr"><h3>Select a period, don't switch to it</h3><p>One focus month is shared by every page and kept in the URL. Charts always show the whole year around it; clicking a bar, a cell or a chart point moves it.</p></div>
+			<div class="pr"><h3>Every figure opens its transactions</h3><p>A category cell, a bar or a flagged outlier opens the transaction list filtered to exactly the rows behind that number. A back link returns you to where you were.</p></div>
+			<div class="pr"><h3>Check your work where you log it</h3><p>The transaction page carries the month's totals, each category against its typical month, and the year strip. A wrong amount or category shows up the moment you save.</p></div>
+			<div class="pr"><h3>Net worth explains itself</h3><p>Each month's net worth change splits into what you saved, from your transactions, and what markets and everything else did. That is the bridge between the two files.</p></div>
+		</div>
+	</section>
+
+	<section>
+		<div class="head">
+			<span class="eyebrow">Clickable prototype</span>
+			<h2>Try the logging and the drill-down</h2>
+		</div>
+		<div class="proto-bar">
+			<p class="hint">Sample figures, not your ledger. Things to try: <b>+ Add entry</b> on Transactions, a cell in the year strip, a month bar on Cash flow, a cell in its table, <b>Log balances</b> on Accounts.</p>
+		</div>
+		<div class="frame-scroll">
+			<div class="frame">
+				<aside class="side" id="side"></aside>
+				<div class="mainwrap"><div class="main" id="screen"></div></div>
+			</div>
+		</div>
+		<div class="notes" id="notes"></div>
+	</section>
+
+	<section>
+		<div class="head">
+			<span class="eyebrow">Scope</span>
+			<h2>What goes away and what stays</h2>
+		</div>
+		<div class="cols2">
+			<ul class="gone">
+				<li>Month, Year and All time tabs on Activity and Net Worth.</li>
+				<li>Four separately remembered periods (Home month, Activity month, Activity year, Net Worth year), replaced by one focus month in the URL.</li>
+				<li>Separate Transactions, Paychecks, Bill pay &amp; transfers and Pending panes, replaced by one list with type filters.</li>
+				<li>The Home tab as a logging hub; logging moves to Transactions, and quick add works from every page.</li>
+			</ul>
+			<ul class="gone keep">
+				<li>Every existing chart, the catalog and the <code>data.json</code> contract. The redesign regroups figures; it does not need new API fields except, later, a per-account balance series for sparklines.</li>
+				<li>The entry modals and guided forms, reused by quick add and the inline add row.</li>
+				<li>Balance reconciliation for cards, surfaced as a check on Log balances and in Needs attention.</li>
+				<li>Planning and Manage, moved into the sidebar as Planning and Settings.</li>
+			</ul>
+		</div>
+	</section>
+
+	<section>
+		<div class="head">
+			<span class="eyebrow">Build order</span>
+			<h2>Five steps, each shippable alone</h2>
+		</div>
+		<ol class="steps">
+			<li><div><b>App shell</b><span>Sidebar navigation, SvelteKit routes per page, and the focus month plus list filters kept in the URL so back and forward work.</span></div></li>
+			<li><div><b>Transactions</b><span>Unified list with filters and search, the inline add row, the Month check rail, the calendar as a view toggle, and drill-in from anywhere. This is the biggest win for logging.</span></div></li>
+			<li><div><b>Cash flow</b><span>Month and Year views with selectable bars, the category table shaded against typical, and cell drill-through. Activity is removed after this step.</span></div></li>
+			<li><div><b>Accounts</b><span>Net worth chart with a range picker, grouped accounts with status, the Log balances sheet and the net worth bridge. Net Worth is removed after this step.</span></div></li>
+			<li><div><b>Dashboard</b><span>Spending pace, Needs attention, the bridge and recent transactions. Home is removed after this step.</span></div></li>
+		</ol>
+	</section>
+
+	<section>
+		<div class="head">
+			<span class="eyebrow">Decisions for you</span>
+			<h2>Open questions before building</h2>
+		</div>
+		<div class="qs">
+			<div class="q"><h3>Keep drag-to-arrange boards?</h3><p>Monarch lets you reorder dashboard widgets, while its work pages have fixed layouts built for the task.</p><p class="rec"><b>Suggested:</b> keep arranging on Dashboard only.</p></div>
+			<div class="q"><h3>Typical month or budgets?</h3><p>Monarch is built around budgets. Your spreadsheets compared months with each other instead.</p><p class="rec"><b>Suggested:</b> use the trailing twelve-month median as "typical" now, and add budgets later if you miss them.</p></div>
+			<div class="q"><h3>Where does the Sankey live?</h3><p>It explains a period rather than a trend.</p><p class="rec"><b>Suggested:</b> a toggle on Cash flow's "Where it went" card for the selected period.</p></div>
+			<div class="q"><h3>Phone layout</h3><p>The sidebar collapses on narrow screens.</p><p class="rec"><b>Suggested:</b> a bottom tab bar with Dashboard, Transactions, Cash flow and Accounts, plus a floating add button.</p></div>
+		</div>
+	</section>
+</div>
+
+<script>
+(() => {
+	const MN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+	const MNL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+	const N = 36, LAST = 35, TODAY = 24;
+	const MONTHS = Array.from({ length: N }, (_, i) => ({ y: 2023 + Math.floor((9 + i) / 12), m: (9 + i) % 12 }));
+	const idxOf = (y, m) => (y - 2023) * 12 + m - 9;
+	const valid = (i) => i >= 0 && i <= LAST;
+	const lab = (i) => `${MN[MONTHS[i].m]} ${MONTHS[i].y}`;
+	const labL = (i) => `${MNL[MONTHS[i].m]} ${MONTHS[i].y}`;
+	const dim = (i) => new Date(MONTHS[i].y, MONTHS[i].m + 1, 0).getDate();
+	const lastDay = (i) => (i === LAST ? TODAY : dim(i));
+
+	function mulberry(a) {
+		return () => {
+			a |= 0; a = (a + 0x6d2b79f5) | 0;
+			let t = Math.imul(a ^ (a >>> 15), 1 | a);
+			t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+			return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+		};
+	}
+	const r2 = (v) => Math.round(v * 100) / 100;
+	const sum = (a) => a.reduce((x, y) => x + y, 0);
+	const median = (a) => {
+		if (!a.length) return 0;
+		const s = [...a].sort((x, y) => x - y), h = s.length >> 1;
+		return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2;
+	};
+
+	const CATS = [
+		{ n: 'Housing', c: '#f7768e', base: 2100, vol: 0, ticket: 9999, pool: ['Rent'] },
+		{ n: 'Takeouts', c: '#bb9af7', base: 600, vol: 0.3, ticket: 34, pool: ['Chipotle', 'Sweetgreen', 'Ramen shop', 'Thai Basil', 'Coffee bar', 'Pizza place', 'Taqueria'] },
+		{ n: 'Grocery', c: '#f295c5', base: 330, vol: 0.25, ticket: 68, pool: ["Trader Joe's", 'Whole Foods', 'Costco', 'H Mart'] },
+		{ n: 'Travel', c: '#6f8fe8', base: 0, vol: 0, ticket: 420, pool: ['Airline', 'Hotel', 'Airbnb', 'Rental car'] },
+		{ n: 'Personal', c: '#7dcfff', base: 300, vol: 0.6, ticket: 58, pool: ['Target', 'Amazon', 'Uniqlo', 'Barber'] },
+		{ n: 'Health', c: '#2bb673', base: 0, vol: 0, ticket: 90, pool: ['Pharmacy', 'Dental office', 'Clinic copay'] },
+		{ n: 'Recreation', c: '#4cc9b0', base: 150, vol: 0.6, ticket: 42, pool: ['Movie theater', 'Steam', 'Climbing gym', 'Concert tickets'] },
+		{ n: 'Transport', c: '#ffd27f', base: 130, vol: 0.4, ticket: 36, pool: ['Gas station', 'Transit card', 'Parking'] },
+		{ n: 'Subscription', c: '#ffd5d2', base: 110, vol: 0.2, ticket: 22, pool: ['Spotify', 'Netflix', 'iCloud', 'Prime'] },
+		{ n: 'Utilities', c: '#ff9e64', base: 95, vol: 0.5, ticket: 60, pool: ['Electric', 'Internet', 'Phone'] },
+		{ n: 'Other', c: '#c0794f', base: 70, vol: 0.9, ticket: 45, pool: ['Gift', 'Post office', 'Hardware store'] }
+	];
+	const K = Object.fromEntries(CATS.map((c, k) => [c.n, k]));
+	const CARDS = ['Card A', 'Card B', 'Card C'];
+
+	const rnd = mulberry(11);
+	const spend = CATS.map(() => new Array(N).fill(0));
+	const income = new Array(N).fill(0);
+	for (let i = 0; i < N; i++) {
+		CATS.forEach((c, k) => {
+			let v;
+			if (c.n === 'Housing') v = i < 12 ? 2100 : i < 24 ? 2185 : 2250;
+			else if (c.n === 'Travel') v = rnd() < 0.3 ? 300 + rnd() * 1100 : rnd() * 70;
+			else if (c.n === 'Health') v = rnd() < 0.4 ? 90 + rnd() * 460 : 20 + rnd() * 40;
+			else v = c.base * (1 + c.vol * (rnd() * 2 - 1));
+			spend[k][i] = r2(v);
+		});
+		income[i] = r2(7150 + rnd() * 350 + (MONTHS[i].m === 6 ? 3800 : 0));
+	}
+	spend[K.Takeouts][29] = r2(spend[K.Takeouts][29] * 2.1);
+	spend[K.Travel][30] = 1840;
+	spend[K.Housing][32] += 1650;
+	CATS.forEach((c, k) => {
+		if (c.n !== 'Housing') spend[k][LAST] = r2(spend[k][LAST] * (c.n === 'Takeouts' ? 1.3 : 0.7));
+	});
+	spend[K.Travel][LAST] = 0;
+
+	const spent = (i) => sum(CATS.map((_, k) => spend[k][i]));
+	const saved = (i) => income[i] - spent(i);
+	const typical = (k, i) => median(spend[k].slice(Math.max(0, i - 12), i));
+	const typSpent = (i) => median(Array.from({ length: Math.min(12, i) }, (_, j) => spent(i - 1 - j)));
+	const typIncome = (i) => median(income.slice(Math.max(0, i - 12), i));
+
+	// Accounts and balances.
+	const ACCTS = [
+		{ n: 'Checking', g: 'Cash', start: 9000, drift: 0, mkt: false, noise: 2400 },
+		{ n: 'High-yield savings', g: 'Cash', start: 36000, drift: 520, mkt: false, noise: 150 },
+		{ n: 'Brokerage', g: 'Investments · taxable', start: 52000, drift: 900, mkt: true },
+		{ n: '401(k)', g: 'Investments · tax-advantaged', start: 61000, drift: 1500, mkt: true },
+		{ n: 'Roth IRA', g: 'Investments · tax-advantaged', start: 21000, drift: 580, mkt: true },
+		{ n: 'HSA', g: 'Investments · tax-advantaged', start: 7000, drift: 300, mkt: true },
+		{ n: 'Card A', g: 'Credit cards', start: 1400, liab: true, noise: 600 },
+		{ n: 'Card B', g: 'Credit cards', start: 700, liab: true, noise: 300 },
+		{ n: 'Card C', g: 'Credit cards', start: 300, liab: true, noise: 200 }
+	];
+	const GROUPS = ['Cash', 'Investments · taxable', 'Investments · tax-advantaged', 'Credit cards'];
+	const mr = mulberry(29);
+	const ret = Array.from({ length: N }, () => 0.007 + (mr() * 2 - 1) * 0.03);
+	const bal = ACCTS.map((a) => {
+		const s = new Array(N);
+		let v = a.start;
+		for (let i = 0; i < N; i++) {
+			if (a.liab) v = Math.max(40, a.start + (mr() * 2 - 1) * a.noise);
+			else if (a.mkt) v = v * (1 + ret[i]) + a.drift;
+			else v = v + a.drift + (a.noise ? (mr() * 2 - 1) * a.noise * 0.3 : 0);
+			s[i] = r2(v);
+		}
+		return s;
+	});
+	const logged = new Set(['Checking', 'High-yield savings', 'Brokerage', '401(k)', 'Card A', 'Card B']);
+	ACCTS.forEach((a, j) => { if (!logged.has(a.n)) bal[j][LAST] = bal[j][LAST - 1]; });
+	const CARD_B_LEDGER = 712.4;
+	bal[K2('Card B')][LAST] = 700;
+	function K2(n) { return ACCTS.findIndex((a) => a.n === n); }
+	const signed = (j, i) => (ACCTS[j].liab ? -bal[j][i] : bal[j][i]);
+	const nw = (i) => sum(ACCTS.map((_, j) => signed(j, i)));
+	const assets = (i) => sum(ACCTS.map((a, j) => (a.liab ? 0 : bal[j][i])));
+	const liabs = (i) => sum(ACCTS.map((a, j) => (a.liab ? bal[j][i] : 0)));
+
+	// Transactions, derived from the category totals so every list sums to its table cell.
+	const txCache = {};
+	function txns(i) {
+		if (txCache[i]) return txCache[i];
+		const rr = mulberry(1000 + i), md = lastDay(i), out = [];
+		let id = 0;
+		const push = (t) => out.push({ id: `${i}-${id++}`, pending: false, ...t });
+		CATS.forEach((c, k) => {
+			const tot = spend[k][i];
+			if (tot <= 0) return;
+			if (c.n === 'Housing') {
+				const rent = i < 12 ? 2100 : i < 24 ? 2185 : 2250;
+				push({ day: 1, payee: 'Rent', cat: c.n, amt: -rent, account: 'Checking', kind: 'spend' });
+				if (tot > rent) push({ day: 12, payee: 'Security deposit', cat: c.n, amt: -r2(tot - rent), account: 'Checking', kind: 'spend' });
+				return;
+			}
+			const n = Math.max(1, Math.min(9, Math.round(tot / c.ticket)));
+			const w = Array.from({ length: n }, () => 0.4 + rr()), ws = sum(w);
+			let acc = 0;
+			for (let j = 0; j < n; j++) {
+				const a = j === n - 1 ? r2(tot - acc) : r2((tot * w[j]) / ws);
+				acc += a;
+				const day = 1 + Math.floor(rr() * md);
+				const account = c.n === 'Utilities' ? 'Checking' : CARDS[Math.floor(rr() * 3)];
+				push({ day, payee: c.pool[Math.floor(rr() * c.pool.length)], cat: c.n, amt: -a, account, kind: 'spend', pending: i === LAST && day >= TODAY - 3 && rr() < 0.55 });
+			}
+		});
+		const bonus = MONTHS[i].m === 6 ? 3800 : 0;
+		const half = r2((income[i] - bonus) / 2);
+		push({ day: 1, payee: 'Employer · paycheck', cat: 'Paycheck', amt: half, account: 'Checking', kind: 'income' });
+		push({ day: 15, payee: 'Employer · paycheck', cat: 'Paycheck', amt: r2(income[i] - bonus - half), account: 'Checking', kind: 'income' });
+		if (bonus) push({ day: 15, payee: 'Employer · bonus', cat: 'Paycheck', amt: bonus, account: 'Checking', kind: 'income' });
+		push({ day: 18, payee: 'Card A payment', cat: 'Transfer', amt: r2(900 + rr() * 700), account: 'Checking → Card A', kind: 'transfer' });
+		push({ day: 16, payee: 'To high-yield savings', cat: 'Transfer', amt: 1500, account: 'Checking → Savings', kind: 'transfer' });
+		out.sort((a, b) => b.day - a.day || a.kind.localeCompare(b.kind));
+		return (txCache[i] = out);
+	}
+
+	const money = (v, o = {}) => {
+		const a = Math.abs(v);
+		const s = a.toLocaleString('en-US', { minimumFractionDigits: o.cents ? 2 : 0, maximumFractionDigits: o.cents ? 2 : 0 });
+		return `${v < 0 ? '−' : o.sign && v > 0 ? '+' : ''}$${s}`;
+	};
+	const kfmt = (v) => (Math.abs(v) >= 1000 ? `${v < 0 ? '−' : ''}$${(Math.abs(v) / 1000).toFixed(Math.abs(v) >= 100000 ? 0 : 1)}k` : money(v));
+	const pct = (v, sign = true) => `${v < 0 ? '−' : sign && v > 0 ? '+' : ''}${Math.abs(Math.round(v * 100))}%`;
+	const catColor = (n) => (K[n] != null ? CATS[K[n]].c : n === 'Paycheck' ? 'var(--f-save)' : 'var(--ink-3)');
+	const dayLabel = (i, d) => new Date(MONTHS[i].y, MONTHS[i].m, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+	const heat = (ratio) => {
+		if (!isFinite(ratio)) return 'var(--inset)';
+		if (ratio >= 1) return `rgba(var(--hot), ${Math.min(0.62, (ratio - 1) * 0.55).toFixed(3)})`;
+		return `rgba(var(--cool), ${Math.min(0.28, (1 - ratio) * 0.3).toFixed(3)})`;
+	};
+	const ratioOf = (k, i) => {
+		const t = typical(k, i);
+		return t > 20 ? spend[k][i] / t : spend[k][i] > 150 ? 3 : 1;
+	};
+
+	const S = {
+		page: 'dashboard', month: LAST, cat: null, type: 'all', pendingOnly: false, q: '', view: 'list', day: null,
+		gran: 'month', cfYear: 2026, hlCat: null, range: '1Y', logOpen: false, logVals: {}, draft: false, from: null,
+		flash: [], toast: null
+	};
+	const HISTORY = [];
+
+	const ICON = {
+		dashboard: '<rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/>',
+		transactions: '<path d="M2 4h12M2 8h12M2 12h8"/>',
+		cashflow: '<path d="M3 14V8M7 14V3M11 14V6M14 14H2"/>',
+		accounts: '<path d="M2 6l6-4 6 4M3 7v6M6.5 7v6M9.5 7v6M13 7v6M2 14h12"/>',
+		planning: '<path d="M3 14V2M3 3h9l-2 3 2 3H3"/>',
+		settings: '<path d="M2 4h7M12 4h2M2 12h2M7 12h7"/><circle cx="10.5" cy="4" r="1.6"/><circle cx="5.5" cy="12" r="1.6"/>'
+	};
+	const NAV = [['dashboard', 'Dashboard'], ['transactions', 'Transactions'], ['cashflow', 'Cash flow'], ['accounts', 'Accounts'], ['planning', 'Planning'], ['settings', 'Settings']];
+
+	function renderSide() {
+		return `<div class="brand"><span class="bdot"></span>Yala</div>
+			<div class="qa"><button class="btn accent wide" data-act="quickadd">+ Add entry</button></div>
+			${NAV.map(([id, l]) => `<button class="nav ${S.page === id ? 'on' : ''}" data-act="nav:${id}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ICON[id]}</svg>${l}</button>`).join('')}
+			<div class="foot"><span>Focus month</span><b>${labL(S.month)}</b><span>Shared by every page</span></div>`;
+	}
+
+	function stepper(label, act, canPrev, canNext) {
+		return `<div class="stepper"><button data-act="${act}:-1" ${canPrev ? '' : 'disabled'} aria-label="Previous">‹</button><span>${label}</span><button data-act="${act}:1" ${canNext ? '' : 'disabled'} aria-label="Next">›</button></div>`;
+	}
+	const seg = (opts, cur, act) => `<div class="seg">${opts.map(([v, l]) => `<button class="${cur === v ? 'on' : ''}" data-act="${act}:${v}">${l}</button>`).join('')}</div>`;
+	const crumb = () => (S.from ? `<button class="crumb" data-act="back">‹ Back to ${S.from}</button>` : '');
+
+	// ---------- Transactions ----------
+	function pageTransactions() {
+		const i = S.month, all = txns(i);
+		const q = S.q.trim().toLowerCase();
+		const rows = all.filter((t) => (S.type === 'all' || t.kind === S.type) && (!S.cat || t.cat === S.cat) && (!S.pendingOnly || t.pending) && (!S.day || t.day === S.day) && (!q || t.payee.toLowerCase().includes(q)));
+		const types = [['all', 'All'], ['spend', 'Spending'], ['income', 'Income'], ['transfer', 'Transfers']];
+		const chips = `<div class="chips">
+			${types.map(([v, l]) => `<button class="chip ${S.type === v ? 'on' : ''}" data-act="type:${v}">${l}</button>`).join('')}
+			<button class="chip ${S.pendingOnly ? 'on' : ''}" data-act="pending">Pending only</button>
+			${S.cat ? `<button class="chip on" data-act="clearcat"><span class="dot" style="background:${catColor(S.cat)}"></span>${S.cat}<span class="x">×</span></button>` : ''}
+			${S.day ? `<button class="chip on" data-act="clearday">${dayLabel(i, S.day)}<span class="x">×</span></button>` : ''}
+			<input class="search" id="q" placeholder="Search payees" value="${S.q.replace(/"/g, '&quot;')}" aria-label="Search payees">
+		</div>`;
+		let body;
+		if (S.view === 'calendar') body = calendar(i);
+		else {
+			const days = [...new Set(rows.map((t) => t.day))].sort((a, b) => b - a);
+			const draft = S.draft ? draftRow(i) : '';
+			body = `<div class="list">${draft}${days.length ? days.map((d) => {
+				const g = rows.filter((t) => t.day === d);
+				const out = sum(g.filter((t) => t.kind === 'spend').map((t) => t.amt));
+				return `<div class="dayh"><span>${dayLabel(i, d)}</span><span class="num">${out ? money(out, { cents: true }) : ''}</span></div>${g.map(txRow).join('')}`;
+			}).join('') : '<div class="empty">No transactions match these filters.</div>'}</div>`;
+		}
+		const shown = rows.filter((t) => t.kind === 'spend');
+		return `${crumb()}<div class="top"><h2>Transactions</h2>
+			${stepper(labL(i), 'month', i > 0, i < LAST)}
+			${seg([['list', 'List'], ['calendar', 'Calendar']], S.view, 'view')}
+			<button class="btn accent" data-act="draft">+ Add entry</button></div>
+			${chips}
+			<div class="split"><div style="display:grid;gap:8px">${body}
+				<div class="small muted">${rows.length} rows${shown.length ? ` · ${money(sum(shown.map((t) => t.amt)), { cents: true })} spent in view` : ''}</div></div>
+				<div class="rail">${monthCheck(i)}</div></div>`;
+	}
+
+	function txRow(t) {
+		const amt = t.kind === 'transfer' ? `<span class="amt mute">${money(t.amt, { cents: true })}</span>` : `<span class="amt ${t.amt > 0 ? 'pos' : ''}">${money(t.amt, { cents: true, sign: true })}</span>`;
+		return `<div class="tx ${t.isNew ? 'new' : ''}"><span class="dot" style="background:${catColor(t.cat)}"></span>
+			<span class="payee"><span class="t">${t.payee}</span>${t.pending ? '<span class="tag">Pending</span>' : ''}${t.isNew ? '<span class="tag new">Just added</span>' : ''}</span>
+			${K[t.cat] != null ? `<button class="catpill" data-act="cat:${t.cat}">${t.cat}</button>` : `<span class="catpill" style="cursor:default">${t.cat}</span>`}
+			<span class="acct">${t.account}</span>${amt}</div>`;
+	}
+
+	function draftRow(i) {
+		const md = lastDay(i);
+		return `<div class="draft">
+			<select id="d-day" aria-label="Day">${Array.from({ length: md }, (_, d) => `<option value="${d + 1}" ${d + 1 === md ? 'selected' : ''}>${MN[MONTHS[i].m]} ${d + 1}</option>`).join('')}</select>
+			<input id="d-payee" value="Ramen shop" aria-label="Payee">
+			<select id="d-cat" aria-label="Category">${CATS.map((c) => `<option ${c.n === 'Takeouts' ? 'selected' : ''}>${c.n}</option>`).join('')}</select>
+			<input id="d-amt" value="48.20" inputmode="decimal" aria-label="Amount">
+			<select id="d-acct" aria-label="Account">${[...CARDS, 'Checking'].map((a) => `<option ${a === 'Card B' ? 'selected' : ''}>${a}</option>`).join('')}</select>
+			<div class="acts"><button class="btn accent" data-act="draftsave">Save</button><button class="btn" data-act="draftcancel">Cancel</button></div></div>`;
+	}
+
+	function calendar(i) {
+		const { y, m } = MONTHS[i], first = new Date(y, m, 1).getDay(), n = dim(i);
+		const tot = Array(n + 1).fill(0);
+		txns(i).forEach((t) => { if (t.kind === 'spend' && t.cat !== 'Housing') tot[t.day] -= t.amt; });
+		const mx = Math.max(...tot);
+		let cells = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => `<div class="wd">${d}</div>`).join('');
+		cells += Array(first).fill('<div></div>').join('');
+		for (let d = 1; d <= n; d++) {
+			const fut = i === LAST && d > TODAY;
+			const a = mx ? (tot[d] / mx) * 0.5 : 0;
+			cells += `<button ${fut ? 'class="fut" disabled' : `data-act="day:${d}"`} style="${tot[d] ? `background:rgba(var(--hot),${a.toFixed(3)})` : ''}"><span class="dn">${d}</span><span class="dv">${tot[d] ? money(tot[d]) : ''}</span></button>`;
+		}
+		return `<div class="list"><div class="cal">${cells}</div><div class="dayh" style="border-top:1px solid var(--grid)"><span>Shaded by day total, rent excluded. Click a day to list it.</span><span></span></div></div>`;
+	}
+
+	function monthCheck(i) {
+		const inc = income[i], sp = spent(i), sv = inc - sp, ti = typIncome(i), ts = typSpent(i);
+		const d = (v, t, goodUp) => {
+			if (!t) return '<span class="d muted">·</span>';
+			const r = v / t - 1, cls = Math.abs(r) < 0.05 ? 'muted' : (r > 0) === goodUp ? 'good' : 'bad';
+			return `<span class="d ${cls}">${pct(r)}</span>`;
+		};
+		const soFar = i === LAST ? ' so far' : '';
+		const glance = `<div class="card"><h4>${labL(i)}${soFar}<span class="r muted">vs typical</span></h4>
+			<div class="kv"><span class="l">Income</span><span class="v">${money(inc)}</span>${d(inc, ti, true)}
+			<span class="l">Spent</span><span class="v">${money(sp)}</span>${d(sp, ts, false)}
+			<span class="l">Saved</span><span class="v ${sv < 0 ? 'bad' : ''}">${money(sv)}</span>${d(sv, ti - ts, true)}
+			<span class="l">Income used</span><span class="v">${Math.round((sp / inc) * 100)}%</span><span class="d muted">${Math.round((ts / ti) * 100)}%</span></div></div>`;
+
+		const order = CATS.map((c, k) => k).sort((a, b) => spend[b][i] - spend[a][i]);
+		// Housing is left out of the scale so it can't flatten every other bar; its own bar is clamped.
+		const scale = Math.max(...order.filter((k) => CATS[k].n !== 'Housing').map((k) => Math.max(spend[k][i], typical(k, i))), 1);
+		const w = (v) => Math.min(100, (v / scale) * 100).toFixed(1);
+		const cats = `<div class="card"><h4>Categories<span class="r muted">bar = this month · tick = typical</span></h4><div class="cats">
+			${order.map((k) => {
+				const v = spend[k][i], t = typical(k, i), r = t > 20 ? v / t - 1 : 0;
+				const flag = t > 20 && r > 0.25 && v - t > 40 ? `<span class="d bad">${pct(r)}</span>` : t > 60 && r < -0.5 ? `<span class="d muted">${pct(r)}</span>` : '<span class="d"></span>';
+				const flash = S.flash.includes(`cat-${CATS[k].n}`) ? 'flash' : '';
+				return `<button class="catrow ${S.cat === CATS[k].n ? 'on' : ''} ${flash}" data-act="cat:${CATS[k].n}"><span class="dot" style="background:${CATS[k].c}"></span><span class="n">${CATS[k].n}</span>
+					<span class="track"><i style="width:${w(v)}%;background:${CATS[k].c}"></i>${t && t <= scale ? `<b style="left:${w(t)}%"></b>` : ''}</span>
+					<span class="v">${money(v)}</span>${flag}</button>`;
+			}).join('')}</div></div>`;
+
+		const y = MONTHS[i].y;
+		let grid = '<span></span>' + MN.map((mm, m) => `<span class="h ${m === MONTHS[i].m ? 'on' : ''}">${mm[0]}</span>`).join('');
+		CATS.forEach((c, k) => {
+			grid += `<span class="rl">${c.n}</span>`;
+			for (let m = 0; m < 12; m++) {
+				const j = idxOf(y, m);
+				if (!valid(j)) { grid += '<button class="fut" disabled aria-hidden="true"></button>'; continue; }
+				const on = j === i, cell = on && S.cat === c.n;
+				const flash = S.flash.includes(`heat-${c.n}`) && on ? 'flash' : '';
+				grid += `<button class="${cell ? 'cell' : on ? 'col' : ''} ${flash}" style="background:${heat(ratioOf(k, j))}" data-act="heat:${j}:${c.n}" title="${c.n} · ${lab(j)} · ${money(spend[k][j])}"></button>`;
+			}
+		});
+		const strip = `<div class="card"><h4>${y} by month<span class="r muted">click a cell to open it</span></h4><div class="mini">${grid}</div>
+			<div class="legend"><span><i style="background:rgba(var(--hot),.5)"></i>above typical</span><span><i style="background:rgba(var(--cool),.25)"></i>below</span></div></div>`;
+
+		const bl = i === LAST
+			? `<div class="card"><h4>Balances<span class="r muted">${lab(i)}</span></h4>
+				<div class="small">${logged.size} of ${ACCTS.length} accounts logged. <span class="bad">Card B is off by ${money(CARD_B_LEDGER - 700, { cents: true })}.</span></div>
+				<button class="btn" data-act="gologbal">Log balances</button></div>`
+			: `<div class="card"><h4>Balances<span class="r muted">${lab(i)}</span></h4><div class="small"><span class="tag ok">Reconciled</span> All ${ACCTS.length} accounts logged and matching.</div></div>`;
+		return glance + cats + strip + bl;
+	}
+
+	// ---------- Cash flow ----------
+	function periods() {
+		if (S.gran === 'month') {
+			const y = MONTHS[S.month].y;
+			return MN.map((mm, m) => {
+				const j = idxOf(y, m);
+				return { label: mm, idxs: valid(j) ? [j] : [], sel: j === S.month, key: j, long: valid(j) ? labL(j) : `${MNL[m]} ${y}` };
+			});
+		}
+		return [2023, 2024, 2025, 2026].map((y) => {
+			const idxs = Array.from({ length: 12 }, (_, m) => idxOf(y, m)).filter(valid);
+			const part = idxs.length < 12;
+			return { label: `${y}${part ? '*' : ''}`, idxs, sel: y === S.cfYear, key: y, long: part ? `${y} (${idxs.length} months)` : String(y) };
+		});
+	}
+	const agg = (p) => {
+		const inc = sum(p.idxs.map((j) => income[j])), sp = sum(p.idxs.map(spent));
+		return { inc, sp, sv: inc - sp, n: p.idxs.length, cats: CATS.map((_, k) => sum(p.idxs.map((j) => spend[k][j]))) };
+	};
+
+	function barChart(ps) {
+		const W = 700, H = 230, L = 48, B = 26, T = 12, R = 8;
+		const as = ps.map(agg);
+		const mx = Math.max(...as.map((a) => Math.max(a.inc, a.sp)), 1);
+		const step = mx > 60000 ? 20000 : mx > 20000 ? 10000 : 2500;
+		const top = Math.ceil(mx / step) * step;
+		const y = (v) => T + (H - T - B) * (1 - v / top);
+		const gw = (W - L - R) / ps.length, bw = Math.min(18, gw * 0.28);
+		let s = '';
+		for (let v = 0; v <= top; v += step) s += `<line class="gl" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${kfmt(v)}</text>`;
+		const pts = [];
+		ps.forEach((p, n) => {
+			const a = as[n], cx = L + gw * n + gw / 2, op = p.sel ? 1 : 0.42;
+			if (p.sel) s += `<rect x="${L + gw * n + 2}" y="${T}" width="${gw - 4}" height="${H - T - B}" rx="6" fill="var(--surface-2)"/>`;
+			if (!a.n) s += `<rect x="${cx - bw - 1}" y="${y(top * 0.18)}" width="${bw * 2 + 2}" height="${y(0) - y(top * 0.18)}" rx="3" fill="none" stroke="var(--grid)" stroke-dasharray="3 3"/>`;
+			else {
+				s += `<rect x="${cx - bw - 1}" y="${y(a.inc)}" width="${bw}" height="${y(0) - y(a.inc)}" rx="3" fill="var(--f-income)" opacity="${op}"/>`;
+				s += `<rect x="${cx + 1}" y="${y(a.sp)}" width="${bw}" height="${y(0) - y(a.sp)}" rx="3" fill="var(--f-spend)" opacity="${op}"/>`;
+				pts.push([cx, y(Math.max(0, a.sv)), p.sel]);
+			}
+			s += `<text x="${cx}" y="${H - 8}" text-anchor="middle" style="${p.sel ? 'fill:var(--ink);font-weight:700' : ''}">${p.label}</text>`;
+			if (a.n) s += `<rect class="hit" x="${L + gw * n}" y="${T}" width="${gw}" height="${H - T}" data-act="cfsel:${p.key}"><title>${p.long}</title></rect>`;
+		});
+		if (pts.length > 1) s += `<polyline points="${pts.map((p) => p.slice(0, 2).join(',')).join(' ')}" fill="none" stroke="var(--f-save)" stroke-width="2" opacity=".8" pointer-events="none"/>`;
+		pts.forEach(([x, yy, sel]) => (s += `<circle cx="${x}" cy="${yy}" r="${sel ? 4.5 : 3}" fill="var(--f-save)" stroke="var(--surface)" stroke-width="1.5" pointer-events="none"/>`));
+		return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Income and spending by period">${s}</svg>`;
+	}
+
+	function pageCashflow() {
+		const ps = periods(), sel = ps.find((p) => p.sel) || ps.filter((p) => p.idxs.length).at(-1);
+		const si = ps.indexOf(sel), a = agg(sel);
+		const prev = ps.slice(0, si).reverse().find((p) => p.idxs.length);
+		const pa = prev ? agg(prev) : null;
+		const per = (x, n) => (S.gran === 'year' ? x / n : x);
+		const dl = (cur, old, goodUp, fmt = (v) => pct(v)) => {
+			if (!old) return '<span class="muted">no earlier period</span>';
+			const r = cur / old - 1, cls = Math.abs(r) < 0.03 ? 'muted' : (r > 0) === goodUp ? 'good' : 'bad';
+			return `<span class="${cls}">${fmt(r)}</span> vs ${prev.label.replace('*', '')}${S.gran === 'year' ? ' per month' : ''}`;
+		};
+		const rate = a.inc ? a.sv / a.inc : 0, prate = pa && pa.inc ? pa.sv / pa.inc : null;
+		const stats = `<div class="stats">
+			<div class="stat"><span class="l">Income</span><span class="v">${money(a.inc)}</span><span class="d">${pa ? dl(per(a.inc, a.n), per(pa.inc, pa.n), true) : dl(0, 0)}</span></div>
+			<div class="stat"><span class="l">Spent</span><span class="v">${money(a.sp)}</span><span class="d">${pa ? dl(per(a.sp, a.n), per(pa.sp, pa.n), false) : dl(0, 0)}</span></div>
+			<div class="stat"><span class="l">Saved</span><span class="v">${money(a.sv)}</span><span class="d">${pa ? dl(per(a.sv, a.n), per(pa.sv, pa.n), true) : dl(0, 0)}</span></div>
+			<div class="stat"><span class="l">Savings rate</span><span class="v">${Math.round(rate * 100)}%</span><span class="d">${prate != null ? `<span class="${rate >= prate ? 'good' : 'bad'}">${rate >= prate ? '+' : '−'}${Math.abs(Math.round((rate - prate) * 100))} pts</span> vs ${prev.label.replace('*', '')}` : ''}</span></div></div>`;
+
+		const order = CATS.map((_, k) => k).sort((x, y) => a.cats[y] - a.cats[x]);
+		const where = `<div class="card"><h4>Where it went<span class="r muted">${sel.long}</span></h4><div class="cats">
+			${order.filter((k) => a.cats[k] > 0).map((k) => `<button class="catrow" data-act="${S.gran === 'month' ? `heat:${sel.key}:${CATS[k].n}` : `cfcell:${k}:${sel.key}`}" style="grid-template-columns:9px 86px minmax(0,1fr) 62px 36px">
+				<span class="dot" style="background:${CATS[k].c}"></span><span class="n">${CATS[k].n}</span>
+				<span class="track"><i style="width:${((a.cats[k] / a.cats[order[0]]) * 100).toFixed(1)}%;background:${CATS[k].c}"></i></span>
+				<span class="v">${money(a.cats[k])}</span><span class="d muted">${Math.round((a.cats[k] / a.sp) * 100)}%</span></button>`).join('')}</div>
+			<div class="small muted">The Sankey from Activity · Year becomes a toggle on this card.</div></div>`;
+
+		const avgAll = CATS.map((_, k) => sum(spend[k]) / N);
+		const cellRatio = (k, p) => (S.gran === 'month' ? ratioOf(k, p.idxs[0]) : avgAll[k] > 5 ? agg(p).cats[k] / p.idxs.length / avgAll[k] : 1);
+		const valids = ps.filter((p) => p.idxs.length);
+		const head = `<tr><th>Category</th>${ps.map((p) => `<th class="${p.sel ? 'on' : ''}">${p.label}</th>`).join('')}<th>Total</th><th>${S.gran === 'month' ? 'Avg / mo' : 'Avg / yr'}</th></tr>`;
+		const rows = CATS.map((c, k) => {
+			const vals = ps.map((p) => (p.idxs.length ? sum(p.idxs.map((j) => spend[k][j])) : null));
+			const tot = sum(vals.filter((v) => v != null));
+			return `<tr class="${S.hlCat === c.n ? 'hl' : ''}"><td class="lab"><span class="dot" style="background:${c.c}"></span>${c.n}</td>
+				${ps.map((p, n) => `<td class="${p.sel ? 'col' : ''}">${vals[n] == null ? '<button class="fut" disabled>&nbsp;</button>' : `<button style="background:${heat(cellRatio(k, p))}" data-act="cfcell:${k}:${p.key}" title="${c.n} · ${p.long}">${Math.round(vals[n]).toLocaleString('en-US')}</button>`}</td>`).join('')}
+				<td class="tot">${Math.round(tot).toLocaleString('en-US')}</td><td class="tot">${Math.round(tot / valids.length).toLocaleString('en-US')}</td></tr>`;
+		}).join('');
+		const foot = (label, f, fmt) => {
+			const vals = ps.map((p) => (p.idxs.length ? f(agg(p)) : null));
+			return `<tr class="foot"><td class="lab">${label}</td>${ps.map((p, n) => `<td class="fv ${p.sel ? 'on' : ''}">${vals[n] == null ? '' : fmt(vals[n])}</td>`).join('')}<td class="fv"></td><td class="fv"></td></tr>`;
+		};
+		const nf = (v) => `${v < 0 ? '−' : ''}${Math.abs(Math.round(v)).toLocaleString('en-US')}`;
+		const table = `<div class="card"><h4>Category by ${S.gran === 'month' ? `month · ${MONTHS[S.month].y}` : 'year'}<span class="r muted">shaded by distance from typical · click a cell ${S.gran === 'month' ? 'for its transactions' : 'to open that year'}</span></h4>
+			<div class="heat-wrap"><table class="heat"><thead>${head}</thead><tbody>${rows}<tr class="sep"><td></td></tr>
+			${foot('Spent', (x) => x.sp, nf)}${foot('Income', (x) => x.inc, nf)}${foot('Saved', (x) => x.sv, nf)}${foot('Income used', (x) => (x.inc ? x.sp / x.inc : 0), (v) => `${Math.round(v * 100)}%`)}
+			</tbody></table></div></div>`;
+
+		const y = MONTHS[S.month].y;
+		const nav = S.gran === 'month' ? stepper(String(y), 'cfyear', y > 2023, y < 2026) : '';
+		return `${crumb()}<div class="top"><h2>Cash flow</h2>${seg([['month', 'Month'], ['year', 'Year']], S.gran, 'gran')}${nav}</div>
+			<div class="split wide-right"><div class="card"><h4>${S.gran === 'month' ? `Income and spending · ${y}` : 'Income and spending by year'}<span class="r"><span class="legend"><span><i style="background:var(--f-income)"></i>Income</span><span><i style="background:var(--f-spend)"></i>Spent</span><span><i style="background:var(--f-save);height:3px"></i>Saved</span></span></span></h4>${barChart(ps)}
+			<div class="small muted">Click a ${S.gran === 'month' ? 'month' : 'year'} to select it. ${S.gran === 'month' ? 'The selection is the focus month on every page.' : '* partial year.'}</div></div>${where}</div>
+			${stats}${table}`;
+	}
+
+	// ---------- Accounts ----------
+	function nwChart() {
+		const span = S.range === '6M' ? 6 : S.range === '1Y' ? 12 : N;
+		const from = N - span, xs = Array.from({ length: span }, (_, n) => from + n);
+		const W = 700, H = 230, L = 52, B = 26, T = 14, R = 12;
+		const vals = xs.flatMap((i) => [nw(i), assets(i)]);
+		const lo = Math.floor((Math.min(...vals) * 0.96) / 10000) * 10000, hi = Math.ceil((Math.max(...vals) * 1.02) / 10000) * 10000;
+		const x = (n) => L + ((W - L - R) * n) / Math.max(1, span - 1), y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+		const st = (hi - lo) / 4;
+		let s = '';
+		for (let v = lo; v <= hi + 1; v += st) s += `<line class="gl" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${kfmt(v)}</text>`;
+		const line = xs.map((i, n) => `${x(n).toFixed(1)},${y(nw(i)).toFixed(1)}`).join(' ');
+		s += `<polygon points="${x(0)},${y(lo)} ${line} ${x(span - 1)},${y(lo)}" fill="var(--f-income)" opacity=".16"/>`;
+		s += `<polyline points="${xs.map((i, n) => `${x(n).toFixed(1)},${y(assets(i)).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--f-asset)" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+		s += `<polyline points="${line}" fill="none" stroke="var(--f-income)" stroke-width="2.2"/>`;
+		const every = span <= 12 ? 1 : 3;
+		xs.forEach((i, n) => {
+			if (n % every === 0 || i === LAST) s += `<text x="${x(n)}" y="${H - 8}" text-anchor="middle">${MN[MONTHS[i].m]}${MONTHS[i].m === 0 || n === 0 ? ` ${String(MONTHS[i].y).slice(2)}` : ''}</text>`;
+		});
+		const fi = xs.indexOf(S.month);
+		if (fi >= 0) s += `<line x1="${x(fi)}" x2="${x(fi)}" y1="${T}" y2="${H - B}" stroke="var(--ink-3)" stroke-dasharray="2 3"/><circle cx="${x(fi)}" cy="${y(nw(S.month))}" r="4.5" fill="var(--f-income)" stroke="var(--surface)" stroke-width="2"/>`;
+		const cw = (W - L - R) / Math.max(1, span - 1);
+		xs.forEach((i, n) => (s += `<rect class="hit" x="${x(n) - cw / 2}" y="${T}" width="${cw}" height="${H - T - B}" data-act="nwmonth:${i}"><title>${lab(i)} · ${money(nw(i))}</title></rect>`));
+		return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Net worth over time">${s}</svg>`;
+	}
+
+	function bridge(i) {
+		if (i < 1) return '';
+		const d = nw(i) - nw(i - 1), sv = saved(i), other = d - sv;
+		const mx = Math.max(Math.abs(d), Math.abs(sv), Math.abs(other), 1);
+		const bar = (label, v, col, act) => `<button class="catrow" ${act ? `data-act="${act}"` : ''} style="grid-template-columns:118px minmax(0,1fr) 76px;${act ? '' : 'cursor:default'}">
+			<span class="n">${label}</span><span class="track" style="height:10px"><i style="width:${((Math.abs(v) / mx) * 100).toFixed(1)}%;background:${col};${v < 0 ? 'opacity:.55' : ''}"></i></span><span class="v ${v < 0 ? 'bad' : ''}">${money(v, { sign: true })}</span></button>`;
+		return `<div class="card"><h4>How net worth moved<span class="r muted">${lab(i - 1)} → ${lab(i)}</span></h4>
+			<div class="cats">${bar('Saved from cash flow', sv, 'var(--f-save)', 'bridgesaved')}${bar('Markets & other', other, 'var(--f-market)')}${bar('Net worth change', d, 'var(--f-income)')}</div>
+			<div class="small muted">Saved comes from your transactions, so a logging mistake shows up here as an odd split.</div></div>`;
+	}
+
+	function spark(vals, col) {
+		const W = 96, H = 26, lo = Math.min(...vals), hi = Math.max(...vals), rg = hi - lo || 1;
+		const pts = vals.map((v, n) => `${((W * n) / (vals.length - 1)).toFixed(1)},${(H - 3 - ((H - 6) * (v - lo)) / rg).toFixed(1)}`).join(' ');
+		return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.6"/></svg>`;
+	}
+
+	function status(j, i) {
+		const a = ACCTS[j];
+		if (i !== LAST) return '<span class="tag ok">Logged</span>';
+		if (!logged.has(a.n)) return '<span class="tag">Not logged</span>';
+		if (a.n === 'Card B') return `<span class="tag bad">Off ${money(CARD_B_LEDGER - bal[j][i], { cents: true })}</span>`;
+		return '<span class="tag ok">Logged</span>';
+	}
+
+	function logPanel() {
+		const i = LAST;
+		let rows = '<div class="logrow hd"><span>Account</span><span class="r">' + lab(i - 1) + '</span><span class="r">' + lab(i) + '</span><span class="r">Change</span><span>Check</span></div>';
+		let total = 0, carried = 0;
+		GROUPS.forEach((g) => {
+			rows += `<div class="logrow"><span class="grp">${g}</span></div>`;
+			ACCTS.forEach((a, j) => {
+				if (a.g !== g) return;
+				const prev = bal[j][i - 1];
+				const raw = S.logVals[a.n] ?? (logged.has(a.n) ? String(bal[j][i].toFixed(2)) : '');
+				const v = raw === '' ? null : Number(raw);
+				const use = v == null || isNaN(v) ? prev : v;
+				if (v == null) carried++;
+				total += a.liab ? -use : use;
+				const ch = v == null || isNaN(v) ? null : v - prev;
+				let chk = '<span class="muted small">Carries last month</span>';
+				if (v != null && a.liab) chk = Math.abs(v - (a.n === 'Card B' ? CARD_B_LEDGER : v)) < 0.005 ? '<span class="tag ok">Matches ledger</span>' : `<span class="tag bad">Ledger says ${money(CARD_B_LEDGER, { cents: true })}</span>`;
+				else if (v != null) chk = '<span class="tag ok">Logged</span>';
+				rows += `<div class="logrow"><span>${a.n}</span><span class="r muted">${money(prev, { cents: true })}</span>
+					<input id="log-${j}" data-log="${a.n}" value="${raw}" placeholder="${prev.toFixed(2)}" inputmode="decimal" aria-label="${a.n} balance">
+					<span class="r ${ch == null ? 'muted' : ch < 0 !== !!a.liab ? 'bad' : 'good'}">${ch == null ? '·' : money(ch, { cents: true, sign: true })}</span><span>${chk}</span></div>`;
+			});
+		});
+		const d = total - nw(i - 1);
+		return `<div class="logp"><div class="lh"><h3>Log balances · ${labL(i)}</h3><span class="small muted">One row of the Net Worth Tracker</span></div>${rows}
+			<div class="logf"><div><div class="small muted">Net worth</div><div class="big">${money(total)}</div></div>
+			<div><div class="small muted">vs ${lab(i - 1)}</div><div class="big ${d < 0 ? 'bad' : 'good'}">${money(d, { sign: true })}</div></div>
+			<div class="small muted">${carried ? `${carried} account${carried > 1 ? 's' : ''} still carry ${lab(i - 1)}'s balance.` : 'Every account has a balance for this month.'}</div>
+			<div class="sp"><button class="btn" data-act="log">Cancel</button><button class="btn accent" data-act="logsave">Save balances</button></div></div></div>`;
+	}
+
+	function pageAccounts() {
+		const i = S.month, a = assets(i), l = liabs(i);
+		const grp = (g) => ACCTS.map((x, j) => j).filter((j) => ACCTS[j].g === g);
+		const groups = GROUPS.map((g) => {
+			const js = grp(g), tot = sum(js.map((j) => signed(j, i)));
+			return `<div class="acc-group"><div class="acc-h"><span>${g}</span><span class="v">${money(tot)}</span></div>
+				${js.map((j) => {
+					const ch = i > 0 ? signed(j, i) - signed(j, i - 1) : 0;
+					const hist = Array.from({ length: 12 }, (_, n) => signed(j, Math.max(0, i - 11 + n)));
+					return `<div class="acc"><span>${ACCTS[j].n}</span>${spark(hist, ACCTS[j].liab ? 'var(--f-spend)' : 'var(--f-asset)')}<span>${status(j, i)}</span>
+						<span class="b">${money(signed(j, i), { cents: true })}</span><span class="c ${ch < 0 ? 'bad' : ch > 0 ? 'good' : 'muted'}">${money(ch, { sign: true })}</span></div>`;
+				}).join('')}</div>`;
+		}).join('');
+		const split = (label, v, parts, col) => `<div style="display:grid;gap:6px"><div style="display:flex;justify-content:space-between"><span class="l muted">${label}</span><b class="num">${money(v)}</b></div>
+			<div class="track" style="height:10px;display:flex;overflow:hidden">${parts.map(([n, pv], x) => `<span title="${n} · ${money(pv)}" style="width:${((pv / v) * 100).toFixed(1)}%;background:${col[x]}"></span>`).join('')}</div>
+			<div class="legend">${parts.map(([n, pv], x) => `<span><i style="background:${col[x]}"></i>${n} ${Math.round((pv / v) * 100)}%</span>`).join('')}</div></div>`;
+		const byG = (g) => sum(grp(g).map((j) => bal[j][i]));
+		const summary = `<div class="card"><h4>${labL(i)}<span class="r muted">${i === LAST ? 'in progress' : 'month end'}</span></h4>
+			<div class="bigv">${money(nw(i))}</div><div class="small ${nw(i) - nw(Math.max(0, i - 1)) < 0 ? 'bad' : 'good'}">${money(nw(i) - nw(Math.max(0, i - 1)), { sign: true })} this month</div>
+			${split('Assets', a, [['Cash', byG('Cash')], ['Taxable', byG('Investments · taxable')], ['Tax-advantaged', byG('Investments · tax-advantaged')]], ['var(--f-asset)', 'var(--lav)', 'var(--f-save)'])}
+			${split('Liabilities', l, grp('Credit cards').map((j) => [ACCTS[j].n, bal[j][i]]), ['var(--f-spend)', 'var(--f-market)', 'var(--ink-3)'])}</div>`;
+		return `${crumb()}<div class="top"><h2>Accounts</h2>${seg([['6M', '6M'], ['1Y', '1Y'], ['All', 'All']], S.range, 'range')}${stepper(labL(i), 'month', i > 0, i < LAST)}<button class="btn accent" data-act="log">Log balances</button></div>
+			${S.logOpen ? logPanel() : ''}
+			<div class="split wide-right"><div class="card"><h4>Net worth<span class="r"><span class="legend"><span><i style="background:var(--f-income)"></i>Net worth</span><span><i style="background:var(--f-asset);height:2px"></i>Assets</span></span></span></h4>${nwChart()}<div class="small muted">Click the chart to move the focus month.</div></div>
+			<div class="rail">${summary}${bridge(i)}</div></div>${groups}`;
+	}
+
+	// ---------- Dashboard ----------
+	function paceChart() {
+		const cum = (i) => {
+			const a = Array(32).fill(0);
+			txns(i).forEach((t) => { if (t.kind === 'spend') a[t.day] -= t.amt; });
+			for (let d = 1; d < 32; d++) a[d] += a[d - 1];
+			return a;
+		};
+		const now = cum(LAST), prev = cum(LAST - 1), typ = Array(32).fill(0);
+		for (let b = 1; b <= 6; b++) { const c = cum(LAST - b); for (let d = 0; d < 32; d++) typ[d] += c[d] / 6; }
+		const W = 520, H = 190, L = 44, B = 22, T = 10, R = 10, D = 30;
+		const top = Math.ceil(Math.max(now[TODAY], prev[D], typ[D]) / 1000) * 1000;
+		const x = (d) => L + ((W - L - R) * (d - 1)) / (D - 1), y = (v) => T + (H - T - B) * (1 - v / top);
+		let s = '';
+		for (let v = 0; v <= top; v += top / 4) s += `<line class="gl" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${kfmt(v)}</text>`;
+		[1, 8, 15, 22, 30].forEach((d) => (s += `<text x="${x(d)}" y="${H - 6}" text-anchor="middle">${d}</text>`));
+		const pl = (arr, to) => Array.from({ length: to }, (_, n) => `${x(n + 1).toFixed(1)},${y(arr[n + 1]).toFixed(1)}`).join(' ');
+		s += `<polyline points="${pl(typ, D)}" fill="none" stroke="var(--ink-3)" stroke-width="5" opacity=".22" stroke-linecap="round"/>`;
+		s += `<polyline points="${pl(prev, D)}" fill="none" stroke="var(--ink-3)" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+		s += `<polyline points="${pl(now, TODAY)}" fill="none" stroke="var(--f-spend)" stroke-width="2.4"/>`;
+		s += `<circle cx="${x(TODAY)}" cy="${y(now[TODAY])}" r="4.5" fill="var(--f-spend)" stroke="var(--surface)" stroke-width="2"/>`;
+		const diff = now[TODAY] - prev[TODAY];
+		return { svg: `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Cumulative spending this month">${s}</svg>`, now: now[TODAY], diff };
+	}
+
+	function pageDashboard() {
+		const i = LAST, p = paceChart();
+		const nwd = nw(i) - nw(i - 1);
+		const ytd = Array.from({ length: MONTHS[i].m + 1 }, (_, m) => idxOf(2026, m));
+		const ly = Array.from({ length: MONTHS[i].m + 1 }, (_, m) => idxOf(2025, m));
+		const rate = (xs) => sum(xs.map(saved)) / sum(xs.map((j) => income[j]));
+		const pend = txns(i).filter((t) => t.pending).length;
+		const hot = CATS.map((c, k) => k).filter((k) => typical(k, i) > 20 && spend[k][i] / typical(k, i) > 1.25 && spend[k][i] - typical(k, i) > 40);
+		const unl = ACCTS.length - logged.size;
+		const items = [
+			pend && ['P', 'var(--gold)', `${pend} pending transaction${pend > 1 ? 's' : ''}`, 'Waiting to post; confirm or edit', 'att:pending'],
+			unl && ['B', 'var(--f-asset)', `${unl} account${unl > 1 ? 's' : ''} not logged for ${MN[MONTHS[i].m]}`, ACCTS.filter((a) => !logged.has(a.n)).map((a) => a.n).join(', '), 'gologbal'],
+			['!', 'var(--f-spend)', `Card B is off by ${money(CARD_B_LEDGER - 700, { cents: true })}`, 'Your logged balance and the ledger disagree', 'gologbal'],
+			...hot.map((k) => ['↑', CATS[k].c, `${CATS[k].n} is ${pct(spend[k][i] / typical(k, i) - 1)} vs typical`, `${money(spend[k][i])} so far, typical is ${money(typical(k, i))}`, `heat:${i}:${CATS[k].n}`])
+		].filter(Boolean);
+		const recent = txns(i).filter((t) => t.kind !== 'transfer').slice(0, 7);
+		return `<div class="top"><h2>Dashboard</h2><span class="muted">${labL(i)} · through ${MN[MONTHS[i].m]} ${TODAY}</span></div>
+			<div class="dash3">
+				<div class="card link" data-act="nav:accounts"><h4>Net worth<span class="r muted">Accounts ›</span></h4><div class="bigv">${money(nw(i))}</div>
+					<div class="small ${nwd < 0 ? 'bad' : 'good'}">${money(nwd, { sign: true })} this month</div>${spark(Array.from({ length: 12 }, (_, n) => nw(i - 11 + n)), 'var(--f-income)').replace('width="96" height="26"', 'width="100%" height="34" preserveAspectRatio="none"')}</div>
+				<div class="card link" data-act="gocash"><h4>${MNL[MONTHS[i].m]} cash flow<span class="r muted">Cash flow ›</span></h4>
+					<div class="kv"><span class="l">Income</span><span class="v">${money(income[i])}</span><span></span><span class="l">Spent</span><span class="v">${money(spent(i))}</span><span></span><span class="l">Saved</span><span class="v good">${money(saved(i))}</span><span></span></div></div>
+				<div class="card link" data-act="gocashyear"><h4>Savings rate<span class="r muted">2026 to date</span></h4><div class="bigv">${Math.round(rate(ytd) * 100)}%</div>
+					<div class="small ${rate(ytd) >= rate(ly) ? 'good' : 'bad'}">${rate(ytd) >= rate(ly) ? '+' : '−'}${Math.abs(Math.round((rate(ytd) - rate(ly)) * 100))} pts vs same months of 2025</div></div>
+			</div>
+			<div class="split wide-right">
+				<div class="card"><h4>Spending pace<span class="r"><span class="legend"><span><i style="background:var(--f-spend)"></i>${MN[MONTHS[i].m]}</span><span><i style="background:var(--ink-3);height:2px"></i>${MN[MONTHS[i - 1].m]}</span><span><i style="background:var(--ink-3);opacity:.3"></i>Typical</span></span></span></h4>${p.svg}
+					<div class="small">${money(p.now)} spent by the ${TODAY}th, <span class="${p.diff > 0 ? 'bad' : 'good'}">${money(p.diff, { sign: true })}</span> against ${MNL[MONTHS[i - 1].m]} at the same day.</div></div>
+				<div class="card"><h4>Needs attention<span class="r muted">${items.length}</span></h4><div class="att">
+					${items.map(([ic, col, t, s, act]) => `<button data-act="${act}"><span class="ic" style="background:color-mix(in srgb, ${col} 22%, transparent);color:var(--ink)">${ic}</span><span>${t}<span class="s small muted" style="display:block">${s}</span></span><span class="go">›</span></button>`).join('')}</div></div>
+			</div>
+			<div class="split wide-right">
+				<div class="card"><h4>Recent transactions<span class="r muted">Transactions ›</span></h4>
+					${recent.map((t) => `<button class="mtx" data-act="nav:transactions"><span class="dot" style="background:${catColor(t.cat)}"></span><span>${t.payee}<span class="s">${dayLabel(i, t.day)} · ${t.cat}${t.pending ? ' · pending' : ''}</span></span><span class="amt ${t.amt > 0 ? 'pos' : ''}">${money(t.amt, { cents: true, sign: true })}</span></button>`).join('')}</div>
+				${bridge(i)}
+			</div>`;
+	}
+
+	function pagePlaceholder(title, text) {
+		return `<div class="top"><h2>${title}</h2></div><div class="placeholder"><b style="color:var(--ink)">Content unchanged</b><p>${text}</p></div>`;
+	}
+
+	const NOTES = {
+		dashboard: ['Where do I stand?', 'Replaces the Home tab\'s figure strip', [
+			'Net worth and this month\'s cash flow side by side, joined by the net worth bridge.',
+			'Spending pace compares this month\'s running total with last month and a typical month, which catches odd behavior mid-month.',
+			'Needs attention lists what only you can fix: pending rows, balances not logged, cards that don\'t reconcile, categories running hot.',
+			'Every card opens the page it summarizes, with the right month and filter already set.'
+		]],
+		transactions: ['Log and verify a month', 'Replaces Home\'s calendar and Activity · Month\'s lists', [
+			'One list for spending, paychecks and transfers, filtered by type instead of split into four panes.',
+			'The Month check rail is the spreadsheet\'s Total row and checksum: totals against typical, each category against its typical month, the year strip and balance status.',
+			'Saving an entry marks the row and pulses its category bar and year cell, so a wrong amount or category is visible at once.',
+			'A year-strip cell jumps to that month and category: the "spot an outlier, open that month\'s sheet" move, without leaving the page.',
+			'Calendar is a view of the same list, not a separate tab.'
+		]],
+		cashflow: ['Read trends', 'Replaces Activity · Year and Activity · All time', [
+			'Month view is SUMMARY 2026: a bar per month and the category-by-month table for that year. Year view is OVERVIEW.',
+			'Selecting a bar sets the focus month for every page; the year shown follows it.',
+			'Cells are shaded by distance from the category\'s own typical month, so outliers stand out rather than the biggest categories.',
+			'A month cell opens its transactions. A year cell opens that year\'s months first, then the transactions.'
+		]],
+		accounts: ['Log and read net worth', 'Replaces Net Worth · Year and All time, and Home\'s balance checklist', [
+			'One chart with a range picker instead of Year and All time tabs; clicking it moves the focus month.',
+			'Log balances is one row of the Net Worth Tracker: every account with last month beside it, a running total, and reconciliation checks.',
+			'The bridge splits the month\'s change into what you saved, from Cash flow, and markets & other.',
+			'Accounts are grouped like the tracker\'s columns: cash, taxable, tax-advantaged, cards.'
+		]],
+		planning: ['Project forward', 'Moves out of Net Worth · All time', ['Retirement and runway projections get their own page because they answer "what if", not "what happened".']],
+		settings: ['Manage the ledger', 'Renamed from Manage', ['Accounts, categories, employers and ledger options, unchanged apart from moving into the sidebar.']]
+	};
+
+	const screen = document.getElementById('screen');
+	const side = document.getElementById('side');
+	const notes = document.getElementById('notes');
+
+	function render() {
+		const ae = document.activeElement, fid = ae && screen.contains(ae) ? ae.id : null, pos = ae && ae.selectionStart;
+		side.innerHTML = renderSide();
+		let html = '';
+		if (S.page === 'dashboard') html = pageDashboard();
+		else if (S.page === 'transactions') html = pageTransactions();
+		else if (S.page === 'cashflow') html = pageCashflow();
+		else if (S.page === 'accounts') html = pageAccounts();
+		else if (S.page === 'planning') html = pagePlaceholder('Planning', 'The retirement and runway projections from Net Worth · All time, on their own page.');
+		else html = pagePlaceholder('Settings', 'Manage, renamed: accounts, categories, employers and ledger options.');
+		screen.innerHTML = html + (S.toast ? `<div class="toast">${S.toast}</div>` : '');
+		const [job, rep, pts] = NOTES[S.page];
+		notes.innerHTML = `<div class="job"><span class="eyebrow">${NAV.find((n) => n[0] === S.page)[1]}</span><h3>${job}</h3><span class="rep">${rep}</span></div><ul>${pts.map((p) => `<li>${p}</li>`).join('')}</ul>`;
+		S.flash = [];
+		S.toast = null;
+		if (fid) {
+			const el = document.getElementById(fid);
+			if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch (e) {} }
+		}
+	}
+
+	function go(page, patch = {}) {
+		HISTORY.push({ page: S.page, month: S.month, cat: S.cat, gran: S.gran, cfYear: S.cfYear, type: S.type, pendingOnly: S.pendingOnly, day: S.day, from: S.from });
+		const names = { dashboard: 'Dashboard', cashflow: 'Cash flow', accounts: 'Accounts', transactions: 'Transactions' };
+		Object.assign(S, { from: page !== S.page ? names[S.page] || null : S.from, draft: false }, patch, { page });
+		render();
+	}
+
+	function addDraft() {
+		const day = Number(document.getElementById('d-day').value);
+		const payee = document.getElementById('d-payee').value.trim() || 'Untitled';
+		const cat = document.getElementById('d-cat').value;
+		const amt = r2(Math.abs(Number(document.getElementById('d-amt').value) || 0));
+		const account = document.getElementById('d-acct').value;
+		if (!amt) return;
+		const i = S.month;
+		txns(i).forEach((t) => (t.isNew = false));
+		txns(i).push({ id: `${i}-new-${Date.now()}`, day, payee, cat, amt: -amt, account, kind: 'spend', pending: false, isNew: true });
+		txns(i).sort((a, b) => b.day - a.day || a.kind.localeCompare(b.kind));
+		spend[K[cat]][i] = r2(spend[K[cat]][i] + amt);
+		const t = typical(K[cat], i), r = t > 20 ? spend[K[cat]][i] / t - 1 : 0;
+		S.draft = false;
+		S.flash = [`cat-${cat}`, `heat-${cat}`];
+		S.toast = `Added ${payee}. ${cat} for ${MNL[MONTHS[i].m]} is now ${money(spend[K[cat]][i])}${t > 20 ? `, ${pct(r)} vs typical` : ''}.`;
+		render();
+	}
+
+	document.querySelector('.frame').addEventListener('click', (e) => {
+		const el = e.target.closest('[data-act]');
+		if (!el || el.disabled) return;
+		const [act, a, b] = el.dataset.act.split(':');
+		const i = S.month;
+		switch (act) {
+			case 'nav': return go(a, { from: null, cat: null, day: null, pendingOnly: false, type: 'all', hlCat: null });
+			case 'quickadd': return go('transactions', { month: LAST, draft: true, view: 'list', cat: null, day: null, type: 'all', pendingOnly: false, from: null });
+			case 'month': S.month = Math.max(0, Math.min(LAST, i + Number(a))); S.day = null; S.draft = false; return render();
+			case 'type': S.type = a; return render();
+			case 'pending': S.pendingOnly = !S.pendingOnly; return render();
+			case 'clearcat': S.cat = null; return render();
+			case 'clearday': S.day = null; return render();
+			case 'view': S.view = a; S.draft = false; return render();
+			case 'cat': S.cat = S.cat === a ? null : a; S.view = 'list'; return render();
+			case 'day': S.day = Number(a); S.view = 'list'; return render();
+			case 'heat': if (S.page === 'transactions') { S.month = Number(a); S.cat = b; S.day = null; S.view = 'list'; return render(); } return go('transactions', { month: Number(a), cat: b, day: null, type: 'all', view: 'list', pendingOnly: false });
+			case 'draft': S.draft = true; S.view = 'list'; S.day = null; return render();
+			case 'draftcancel': S.draft = false; return render();
+			case 'draftsave': return addDraft();
+			case 'gran': S.gran = a; S.hlCat = null; if (a === 'year') S.cfYear = MONTHS[S.month].y; return render();
+			case 'cfyear': {
+				const y = MONTHS[i].y + Number(a), m = MONTHS[i].m;
+				let j = idxOf(y, m);
+				j = Math.max(0, Math.min(LAST, j));
+				S.month = j; return render();
+			}
+			case 'cfsel': if (S.gran === 'month') S.month = Number(a); else S.cfYear = Number(a); return render();
+			case 'cfcell': {
+				const k = Number(a), key = Number(b);
+				if (S.gran === 'month') return go('transactions', { month: key, cat: CATS[k].n, day: null, type: 'all', view: 'list', pendingOnly: false });
+				const js = Array.from({ length: 12 }, (_, m) => idxOf(key, m)).filter(valid);
+				S.gran = 'month'; S.month = js[js.length - 1]; S.hlCat = CATS[k].n; return render();
+			}
+			case 'range': S.range = a; return render();
+			case 'nwmonth': S.month = Number(a); return render();
+			case 'log': S.logOpen = !S.logOpen; S.month = S.logOpen ? LAST : S.month; return render();
+			case 'logsave':
+				ACCTS.forEach((acc, j) => {
+					const raw = S.logVals[acc.n];
+					if (raw != null && raw !== '' && !isNaN(Number(raw))) { bal[j][LAST] = r2(Number(raw)); logged.add(acc.n); }
+				});
+				S.logOpen = false; S.logVals = {}; S.toast = 'Balances saved.'; return render();
+			case 'gologbal': return go('accounts', { month: LAST, logOpen: true });
+			case 'gocash': return go('cashflow', { gran: 'month', month: LAST });
+			case 'gocashyear': return go('cashflow', { gran: 'year', cfYear: 2026 });
+			case 'bridgesaved': return go('cashflow', { gran: 'month' });
+			case 'att': if (a === 'pending') return go('transactions', { month: LAST, pendingOnly: true, cat: null, day: null, type: 'all', view: 'list' }); return;
+			case 'back': {
+				const h = HISTORY.pop();
+				if (h) Object.assign(S, h, { draft: false });
+				return render();
+			}
+		}
+	});
+
+	screen.addEventListener('input', (e) => {
+		if (e.target.id === 'q') { S.q = e.target.value; render(); }
+		else if (e.target.dataset.log) { S.logVals[e.target.dataset.log] = e.target.value; render(); }
+	});
+	screen.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter' && e.target.closest('.draft')) { e.preventDefault(); addDraft(); }
+	});
+
+	render();
+})();
+</script>
+</body></html>

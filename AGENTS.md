@@ -1,5 +1,9 @@
 # Agent notes
 
+### Redesign in progress
+
+On `redesign/main` and any `redesign/*` branch, read [docs/redesign/README.md](docs/redesign/README.md) before starting. Remove this section when `redesign/main` merges to `master`.
+
 ### Punctuation
 
 - No em dashes or en dashes in prose. Use a comma, colon, semicolon, or a new sentence. `NO_VALUE` is an exception via using the `—` glyph. 
