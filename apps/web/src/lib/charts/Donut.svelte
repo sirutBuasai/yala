@@ -5,6 +5,7 @@
 	import { type Unit } from '$lib/data/primitives';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Empty from '$lib/ui/Empty.svelte';
+	import Swatch from '$lib/charts/marks/Swatch.svelte';
 	import { sumBy } from '$lib/utils/num';
 
 	interface Slice {
@@ -75,7 +76,7 @@
 			<ul class="legend-list">
 				{#each slices as s (s.name)}
 					<li>
-						<span class="sw" style:background={s.color}></span>
+						<Swatch color={s.color} />
 						<span class="nm" title={s.name}>{s.name}</span>
 						<span class="val">{f.plain(s.value)} · {pctOf(s.value)}%</span>
 					</li>
@@ -141,12 +142,6 @@
 		font-size: var(--text-caption);
 		/* keep a row intact when the legend flows into multiple columns */
 		break-inside: avoid;
-	}
-	.legend-list .sw {
-		width: 11px;
-		height: 11px;
-		border-radius: var(--radius-xs);
-		flex: 0 0 auto;
 	}
 	/* The name gives way, the figure never does: a long name truncates (full text on hover) rather
 	   than pushing the amount out of the column. */

@@ -909,8 +909,8 @@ svg.chart {
 	fill: var(--ink-3);
 	font-variant-numeric: tabular-nums;
 }
-/* The one chart legend: every chart that draws keys uses this markup (`.legend > .k > .sw`) rather
-   than styling its own. `.below` keys underneath the plot instead of above it. */
+/* The one chart legend: every chart that draws keys uses this markup (`.legend > .k`, its key a
+   `marks/Swatch`) rather than styling its own. `.below` keys underneath the plot instead of above it. */
 .legend {
 	display: flex;
 	gap: var(--space-8);
@@ -928,19 +928,6 @@ svg.chart {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--gap-inline);
-}
-.legend .sw {
-	width: 11px;
-	height: 11px;
-	border-radius: var(--radius-xs);
-	flex: 0 0 auto;
-}
-/* A dashed series' key is drawn as a RULE so it looks like the mark it stands for; the dashes come
-   from the caller's background gradient. */
-.legend .sw.dash {
-	width: 16px;
-	height: 3px;
-	border-radius: 0;
 }
 .tooltip {
 	position: fixed;

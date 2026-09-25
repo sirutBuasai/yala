@@ -96,82 +96,85 @@
 		<button class="btn-ghost" onclick={onadd}>+ Add</button>
 	{/snippet}
 
-	<!-- Pinned while the list scrolls under it. Bled to the card's edges so its background covers the rows
-	     sliding beneath, and padded back so its controls line up with the content. -->
-	<div class="filters bleed-x">
-		<Segmented
-			options={TYPES}
-			value={filter.type ?? 'all'}
-			onchange={(t) => onfilter({ type: t === 'all' ? null : t })}
-			ariaLabel="Entry type"
-		/>
-		<div class="menu first">
-			<Select
-				ariaLabel="Category"
-				value={filter.category ?? ''}
-				options={categories}
-				optionLabel={(c) => c || 'Any category'}
-				onchange={(c) => onfilter({ category: c || null })}
-				placeholder="Any category"
+	<!-- Filters, summary, search and sort, pinned while the list scrolls under them. Bled to the card's edges
+	     so the background covers the rows sliding beneath, and padded back so the controls line up with the
+	     content. -->
+	<div class="pinned bleed-x">
+		<div class="filters">
+			<Segmented
+				options={TYPES}
+				value={filter.type ?? 'all'}
+				onchange={(t) => onfilter({ type: t === 'all' ? null : t })}
+				ariaLabel="Entry type"
+			/>
+			<div class="menu first">
+				<Select
+					ariaLabel="Category"
+					value={filter.category ?? ''}
+					options={categories}
+					optionLabel={(c) => c || 'Any category'}
+					onchange={(c) => onfilter({ category: c || null })}
+					placeholder="Any category"
+				/>
+			</div>
+			<div class="menu">
+				<Select
+					ariaLabel="Account"
+					value={filter.account ?? ''}
+					options={accounts}
+					optionLabel={(a) => (a ? formatAccount(a) : 'Any account')}
+					onchange={(a) => onfilter({ account: a || null })}
+					placeholder="Any account"
+				/>
+			</div>
+		</div>
+
+		{#if shown.length}
+			<dl class="summary">
+				{#if summary.spent !== null}
+					<div>
+						<dt class="cap">Spent</dt>
+						<dd><Amount value={summary.spent} sign="refund" /></dd>
+					</div>
+				{/if}
+				{#if summary.takehome !== null}
+					<div>
+						<dt class="cap">Take-home</dt>
+						<dd><Amount value={summary.takehome} sign="credit" /></dd>
+					</div>
+				{/if}
+				{#if summary.billpay !== null}
+					<div>
+						<dt class="cap">Bill pay &amp; transfers</dt>
+						<dd><Amount value={summary.billpay} /></dd>
+					</div>
+				{/if}
+				{#if vsAverage !== null}
+					<div>
+						<dt class="cap">vs your average</dt>
+						<dd class:over={vsAverage > 0} class:under={vsAverage < 0}>
+							{formatDelta(vsAverage, unit)}
+						</dd>
+					</div>
+				{/if}
+			</dl>
+		{/if}
+
+		<div class="tools">
+			<input
+				class="field-input search"
+				type="search"
+				placeholder="Find an entry"
+				aria-label="Find an entry"
+				value={filter.search}
+				oninput={(e) => onfilter({ search: e.currentTarget.value })}
+			/>
+			<SortMenu
+				fields={TXN_SORTS}
+				bind:sortKey={() => sort.value, (v) => (sort.value = v)}
+				bind:sortDir={() => sortDir.value, (v) => (sortDir.value = v)}
 			/>
 		</div>
-		<div class="menu">
-			<Select
-				ariaLabel="Account"
-				value={filter.account ?? ''}
-				options={accounts}
-				optionLabel={(a) => (a ? formatAccount(a) : 'Any account')}
-				onchange={(a) => onfilter({ account: a || null })}
-				placeholder="Any account"
-			/>
-		</div>
-	</div>
-
-	{#if shown.length}
-		<dl class="summary">
-			{#if summary.spent !== null}
-				<div>
-					<dt class="cap">Spent</dt>
-					<dd><Amount value={summary.spent} sign="refund" /></dd>
-				</div>
-			{/if}
-			{#if summary.takehome !== null}
-				<div>
-					<dt class="cap">Take-home</dt>
-					<dd><Amount value={summary.takehome} sign="credit" /></dd>
-				</div>
-			{/if}
-			{#if summary.billpay !== null}
-				<div>
-					<dt class="cap">Bill pay &amp; transfers</dt>
-					<dd><Amount value={summary.billpay} /></dd>
-				</div>
-			{/if}
-			{#if vsAverage !== null}
-				<div>
-					<dt class="cap">vs your average</dt>
-					<dd class:over={vsAverage > 0} class:under={vsAverage < 0}>
-						{formatDelta(vsAverage, unit)}
-					</dd>
-				</div>
-			{/if}
-		</dl>
-	{/if}
-
-	<div class="tools">
-		<input
-			class="field-input search"
-			type="search"
-			placeholder="Find an entry"
-			aria-label="Find an entry"
-			value={filter.search}
-			oninput={(e) => onfilter({ search: e.currentTarget.value })}
-		/>
-		<SortMenu
-			fields={TXN_SORTS}
-			bind:sortKey={() => sort.value, (v) => (sort.value = v)}
-			bind:sortDir={() => sortDir.value, (v) => (sortDir.value = v)}
-		/>
 	</div>
 
 	{#if shown.length}
@@ -200,11 +203,14 @@
 		align-items: center;
 		flex-wrap: wrap;
 	}
-	.filters {
+	.pinned {
 		position: sticky;
 		top: 0;
 		z-index: 1;
-		padding: var(--space-3) var(--pad-card-x) var(--space-6);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-6);
+		padding: var(--space-3) var(--pad-card-x) var(--space-4);
 		background: var(--surface);
 	}
 	/* Wide enough for most names; a longer one ellipsizes in the trigger and shows whole in the list. */
@@ -218,7 +224,6 @@
 	}
 	.tools {
 		justify-content: space-between;
-		margin-bottom: var(--space-4);
 	}
 	.search {
 		min-width: 0;
@@ -228,7 +233,7 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--space-3) var(--space-11);
-		margin: 0 0 var(--space-6);
+		margin: 0;
 		padding: var(--space-5) var(--space-7);
 		border-radius: var(--radius-md);
 		background: var(--inset);

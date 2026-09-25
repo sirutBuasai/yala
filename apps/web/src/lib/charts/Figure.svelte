@@ -28,6 +28,11 @@
 		ceiling?: number;
 		/** Heatmap row to mark as the one in focus, by its label. */
 		mark?: string;
+		/** Makes a chart's rows (or cells) choosable, where the chart offers it: the key picked, and for a
+		    grid the column within it, null when a whole row was picked. */
+		onpick?: (key: string, sub: string | null) => void;
+		/** The key currently chosen, which the chart marks. */
+		picked?: string | null;
 	}
 	let {
 		primitive,
@@ -42,7 +47,9 @@
 		valueLabels,
 		normalize,
 		ceiling,
-		mark
+		mark,
+		onpick,
+		picked
 	}: Props = $props();
 
 	const def = $derived(chart ? CHARTS_BY_ID[chart] : defaultChart(primitive.kind));
@@ -64,7 +71,7 @@
 
 {#if def && chartProps}
 	{@const Chart = def.component}
-	<Chart {...chartProps} />
+	<Chart {...chartProps} {onpick} {picked} />
 {:else}
 	<Empty>No chart accepts {primitive.kind} data.</Empty>
 {/if}

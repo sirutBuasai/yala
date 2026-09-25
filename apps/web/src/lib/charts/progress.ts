@@ -8,8 +8,8 @@ import { formatUnit, type Unit } from '$lib/data/primitives';
 
 /** How far along its target a figure sits, or null where there is nothing to draw. */
 export interface Fill {
-	/** A CSS width, held to the track. */
-	width: string;
+	/** Percent of the track, held to it. */
+	pct: number;
 	/** Past the target, which the track cannot show by growing. */
 	over: boolean;
 	reached: boolean;
@@ -20,7 +20,7 @@ export function fillTo(value: number | null | undefined, target: number): Fill |
 
 	const share = (value / target) * 100;
 	return {
-		width: `${Math.min(100, Math.max(0, share))}%`,
+		pct: Math.min(100, Math.max(0, share)),
 		over: share > 100,
 		reached: share >= 100
 	};

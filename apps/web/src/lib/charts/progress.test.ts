@@ -4,21 +4,21 @@ import { fillTo, fillText } from './progress';
 
 describe('fillTo', () => {
 	it('fills the share of the target the figure has reached', () => {
-		expect(fillTo(25, 100)).toMatchObject({ width: '25%', over: false, reached: false });
+		expect(fillTo(25, 100)).toMatchObject({ pct: 25, over: false, reached: false });
 	});
 
 	// The whole point of the mark: scaled to the value, these two draw the same bar.
 	it('holds the bar to the target rather than stretching to the value', () => {
-		expect(fillTo(250, 100)).toMatchObject({ width: '100%', over: true });
-		expect(fillTo(105, 100)).toMatchObject({ width: '100%', over: true });
+		expect(fillTo(250, 100)).toMatchObject({ pct: 100, over: true });
+		expect(fillTo(105, 100)).toMatchObject({ pct: 100, over: true });
 	});
 
 	it('marks the target met exactly at it, and not over it', () => {
-		expect(fillTo(100, 100)).toMatchObject({ width: '100%', reached: true, over: false });
+		expect(fillTo(100, 100)).toMatchObject({ pct: 100, reached: true, over: false });
 	});
 
 	it('empties the track for a negative figure rather than drawing it backwards', () => {
-		expect(fillTo(-40, 100)).toMatchObject({ width: '0%', reached: false });
+		expect(fillTo(-40, 100)).toMatchObject({ pct: 0, reached: false });
 	});
 
 	it('draws nothing without a figure, or without a target to judge it by', () => {

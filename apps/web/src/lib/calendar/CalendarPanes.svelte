@@ -79,7 +79,7 @@
 <Pane id="day" title={live(dayTitle)} caption={live(dayCaption)}>
 	{#snippet actions()}
 		{#if selected}
-			<button class="btn-ghost" onclick={() => onadd(selected.iso)}>+ Add entry</button>
+			<button class="btn-ghost" onclick={() => onadd(selected.iso)}>+ Add</button>
 		{/if}
 	{/snippet}
 	{#if selected}

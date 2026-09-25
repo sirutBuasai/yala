@@ -1,6 +1,7 @@
 <script lang="ts">
 	// A week's spend in the calendar's gutter: a bar grown from the bottom of its row, plus the figure.
 	import type { Snippet } from 'svelte';
+	import Bands from '$lib/charts/marks/Bands.svelte';
 
 	interface Props {
 		total: number;
@@ -16,7 +17,16 @@
 </script>
 
 <div class="wkcell" role="gridcell" aria-label={label}>
-	<span class="wbar" aria-hidden="true"><i style:height={`${pct}%`}></i></span>
+	<span class="wbar" aria-hidden="true">
+		<Bands
+			axis="y"
+			radius={3.5}
+			bands={[
+				{ from: 0, to: 100, fill: 'color-mix(in srgb, var(--inset) 65%, transparent)' },
+				{ from: 0, to: pct, fill: 'color-mix(in srgb, var(--lav) 62%, transparent)' }
+			]}
+		/>
+	</span>
 	<span class="wval" aria-hidden="true">{@render children()}</span>
 </div>
 
@@ -31,17 +41,6 @@
 	.wbar {
 		width: 7px;
 		flex: none;
-		border-radius: var(--radius-pill);
-		background: color-mix(in srgb, var(--inset) 65%, transparent);
-		display: flex;
-		align-items: flex-end;
-		overflow: hidden;
-	}
-	.wbar i {
-		display: block;
-		width: 100%;
-		border-radius: var(--radius-pill);
-		background: color-mix(in srgb, var(--lav) 62%, transparent);
 	}
 	.wval {
 		align-self: center;

@@ -185,6 +185,18 @@
 	}
 	const addTitle = $derived(addDate ? `Add entry · ${dateShort(addDate)}` : 'Add entry');
 
+	/** A Category by month row is a month of the focus year; a cell also names a category to filter by. */
+	function pickMonth(row: string, category: string | null) {
+		const m = MONTHS.indexOf(row);
+		if (m < 0) return;
+		const month = `${yearOf(monthKey)}-${String(m + 1).padStart(2, '0')}`;
+		navigate({
+			[MONTH_PARAM]: month,
+			[P.day]: null,
+			...(category ? { [P.category]: category } : {})
+		});
+	}
+
 	function edit(e: HistoryEntry) {
 		if (e.type === 'txn') modals.editTransaction(e.locator);
 		else if (e.type === 'pay') modals.editPaycheck(e.locator);
@@ -198,9 +210,6 @@
 		monthKeys={data.meta.month_keys}
 		onchange={(k) => navigate({ [MONTH_PARAM]: k, [P.day]: null })}
 	/>
-	{#snippet actions()}
-		<button class="btn-accent pill" onclick={() => add()}>+ Add entry</button>
-	{/snippet}
 </ViewHeader>
 
 <Board key="transactions" layout={PANES} names={Object.keys(KPIS)} onreset={() => kpis.reset()}>
@@ -236,9 +245,21 @@
 		onadd={() => add()}
 	/>
 
-	<FigurePane id="categories" {data} spec={PANES.categories.figure} />
+	<FigurePane
+		id="categories"
+		{data}
+		spec={PANES.categories.figure}
+		picked={filter.category}
+		onpick={(c) => setFilter({ category: filter.category === c ? null : c })}
+	/>
 	<FigurePane id="donut" {data} spec={PANES.donut.figure} />
-	<FigurePane id="heatmap" {data} spec={PANES.heatmap.figure} />
+	<FigurePane
+		id="heatmap"
+		{data}
+		spec={PANES.heatmap.figure}
+		picked={filter.category}
+		onpick={pickMonth}
+	/>
 </Board>
 
 <EditModals

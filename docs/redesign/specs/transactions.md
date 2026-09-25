@@ -39,10 +39,10 @@ Home's three-card strip (Income, Spent, Saved) is not carried: Activity · Month
 
 A board with arranging on (D14). Mock: [mocks/transactions-layout.html](../mocks/transactions-layout.html).
 
-1. **Header:** `Transactions` and the month picker; at the right, `+ Add entry` beside Edit and the theme toggle.
+1. **Header:** `Transactions` and the month picker; Edit and the theme toggle at the right. Adding lives in the panes: `+ Add` on the day's entries (dated to that day) and on Transaction history.
 2. **KPI bar:** Income, Take-home, Saved and Spent, four KPI cards opened merged along one row, each with its bar underlay and its distance from your average (`vsavg.*`). KPI values keep the display size. The badge shows the difference alone, e.g. `+$1,000`; the caption names the average.
 3. **Log activity**, with Pending transactions and the day's entries beside it.
-4. **Transaction history** (left): transactions, paychecks and bill pay in one list, newest first and grouped by day, laid out as: the type chips with the category and account menus on one row, pinned while the list scrolls; the summary; then search on the left and sort on the right. Filters and search live in the URL; Pending only was dropped, since Pending transactions has its own pane. **Spending by category** (right): each category's total as a bar on one shared scale, its usual range and average over it, then Total and Δ average columns under a Category header (`range-bars`, replacing the dumbbell). Its markers are SVG circles, so the out-of-range ring stays even at any position.
+4. **Transaction history** (left): transactions, paychecks and bill pay in one list, newest first and grouped by day, laid out as: the type chips with the category and account menus on one row, the summary, then search on the left and sort on the right, all pinned while the list scrolls. Filters and search live in the URL; Pending only was dropped, since Pending transactions has its own pane. **Spending by category** (right): each category's total as a bar on one shared scale, its usual range and average over it, then Total and Δ average columns under a Category header (`range-bars`, replacing the dumbbell). Its markers are SVG circles, so the out-of-range ring stays even at any position.
 5. **Where your income went** and **Category by month**, the focus month's row marked.
 
 Dropped: the six KPI cards (Spending rate and vs your average with them), Unusual this month, and the separate Paychecks and Bill pay & transfers panes.
@@ -50,6 +50,13 @@ Dropped: the six KPI cards (Spending rate and vs your average with them), Unusua
 ### History summary
 
 It reads the rows the filters leave, never the filters: Spent when transactions remain (refunds netted), Take-home when paychecks remain, Bill pay & transfers when bill pay remains, and vs your average when every transaction left shares one category. The caption counts rows, as `N of M in <month>` while filtered.
+
+## Drill-ins (built)
+
+- A Spending by category row filters the history to its category; clicking the chosen row again clears it. The chosen row is marked.
+- A Category by month month label moves the page to that month; a cell moves to its month and filters the history to its category. The filtered category's column header is marked.
+
+Every graphic mark is SVG (`charts/marks`: Dot, Swatch, Bands). Category by month stays an HTML table, since it is one: its axes are headers a screen reader announces.
 
 ## Click map
 

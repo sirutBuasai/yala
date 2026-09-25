@@ -5,6 +5,7 @@
 	// list — a list that overruns scrolls inside its pane.
 	import { monthDay } from '$lib/utils/format';
 	import type { Snippet } from 'svelte';
+	import Dot from '$lib/charts/marks/Dot.svelte';
 
 	interface Props {
 		items: T[];
@@ -67,7 +68,7 @@
 			onclick={clickable ? () => onedit?.(item.locator) : undefined}
 		>
 			{#if dateOf}<span class="date">{monthDay(dateOf(item))}</span>{/if}
-			<span class="dot" style:background={dotColor(item)} aria-hidden="true"></span>
+			<Dot color={dotColor(item)} />
 			{@render main(item)}
 			<!-- `display: contents` keeps each middle column its own grid track while giving the group
 			     one switch: at narrow widths the wrapper goes `display: none` and the tracks collapse. -->
@@ -148,10 +149,5 @@
 		color: var(--ink-3);
 		font-size: var(--text-meta);
 		font-variant-numeric: tabular-nums;
-	}
-	.dot {
-		width: 8px;
-		height: 8px;
-		border-radius: var(--radius-pill);
 	}
 </style>

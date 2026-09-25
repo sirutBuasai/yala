@@ -5,6 +5,7 @@
 	import { formatDelta, formatUnitExact, type Unit } from '$lib/data/primitives';
 	import { esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
+	import Bands from '$lib/charts/marks/Bands.svelte';
 
 	interface Row {
 		label: string;
@@ -17,16 +18,21 @@
 	interface Props {
 		rows: Row[];
 		unit: Unit;
+		/** Makes each row a button choosing its label. */
+		onpick?: (label: string) => void;
+		/** The label currently chosen, which its row marks. */
+		picked?: string | null;
 	}
-	let { rows, unit }: Props = $props();
+	let { rows, unit, onpick, picked }: Props = $props();
 
 	/** One scale for every row, from zero (or the lowest value, when a refund took one below it). */
-	const at = $derived.by(() => {
+	const pos = $derived.by(() => {
 		const min = Math.min(0, ...rows.flatMap((r) => [r.lo, r.value]));
 		const max = Math.max(1, ...rows.flatMap((r) => [r.hi, r.value]));
 		const span = max - min;
-		return (v: number) => `${((v - min) / span) * 100}%`;
+		return (v: number) => ((v - min) / span) * 100;
 	});
+	const at = (v: number) => `${pos(v)}%`;
 
 	const fmt = (v: number) => formatUnitExact(v, unit);
 	const tip = (r: Row) =>
@@ -59,36 +65,61 @@
 	</div>
 	{#each rows as r (r.label)}
 		{@const delta = r.value - r.base}
-		<div class="row">
+		<svelte:element
+			this={onpick ? 'button' : 'div'}
+			class="row"
+			class:pickable={!!onpick}
+			class:picked={r.label === picked}
+			type={onpick ? 'button' : undefined}
+			role={onpick ? 'button' : undefined}
+			aria-pressed={onpick ? r.label === picked : undefined}
+			onclick={onpick ? () => onpick(r.label) : undefined}
+		>
 			<span class="name">{r.label}</span>
-			<div
+			<span
 				class="lane"
 				role="presentation"
 				onmousemove={(e) => showTip(tip(r), e)}
 				onmouseleave={hideTip}
 			>
-				<span
-					class="fill"
-					style:left={at(Math.min(0, r.value))}
-					style:right={`calc(100% - ${at(Math.max(0, r.value))})`}
-					style:--fill={r.color}
-				></span>
-				<span class="range" style:left={at(r.lo)} style:right={`calc(100% - ${at(r.hi)})`}></span>
+				<Bands
+					radius={3}
+					bands={[
+						{
+							from: pos(0),
+							to: pos(r.value),
+							fill: `color-mix(in srgb, ${r.color} calc(var(--mark-area) * 100%), transparent)`
+						},
+						{
+							from: pos(r.lo),
+							to: pos(r.hi),
+							fill: 'color-mix(in srgb, var(--ink-3) 45%, transparent)',
+							thickness: 4 / 14
+						}
+					]}
+				/>
 				<span class="at" style:left={at(r.base)}>{@render average()}</span>
 				<span class="at" style:left={at(r.value)}>
 					{@render current(r.color, r.value > r.hi || r.value < r.lo)}
 				</span>
-			</div>
+			</span>
 			<span class="num total">{fmt(r.value)}</span>
 			<span class="num delta" class:over={delta > 0} class:under={delta < 0}>
 				{formatDelta(delta, unit)}
 			</span>
-		</div>
+		</svelte:element>
 	{/each}
 	<div class="key" aria-hidden="true">
 		<span>{@render current('var(--ink-3)', false)}this month</span>
 		<span>{@render average()}average</span>
-		<span><i class="k-range"></i>usual range</span>
+		<span>
+			<span class="k-range">
+				<Bands
+					radius={2}
+					bands={[{ from: 0, to: 100, fill: 'color-mix(in srgb, var(--ink-3) 45%, transparent)' }]}
+				/>
+			</span>usual range
+		</span>
 	</div>
 </div>
 
@@ -98,7 +129,6 @@
 	   rather than stacking at the top. */
 	.bars {
 		--lane-h: 14px;
-		--track-h: 4px;
 
 		display: grid;
 		flex: 1 1 auto;
@@ -125,24 +155,31 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
+	/* A row that chooses its category reads as one control: no button chrome, a wash on hover and while
+	   chosen. */
+	.pickable {
+		border: 0;
+		margin: 0;
+		padding: 0;
+		background: none;
+		font: inherit;
+		color: inherit;
+		text-align: left;
+		cursor: pointer;
+		border-radius: var(--radius-sm);
+	}
+	.pickable:hover,
+	.picked {
+		background: var(--inset);
+	}
+	.picked .name {
+		color: var(--ink);
+		font-weight: var(--fw-semibold);
+	}
 	.lane {
+		display: block;
 		position: relative;
 		height: var(--lane-h);
-	}
-	.fill {
-		position: absolute;
-		top: 0;
-		bottom: 0;
-		border-radius: var(--radius-sm);
-		background: color-mix(in srgb, var(--fill) calc(var(--mark-area) * 100%), transparent);
-	}
-	/* Every layer is centred on the lane, so each offset is half the difference in heights. */
-	.range {
-		position: absolute;
-		top: calc((var(--lane-h) - var(--track-h)) / 2);
-		height: var(--track-h);
-		border-radius: var(--radius-pill);
-		background: color-mix(in srgb, var(--ink-3) 45%, transparent);
 	}
 	/* A zero-size anchor at the value; the marker centres on it, so no offset depends on its size. */
 	.at {
@@ -208,9 +245,7 @@
 	}
 	.k-range {
 		display: inline-block;
-		border-radius: var(--radius-pill);
 		width: 18px;
 		height: 4px;
-		background: color-mix(in srgb, var(--ink-3) 45%, transparent);
 	}
 </style>

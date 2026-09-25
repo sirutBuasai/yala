@@ -16,8 +16,11 @@
 		spec: FigureSpec;
 		/** Header controls, for the one figure a view lets you act on rather than only read. */
 		actions?: Snippet;
+		/** See `Figure`: makes the chart's rows or cells choosable, and marks the chosen one. */
+		onpick?: (key: string, sub: string | null) => void;
+		picked?: string | null;
 	}
-	let { id, data, spec, actions }: Props = $props();
+	let { id, data, spec, actions, onpick, picked }: Props = $props();
 
 	const primitive = $derived(build(data, spec.figure, spec.scope));
 
@@ -29,5 +32,5 @@
 </script>
 
 <Pane {id} title={spec.title} caption={spec.caption} {actions}>
-	<Figure {primitive} {...options} />
+	<Figure {primitive} {...options} {onpick} {picked} />
 </Pane>

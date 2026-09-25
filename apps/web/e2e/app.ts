@@ -74,9 +74,9 @@ export async function showPage(page: Page, label: string): Promise<void> {
 	await settle(page);
 }
 
-/** Open the page's Add entry modal from its header, which every logging page carries. */
+/** Open the Add entry modal from the first pane that offers one. */
 export async function openAdd(page: Page): Promise<void> {
-	await page.locator('.viewhead').getByRole('button', { name: '+ Add entry' }).click();
+	await page.getByRole('button', { name: '+ Add', exact: true }).first().click();
 	await settle(page);
 }
 

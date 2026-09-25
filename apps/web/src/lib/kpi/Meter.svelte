@@ -3,6 +3,7 @@
 	// this one is not decorative — the fill IS the reading, on the same scaling rule as `BulletChart`.
 	import { fillTo, fillText } from '$lib/charts/progress';
 	import { formatUnit, type Unit } from '$lib/data/primitives';
+	import Bands from '$lib/charts/marks/Bands.svelte';
 
 	interface Props {
 		value: number | null;
@@ -29,7 +30,13 @@
 		aria-valuemax={target}
 		aria-valuetext={fillText(value, target, unit)}
 	>
-		<span class="fill" class:reached={fill?.reached} style:width={fill?.width ?? '0%'}></span>
+		<Bands
+			radius={4}
+			bands={[
+				{ from: 0, to: 100, fill: 'var(--inset)' },
+				{ from: 0, to: fill?.pct ?? 0, fill: fill?.reached ? 'var(--role-saving)' : 'var(--mark)' }
+			]}
+		/>
 	</div>
 </div>
 
@@ -55,18 +62,5 @@
 		flex: 1 1 auto;
 		min-width: 24px;
 		height: 8px;
-		border-radius: var(--radius-sm);
-		background: var(--inset);
-		overflow: hidden;
-	}
-	.fill {
-		position: absolute;
-		inset-block: 0;
-		left: 0;
-		border-radius: var(--radius-sm);
-		background: var(--mark);
-	}
-	.fill.reached {
-		background: var(--role-saving);
 	}
 </style>

@@ -11,6 +11,7 @@
 	import { SLACK } from '$lib/layout/grid/spill';
 	import { contentFloor, watchWidth } from '$lib/ui/fit';
 	import { fillTo, fillText } from '$lib/charts/progress';
+	import Bands from '$lib/charts/marks/Bands.svelte';
 	import { formatUnit, type Unit } from '$lib/data/primitives';
 	import { labelText, type Label } from '$lib/ui/label';
 
@@ -26,6 +27,10 @@
 		rows: Row[];
 	}
 	let { rows }: Props = $props();
+
+	/** One per chart, since a pattern is looked up by id across the whole page. */
+	const uid = $props.id();
+	const hatch = `hatch-${uid}`;
 
 	let box = $state<HTMLElement>();
 
@@ -85,9 +90,31 @@
 				aria-valuemax={row.target}
 				aria-valuetext={fillText(row.value, row.target, row.unit)}
 			>
-				{#if f}
-					<span class="value" class:reached={f.reached} style:width={f.width}></span>
-					{#if f.over}<span class="over" aria-hidden="true"></span>{/if}
+				<Bands
+					radius={6}
+					bands={[
+						{ from: 0, to: 100, fill: 'var(--inset)' },
+						...(f
+							? [
+									{
+										from: 0,
+										to: f.pct,
+										fill: f.reached ? 'var(--role-saving)' : 'var(--role-balance)'
+									}
+								]
+							: [])
+					]}
+				/>
+				{#if f?.over}
+					<!-- Hatched, so a full bar and an overflowing one are told apart without stretching the track. -->
+					<svg class="over" width="10" height="100%" aria-hidden="true">
+						<defs>
+							<pattern id={hatch} width="5" height="5" patternUnits="userSpaceOnUse">
+								<path d="M-1 1 L1 -1 M0 5 L5 0 M4 6 L6 4" />
+							</pattern>
+						</defs>
+						<rect width="10" height="100%" fill="url(#{hatch})" />
+					</svg>
 				{/if}
 			</div>
 		</div>
@@ -156,26 +183,15 @@
 		flex: 1 1 auto;
 		min-height: 10px;
 		max-height: 32px;
-		border-radius: var(--radius-sm);
-		background: var(--inset);
-		overflow: hidden;
 	}
-	.value {
-		position: absolute;
-		inset-block: 0;
-		left: 0;
-		border-radius: var(--radius-sm);
-		background: var(--role-balance);
-	}
-	.value.reached {
-		background: var(--role-saving);
-	}
-	/* Notched, so a full bar and an overflowing one are told apart without stretching the track. */
 	.over {
 		position: absolute;
 		inset-block: 0;
 		right: 0;
-		width: 10px;
-		background: repeating-linear-gradient(-45deg, var(--surface) 0 2px, transparent 2px 5px);
+		height: 100%;
+	}
+	.over path {
+		stroke: var(--surface);
+		stroke-width: 2;
 	}
 </style>

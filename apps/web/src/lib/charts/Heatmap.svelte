@@ -28,8 +28,22 @@
 		colors?: string[];
 		/** Row to mark as the one in focus, by its label. */
 		mark?: string;
+		/** Makes row labels and cells buttons: a row label picks its row, a cell its row and column. */
+		onpick?: (row: string, col: string | null) => void;
+		/** Column currently chosen, which its header marks. */
+		picked?: string | null;
 	}
-	let { rows, cols, values, unit, normalize = 'row', colors, mark }: Props = $props();
+	let {
+		rows,
+		cols,
+		values,
+		unit,
+		normalize = 'row',
+		colors,
+		mark,
+		onpick,
+		picked
+	}: Props = $props();
 
 	const globalMax = $derived(Math.max(1, ...values.flat().map(Math.abs)));
 	const rowMax = $derived(rows.map((_, i) => Math.max(1, ...(values[i] ?? []).map(Math.abs))));
@@ -66,7 +80,7 @@
 			<tr>
 				<td class="corner"></td>
 				{#each cols as c (c)}
-					<th scope="col" title={c}>{c}</th>
+					<th scope="col" title={c} class:picked={c === picked}>{c}</th>
 				{/each}
 				<td class="gap"></td>
 				<th scope="col" class="sum">Total</th>
@@ -75,7 +89,13 @@
 		<tbody>
 			{#each rows as r, i (r)}
 				<tr class:marked={r === mark} aria-current={r === mark ? 'true' : undefined}>
-					<th scope="row">{r}</th>
+					<th scope="row">
+						{#if onpick}
+							<button type="button" class="pick" onclick={() => onpick(r, null)}>{r}</button>
+						{:else}
+							{r}
+						{/if}
+					</th>
 					{#each cols as c, j (c)}
 						{@const v = values[i]?.[j] ?? 0}
 						<td
@@ -86,7 +106,16 @@
 								showTip(`<b>${esc(r)} · ${esc(c)}</b><br>${formatUnitExact(v, unit)}`, e)}
 							onmouseleave={hideTip}
 						>
-							{numCompact(v)}
+							{#if onpick}
+								<button
+									type="button"
+									class="pick"
+									aria-label={`${r} · ${c}`}
+									onclick={() => onpick(r, c)}>{numCompact(v)}</button
+								>
+							{:else}
+								{numCompact(v)}
+							{/if}
 						</td>
 					{/each}
 					<td class="gap"></td>
@@ -189,6 +218,27 @@
 	/* Label only. A wash behind the row total read as an amount, in a grid where every shaded box is one. */
 	tbody tr:hover th[scope='row'] {
 		color: var(--ink);
+	}
+	/* A pickable label or cell keeps the table's look: the button only takes the click and a ring on hover. */
+	.pick {
+		all: unset;
+		box-sizing: border-box;
+		display: block;
+		width: 100%;
+		cursor: pointer;
+		border-radius: var(--tile-radius);
+		text-align: inherit;
+	}
+	.pick:hover {
+		box-shadow: inset 0 0 0 1.5px var(--ink-3);
+	}
+	.pick:focus-visible {
+		outline: var(--ring-width) solid var(--ring-color);
+		outline-offset: var(--ring-offset);
+	}
+	th[scope='col'].picked {
+		color: var(--ink);
+		font-weight: var(--fw-semibold);
 	}
 	/* The row in focus: its label stands out and its tiles are ringed, without a wash that would read as
 	   an amount. */

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Dot from '$lib/charts/marks/Dot.svelte';
 	// One day in the month grid. A gridcell rather than a plain button: the grid around it owns
 	// arrow-key movement, and this cell only reports whether it is the selected one.
 	import type { DayCell } from '$lib/calendar/days';
@@ -42,7 +43,7 @@
 	<span class="dn" aria-hidden="true">{cell.day}</span>
 	{#if cell.cats.length}
 		<span class="cdots" aria-hidden="true">
-			{#each cell.cats as cat (cat)}<i style:background={categoryVar(cat)}></i>{/each}
+			{#each cell.cats as cat (cat)}<Dot color={categoryVar(cat)} size={6} />{/each}
 			{#if cell.more}<span class="more">+</span>{/if}
 		</span>
 	{/if}
@@ -99,12 +100,6 @@
 		flex-wrap: wrap;
 		max-width: 46px;
 		justify-content: flex-end;
-	}
-	.cdots i {
-		width: 6px;
-		height: 6px;
-		border-radius: var(--radius-pill);
-		display: block;
 	}
 	.cdots .more {
 		font-size: var(--text-micro);

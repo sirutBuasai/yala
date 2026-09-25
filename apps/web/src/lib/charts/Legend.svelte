@@ -8,6 +8,7 @@
 </script>
 
 <script lang="ts">
+	import Swatch from '$lib/charts/marks/Swatch.svelte';
 	// The keys above (or below) a chart. Every chart that names its series renders this, so swatch
 	// size, order and the dashed variant can't drift between them. Styles are the shared `.legend`
 	// rules in app.css.
@@ -21,15 +22,12 @@
 	let { keys, below = false, reverse = false }: Props = $props();
 
 	const shown = $derived(reverse ? keys.slice().reverse() : keys);
-	const dashes = (color: string) =>
-		`repeating-linear-gradient(90deg, ${color} 0 4px, transparent 4px 7px)`;
 </script>
 
 <div class="legend" class:below>
 	{#each shown as k (k.name)}
 		<span class="k">
-			<span class="sw" class:dash={k.dashed} style:background={k.dashed ? dashes(k.color) : k.color}
-			></span>{k.name}
+			<Swatch color={k.color} dashed={k.dashed} />{k.name}
 		</span>
 	{/each}
 </div>
