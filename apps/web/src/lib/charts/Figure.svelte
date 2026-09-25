@@ -26,6 +26,8 @@
 		normalize?: 'row' | 'col' | 'global';
 		/** Fix a line chart's value axis to end here, so a level partway up is not squashed to the floor. */
 		ceiling?: number;
+		/** Heatmap row to mark as the one in focus, by its label. */
+		mark?: string;
 	}
 	let {
 		primitive,
@@ -39,7 +41,8 @@
 		dashed,
 		valueLabels,
 		normalize,
-		ceiling
+		ceiling,
+		mark
 	}: Props = $props();
 
 	const def = $derived(chart ? CHARTS_BY_ID[chart] : defaultChart(primitive.kind));
@@ -53,7 +56,8 @@
 		dashed,
 		valueLabels,
 		normalize,
-		ceiling
+		ceiling,
+		mark
 	});
 	const chartProps = $derived(def ? def.adapt(primitive, opts) : null);
 </script>

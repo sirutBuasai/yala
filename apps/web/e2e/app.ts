@@ -24,6 +24,9 @@ const SNAPSHOT = readFileSync(
 
 export const PAGE_LABELS = PAGES.map((p) => p.label);
 
+/** Pages with a board, which the board suites (charts, steady, arrange) run against. */
+export const BOARD_PAGES = ['Transactions'] as const;
+
 /** Content widths worth checking: either side of both fold thresholds, and the phone floor. */
 export const WIDTHS = [320, 390, 480, 700, 960, 1000, 1200, 1392] as const;
 
@@ -44,13 +47,20 @@ export async function openApp(page: Page): Promise<void> {
 	await expect(page.locator('#page')).toBeVisible();
 }
 
-/** Open a page from the docked sidebar. */
+/** Open a page from the sidebar, or from the menu sheet when the window is too narrow for it. */
 export async function showPage(page: Page, label: string): Promise<void> {
-	await page
-		.getByRole('navigation', { name: 'Pages' })
-		.getByRole('link', { name: label, exact: true })
-		.click();
-	await expect(page.getByRole('heading', { level: 2, name: label })).toBeVisible();
+	// A resize just before this is only applied on the next frame, which decides sidebar or sheet.
+	await settle(page, 2);
+	const nav = page.getByRole('navigation', { name: 'Pages' });
+	if (!(await nav.isVisible())) await page.getByRole('button', { name: 'Open menu' }).click();
+	await nav.getByRole('link', { name: label, exact: true }).click();
+	await expect(page.getByRole('heading', { level: 2, name: label, exact: true })).toBeVisible();
+	await settle(page);
+}
+
+/** Open the page's Add entry modal from its header, which every logging page carries. */
+export async function openAdd(page: Page): Promise<void> {
+	await page.locator('.viewhead').getByRole('button', { name: '+ Add entry' }).click();
 	await settle(page);
 }
 
@@ -93,6 +103,83 @@ export async function setContentWidth(page: Page, px: number | null): Promise<vo
 		wrap.style.maxWidth = w === null ? '' : `${w}px`;
 	}, px);
 	await settle(page);
+}
+
+/** Turn the board's arrange affordances on, if this width offers them. */
+export async function startArranging(page: Page): Promise<void> {
+	if (await page.locator('.grab').first().isVisible()) return;
+	await page.getByRole('button', { name: 'Edit' }).click();
+	await settle(page);
+	await expect(page.locator('.grab').first()).toBeVisible();
+}
+
+/**
+ * Drag `handle` by `dx`/`dy` as a stream of pointer events. Synthetic ones reach `grid/drag` directly: its
+ * listeners are on the node, and it already tolerates `setPointerCapture` refusing an id it never saw.
+ * Stepped, because the gesture only begins once the travel passes its own threshold.
+ */
+export async function dragBy(handle: Locator, dx: number, dy: number, steps = 6): Promise<void> {
+	await handle.evaluate(
+		async (node: Element, { dx, dy, steps }) => {
+			const box = node.getBoundingClientRect();
+			const [x, y] = [Math.round(box.left + box.width / 2), Math.round(box.top + box.height / 2)];
+			const send = async (type: string, px: number, py: number) => {
+				node.dispatchEvent(
+					new PointerEvent(type, {
+						bubbles: true,
+						cancelable: true,
+						clientX: px,
+						clientY: py,
+						button: 0,
+						buttons: type === 'pointerup' ? 0 : 1,
+						pointerId: 7,
+						isPrimary: true
+					})
+				);
+				await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+			};
+			await send('pointerdown', x, y);
+			for (let i = 1; i <= steps; i++)
+				await send('pointermove', x + (dx * i) / steps, y + (dy * i) / steps);
+			await send('pointerup', x + dx, y + dy);
+		},
+		{ dx, dy, steps }
+	);
+	await settle(handle.page());
+}
+
+/** One arrange gesture or control press, picked from what the board currently offers. */
+export const GESTURES = ['move', 'resize', 'split', 'merge', 'height'] as const;
+export type Gesture = (typeof GESTURES)[number];
+
+const TARGET: Record<Gesture, string> = {
+	move: '.cell > .grab',
+	resize: '.cell > .handle',
+	split: '.cut',
+	merge: '.join',
+	height: '.modebtn'
+};
+
+/**
+ * Perform `gesture` on one of the elements offering it, chosen by `pick`. Returns false when the board
+ * offers none — a board with nothing merged has no dividers to cut, and that is not a failure.
+ */
+export async function doGesture(
+	page: Page,
+	gesture: Gesture,
+	pick: (count: number) => number,
+	travel: () => number
+): Promise<boolean> {
+	const targets = page.locator(TARGET[gesture]);
+	const count = await targets.count();
+	if (count === 0) return false;
+	const target = targets.nth(pick(count));
+	if (gesture === 'move' || gesture === 'resize') await dragBy(target, travel(), travel());
+	else {
+		await target.click();
+		await settle(page);
+	}
+	return true;
 }
 
 /** Everything the audit found, as one message a failure can be read from. */

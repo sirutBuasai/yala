@@ -26,8 +26,10 @@
 		normalize?: 'row' | 'col' | 'global';
 		/** One colour per band, along `normalize`'s axis. Short or absent, bands fall back to `FALLBACK`. */
 		colors?: string[];
+		/** Row to mark as the one in focus, by its label. */
+		mark?: string;
 	}
-	let { rows, cols, values, unit, normalize = 'row', colors }: Props = $props();
+	let { rows, cols, values, unit, normalize = 'row', colors, mark }: Props = $props();
 
 	const globalMax = $derived(Math.max(1, ...values.flat().map(Math.abs)));
 	const rowMax = $derived(rows.map((_, i) => Math.max(1, ...(values[i] ?? []).map(Math.abs))));
@@ -72,7 +74,7 @@
 		</thead>
 		<tbody>
 			{#each rows as r, i (r)}
-				<tr>
+				<tr class:marked={r === mark} aria-current={r === mark ? 'true' : undefined}>
 					<th scope="row">{r}</th>
 					{#each cols as c, j (c)}
 						{@const v = values[i]?.[j] ?? 0}
@@ -187,5 +189,16 @@
 	/* Label only. A wash behind the row total read as an amount, in a grid where every shaded box is one. */
 	tbody tr:hover th[scope='row'] {
 		color: var(--ink);
+	}
+	/* The row in focus: its label stands out and its tiles are ringed, without a wash that would read as
+	   an amount. */
+	tr.marked th[scope='row'] {
+		color: var(--ink);
+		font-weight: var(--fw-semibold);
+	}
+	tr.marked .cell,
+	tr.marked .sum {
+		box-shadow: inset 0 0 0 1.5px var(--ink-3);
+		border-radius: var(--tile-radius);
 	}
 </style>

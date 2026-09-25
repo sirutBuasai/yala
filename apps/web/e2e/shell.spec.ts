@@ -21,9 +21,13 @@ test('back and forward move between pages', async ({ page }) => {
 	await showPage(page, 'Transactions');
 	await showPage(page, 'Accounts');
 	await page.goBack();
-	await expect(page.getByRole('heading', { level: 2, name: 'Transactions' })).toBeVisible();
+	await expect(
+		page.getByRole('heading', { level: 2, name: 'Transactions', exact: true })
+	).toBeVisible();
 	await page.goForward();
-	await expect(page.getByRole('heading', { level: 2, name: 'Accounts' })).toBeVisible();
+	await expect(
+		page.getByRole('heading', { level: 2, name: 'Accounts', exact: true })
+	).toBeVisible();
 });
 
 test('the focus month carries over to the next page', async ({ page }) => {
@@ -34,7 +38,7 @@ test('the focus month carries over to the next page', async ({ page }) => {
 
 test('a deep link opens its page directly', async ({ page }) => {
 	await page.goto('/manage');
-	await expect(page.getByRole('heading', { level: 2, name: 'Manage' })).toBeVisible();
+	await expect(page.getByRole('heading', { level: 2, name: 'Manage', exact: true })).toBeVisible();
 });
 
 test('the development gallery opens inside the shell, like every other page', async ({ page }) => {
@@ -42,7 +46,9 @@ test('the development gallery opens inside the shell, like every other page', as
 		.getByRole('navigation', { name: 'Tools' })
 		.getByRole('link', { name: 'Development' })
 		.click();
-	await expect(page.getByRole('heading', { level: 2, name: 'Development' })).toBeVisible();
+	await expect(
+		page.getByRole('heading', { level: 2, name: 'Development', exact: true })
+	).toBeVisible();
 	await expect(pages(page)).toBeVisible();
 });
 

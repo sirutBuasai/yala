@@ -1,5 +1,8 @@
 <script lang="ts">
-	import Rebuilding from '$lib/layout/Rebuilding.svelte';
+	import { accounts, data, refreshData } from '$lib/data/load';
+	import Transactions from '$lib/views/transactions/Transactions.svelte';
 </script>
 
-<Rebuilding title="Transactions" />
+{#if $data}
+	<Transactions data={$data} accounts={$accounts} onsaved={refreshData} />
+{/if}

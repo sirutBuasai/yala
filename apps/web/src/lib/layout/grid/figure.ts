@@ -28,6 +28,8 @@ export interface FigureSpec {
 	dashed?: string[];
 	/** Print each bar's own figure above it (a lone series only). */
 	valueLabels?: boolean;
+	/** Heatmap row to mark as the one in focus, by its label. */
+	mark?: string;
 	/** Heatmap scaling: per row (default) or one scale for the whole grid. */
 	normalize?: 'row' | 'col' | 'global';
 }

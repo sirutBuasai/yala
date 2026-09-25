@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { withFocus } from './focus';
+import { focusMonth, withFocus, withParams } from './focus';
 import { RAIL_W, SIDEBAR_W, sidebarMode } from './sidebar';
 import { CONTENT, ONE_COLUMN, WRAP_PAD } from '$lib/layout/grid/units';
 
@@ -19,6 +19,26 @@ describe('withFocus', () => {
 	it('ignores a month that is not a real calendar month', () => {
 		expect(withFocus('/', at('?month=2026-13'))).toBe('/');
 		expect(withFocus('/', at('?month=march'))).toBe('/');
+	});
+});
+
+describe('focusMonth', () => {
+	it('reads the month from the URL, falling back when it is missing or not a month', () => {
+		expect(focusMonth(new URL('http://y/t?month=2025-02'), '2026-09')).toBe('2025-02');
+		expect(focusMonth(new URL('http://y/t'), '2026-09')).toBe('2026-09');
+		expect(focusMonth(new URL('http://y/t?month=2025-00'), '2026-09')).toBe('2026-09');
+	});
+});
+
+describe('withParams', () => {
+	const url = new URL('http://y/transactions?month=2026-09&day=2026-09-03');
+
+	it('sets and removes parameters, keeping the rest', () => {
+		expect(withParams(url, { month: '2026-08', day: null })).toBe('/transactions?month=2026-08');
+	});
+
+	it('drops the question mark once nothing is left', () => {
+		expect(withParams(url, { month: null, day: null })).toBe('/transactions');
 	});
 });
 

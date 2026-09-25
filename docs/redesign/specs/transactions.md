@@ -1,6 +1,6 @@
 # Transactions spec
 
-Status: decided, building · Branch: `redesign/transactions`
+Status: step 1 built, in review · Branch: `redesign/transactions`
 
 ## Job
 
@@ -72,6 +72,14 @@ Rows shown on other pages open the same editor in place (D8); nothing there rout
 3. **Rows:** both, as today: the calendar with its day list, then the three lists.
 4. **Arranging:** on (D14).
 
+## Build steps
+
+1. **The page (built).** The icon rail (D13), every carried pane on the board with arranging on, the focus month's row marked in Category by month, `month` and `day` in the URL, and the page's `+ Add entry` offering Transaction, Paycheck and Bill pay. Rows edit in the current modals.
+2. **Drill-ins.** The click map's filters: donut slices, Unusual this month rows and Category by month cells set `category` (and `month`), with a filter chip on the lists.
+3. **Inline editing.** The measured inline editor with its More section (D7, D10, D11), opened rows kept in `entry`.
+
+Each step is dogfooded before the next.
+
 ## Period and URL state
 
 `month` (D4), plus `category`, `day`, `view` and `entry`. Sort stays a browser preference.
@@ -80,9 +88,9 @@ Rows shown on other pages open the same editor in place (D8); nothing there rout
 
 Balances (Accounts), multi-year trends (Cash flow), and any chart or copy change (D6).
 
-## Tests to restore from `master`
+## Tests
 
-`entries.spec.ts`, the modal and date picker cases in `a11y.spec.ts`, the dropdown and popup cases in `overlay.spec.ts`, and the board suites (`charts`, `steady`, `arrange`) pointed at this page.
+Restored from `master` and pointed at this page: `entries`, `charts`, `steady`, `arrange`, and the modal, date picker, dropdown and popup cases of `a11y` and `overlay`. Not restored: `arrange`'s merged-section cases, which need a KPI strip merged along a row (Home's); they return with the first page that has one. `planning` and `slider` return with Planning.
 
 ## Dogfood checklist
 

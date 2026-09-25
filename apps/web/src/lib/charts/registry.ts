@@ -49,6 +49,8 @@ interface AdaptOpts {
 	dashed?: string[];
 	/** Print each bar's own figure above it (a lone series only) — see `BarChart`. */
 	valueLabels?: boolean;
+	/** Heatmap row to mark as the one in focus, by its label. */
+	mark?: string;
 }
 
 export interface ChartDef<P extends Record<string, unknown> = Record<string, unknown>> {
@@ -343,6 +345,7 @@ export const CHARTS: ChartDef[] = [
 				values: m.values,
 				unit: m.unit,
 				normalize,
+				mark: opts.mark,
 				colors: normalize === 'global' ? undefined : band.map((key) => keyColor(key, opts.colorBy))
 			};
 		}
