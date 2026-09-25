@@ -2,7 +2,7 @@
 // Pending, or directly under it when Pending's cell is too narrow for both, never in a grid cell of its own.
 
 import { expect, test, type Locator } from '@playwright/test';
-import { openApp, settle, showTab, violations } from './app';
+import { openApp, settle, violations } from './app';
 
 test.beforeEach(async ({ page }) => openApp(page));
 
@@ -19,7 +19,6 @@ const boxOf = async (checkbox: Locator) => (await checkbox.locator('xpath=..').b
 for (const size of VIEWPORTS) {
 	test(`the reimbursement box sits with Pending at ${size.width}px`, async ({ page }) => {
 		await page.setViewportSize(size);
-		await showTab(page, 'Activity');
 		await page.getByRole('button', { name: '+ Add entry' }).click();
 		await settle(page);
 

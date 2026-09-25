@@ -46,7 +46,7 @@ make serve-api LEDGER=../yala-private-data/.worktrees/<topic>/ledger
 
 | Piece | Spec | Build | Dogfood |
 |---|---|---|---|
-| App shell (sidebar, routes, URL state) | [draft](specs/app-shell.md) | not started | not started |
+| App shell (sidebar, routes, URL state) | [done](specs/app-shell.md) | in review | not started |
 | Transactions | not started | not started | not started |
 | Cash flow | not started | not started | not started |
 | Accounts | not started | not started | not started |

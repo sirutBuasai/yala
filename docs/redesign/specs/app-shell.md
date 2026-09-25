@@ -1,10 +1,10 @@
 # App shell spec
 
-Status: draft, awaiting review · Branch: `redesign/app-shell`
+Status: built, in review · Branch: `redesign/app-shell`
 
 ## Job
 
-Move between pages without losing your place. The shell carries the focus period from page to page (D4), makes browser back and forward undo each step (D9), and gives every page the same way to add an entry. It changes no page content: the current views are mounted as they are until their own specs replace them.
+Move between pages without losing your place. The shell carries the focus period from page to page (D4), makes browser back and forward undo each step (D9), and gives every page the same way to add an entry. It starts every page from a clean slate: the old tabbed views are removed rather than mounted under the new routes, and each page is rebuilt on its own branch.
 
 ## Owns
 
@@ -33,33 +33,32 @@ Preferences stay in localStorage, since they are about you rather than about the
 - **Banners**: loading, error and read-only mode, above the page area, unchanged.
 - **Narrow screens**: the sidebar collapses into the existing hamburger sheet (`NavMenu`). The phone layout itself is an open decision.
 
-## Routes during the transition
+## Routes
 
-Each route shows the closest current view until its page is built, so the shell can ship and be dogfooded on its own.
-
-| Route | Sidebar item | Shows until its page is built |
+| Route | Sidebar item | Content now |
 |---|---|---|
-| `/` | Dashboard | Home |
-| `/transactions` | Transactions | Activity, Month range |
-| `/cash-flow` | Cash flow | Activity, Year and All time ranges |
-| `/accounts` | Accounts | Net Worth |
-| `/planning` | Planning | Hidden until the Planning spec; today it is only the Adjust dialog inside Net Worth · All time |
-| `/manage` | Manage | Manage |
-| `/dev` | Development | Development |
+| `/` | Dashboard | "This page is being rebuilt." |
+| `/transactions` | Transactions | Same |
+| `/cash-flow` | Cash flow | Same |
+| `/accounts` | Accounts | Same |
+| `/planning` | Planning | Same |
+| `/manage` | Manage | The current Manage view, unchanged |
+| `/dev` | Development | The token gallery, outside the shell |
+
+The Home, Activity and Net Worth views were deleted, with the e2e suites that drove their boards: `arrange`, `charts`, `planning`, `slider` and `steady`. The reusable components they composed (KPI cards, charts, calendar, lists, balance checklist) stay. When a page is built, recover what it carries over (D6) from `master`, for example `git show master:apps/web/src/lib/views/activity/YearView.svelte`, and restore the e2e suites that cover it.
 
 ## URL state
 
 | Param | Values | Used by | Absent or invalid |
 |---|---|---|---|
-| `month` | `YYYY-MM` | Month-level pages | The latest tracked month; an invalid value is replaced in place, not reported |
-| `year` | `YYYY` | Year-level views | The focus month's year |
+| `month` | `YYYY-MM` | Every page with a period | The latest tracked month; an invalid value is replaced in place, not reported |
 | `view` | Page-defined, e.g. `month`, `year`, `all` | Pages with more than one range | The page's default |
 | `day` | `YYYY-MM-DD` | The calendar | No day chosen |
 | `entry` | An entry locator | Any list with an open editor | Nothing open |
 
 Page filters (category, account, type, pending, search) are named by each page's spec but follow the same rules.
 
-**One focus, two grains (D4).** The shell holds a single focus month. A year-level view reads its year from it. Stepping a year view from 2026 to 2024 moves the focus to the same calendar month in 2024, clamped to the tracked range. Going back to a month-level page then lands on that month.
+**One focus, two grains (D4).** There is no `year` parameter: a year-level view reads its year from `month`. Stepping a year view from 2026 to 2024 moves the focus to the same calendar month in 2024, clamped to the tracked range. Going back to a month-level page then lands on that month.
 
 **Carrying it over.** Sidebar links and every drill-down are built from the current focus, so `/transactions` opened from Cash flow keeps the month or year you were on.
 
@@ -77,7 +76,10 @@ Page filters (category, account, type, pending, search) are named by each page's
 
 ## Implementation notes
 
-- `+layout.svelte` takes over loading, the banners, the sidebar and the shared Add entry modal from `+page.svelte`.
+- `routes/(app)/+layout.svelte` holds loading, the banners, the sidebar and the shared Add entry modal. `/dev` sits outside the `(app)` group.
+- `lib/nav/pages.ts` is the one list of pages; the sidebar and the hamburger sheet both render it through `NavLinks`, whose links carry the focus month (`lib/nav/focus.ts`).
+- The sidebar docks while the page beside it stays wider than a one-column board (`lib/nav/sidebar.ts`); otherwise it folds into the hamburger sheet.
+- The arrange toggle is left out until a page has a board again.
 - The hand-written scroll restore in `+page.svelte` goes; the router restores scroll on back and forward. Verify this while dogfooding, since async panes grow the page after navigation.
 - The site is prerendered with `ssr = false`, so query params may only be read in the browser.
 - The API already serves `200.html` for unknown paths, so deep links work behind `make serve-api` and the container. Check `make serve` (the preview server) too.
@@ -87,10 +89,14 @@ Page filters (category, account, type, pending, search) are named by each page's
 
 Page content, charts and copy (D6), the Dashboard itself, the phone layout, and the Planning page.
 
+## Resolved
+
+- **Transitional routes (2026-09-24).** Clean slate: new pages only, no old views mounted under them, so no migration code to remove later.
+- **Period steps in history (2026-09-24).** Each step adds a history entry for now; revisit after dogfooding.
+
 ## Open questions
 
-1. **Transitional routes.** The table above names routes after the new pages and mounts old views under them (Dashboard shows Home, for instance). The alternative keeps the old four tabs as sidebar items until each is replaced. Suggested: the new names, so dogfooding tests the new navigation from day one.
-2. **Period steps in history.** Should each month step add a history entry, or should a run of steps collapse into one? Suggested: each step, as written, then revisit after dogfooding.
+- **Board width beside the sidebar.** A full 48-column board needs about 1,400px of content. With the sidebar docked, a board only reaches full width, and so only offers arranging, on a very wide window. Decide in the first spec that brings a board back (likely Dashboard).
 
 ## Dogfood checklist
 
