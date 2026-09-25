@@ -30,11 +30,15 @@ The focus month carries over when moving between pages. When a page works at yea
 
 `redesign/main` is the integration branch and home of these docs. Pages and features branch off it and merge back; it merges to `master` when the redesign is complete. See [README.md](README.md).
 
+### D6 · Current charts and copy carry over (2026-09-24)
+
+The existing charts, figures, titles, subtitles, captions and UI strings carry over as they are. Mocks and specs show the current chart by default. A proposed improvement is shown as its own mock next to the current one, for the user to choose. The prototype restyled charts freely; some of its versions were better and some worse, so it is not a reference for chart design.
+
 ## Open
 
 - **Month from a year.** Moving from a year-level view to a month-level page: which month becomes the focus? Candidates are the previous focus month's calendar month within that year, or the latest month with data in that year.
-- **Filters in the URL.** Whether every filter and the focus period live in the URL, so back undoes a drill-down and a view can be bookmarked.
-- **Where a transaction is edited.** A side panel over the current page, a modal, or inline in the row; and whether rows shown on other pages open the same editor in place or navigate to Transactions.
+- **Filters in the URL.** Whether every filter and the focus period live in the URL, so back undoes a drill-down and a view can be bookmarked. Also in [mocks/editing-surfaces.html](mocks/editing-surfaces.html).
+- **Where a transaction is edited.** A side panel over the current page, a modal, or inline in the row; and whether rows shown on other pages open the same editor in place or navigate to Transactions. Compare them in [mocks/editing-surfaces.html](mocks/editing-surfaces.html).
 - **Drag-to-arrange boards.** Suggested: keep only on Dashboard.
 - **Typical month or budgets.** Suggested: trailing twelve-month median as "typical" now; budgets later if missed.
 - **Sankey placement.** Suggested: a toggle on Cash flow's breakdown for the selected period.

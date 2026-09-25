@@ -7,7 +7,8 @@ Yala is being reorganized from tabbed Month / Year / All time boards into Monarc
 1. [proposal.md](proposal.md): the approved structure and principles.
 2. [decisions.md](decisions.md): what is settled and what is still open. Do not re-open a settled decision without the user.
 3. The spec for the page you are working on, under [specs/](specs/). New specs start from [specs/_template.md](specs/_template.md).
-4. [prototype.html](prototype.html): the clickable sample-data prototype. Open it in a browser. It illustrates the direction; it is not a spec, and it repeats figures across pages that the specs must resolve.
+4. [mocks/prototype.html](mocks/prototype.html): the clickable sample-data prototype. Open it in a browser. It illustrates the direction; it is not a spec, it repeats figures across pages that the specs must resolve, and its charts are not a reference: the current charts and copy carry over (D6).
+5. [mocks/](mocks/): clickable mocks made for specific decisions. Open them in a browser.
 
 ## How the work proceeds
 
