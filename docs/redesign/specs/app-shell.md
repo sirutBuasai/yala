@@ -4,7 +4,7 @@ Status: built, in review · Branch: `redesign/app-shell`
 
 ## Job
 
-Move between pages without losing your place. The shell carries the focus period from page to page (D4), makes browser back and forward undo each step (D9), and gives every page the same way to add an entry. It starts every page from a clean slate: the old tabbed views are removed rather than mounted under the new routes, and each page is rebuilt on its own branch.
+Move between pages without losing your place. The shell carries the focus period from page to page (D4) and makes browser back and forward undo each step (D9). Adding entries is each page's job (D12). It starts every page from a clean slate: the old tabbed views are removed rather than mounted under the new routes, and each page is rebuilt on its own branch.
 
 ## Owns
 
@@ -17,7 +17,6 @@ The shell owns no figures. It owns:
 | Range within a page | `activity-range`, `networth-range` in localStorage | `view` in the URL |
 | Chosen calendar day | `calendar-day` in localStorage | `day` in the URL |
 | Scroll position | `scroll` in localStorage, restored by hand per tab | The router's own restore on back and forward |
-| Adding an entry | An Add entry modal per view | One Add entry modal owned by the shell |
 | Loading and read-only notices | `+page.svelte` | `+layout.svelte`, so data loads once and survives navigation |
 
 Preferences stay in localStorage, since they are about you rather than about the view: theme, board arrangements, transaction sort, and the last-used form values (`last-category` and the rest).
@@ -26,10 +25,10 @@ Preferences stay in localStorage, since they are about you rather than about the
 
 - **Sidebar**, left, full height:
   - The brand and today's header caption, unchanged (live or snapshot, transaction count, year span).
-  - `+ Add entry`, opening the current Add entry modal with its four kinds.
   - Page links in this order: Dashboard, Transactions, Cash flow, Accounts, Planning, Manage.
-  - At the bottom: the arrange toggle, the theme toggle, and the Development link that today sits in the hamburger menu.
-- **Page area**: each page's `ViewHeader` (title plus its period control), then its content, as today.
+  - At the bottom: the Development link.
+- **Page area**: each page's `ViewHeader` (title, the page's own controls, and the theme toggle at the far right, as in the old top bar), then its content.
+- **Every page, Development included, sits inside the shell**, so the sidebar never changes shape between pages.
 - **Banners**: loading, error and read-only mode, above the page area, unchanged.
 - **Narrow screens**: the sidebar collapses into the existing hamburger sheet (`NavMenu`). The phone layout itself is an open decision.
 
@@ -43,9 +42,9 @@ Preferences stay in localStorage, since they are about you rather than about the
 | `/accounts` | Accounts | Same |
 | `/planning` | Planning | Same |
 | `/manage` | Manage | The current Manage view, unchanged |
-| `/dev` | Development | The token gallery, outside the shell |
+| `/dev` | Development | The token gallery, inside the shell |
 
-The Home, Activity and Net Worth views were deleted, with the e2e suites that drove their boards: `arrange`, `charts`, `planning`, `slider` and `steady`. The reusable components they composed (KPI cards, charts, calendar, lists, balance checklist) stay. When a page is built, recover what it carries over (D6) from `master`, for example `git show master:apps/web/src/lib/views/activity/YearView.svelte`, and restore the e2e suites that cover it.
+The Home, Activity and Net Worth views were deleted, with the e2e suites that drove their boards: `arrange`, `charts`, `planning`, `slider` and `steady`. With the quick add gone no page opens an entry form yet, so `entries` and the form tests in `a11y` (open modal, date picker) and `overlay` (dropdowns and popups in a modal) went too; Transactions restores them. The reusable components they composed (KPI cards, charts, calendar, lists, balance checklist) stay. When a page is built, recover what it carries over (D6) from `master`, for example `git show master:apps/web/src/lib/views/activity/YearView.svelte`, and restore the e2e suites that cover it.
 
 ## URL state
 
@@ -69,14 +68,15 @@ Page filters (category, account, type, pending, search) are named by each page's
 | Element | Action | Route and state | Back returns to |
 |---|---|---|---|
 | Brand | Go to Dashboard | `/` with the current focus | The previous page |
-| `+ Add entry` | Open the Add entry modal over the current page | Unchanged | Closes nothing; the modal has its own close |
 | Page link | Go to that page | `/<page>` with the current focus | The previous page, at its scroll position |
 | Period stepper, range switch | Step or switch | Same route, new `month`, `year` or `view` | The previous period or range |
-| Arrange toggle, theme toggle, Development | As today | Unchanged | Not applicable |
+| Theme toggle | Switch theme | Unchanged | Not applicable |
+| Development | Open the token gallery | `/dev` | The previous page |
 
 ## Implementation notes
 
-- `routes/(app)/+layout.svelte` holds loading, the banners, the sidebar and the shared Add entry modal. `/dev` sits outside the `(app)` group.
+- `routes/(app)/+layout.svelte` holds loading, the banners and the sidebar. Every route, `/dev` included, lives in the `(app)` group.
+- The theme toggle lives in `ViewHeader`, so every page shows it on its title line.
 - `lib/nav/pages.ts` is the one list of pages; the sidebar and the hamburger sheet both render it through `NavLinks`, whose links carry the focus month (`lib/nav/focus.ts`).
 - The sidebar docks while the page beside it stays wider than a one-column board (`lib/nav/sidebar.ts`); otherwise it folds into the hamburger sheet.
 - The arrange toggle is left out until a page has a board again.
@@ -105,7 +105,6 @@ Page content, charts and copy (D6), the Dashboard itself, the phone layout, and 
 - Drill in, then press back; you return to the same place and scroll.
 - Reload any page; the view is identical.
 - Open a deep link in a new tab, under `make serve-api` and in the container.
-- Quick add from each page; the page refreshes with the new entry.
 - Read-only mode still shows its banner and refuses saves.
 
 ## Dogfood notes

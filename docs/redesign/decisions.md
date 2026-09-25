@@ -58,6 +58,10 @@ When a row is edited inline and the form has more than the row can hold (reimbur
 
 Supersedes D7's side panel. No place in Yala suits one: the calendar already has its day pane beside it, and on Transactions a panel would cover the context used to verify an entry. Rows are edited inline, growing a More section (D10), or in a modal when the inline row does not fit.
 
+### D12 · Each page owns its logging (2026-09-24)
+
+There is no app-wide quick add. A page's own Add offers the entry kinds its context logs: Transactions offers a transaction, a bill pay and a paycheck; Accounts offers a balance.
+
 ## Open
 
 - **Month from a year.** Moving from a year-level view to a month-level page: which month becomes the focus? Candidates are the previous focus month's calendar month within that year, or the latest month with data in that year.

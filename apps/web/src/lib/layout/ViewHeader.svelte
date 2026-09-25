@@ -1,6 +1,7 @@
 <script lang="ts">
-	// The per-tab header: a serif title with optional trailing content, shared by every view.
+	// The per-page header: a serif title, the page's own controls, and the theme toggle at the far right.
 	import type { Snippet } from 'svelte';
+	import ThemeToggle from '$lib/nav/ThemeToggle.svelte';
 
 	interface Props {
 		title: string;
@@ -12,6 +13,7 @@
 <div class="viewhead">
 	<h2 class="serif">{title}</h2>
 	{@render children?.()}
+	<span class="theme"><ThemeToggle /></span>
 </div>
 
 <style>
@@ -26,5 +28,8 @@
 		font-size: var(--text-title);
 		font-weight: var(--fw-semibold);
 		margin: 0;
+	}
+	.theme {
+		margin-left: auto;
 	}
 </style>

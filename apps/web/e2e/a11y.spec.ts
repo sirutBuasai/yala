@@ -1,4 +1,4 @@
-// axe over every page, in both themes, and over an open modal. WCAG A/AA is the bar the palette was
+// axe over every page, in both themes. WCAG A/AA is the bar the palette was
 // pitched against (see the contrast notes in app.css), and its colour rules are the ones a redesign is
 // most likely to break silently.
 
@@ -18,22 +18,6 @@ for (const label of PAGE_LABELS) {
 test('the light theme has no accessibility violations', async ({ page }) => {
 	await page.getByRole('button', { name: /Switch to (light|dark) theme/ }).click();
 	await settle(page);
-	const found = await violations(page);
-	expect(found, JSON.stringify(found, null, 2)).toEqual([]);
-});
-
-test('an open modal has no accessibility violations', async ({ page }) => {
-	await page.getByRole('button', { name: '+ Add entry' }).click();
-	await settle(page);
-	const found = await violations(page);
-	expect(found, JSON.stringify(found, null, 2)).toEqual([]);
-});
-
-test('an open date picker has no accessibility violations', async ({ page }) => {
-	await page.getByRole('button', { name: '+ Add entry' }).click();
-	await page.locator('dialog').getByRole('combobox', { name: 'Date' }).click();
-	await settle(page);
-	await expect(page.getByRole('grid')).toBeVisible();
 	const found = await violations(page);
 	expect(found, JSON.stringify(found, null, 2)).toEqual([]);
 });

@@ -1,8 +1,7 @@
 <script lang="ts">
 	// Design-token gallery: every semantic token in app.css at its real value, then those tokens in
 	// context. Roles that share a value still get their own named token, so intent stays explicit.
-	import '../../app.css';
-	import NavMenu from '$lib/nav/NavMenu.svelte';
+	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import Figure from '$lib/charts/Figure.svelte';
 	import Kpi from '$lib/kpi/Kpi.svelte';
@@ -273,280 +272,235 @@
 	const table = build(data, 'income.paychecks', all);
 </script>
 
-<div class="wrap">
-	<NavMenu />
+<ViewHeader title="Development" />
 
-	<header class="top">
-		<a href="/" class="brand">
-			<span class="dot"></span>
-			<h1 class="serif">Yala</h1>
-		</a>
-		<span class="sub">design token gallery</span>
-	</header>
+<p class="lead">
+	Every value below is a semantic token from <code>app.css</code>. Components reference
+	<em>roles</em> (<code>--text-subtitle</code>), never raw pixels. Roles that share a value keep
+	separate names, so either can move without disturbing the other.
+</p>
 
-	<p class="lead">
-		Every value below is a semantic token from <code>app.css</code>. Components reference
-		<em>roles</em> (<code>--text-subtitle</code>), never raw pixels. Roles that share a value keep
-		separate names, so either can move without disturbing the other.
-	</p>
-
-	<!-- ── Font family ────────────────────────────────────────────────────── -->
-	<h2 class="sec">Font family</h2>
-	<section class="card grp">
-		<div class="grphead">
-			<h3>Two faces</h3>
-			<span>Fancy serif for titles; modern sans for everything else.</span>
-		</div>
-		<div class="tlist">
-			{#each families as f (f.name)}
-				<div class="trow">
-					<code class="tname">--{f.name}</code>
-					<span class="tmeta">{f.alias}</span>
-					<span class="trole">{f.role}</span>
-					<span class="tsample" class:serif={f.serif} style="font-size: var(--text-title)">
-						Yala savings 1,240
-					</span>
-				</div>
-			{/each}
-		</div>
-	</section>
-
-	<!-- ── Typography ─────────────────────────────────────────────────────── -->
-	<h2 class="sec">Type scale</h2>
-	{#each typeGroups as g (g.title)}
-		<section class="card grp">
-			<div class="grphead">
-				<h3>{g.title}</h3>
-				<span>{g.note}</span>
-			</div>
-			<div class="tlist">
-				{#each g.tokens as t (t.name)}
-					<div class="trow">
-						<code class="tname">--{t.name}</code>
-						<span class="tmeta">{t.px}px · {t.primitive} · {t.font}</span>
-						<span class="trole">{t.role}</span>
-						<span
-							class="tsample"
-							class:serif={t.font === 'serif'}
-							style="font-size: var(--{t.name})">Aa Yala 1,240</span
-						>
-					</div>
-				{/each}
-			</div>
-		</section>
-	{/each}
-
-	<!-- ── Weight + tracking ──────────────────────────────────────────────── -->
-	<div class="cols2">
-		<section class="card grp">
-			<div class="grphead"><h3>Font weight</h3></div>
-			<div class="tlist">
-				{#each weights as w (w.name)}
-					<div class="trow">
-						<code class="tname">--{w.name}</code>
-						<span class="tmeta">{w.v}</span>
-						<span class="trole">{w.role}</span>
-						<span class="tsample" style="font-weight: var(--{w.name})">Money flow</span>
-					</div>
-				{/each}
-			</div>
-		</section>
-		<section class="card grp">
-			<div class="grphead"><h3>Letter spacing</h3></div>
-			<div class="tlist">
-				{#each tracking as t (t.name)}
-					<div class="trow">
-						<code class="tname">--{t.name}</code>
-						<span class="tmeta">{t.v}</span>
-						<span class="trole">{t.role}</span>
-						<span class="tsample" style="letter-spacing: var(--{t.name})">HEADING</span>
-					</div>
-				{/each}
-			</div>
-		</section>
+<!-- ── Font family ────────────────────────────────────────────────────── -->
+<h2 class="sec">Font family</h2>
+<section class="card grp">
+	<div class="grphead">
+		<h3>Two faces</h3>
+		<span>Fancy serif for titles; modern sans for everything else.</span>
 	</div>
-
-	<!-- ── Spacing ────────────────────────────────────────────────────────── -->
-	<h2 class="sec">Spacing</h2>
-	<div class="cols2">
-		<section class="card grp">
-			<div class="grphead">
-				<h3>Ramp (primitives)</h3>
-				<span>Every allowed gap/pad value.</span>
-			</div>
-			<div class="ramp">
-				{#each spacePrims as [name, px] (name)}
-					<div class="rrow">
-						<code class="tname">--{name}</code>
-						<span class="bar" style="width: var(--{name})"></span>
-						<span class="tmeta">{px}px</span>
-					</div>
-				{/each}
-			</div>
-		</section>
-		<section class="card grp">
-			<div class="grphead">
-				<h3>Gap aliases</h3>
-				<span>What components actually reference.</span>
-			</div>
-			<div class="ramp">
-				{#each gapAliases as g (g.name)}
-					<div class="rrow">
-						<code class="tname">--{g.name}</code>
-						<span class="bar accent" style="width: var(--{g.name})"></span>
-						<span class="tmeta">{g.px}px</span>
-						<span class="trole">{g.role}</span>
-					</div>
-				{/each}
-			</div>
-		</section>
-	</div>
-
-	<section class="card grp">
-		<div class="grphead">
-			<h3>Padding aliases</h3>
-			<span>Compound insets, standardized.</span>
-		</div>
-		<div class="padgrid">
-			{#each padAliases as p (p.name)}
-				<div class="padcell">
-					<div class="padbox" style="padding: var(--{p.name})"><span></span></div>
-					<code class="tname">--{p.name}</code>
-					<span class="tmeta">{p.v}</span>
-					<span class="trole">{p.role}</span>
-				</div>
-			{/each}
-		</div>
-	</section>
-
-	<!-- ── Radius ─────────────────────────────────────────────────────────── -->
-	<h2 class="sec">Radius</h2>
-	<section class="card grp">
-		<div class="radgrid">
-			{#each radii as r (r.name)}
-				<div class="radcell">
-					<div class="radbox" style="border-radius: var(--{r.name})"></div>
-					<code class="tname">--{r.name}</code>
-					<span class="tmeta">{r.px === 999 ? 'pill' : r.px + 'px'}</span>
-					<span class="trole">{r.role}</span>
-				</div>
-			{/each}
-		</div>
-	</section>
-
-	<!-- ── In context ─────────────────────────────────────────────────────── -->
-	<h2 class="sec">In context</h2>
-
-	<div class="board">
-		{#each kpis as spec (spec.figure)}
-			<div class="cell span2">
-				<Card><Kpi {data} {spec} /></Card>
+	<div class="tlist">
+		{#each families as f (f.name)}
+			<div class="trow">
+				<code class="tname">--{f.name}</code>
+				<span class="tmeta">{f.alias}</span>
+				<span class="trole">{f.role}</span>
+				<span class="tsample" class:serif={f.serif} style="font-size: var(--text-title)">
+					Yala savings 1,240
+				</span>
 			</div>
 		{/each}
-		<div class="cell span3">
-			<Card title={words('Where it went')} caption={words('Lifetime · donut')}>
-				<Figure primitive={donut} chart="donut" />
-			</Card>
-		</div>
-		<div class="cell span3">
-			<Card title={words('Income vs Spending vs Savings')} caption={words('Lifetime · bars')}>
-				<Figure primitive={bars} chart="bar" />
-			</Card>
-		</div>
-		<div class="cell span3">
-			<Card title={words('Cumulative savings')} caption={words('Lifetime · area line')}>
-				<Figure primitive={cumulative} chart="line" area />
-			</Card>
-		</div>
-		<div class="cell span3">
-			<Card title={words('Paychecks')} caption={words('Lifetime · table')}>
-				<Figure primitive={table} chart="table" />
-			</Card>
-		</div>
 	</div>
+</section>
 
-	<!-- Fields, buttons, controls -->
+<!-- ── Typography ─────────────────────────────────────────────────────── -->
+<h2 class="sec">Type scale</h2>
+{#each typeGroups as g (g.title)}
 	<section class="card grp">
 		<div class="grphead">
-			<h3>Fields & controls</h3>
-			<span>Labels, inputs, buttons, pills, triggers.</span>
+			<h3>{g.title}</h3>
+			<span>{g.note}</span>
 		</div>
-		<div class="demorow">
-			<div class="field">
-				<label for="d1">Payee</label>
-				<input id="d1" value="Example Store" />
-			</div>
-			<div class="field">
-				<label for="d2">Amount</label>
-				<input id="d2" type="number" value="42" />
-			</div>
-			<div class="field">
-				<label for="d3">Account</label>
-				<button class="trigger" type="button"
-					><span class="val">Checking</span><span>▾</span></button
-				>
-			</div>
-		</div>
-		<div class="demorow btns">
-			<button class="btn-primary">Save</button>
-			<button class="btn-danger">Delete</button>
-			<button class="btn-ghost">Ghost</button>
-			<button class="btn-cancel">Cancel</button>
-			<button class="btn-mini">+ Add row</button>
-			<button class="pill">Theme</button>
-			<button class="pill active">Edit</button>
+		<div class="tlist">
+			{#each g.tokens as t (t.name)}
+				<div class="trow">
+					<code class="tname">--{t.name}</code>
+					<span class="tmeta">{t.px}px · {t.primitive} · {t.font}</span>
+					<span class="trole">{t.role}</span>
+					<span class="tsample" class:serif={t.font === 'serif'} style="font-size: var(--{t.name})"
+						>Aa Yala 1,240</span
+					>
+				</div>
+			{/each}
 		</div>
 	</section>
+{/each}
 
-	<!-- Reusable edge-to-edge bleed: .bleed-x + --pad-card-x (same recipe as RowList) -->
+<!-- ── Weight + tracking ──────────────────────────────────────────────── -->
+<div class="cols2">
 	<section class="card grp">
-		<div class="grphead">
-			<h3>Edge-to-edge bleed</h3>
-			<span>Hover a row: highlight runs to the card edge; divider + content stay inset.</span>
+		<div class="grphead"><h3>Font weight</h3></div>
+		<div class="tlist">
+			{#each weights as w (w.name)}
+				<div class="trow">
+					<code class="tname">--{w.name}</code>
+					<span class="tmeta">{w.v}</span>
+					<span class="trole">{w.role}</span>
+					<span class="tsample" style="font-weight: var(--{w.name})">Money flow</span>
+				</div>
+			{/each}
 		</div>
-		<div class="bleed-x">
-			{#each bleedRows as r (r.label)}
-				<div class="blrow">
-					<span>{r.label}</span>
-					<span class="blamt">{r.amt}</span>
+	</section>
+	<section class="card grp">
+		<div class="grphead"><h3>Letter spacing</h3></div>
+		<div class="tlist">
+			{#each tracking as t (t.name)}
+				<div class="trow">
+					<code class="tname">--{t.name}</code>
+					<span class="tmeta">{t.v}</span>
+					<span class="trole">{t.role}</span>
+					<span class="tsample" style="letter-spacing: var(--{t.name})">HEADING</span>
 				</div>
 			{/each}
 		</div>
 	</section>
 </div>
 
+<!-- ── Spacing ────────────────────────────────────────────────────────── -->
+<h2 class="sec">Spacing</h2>
+<div class="cols2">
+	<section class="card grp">
+		<div class="grphead">
+			<h3>Ramp (primitives)</h3>
+			<span>Every allowed gap/pad value.</span>
+		</div>
+		<div class="ramp">
+			{#each spacePrims as [name, px] (name)}
+				<div class="rrow">
+					<code class="tname">--{name}</code>
+					<span class="bar" style="width: var(--{name})"></span>
+					<span class="tmeta">{px}px</span>
+				</div>
+			{/each}
+		</div>
+	</section>
+	<section class="card grp">
+		<div class="grphead">
+			<h3>Gap aliases</h3>
+			<span>What components actually reference.</span>
+		</div>
+		<div class="ramp">
+			{#each gapAliases as g (g.name)}
+				<div class="rrow">
+					<code class="tname">--{g.name}</code>
+					<span class="bar accent" style="width: var(--{g.name})"></span>
+					<span class="tmeta">{g.px}px</span>
+					<span class="trole">{g.role}</span>
+				</div>
+			{/each}
+		</div>
+	</section>
+</div>
+
+<section class="card grp">
+	<div class="grphead">
+		<h3>Padding aliases</h3>
+		<span>Compound insets, standardized.</span>
+	</div>
+	<div class="padgrid">
+		{#each padAliases as p (p.name)}
+			<div class="padcell">
+				<div class="padbox" style="padding: var(--{p.name})"><span></span></div>
+				<code class="tname">--{p.name}</code>
+				<span class="tmeta">{p.v}</span>
+				<span class="trole">{p.role}</span>
+			</div>
+		{/each}
+	</div>
+</section>
+
+<!-- ── Radius ─────────────────────────────────────────────────────────── -->
+<h2 class="sec">Radius</h2>
+<section class="card grp">
+	<div class="radgrid">
+		{#each radii as r (r.name)}
+			<div class="radcell">
+				<div class="radbox" style="border-radius: var(--{r.name})"></div>
+				<code class="tname">--{r.name}</code>
+				<span class="tmeta">{r.px === 999 ? 'pill' : r.px + 'px'}</span>
+				<span class="trole">{r.role}</span>
+			</div>
+		{/each}
+	</div>
+</section>
+
+<!-- ── In context ─────────────────────────────────────────────────────── -->
+<h2 class="sec">In context</h2>
+
+<div class="board">
+	{#each kpis as spec (spec.figure)}
+		<div class="cell span2">
+			<Card><Kpi {data} {spec} /></Card>
+		</div>
+	{/each}
+	<div class="cell span3">
+		<Card title={words('Where it went')} caption={words('Lifetime · donut')}>
+			<Figure primitive={donut} chart="donut" />
+		</Card>
+	</div>
+	<div class="cell span3">
+		<Card title={words('Income vs Spending vs Savings')} caption={words('Lifetime · bars')}>
+			<Figure primitive={bars} chart="bar" />
+		</Card>
+	</div>
+	<div class="cell span3">
+		<Card title={words('Cumulative savings')} caption={words('Lifetime · area line')}>
+			<Figure primitive={cumulative} chart="line" area />
+		</Card>
+	</div>
+	<div class="cell span3">
+		<Card title={words('Paychecks')} caption={words('Lifetime · table')}>
+			<Figure primitive={table} chart="table" />
+		</Card>
+	</div>
+</div>
+
+<!-- Fields, buttons, controls -->
+<section class="card grp">
+	<div class="grphead">
+		<h3>Fields & controls</h3>
+		<span>Labels, inputs, buttons, pills, triggers.</span>
+	</div>
+	<div class="demorow">
+		<div class="field">
+			<label for="d1">Payee</label>
+			<input id="d1" value="Example Store" />
+		</div>
+		<div class="field">
+			<label for="d2">Amount</label>
+			<input id="d2" type="number" value="42" />
+		</div>
+		<div class="field">
+			<label for="d3">Account</label>
+			<button class="trigger" type="button"><span class="val">Checking</span><span>▾</span></button>
+		</div>
+	</div>
+	<div class="demorow btns">
+		<button class="btn-primary">Save</button>
+		<button class="btn-danger">Delete</button>
+		<button class="btn-ghost">Ghost</button>
+		<button class="btn-cancel">Cancel</button>
+		<button class="btn-mini">+ Add row</button>
+		<button class="pill">Theme</button>
+		<button class="pill active">Edit</button>
+	</div>
+</section>
+
+<!-- Reusable edge-to-edge bleed: .bleed-x + --pad-card-x (same recipe as RowList) -->
+<section class="card grp">
+	<div class="grphead">
+		<h3>Edge-to-edge bleed</h3>
+		<span>Hover a row: highlight runs to the card edge; divider + content stay inset.</span>
+	</div>
+	<div class="bleed-x">
+		{#each bleedRows as r (r.label)}
+			<div class="blrow">
+				<span>{r.label}</span>
+				<span class="blamt">{r.amt}</span>
+			</div>
+		{/each}
+	</div>
+</section>
+
 <style>
-	.top {
-		display: flex;
-		align-items: baseline;
-		gap: var(--gap-field);
-		margin-bottom: var(--gap-row);
-	}
-	.brand {
-		display: flex;
-		align-items: baseline;
-		gap: var(--gap-field);
-		text-decoration: none;
-		color: inherit;
-	}
-	.brand h1 {
-		font-size: var(--text-brand);
-		margin: 0;
-		font-weight: var(--fw-semibold);
-		letter-spacing: var(--ls-tight);
-	}
-	.brand .dot {
-		width: 9px;
-		height: 9px;
-		border-radius: var(--radius-pill);
-		background: var(--lav);
-		box-shadow: 0 0 0 4px color-mix(in srgb, var(--lav) 20%, transparent);
-		align-self: center;
-	}
-	.sub {
-		color: var(--ink-3);
-		font-size: var(--text-subtitle);
-	}
 	.lead {
 		color: var(--ink-2);
 		font-size: var(--text-control);

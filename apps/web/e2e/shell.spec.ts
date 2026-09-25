@@ -37,19 +37,24 @@ test('a deep link opens its page directly', async ({ page }) => {
 	await expect(page.getByRole('heading', { level: 2, name: 'Manage' })).toBeVisible();
 });
 
-test('quick add opens the Add entry modal from any page', async ({ page }) => {
-	await showPage(page, 'Planning');
-	await page.getByRole('button', { name: '+ Add entry' }).click();
-	const dialog = page.getByRole('dialog');
-	await expect(dialog).toContainText('Add entry');
-	await expect(dialog.getByRole('tablist', { name: 'Entry type' })).toBeVisible();
+test('the development gallery opens inside the shell, like every other page', async ({ page }) => {
+	await page
+		.getByRole('navigation', { name: 'Tools' })
+		.getByRole('link', { name: 'Development' })
+		.click();
+	await expect(page.getByRole('heading', { level: 2, name: 'Development' })).toBeVisible();
+	await expect(pages(page)).toBeVisible();
 });
 
-test('a narrow window folds the sidebar into the menu, keeping quick add', async ({ page }) => {
+test('the theme toggle sits on the page title line', async ({ page }) => {
+	const header = page.locator('.viewhead');
+	await expect(header.getByRole('button', { name: /Switch to (light|dark) theme/ })).toBeVisible();
+});
+
+test('a narrow window folds the sidebar into the menu', async ({ page }) => {
 	await page.setViewportSize({ width: 900, height: 900 });
 	await settle(page);
 	await expect(pages(page)).toHaveCount(0);
-	await expect(page.getByRole('button', { name: '+ Add entry' })).toBeVisible();
 
 	await page.getByRole('button', { name: 'Open menu' }).click();
 	for (const label of PAGE_LABELS) {
