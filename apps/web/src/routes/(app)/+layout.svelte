@@ -1,20 +1,26 @@
 <script lang="ts">
-	// The app shell: loads the ledger once for every page and docks the sidebar, or folds it into the
-	// hamburger sheet. Adding entries belongs to each page, which offers the kinds its context logs.
+	// The app shell: loads the ledger once for every page and shows the sidebar in full, as an icon rail,
+	// or folded into the hamburger sheet. Adding entries belongs to each page, which offers the kinds its context logs.
 	import { onMount, type Snippet } from 'svelte';
 	import '../../app.css';
 	import { live, loadData, loadState } from '$lib/data/load';
-	import { docks } from '$lib/nav/sidebar';
+	import { sidebarMode } from '$lib/nav/sidebar';
 	import Brand from '$lib/nav/Brand.svelte';
 	import NavMenu from '$lib/nav/NavMenu.svelte';
 	import Sidebar from '$lib/nav/Sidebar.svelte';
 	import Tooltip from '$lib/overlay/Tooltip.svelte';
 	import Banner from '$lib/ui/Banner.svelte';
+	import { GridEnv } from '$lib/layout/grid/env.svelte';
+	import { setGridEnv } from '$lib/layout/grid/context';
 
 	let { children }: { children: Snippet } = $props();
 
 	let viewport = $state(window.innerWidth);
-	const docked = $derived(docks(viewport));
+	const mode = $derived(sidebarMode(viewport));
+
+	// One grid environment for every page, measured off `.wrap`: its content box is the board's width.
+	const env = new GridEnv();
+	setGridEnv(env);
 
 	/** Dismissed for this visit only: the banner is a standing fact, so it returns on a reload. */
 	let bannerClosed = $state(false);
@@ -27,12 +33,12 @@
 <a class="skip" href="#page">Skip to content</a>
 
 <div class="shell">
-	{#if docked}
-		<Sidebar />
+	{#if mode !== 'sheet'}
+		<Sidebar rail={mode === 'rail'} />
 	{/if}
 
-	<div class="wrap">
-		{#if !docked}
+	<div class="wrap" bind:clientWidth={env.width}>
+		{#if mode === 'sheet'}
 			<header class="top">
 				<NavMenu />
 				<Brand />

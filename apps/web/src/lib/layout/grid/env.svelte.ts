@@ -15,13 +15,17 @@ export class GridEnv {
 	 */
 	arrangeRequested = $state(false);
 
+	/** Boards on the current page. The shell's Edit toggle only means something while one is mounted. */
+	boards = $state(0);
+
 	readonly content = $derived(Math.max(0, this.width - 2 * WRAP_PAD));
 	readonly foldMode = $derived<FoldMode>(foldMode(this.content));
 	readonly folded = $derived(this.foldMode !== 'full');
 	readonly columns = $derived(foldColumns(this.foldMode));
 
-	/** Arranging is only offered when the full content column fits (see `foldMode`). */
-	readonly canArrange = $derived(this.foldMode === 'full');
+	/** Arranging is only offered for a board on screen, and only when the full content column fits (see
+	    `foldMode`). */
+	readonly canArrange = $derived(this.boards > 0 && this.foldMode === 'full');
 
 	/** Requested and possible — the one every component reads. */
 	readonly arranging = $derived(this.arrangeRequested && this.canArrange);

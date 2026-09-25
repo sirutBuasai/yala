@@ -5,6 +5,7 @@
 	// renders any more. Keyed on the ids alone — a caption changing must not throw the board away.
 	import type { Snippet } from 'svelte';
 	import BoardGrid from './BoardGrid.svelte';
+	import { getGridEnv } from './context';
 	import type { BoardLayout } from './types';
 
 	interface Props {
@@ -21,6 +22,12 @@
 	let { key, layout, names, onreset, children }: Props = $props();
 
 	const panes = $derived(Object.keys(layout).join(' '));
+
+	const env = getGridEnv();
+	$effect(() => {
+		env.boards++;
+		return () => env.boards--;
+	});
 </script>
 
 {#key panes}

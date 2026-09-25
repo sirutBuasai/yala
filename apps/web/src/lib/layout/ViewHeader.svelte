@@ -1,7 +1,8 @@
 <script lang="ts">
-	// The per-page header: a serif title, the page's own controls, and the theme toggle at the far right.
+	// The per-page header: a serif title, the page's own controls, and the app-wide toggles at the far right.
 	import type { Snippet } from 'svelte';
 	import ThemeToggle from '$lib/nav/ThemeToggle.svelte';
+	import ArrangeToggle from '$lib/layout/grid/ArrangeToggle.svelte';
 
 	interface Props {
 		title: string;
@@ -13,7 +14,7 @@
 <div class="viewhead">
 	<h2 class="serif">{title}</h2>
 	{@render children?.()}
-	<span class="theme"><ThemeToggle /></span>
+	<span class="toggles"><ArrangeToggle /><ThemeToggle /></span>
 </div>
 
 <style>
@@ -29,7 +30,9 @@
 		font-weight: var(--fw-semibold);
 		margin: 0;
 	}
-	.theme {
+	.toggles {
 		margin-left: auto;
+		display: flex;
+		gap: var(--gap-row);
 	}
 </style>

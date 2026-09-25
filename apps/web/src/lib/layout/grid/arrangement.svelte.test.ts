@@ -15,10 +15,11 @@ const LAYOUT = {
 	wide: { x: 0, y: 12, w: 48, h: 8, content: 'flow', mode: 'cap', cap: 8 }
 } satisfies BoardLayout;
 
-/** A full-width environment, so the board is not folded. */
+/** A full-width environment with this board on screen, so the board is not folded. */
 function wideEnv(): GridEnv {
 	const env = new GridEnv();
 	env.width = CONTENT + 2 * WRAP_PAD;
+	env.boards = 1;
 	return env;
 }
 
@@ -344,6 +345,14 @@ describe('seed', () => {
 	});
 });
 
+describe('offering arranging', () => {
+	it('offers nothing on a page without a board', () => {
+		const env = wideEnv();
+		env.boards = 0;
+		expect(env.canArrange).toBe(false);
+	});
+});
+
 describe('folding', () => {
 	it('sequences the folded layout in the arrangement’s reading order', () => {
 		const { arrangement: b } = arrangement();
@@ -363,6 +372,7 @@ describe('folding', () => {
 
 	it('does not offer arranging when the full content width does not fit', () => {
 		const env = new GridEnv();
+		env.boards = 1;
 		env.width = CONTENT; // short of the padding, so the content column is 48px narrow
 		expect(env.canArrange).toBe(false);
 		env.arrangeRequested = true;
