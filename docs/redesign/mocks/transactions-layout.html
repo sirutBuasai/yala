@@ -1,0 +1,236 @@
+<title>Transactions Page Layout</title>
+<style>
+:root {
+	--bg: #f0ebdd; --surface: #faf6ec; --surface-2: #f1ead9; --inset: #ece4d2; --border: #ddd2bb; --grid: #e6ddca;
+	--ink: #2e2a22; --ink-2: #5c5443; --ink-3: #6e6652;
+	--lav: #6a49bd; --lav-fill: #bb9af7; --gold: #806211; --gold-fill: #e0af68; --salmon: #b33b54; --green: #457124; --green-fill: #9ece6a;
+	--shadow: 0 1px 2px rgba(120, 90, 40, 0.06), 0 14px 34px -18px rgba(120, 90, 40, 0.28);
+	--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+	--sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+	--wash: 22%;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		color-scheme: dark;
+		--bg: #16161f; --surface: #1f1f2b; --surface-2: #26263a; --inset: #2a2a3c; --border: #33334a; --grid: #2a2a3c;
+		--ink: #e6e0c8; --ink-2: #a8a28c; --ink-3: #969380; --lav: #bb9af7; --gold: #e0af68; --salmon: #f7768e; --green: #9ece6a;
+		--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+		--wash: 30%;
+	}
+}
+:root[data-theme='dark'] {
+	color-scheme: dark;
+	--bg: #16161f; --surface: #1f1f2b; --surface-2: #26263a; --inset: #2a2a3c; --border: #33334a; --grid: #2a2a3c;
+	--ink: #e6e0c8; --ink-2: #a8a28c; --ink-3: #969380; --lav: #bb9af7; --gold: #e0af68; --salmon: #f7768e; --green: #9ece6a;
+	--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+	--wash: 30%;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; padding-inline: 20px; }
+.page { max-width: 1120px; margin: 0 auto; padding-block: 52px 110px; display: grid; gap: 60px; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 { font-size: clamp(30px, 5vw, 42px); line-height: 1.12; }
+h2 { font-size: 25px; }
+p { margin: 0; }
+.eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.lede, .head p { color: var(--ink-2); max-width: 72ch; }
+section { display: grid; gap: 18px; }
+.head { display: grid; gap: 8px; }
+.tabs { display: inline-flex; flex-wrap: wrap; padding: 4px; gap: 3px; border-radius: 999px; background: var(--inset); justify-self: start; }
+.tabs button { border: 0; background: none; font: inherit; font-size: 13.5px; color: var(--ink-2); padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.tabs button.on { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
+button:focus-visible { outline: 2px solid var(--lav); outline-offset: 2px; }
+.scroll { overflow-x: auto; }
+
+/* page wireframe */
+.frame { min-width: 900px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); padding: 16px 18px 20px; display: grid; gap: 10px; box-shadow: var(--shadow); }
+.bar { display: flex; align-items: center; gap: 10px; }
+.bar h3 { font-size: 21px; }
+.bar .sp { margin-left: auto; display: flex; gap: 8px; }
+.pill { border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 3px 12px; font-size: 12.5px; }
+.pill.acc { background: var(--lav-fill); color: #1a1522; border-color: transparent; font-weight: 600; }
+.grid { display: grid; grid-template-columns: repeat(48, 1fr); gap: 10px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.card.stub { min-height: 120px; color: var(--ink-3); font-size: 12.5px; background: var(--surface); border-style: dashed; }
+.ct { display: flex; align-items: baseline; gap: 10px; }
+.ct b { font-family: var(--serif); font-size: 15px; font-weight: 600; color: var(--ink); }
+.ct span { color: var(--ink-3); font-size: 12px; }
+.new { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; color: var(--lav); background: color-mix(in srgb, var(--lav-fill) 18%, transparent); padding: 1px 7px; border-radius: 999px; }
+
+/* KPI bar */
+.kbar { display: grid; grid-template-columns: repeat(4, 1fr); padding: 10px 6px; gap: 0; }
+.kbar .k { padding: 2px 16px; display: grid; gap: 1px; border-left: 1px solid var(--grid); }
+.kbar .k:first-child { border-left: 0; }
+.kbar .l { font-family: var(--serif); font-size: 14px; font-weight: 600; }
+.kbar .v { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.kbar .v b { font-family: var(--serif); font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kbar .d { font-size: 12px; font-variant-numeric: tabular-nums; }
+.kbar .n { font-size: 11.5px; color: var(--ink-3); }
+.good { color: var(--green); }
+.bad { color: var(--salmon); }
+
+/* category chart */
+.cats { display: grid; gap: 3px; }
+.crow { display: grid; grid-template-columns: 84px minmax(0, 1fr) 62px 62px; gap: 10px; align-items: center; font-size: 12px; min-height: 22px; }
+.crow .nm { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; gap: 6px; align-items: center; }
+.crow .nm i { width: 7px; height: 7px; border-radius: 7px; flex: none; }
+.lane { position: relative; height: 16px; }
+.lane .fill { position: absolute; left: 0; top: 3px; bottom: 3px; border-radius: 4px; }
+.lane .range { position: absolute; top: 6.5px; height: 3px; border-radius: 3px; background: var(--ink-3); opacity: 0.55; }
+.lane .avg { position: absolute; top: 3.5px; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 9px; border: 1.8px solid var(--ink-2); background: var(--surface); }
+.lane .now { position: absolute; top: 2.5px; width: 11px; height: 11px; margin-left: -5.5px; border-radius: 11px; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--ink-3); }
+.crow .sum, .crow .dv { text-align: right; font-variant-numeric: tabular-nums; }
+.crow .sum { color: var(--ink); font-weight: 600; }
+.chead { display: grid; grid-template-columns: 84px minmax(0, 1fr) 62px 62px; gap: 10px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.chead span:nth-child(3), .chead span:nth-child(4) { text-align: right; }
+.clegend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11.5px; color: var(--ink-3); align-items: center; }
+.clegend .sw { display: inline-flex; gap: 6px; align-items: center; }
+.clegend .r { width: 18px; height: 3px; background: var(--ink-3); opacity: 0.55; border-radius: 3px; }
+.clegend .a { width: 9px; height: 9px; border-radius: 9px; border: 1.8px solid var(--ink-2); background: var(--surface); }
+.clegend .n { width: 10px; height: 10px; border-radius: 10px; background: var(--lav-fill); box-shadow: 0 0 0 1px var(--ink-3); }
+.clegend .f { width: 18px; height: 8px; border-radius: 3px; background: color-mix(in srgb, var(--lav-fill) var(--wash), transparent); }
+
+/* history mini */
+.row { display: grid; grid-template-columns: 36px 8px minmax(0, 1fr) auto 70px; gap: 10px; align-items: center; font-size: 12.5px; padding: 5px 0; border-top: 1px solid var(--grid); }
+.row .d { color: var(--ink-3); font-size: 11px; }
+.dot { width: 7px; height: 7px; border-radius: 7px; }
+.row .m { display: flex; flex-direction: column; min-width: 0; }
+.row .m small { color: var(--ink-3); font-size: 10.5px; }
+.row .s { color: var(--ink-2); font-size: 11px; }
+.row .a { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--border); border-radius: 999px; padding: 1px 9px; font-size: 11.5px; color: var(--ink-2); }
+.chip.on { background: color-mix(in srgb, var(--lav-fill) 15%, var(--surface)); color: var(--ink); border-color: color-mix(in srgb, var(--lav-fill) 60%, var(--border)); }
+.sumbar { display: flex; gap: 20px; padding: 7px 10px; border-radius: 8px; background: var(--surface-2); font-size: 11.5px; color: var(--ink-3); }
+.sumbar b { display: block; font-family: var(--serif); font-size: 15px; color: var(--ink); }
+
+.why { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.why > div { padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font-size: 14px; color: var(--ink-2); display: grid; gap: 6px; align-content: start; }
+.why b { color: var(--ink); }
+.plus::before { content: '+ '; color: var(--green); font-weight: 700; }
+.minus::before { content: '− '; color: var(--salmon); font-weight: 700; }
+.q::before { content: '? '; color: var(--gold); font-weight: 700; }
+table.rules { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+table.rules th { text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+table.rules td { padding: 10px 14px; border-bottom: 1px solid var(--grid); color: var(--ink-2); vertical-align: top; }
+table.rules tr:last-child td { border-bottom: 0; }
+table.rules td:first-child { color: var(--ink); }
+.ex { font-size: 12.5px; color: var(--ink-3); }
+@media (max-width: 760px) { .why { grid-template-columns: 1fr; } }
+</style>
+
+<div class="page">
+	<header class="head">
+		<span class="eyebrow">Yala redesign · Transactions</span>
+		<h1>The page top to bottom</h1>
+		<p class="lede">Your layout from the last message, with the two new pieces drawn in full: the KPI bar and the categories chart. Dashed boxes are today's panes, unchanged. Every figure is a sample.</p>
+	</header>
+
+	<section>
+		<div class="tabs" id="scale"></div>
+		<div class="scroll"><div class="frame" id="frame"></div></div>
+		<div class="why" id="why"></div>
+	</section>
+
+	<section>
+		<div class="head">
+			<span class="eyebrow">Question 5</span>
+			<h2>What the history summary shows</h2>
+			<p>The summary never looks at which filters you set. It looks at what is left in the list, so any combination of filters is covered by the same few rules.</p>
+		</div>
+		<table class="rules">
+			<thead><tr><th>When the filtered list holds</th><th>The summary shows</th></tr></thead>
+			<tbody>
+				<tr><td>Anything</td><td>How many rows</td></tr>
+				<tr><td>Transactions</td><td><b>Spent</b>: their sum, refunds netted</td></tr>
+				<tr><td>Paychecks</td><td><b>Take-home</b>: their sum</td></tr>
+				<tr><td>Bill pay &amp; transfers</td><td><b>Bill pay &amp; transfers</b>: their sum</td></tr>
+				<tr><td>Transactions from exactly one category</td><td>Also <b>vs your average</b> for that category, the same figure as its row in the categories chart</td></tr>
+				<tr><td>Rows touching exactly one card</td><td>Also <b>Charged − paid</b>: what went on the card less what was paid to it</td></tr>
+			</tbody>
+		</table>
+		<p class="ex">So: filtering to Takeouts on Amex Gold shows Rows, Spent and vs your average (one category) but not Charged − paid, because Amex Gold's payments are bill pay, which the Takeouts filter removed. Search, Pending only and several categories at once never add a figure; they only narrow what the figures add up.</p>
+	</section>
+</div>
+
+<script>
+(() => {
+	const C = { Housing: '#f7768e', Personal: '#7dcfff', Health: '#2bb673', Takeouts: '#bb9af7', Travel: '#6f8fe8', Grocery: '#f295c5', Recreation: '#4cc9b0', Subscription: '#ffd5d2', Transport: '#ffd27f', Utilities: '#ff9e64', Misc: '#c0794f' };
+	// value = this month, avg = mean of the prior twelve, lo/hi = their lowest and highest
+	const ROWS = [
+		['Housing', 6418, 2283, 1685, 4700], ['Personal', 905, 143, 17, 520], ['Health', 884, 184, 26, 757],
+		['Grocery', 453, 384, 256, 476], ['Takeouts', 369, 744, 530, 1420], ['Travel', 689, 440, 0, 1300],
+		['Subscription', 130, 172, 99, 495], ['Transport', 118, 151, 95, 214], ['Recreation', 0, 123, 0, 418],
+		['Utilities', 62, 20, -62, 95], ['Misc', 60, 123, 0, 291]
+	];
+	const money = (v, sign) => `${v < 0 ? '−' : sign && v > 0 ? '+' : ''}$${Math.round(Math.abs(v)).toLocaleString('en-US')}`;
+	const S = { scale: 'row' };
+	const SCALES = [['row', 'Each row to its own range'], ['shared', 'One scale for every row']];
+
+	function catChart() {
+		const rows = [...ROWS].sort((a, b) => b[1] - a[1]);
+		const globalMax = Math.max(...rows.map((r) => Math.max(r[1], r[4])));
+		const body = rows.map(([n, v, avg, lo, hi]) => {
+			const max = S.scale === 'shared' ? globalMax : Math.max(v, hi) * 1.08;
+			const min = S.scale === 'shared' ? 0 : Math.min(0, lo);
+			const x = (val) => `${(((val - min) / (max - min)) * 100).toFixed(2)}%`;
+			const d = v - avg;
+			const cls = Math.abs(d) < avg * 0.1 ? '' : d > 0 ? 'bad' : 'good';
+			return `<div class="crow" title="${n}: ${money(v)} this month, ${money(avg)} average, usually ${money(lo)} to ${money(hi)}">
+				<span class="nm"><i style="background:${C[n]}"></i>${n}</span>
+				<span class="lane">
+					<span class="fill" style="width:${x(Math.max(v, min))};background:color-mix(in srgb, ${C[n]} var(--wash), transparent)"></span>
+					<span class="range" style="left:${x(Math.max(lo, min))};width:calc(${x(hi)} - ${x(Math.max(lo, min))})"></span>
+					<span class="avg" style="left:${x(avg)}"></span>
+					<span class="now" style="left:${x(Math.max(v, min))};background:${C[n]}"></span>
+				</span>
+				<span class="sum">${money(v)}</span><span class="dv ${cls}">${money(d, true)}</span></div>`;
+		}).join('');
+		return `<div class="chead"><span>Category</span><span></span><span>Total</span><span>vs avg</span></div><div class="cats">${body}</div>
+			<div class="clegend"><span class="sw"><span class="f"></span><span class="n"></span>this month</span><span class="sw"><span class="a"></span>average</span><span class="sw"><span class="r"></span>usual range</span></div>`;
+	}
+
+	const kbar = () => {
+		const K = [['Income', 7420, 7108, true], ['Take-home', 4120, 4064, true], ['Saved', 3217, 2340, true], ['Spent', 10089, 4768, false]];
+		return `<div class="card kbar">${K.map(([l, v, avg, up]) => {
+			const d = v - avg, good = (d > 0) === up;
+			return `<div class="k"><span class="l">${l}</span><span class="v"><b>${money(v)}</b><span class="d ${Math.abs(d) < avg * 0.03 ? '' : good ? 'good' : 'bad'}">${money(d, true)} vs avg</span></span><span class="n">your ${money(avg)} / mo average</span></div>`;
+		}).join('')}</div>`;
+	};
+
+	const history = () => `<div class="card" style="grid-column: span 28"><div class="ct"><b>History</b><span>20 in Sep 2026</span><span style="margin-left:auto;color:var(--lav);font-weight:600">+ Add</span></div>
+		<div class="chips"><span class="chip on">All</span><span class="chip">Transactions</span><span class="chip">Paychecks</span><span class="chip">Bill pay</span><span class="chip">Any category ▾</span><span class="chip">Any account ▾</span><span class="chip">Pending only</span></div>
+		<div class="sumbar"><span>Rows<b>20</b></span><span>Spent<b>$3,144.86</b></span><span>Take-home<b class="good">$7,780.00</b></span><span>Bill pay &amp; transfers<b>$3,138.50</b></span></div>
+		${[['9/23', '#bb9af7', 'Ramen shop', 'Takeouts', 'Amex Gold', '$48.20'], ['9/22', '#ffd27f', 'Transit card', 'Transport', 'C1 Venture X', '$42.28'], ['9/21', '#f295c5', "Trader Joe's", 'Grocery', 'C1 Venture X', '$86.14'], ['9/20', 'var(--ink-3)', 'Checking → C1 Venture X', 'Autopay', '', '$1,236.40'], ['9/15', 'var(--green-fill)', 'Employer', 'Paycheck', '', '+$4,410.00']].map(([d, c, p, k, s, a]) => `<div class="row"><span class="d">${d}</span><span class="dot" style="background:${c}"></span><span class="m">${p}<small>${k}</small></span><span class="s">${s}</span><span class="a">${a}</span></div>`).join('')}
+		<span class="ex">…one list, sorted by date, with the chips and summary from the last mock</span></div>`;
+
+	function render() {
+		document.getElementById('scale').innerHTML = SCALES.map(([v, l]) => `<button class="${S.scale === v ? 'on' : ''}" data-s="${v}">${l}</button>`).join('');
+		document.getElementById('frame').innerHTML = `
+			<div class="bar"><h3>Transactions</h3><span class="pill">‹ Sep 2026 ›</span><span class="sp"><span class="pill acc">+ Add entry</span><span class="pill">Edit</span><span class="pill">◑ Dark</span></span></div>
+			<div class="grid">
+				<div style="grid-column: span 48; display:grid; gap:6px"><div class="ct"><span class="new">New</span><span>KPI bar: one thin card, not pinned</span></div>${kbar()}</div>
+				<div class="card stub" style="grid-column: span 31; min-height: 230px"><div class="ct"><b>Log activity</b><span>Sep 2026</span></div>Today's calendar, unchanged.</div>
+				<div style="grid-column: span 17; display:grid; gap:10px">
+					<div class="card stub" style="min-height:100px"><div class="ct"><b>Pending transactions</b><span>waiting for posting, refunds, or credits</span></div>Unchanged.</div>
+					<div class="card stub" style="min-height:120px"><div class="ct"><b>Sep 23, 2026</b><span>4 transactions · $214</span></div>The day's entries, unchanged.</div>
+				</div>
+				${history()}
+				<div class="card" style="grid-column: span 20"><div class="ct"><b>Spending by category</b><span>Sep 2026 · total and deviation from monthly averages</span><span class="new" style="margin-left:auto">New</span></div>${catChart()}</div>
+				<div class="card stub" style="grid-column: span 18; min-height: 200px"><div class="ct"><b>Where your income went</b><span>Sep 2026 · income and spending split</span></div>Today's donut, unchanged.</div>
+				<div class="card stub" style="grid-column: span 30; min-height: 200px"><div class="ct"><b>Category by month</b><span>category spending split per month</span></div>Today's heatmap with the focus month's row marked.</div>
+			</div>`;
+		const W = {
+			row: ['Each row to its own range', ['Every row is legible, including the small categories, like Unusual this month today.', 'The Total and vs avg columns carry the absolute figures.'], ['Bar lengths are not comparable between rows: a full Utilities bar is not as much money as a full Housing bar.']],
+			shared: ['One scale for every row', ['Bar lengths compare across rows, so the biggest categories read at a glance.'], ['Housing flattens everything else: small categories and their ranges become slivers.']]
+		}[S.scale];
+		document.getElementById('why').innerHTML = `<div><b>${W[0]}</b>${W[1].map((x) => `<span class="plus">${x}</span>`).join('')}${W[2].map((x) => `<span class="minus">${x}</span>`).join('')}</div>
+			<div><b>What this replaces</b><span>The KPI bar replaces the six KPI cards; Spending rate and the separate vs your average card go. Spending by category replaces Unusual this month, since it holds the same average, range and deviation plus each category's total. Title and caption are proposals.</span><span class="q">Keep Spending rate somewhere?</span></div>`;
+	}
+	document.addEventListener('click', (e) => {
+		const b = e.target.closest('button[data-s]');
+		if (b) { S.scale = b.dataset.s; render(); }
+	});
+	render();
+})();
+</script>
