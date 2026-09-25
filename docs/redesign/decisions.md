@@ -78,10 +78,24 @@ The page for reading trends across months and years is called Analytics, at `/an
 
 Supersedes D7, D10 and D11. There is one editing surface: the existing entry modal, wherever a row appears. No inline row editor, no More section, no side panel. D8 stands, since the modal opens over whatever page the row is on.
 
+### D17 · Category by month on Transactions and Analytics (2026-09-25)
+
+The heatmap appears on both pages, drawn from one builder so the numbers cannot disagree. On Transactions it is the running per-category sum while logging; on Analytics it is the year's SUMMARY table, whose cells open the month behind an outlier.
+
+### D18 · The Sankey stays a pane of its own (2026-09-25)
+
+"Where it all went" stays a full-width pane on both Analytics boards, scoped to whatever the board reads. The prototype's "Where it went" category bars are not carried.
+
+### D19 · Analytics ranges are named by their grain (2026-09-25)
+
+The range switch reads Month (a year, month by month; was Activity · Year) and Year (the whole record, year by year; was All time).
+
+### D20 · Bar charts select; only heatmaps navigate (2026-09-25)
+
+Clicking a period in a bar chart narrows the page's other panes to that period in place: KPI cards (a month against its average), the Sankey, and a mark on every chart sharing that axis. Clicking it again widens the page back. A heatmap is the one chart whose click leaves the page, for the rows behind a cell on Transactions. This is the rule for clickable charts on every page.
+
 ## Open
 
-- **Sankey placement.** Where "Where it all went" lands on Analytics. Suggested: a view of the selected period's breakdown.
-- **Category by month on Analytics too?** It lives on Transactions (see its spec). The user's hunch was both pages; decide in the Analytics spec without duplicating needlessly (D3).
 - **A card filter's figure.** When the history is filtered to one card, show "Charged to card" (full bills) beside Spent, so the gap reads as what was fronted? Or nothing. "Charged − paid" was rejected: it mostly reflects statement timing.
 - **The open entry in the URL (D9).** The modal's open entry is not in the URL yet, so back does not close it.
 - **Phone layout.** Suggested: bottom tab bar with the four main pages.
