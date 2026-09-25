@@ -7,8 +7,8 @@ import type { DashboardData } from '$lib/data/types';
 import type { Flow, FlowLink, FlowNode } from './primitives';
 import { MONEY } from './primitives';
 import { sumBy, sumValues } from '$lib/utils/num';
-import { componentKeys, measureValue } from './metric';
-import { type Scope, scopeYear } from './scope';
+import { categoryTotals, componentKeys, measureValue } from './metric';
+import type { Scope } from './scope';
 
 /** Split `total` across named buckets by their `shares` proportions. Nothing when the total is zero,
  * and a single `fallbackLabel` bucket when there's no breakdown to split by. */
@@ -30,18 +30,7 @@ function scopeCategories(
 	data: DashboardData,
 	scope: Scope
 ): { category: string; amount: number }[] {
-	const totals: Record<string, number> = {};
-	if (scope.level === 'month') {
-		for (const c of (scope.monthKey && data.months[scope.monthKey]?.by_category) || [])
-			totals[c.category] = (totals[c.category] ?? 0) + c.amount;
-	} else if (scope.level === 'year') {
-		for (const row of data.years[String(scopeYear(data, scope))]?.matrix ?? []) {
-			for (const [c, v] of Object.entries(row.spent)) totals[c] = (totals[c] ?? 0) + v;
-		}
-	} else {
-		for (const c of data.overview.all_time_by_category) totals[c.category] = c.amount;
-	}
-	return Object.entries(totals)
+	return Object.entries(categoryTotals(data, scope))
 		.filter(([, v]) => v > 0)
 		.map(([category, amount]) => ({ category, amount }))
 		.sort((a, b) => b.amount - a.amount);

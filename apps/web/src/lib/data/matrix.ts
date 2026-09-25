@@ -39,9 +39,9 @@ export function categoryByMonth(data: DashboardData, year: number): Matrix {
 	};
 }
 
-/** The lifetime by year: the category-by-year series turned into a grid, so both readings agree. */
-export function categoryByYear(data: DashboardData): Matrix {
-	const byYear = categorySpendByYear(data);
+/** Year by year from `since`: the category-by-year series turned into a grid, so both readings agree. */
+export function categoryByYear(data: DashboardData, since?: number): Matrix {
+	const byYear = categorySpendByYear(data, since);
 	return {
 		kind: 'matrix',
 		unit: byYear.unit,

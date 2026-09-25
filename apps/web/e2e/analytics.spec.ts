@@ -83,3 +83,15 @@ test('a Category by month cell opens its rows on Transactions, and back returns'
 	await page.goBack();
 	await expect(page).toHaveURL(/\/analytics/);
 });
+
+test('the Year view shows the last ten years unless another span is picked', async ({ page }) => {
+	await page.goto('/analytics?view=year');
+	await settle(page);
+	const spans = page.getByRole('tablist', { name: 'Years shown' });
+	await expect(spans.getByRole('tab', { name: '10Y' })).toHaveAttribute('aria-selected', 'true');
+
+	await spans.getByRole('tab', { name: '5Y' }).click();
+	await expect(page).toHaveURL(/span=5/);
+	await spans.getByRole('tab', { name: '10Y' }).click();
+	await expect(page).not.toHaveURL(/span=/);
+});

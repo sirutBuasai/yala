@@ -86,18 +86,18 @@ export function measureTrailing(
 	return overMonths(data, m, keys, keys.map(monthName));
 }
 
-/** Every year from the first tracked to the last, so a year with nothing logged still holds its place
-    on an axis rather than closing the gap. */
-export function yearAxis(data: DashboardData): number[] {
+/** Every year from the first tracked (or `since`, when later) to the last, so a year with nothing logged
+    still holds its place on an axis rather than closing the gap. */
+export function yearAxis(data: DashboardData, since?: number): number[] {
 	const ys = data.meta.years;
 	if (!ys.length) return [];
-	const first = Math.min(...ys);
-	return Array.from({ length: Math.max(...ys) - first + 1 }, (_, i) => first + i);
+	const first = Math.max(Math.min(...ys), since ?? -Infinity);
+	return Array.from({ length: Math.max(0, Math.max(...ys) - first + 1) }, (_, i) => first + i);
 }
 
 /** One point per year, gaps included. */
-export function measureByYear(data: DashboardData, m: Measure): Series {
-	const years = yearAxis(data);
+export function measureByYear(data: DashboardData, m: Measure, since?: number): Series {
+	const years = yearAxis(data, since);
 	return series(
 		measureLabel(m),
 		years.map(String),
@@ -116,14 +116,14 @@ export function accumulate(s: Series): Series {
 // --- composite ---
 
 /**
- * The cash-flow measures as one MultiSeries. Lifetime (`year` omitted) plots per tracked year; a
+ * The cash-flow measures as one MultiSeries. Without a `year` it plots per year from `since`; a
  * specific `year` plots its twelve months. `net` rather than `income` so it reads from the same
  * paycheck rows take-home does.
  */
-export function cashFlowBars(data: DashboardData, year?: number): MultiSeries {
+export function cashFlowBars(data: DashboardData, year?: number, since?: number): MultiSeries {
 	const parts: Field[] = ['net', 'takehome', 'spending', 'saved'];
 	const list = parts.map((f) =>
-		year == null ? measureByYear(data, f) : measureByMonth(data, f, year)
+		year == null ? measureByYear(data, f, since) : measureByMonth(data, f, year)
 	);
 
 	return multiseries(
@@ -135,12 +135,12 @@ export function cashFlowBars(data: DashboardData, year?: number): MultiSeries {
 }
 
 /**
- * One series per spending category across every year from the first tracked, ordered by lifetime total. Categories span
- * orders of magnitude, so this wants a log axis — see `logYScale`.
+ * One series per spending category across the years from `since`, ordered by their total over them.
+ * Categories span orders of magnitude, so this wants a log axis — see `logYScale`.
  */
-export function categorySpendByYear(data: DashboardData): MultiSeries {
+export function categorySpendByYear(data: DashboardData, since?: number): MultiSeries {
 	const unit = MONEY(data.currency);
-	const years = yearAxis(data);
+	const years = yearAxis(data, since);
 	const labels = years.map(String);
 
 	const totalFor = (year: number, cat: string) =>
@@ -162,9 +162,9 @@ export function categorySpendByYear(data: DashboardData): MultiSeries {
 }
 
 /** Savings-to-income ratio per year, as a percentage. */
-export function savingsRate(data: DashboardData): Series {
-	const saved = measureByYear(data, 'saved');
-	const income = measureByYear(data, 'income');
+export function savingsRate(data: DashboardData, since?: number): Series {
+	const saved = measureByYear(data, 'saved', since);
+	const income = measureByYear(data, 'income', since);
 	const total = (s: Series) => sumBy(s.points, (p) => p.value ?? 0);
 	const lifetimeIncome = total(income);
 	return {
@@ -175,9 +175,13 @@ export function savingsRate(data: DashboardData): Series {
 			const base = income.points[i]?.value ?? 0;
 			return { ...p, value: base ? ((p.value ?? 0) / base) * 100 : 0 };
 		}),
-		// The lifetime rate, not the mean of the yearly ones: a bigger year has more say in "usual".
+		// The rate over every year shown, not the mean of the yearly ones: a bigger year has more say in
+		// "usual".
 		reference: lifetimeIncome
-			? { value: (total(saved) / lifetimeIncome) * 100, label: 'lifetime' }
+			? {
+					value: (total(saved) / lifetimeIncome) * 100,
+					label: since == null ? 'lifetime' : 'average'
+				}
 			: undefined
 	};
 }

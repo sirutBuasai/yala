@@ -60,6 +60,10 @@ A bar chart selects; it never leaves the page. Picking a period narrows the boar
 
 Only the heatmap leaves the page: on Month, a Category by month label opens that month on Transactions, and a cell opens it filtered to its category. Category by year is not clickable: Transactions has no year to open.
 
+## Time frame (D25)
+
+The Year view's header picks how far back the board reaches: 5Y, 10Y, 20Y, 50Y or All, each ending at the latest year, 10Y by default. The window scopes the whole board, so the KPI cards, stat matrix, Sankey and every year axis read those years; titles drop "Lifetime" and name the years instead, and Savings rate's reference line reads `average` rather than `lifetime`. A year with nothing logged keeps its place (D23). A picked year outside the window is dropped.
+
 ## Click map
 
 | Element | Action | Route and state | Back returns to |
@@ -79,7 +83,8 @@ Only the heatmap leaves the page: on Month, a Category by month label opens that
 |---|---|---|
 | `month` | `YYYY-MM`, shared (D4) | The latest tracked month |
 | `view` | `year` | Month |
-| `scope` | `month` on Month, `year` on Year | The board's whole span: the focus year on Month, the lifetime on Year |
+| `scope` | `month` on Month, `year` on Year | The board's whole span: the focus year on Month, the window on Year |
+| `span` | `5`, `20`, `50`, `all` (Year) | `10`: the last ten years (D25) |
 
 Leaving the page keeps its picks (D21): the sidebar reopens it with its `view` and `scope`, at whatever month the focus moved to meanwhile.
 
@@ -114,7 +119,7 @@ Month rows (Transactions), net worth (Accounts), projections (Planning).
 
 ## Open questions
 
-- **Time frame on Year.** Every year from the first to the last shows, gap years included (D23); decades of data would crowd it. Four styles are mocked in [mocks/analytics-year-ranges.html](../mocks/analytics-year-ranges.html). The bar chart does not yet thin its labels as the line chart does.
+- **Bar labels.** The bar chart does not yet thin its year labels as the line chart does; a 20Y or 50Y span will crowd them.
 
 - **Stat matrices.** They repeat figures the KPI cards show. Rework them once dogfooding shows which comparisons are used.
 - **Header while narrowed.** Only the panes' captions and the marks say a period is picked. A chip in the header, with a clear, may read better.

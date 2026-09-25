@@ -9,7 +9,13 @@ export interface Scope {
 	level: ScopeLevel;
 	year?: number;
 	monthKey?: string;
+	/** At `all`, the first year the record is read from: a trailing window rather than the lifetime. */
+	since?: number;
 }
+
+/** Whether `year` falls inside an `all` scope's window. Only meaningful at `all`. */
+export const inWindow = (scope: Scope, year: number): boolean =>
+	scope.since == null || year >= scope.since;
 
 /** The most recent tracked year, or the current calendar year when none are tracked. */
 export function latestYear(data: DashboardData): number {
@@ -57,5 +63,5 @@ export function scopeYear(data: DashboardData, scope: Scope): number {
 
 /** A stable string key for a scope — used to memoize per-scope computations. */
 export function scopeKey(scope: Scope): string {
-	return `${scope.level}:${scope.year ?? ''}:${scope.monthKey ?? ''}`;
+	return `${scope.level}:${scope.year ?? ''}:${scope.monthKey ?? ''}:${scope.since ?? ''}`;
 }

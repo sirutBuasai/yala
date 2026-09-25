@@ -12,25 +12,28 @@
 	import { CASH_FLOW_COLUMNS, columnHeading } from '$lib/data/catalog';
 	import { statCells } from '$lib/charts/statMatrix';
 	import { live, words } from '$lib/ui/label';
-	import { yearSpan } from '$lib/utils/format';
 	import { yearOf } from '$lib/utils/period';
 	import { incomeChain, INCOME_CHAIN_MERGES } from './kpis';
 
 	interface Props {
 		data: DashboardData;
 		monthKey: string;
-		/** Whether the board reads at the focus year rather than the lifetime. */
+		/** Whether the board reads at the focus year rather than its window. */
 		scoped: boolean;
+		/** The window's first year; absent, the board reads the lifetime. */
+		since?: number;
+		/** The years the window covers, as the header words them. */
+		spanText: string;
 		/** Picks a tracked year, by its label. */
 		onpick: (year: string) => void;
 	}
-	let { data, monthKey, scoped, onpick }: Props = $props();
+	let { data, monthKey, scoped, since, spanText, onpick }: Props = $props();
 
-	const all: Scope = { level: 'all' };
+	const all = $derived<Scope>({ level: 'all', since });
+	const lifetime = $derived(since == null);
 	const year = $derived(yearOf(monthKey));
 	const scope = $derived<Scope>(scoped ? { level: 'year', year } : all);
 	const pickedYear = $derived(scoped ? String(year) : undefined);
-	const span = $derived(yearSpan(data.meta.years, 'no tracked years'));
 
 	const KPIS = $derived(incomeChain(scope));
 	const kpis = useKpiBoard('analytics:year', () => KPIS, INCOME_CHAIN_MERGES);
@@ -96,7 +99,7 @@
 					chart: 'sankey',
 					title: words('Where it all went'),
 					caption: {
-						context: pickedYear ?? 'Lifetime',
+						context: pickedYear ?? (lifetime ? 'Lifetime' : spanText),
 						text: 'gross income to each spending category'
 					}
 				}
@@ -130,7 +133,11 @@
 
 	// The averages carry no caption: their divisor is each figure's own footnote.
 	const rows = $derived([
-		{ label: words('Lifetime total'), caption: live(span), cells: cellsOf((c) => c.total) },
+		{
+			label: words(lifetime ? 'Lifetime total' : 'Total'),
+			caption: live(spanText),
+			cells: cellsOf((c) => c.total)
+		},
 		{ label: words('Avg / year'), cells: cellsOf((c) => c.perYear) },
 		{ label: words('Avg / month'), cells: cellsOf((c) => c.perMonth) }
 	]);
@@ -141,8 +148,8 @@
 
 	<Pane
 		id="cashflow"
-		title={words('Lifetime cash flow')}
-		caption={{ context: span, text: 'totals, yearly, and monthly rates' }}
+		title={words(lifetime ? 'Lifetime cash flow' : 'Cash flow')}
+		caption={{ context: spanText, text: 'totals, yearly, and monthly rates' }}
 	>
 		<StatMatrix {data} {columns} {rows} />
 	</Pane>

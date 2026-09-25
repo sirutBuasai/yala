@@ -110,11 +110,14 @@ A year with nothing logged keeps its place on every year axis, so the record rea
 
 The text caret and the I-beam pointer appear only in fields that take typing. A click on a chart or control never places a caret or starts a text selection.
 
+### D25 · Year view time frame: preset spans (2026-09-25)
+
+Style A of [mocks/analytics-year-ranges.html](mocks/analytics-year-ranges.html). The Year view's header offers 5Y, 10Y, 20Y, 50Y and All, each ending at the latest year, default 10Y, in the URL as `span`. The window scopes the whole board: KPI cards, stat matrix, Sankey and every year axis. A picked year the window moves past is dropped. A window reaching back past the first tracked year is the lifetime, and reads as one.
+
 ## Open
 
 - **A card filter's figure.** When the history is filtered to one card, show "Charged to card" (full bills) beside Spent, so the gap reads as what was fronted? Or nothing. "Charged − paid" was rejected: it mostly reflects statement timing.
 - **The open entry in the URL (D9).** The modal's open entry is not in the URL yet, so back does not close it.
-- **Year view time frame.** Presets, a stepped window, or an overview strip, and whether the window scopes the whole board. Mock: [mocks/analytics-year-ranges.html](mocks/analytics-year-ranges.html).
 - **Phone layout.** Suggested: bottom tab bar with the four main pages.
 
 ## Resolved elsewhere

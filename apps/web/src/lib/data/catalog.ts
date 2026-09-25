@@ -167,14 +167,14 @@ const CHART_DEFS: DataDef[] = [
 		label: 'Category by year',
 		kind: 'multiseries',
 		scopes: LIFETIME,
-		build: (data) => categorySpendByYear(data)
+		build: (data, scope) => categorySpendByYear(data, scope.since)
 	},
 	{
 		id: 'spending.category_by_year_grid',
 		label: 'Category by year',
 		kind: 'matrix',
 		scopes: LIFETIME,
-		build: (data) => categoryByYear(data)
+		build: (data, scope) => categoryByYear(data, scope.since)
 	},
 	{
 		id: 'spending.vs_average',
@@ -202,14 +202,14 @@ const CHART_DEFS: DataDef[] = [
 		label: 'Net income vs take-home vs spending vs saved',
 		kind: 'multiseries',
 		scopes: YEARLY,
-		build: (data, scope) => cashFlowBars(data, optionalYear(data, scope))
+		build: (data, scope) => cashFlowBars(data, optionalYear(data, scope), scope.since)
 	},
 	{
 		id: 'overview.savings_rate',
 		label: 'Savings rate',
 		kind: 'series',
 		scopes: LIFETIME,
-		build: (data) => savingsRate(data)
+		build: (data, scope) => savingsRate(data, scope.since)
 	},
 	{
 		id: 'money.flow',
@@ -450,7 +450,7 @@ const SERIES_DEFS: DataDef[] = [
 			accumulate(
 				scope.level === 'year'
 					? measureActive(data, f, scopeYear(data, scope))
-					: measureByYear(data, f)
+					: measureByYear(data, f, scope.since)
 			)
 	})),
 	...RUNNING.map((f): DataDef => ({

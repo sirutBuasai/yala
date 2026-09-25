@@ -184,6 +184,12 @@ describe('yearAxis', () => {
 		expect(spent.points[1]!.value).toBe(0);
 	});
 
+	it('starts at `since` when the window is shorter than the record', () => {
+		const data = makeData();
+		expect(yearAxis(data, 2025)).toEqual([2025]);
+		expect(yearAxis(data, 1990)).toEqual([2024, 2025]);
+	});
+
 	it('is empty with no tracked years', () => {
 		const data = makeData();
 		data.meta.years = [];
