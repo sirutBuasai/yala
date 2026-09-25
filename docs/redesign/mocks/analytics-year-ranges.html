@@ -1,0 +1,313 @@
+<title>Year View Time Frames</title>
+<style>
+:root {
+	--bg: #f0ebdd; --surface: #faf6ec; --surface-2: #f1ead9; --inset: #ece4d2; --border: #ddd2bb; --grid: #e6ddca;
+	--ink: #2e2a22; --ink-2: #5c5443; --ink-3: #6e6652;
+	--lav: #6a49bd; --lav-fill: #bb9af7;
+	--net: #7090e0; --take: #4cc2a8; --spent: #ef7d90; --saved: #97c95f;
+	--shadow: 0 1px 2px rgba(120, 90, 40, 0.06), 0 14px 34px -18px rgba(120, 90, 40, 0.28);
+	--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+	--sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		color-scheme: dark;
+		--bg: #16161f; --surface: #1f1f2b; --surface-2: #26263a; --inset: #2a2a3c; --border: #33334a; --grid: #2a2a3c;
+		--ink: #e6e0c8; --ink-2: #a8a28c; --ink-3: #969380; --lav: #bb9af7;
+		--net: #7aa2f7; --take: #73daca; --spent: #f7768e; --saved: #9ece6a;
+		--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+	}
+}
+:root[data-theme='dark'] {
+	color-scheme: dark;
+	--bg: #16161f; --surface: #1f1f2b; --surface-2: #26263a; --inset: #2a2a3c; --border: #33334a; --grid: #2a2a3c;
+	--ink: #e6e0c8; --ink-2: #a8a28c; --ink-3: #969380; --lav: #bb9af7;
+	--net: #7aa2f7; --take: #73daca; --spent: #f7768e; --saved: #9ece6a;
+	--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; padding-inline: 20px; }
+.page { max-width: 1040px; margin: 0 auto; padding-block: 52px 110px; display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 { font-size: clamp(30px, 5vw, 42px); line-height: 1.12; }
+h2 { font-size: 24px; }
+p { margin: 0; }
+.eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.lede, .head p, .note { color: var(--ink-2); max-width: 70ch; }
+.note { font-size: 13.5px; }
+section { display: grid; gap: 16px; }
+.head { display: grid; gap: 6px; }
+ul.pts { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 14px; display: grid; gap: 3px; max-width: 70ch; }
+
+.frame { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 14px 18px 18px; display: grid; gap: 12px; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.bar h3 { font-size: 20px; margin-right: 4px; }
+.cap { color: var(--ink-3); font-size: 13px; font-variant-numeric: tabular-nums; }
+.seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--inset); }
+.seg button { border: 0; background: none; font: inherit; font-size: 13px; color: var(--ink-2); padding: 4px 12px; border-radius: 999px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.seg button.on { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
+.nav { display: inline-flex; align-items: center; gap: 6px; }
+.nav button.arrow { width: 28px; height: 28px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); cursor: pointer; font-size: 15px; line-height: 1; }
+.nav button.arrow:disabled { opacity: 0.4; cursor: default; }
+.nav .span { min-width: 92px; text-align: center; padding: 3px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); font-size: 13px; font-variant-numeric: tabular-nums; }
+select { font: inherit; font-size: 13px; color: var(--ink); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px; }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--lav); outline-offset: 2px; }
+
+.chartcard { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px 8px; display: grid; gap: 4px; background: var(--surface); }
+.ct { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.ct b { font-family: var(--serif); font-size: 15px; font-weight: 600; }
+.ct span { color: var(--ink-3); font-size: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11.5px; color: var(--ink-2); }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+svg.chart text { fill: var(--ink-3); font-size: 11px; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+svg.chart .gl { stroke: var(--grid); stroke-width: 1; }
+svg.chart .gap { fill: none; stroke: var(--border); stroke-dasharray: 3 3; }
+svg.chart .gaplab { font-size: 9.5px; font-style: italic; }
+.brush { cursor: grab; }
+.brush:active { cursor: grabbing; }
+.brush rect.win { fill: var(--lav-fill); fill-opacity: 0.18; stroke: var(--lav); stroke-width: 1.2; }
+.brush rect.handle { fill: var(--lav); cursor: ew-resize; }
+.shade { fill: var(--bg); fill-opacity: 0.55; pointer-events: none; }
+
+.tag { justify-self: start; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; color: var(--lav); background: color-mix(in srgb, var(--lav-fill) 18%, transparent); padding: 1px 8px; border-radius: 999px; }
+.qs { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.q { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.q h3 { font-size: 16px; }
+.q p { font-size: 13.5px; color: var(--ink-2); }
+.q .rec { color: var(--ink); }
+@media (prefers-reduced-motion: no-preference) { svg.chart rect.b { transition: opacity 120ms; } }
+</style>
+
+<main class="page">
+	<header class="head">
+		<span class="eyebrow">Analytics · Year view · mock</span>
+		<h1>How far back the Year view reaches</h1>
+		<p class="lede">The Year view draws every year from the first one you logged to the last, gaps included. After decades that is dozens of bars. Below are four ways to pick a time frame, each drawn with the current chart. Sample figures, not your ledger: 26 years, 2001 to 2026, with nothing logged in 2009.</p>
+	</header>
+
+	<section>
+		<div class="head">
+			<h2>Today: every year, labels thinned</h2>
+			<p class="note">No time frame. A gap year keeps its slot, drawn as an empty outline so the axis stays continuous. The bar chart's labels are thinned so they never overlap, which it does not do yet. This is the baseline the others are measured against.</p>
+		</div>
+		<div class="frame">
+			<div class="bar"><h3>Analytics</h3><div class="seg"><button type="button">Month</button><button type="button" class="on">Year</button></div><span class="cap">Lifetime · 2001–2026</span></div>
+			<div class="chartcard" id="c0"></div>
+		</div>
+	</section>
+
+	<section>
+		<div class="head">
+			<span class="tag">A</span>
+			<h2>Preset spans in the header</h2>
+			<p class="note">A second switch beside Month and Year, always ending at the latest year. Fastest to use, and it reads like a stock chart. Older decades are reached only through All.</p>
+		</div>
+		<div class="frame">
+			<div class="bar"><h3>Analytics</h3><div class="seg"><button type="button">Month</button><button type="button" class="on">Year</button></div>
+				<div class="seg" id="a-seg" role="group" aria-label="Time frame"></div><span class="cap" id="a-cap"></span></div>
+			<div class="chartcard" id="c1"></div>
+		</div>
+	</section>
+
+	<section>
+		<div class="head">
+			<span class="tag">B</span>
+			<h2>A window you step through</h2>
+			<p class="note">The same span choices in a menu, plus arrows that slide the window a whole span at a time, the way the Month view's year stepper works. Any decade is two clicks away, and the header says exactly which years are showing.</p>
+		</div>
+		<div class="frame">
+			<div class="bar"><h3>Analytics</h3><div class="seg"><button type="button">Month</button><button type="button" class="on">Year</button></div>
+				<div class="nav"><button type="button" class="arrow" id="b-prev" aria-label="Earlier years">‹</button><span class="span" id="b-span"></span><button type="button" class="arrow" id="b-next" aria-label="Later years">›</button></div>
+				<label class="cap" for="b-size">Show</label><select id="b-size"><option value="5">5 years</option><option value="10" selected>10 years</option><option value="20">20 years</option><option value="0">All years</option></select></div>
+			<div class="chartcard" id="c2"></div>
+		</div>
+	</section>
+
+	<section>
+		<div class="head">
+			<span class="tag">C</span>
+			<h2>An overview strip with a draggable window</h2>
+			<p class="note">Every year stays visible as a thin strip under the chart; the chart above shows the window you drag or resize on it. Best for seeing where a span sits in the whole record. It costs a strip of height on the board and is the fiddliest to use on a phone.</p>
+		</div>
+		<div class="frame">
+			<div class="bar"><h3>Analytics</h3><div class="seg"><button type="button">Month</button><button type="button" class="on">Year</button></div><span class="cap" id="c-cap"></span></div>
+			<div class="chartcard" id="c3"></div>
+			<div class="chartcard"><div class="ct"><span>Drag the window, or its edges</span></div><svg class="chart" id="strip" viewBox="0 0 720 64" aria-label="Every year, with the shown window"></svg></div>
+		</div>
+	</section>
+
+	<section>
+		<div class="head">
+			<h2>Decide</h2>
+		</div>
+		<div class="qs">
+			<div class="q"><h3>Which control</h3><p>A is quickest, B reaches any decade, C shows context.</p><p class="rec"><b>Suggested:</b> B. It matches the Month view's stepper, and the header names the years on screen.</p></div>
+			<div class="q"><h3>What the window covers</h3><p>Only the year-axis charts (bars, Category by year, lines), or the whole board, so the KPI cards, Sankey and stat matrix read "2017–2026" instead of the lifetime.</p><p class="rec"><b>Suggested:</b> the whole board. A Sankey of fifty years beside a ten-year chart would answer a different question.</p></div>
+			<div class="q"><h3>The default</h3><p>All years, or the last ten.</p><p class="rec"><b>Suggested:</b> the last ten, which is every year you have today. The span lives in the URL and persists across pages like the other picks.</p></div>
+			<div class="q"><h3>A picked year outside the window</h3><p>Stepping the window away from a picked year could keep the pick or drop it.</p><p class="rec"><b>Suggested:</b> drop it, so the board never reads a year it no longer shows.</p></div>
+		</div>
+	</section>
+</main>
+
+<script>
+(() => {
+	const YEARS = Array.from({ length: 26 }, (_, i) => 2001 + i);
+	const GAP = new Set([2009]);
+	const noise = (y, k) => Math.sin(y * 12.9898 + k * 78.233) * 0.5 + 0.5;
+	const DATA = Object.fromEntries(YEARS.map((y, i) => {
+		if (GAP.has(y)) return [y, null];
+		const part = y === 2026 ? 0.75 : 1;
+		const net = (26000 + i * 4200 + noise(y, 1) * 9000) * part;
+		const take = net * (0.6 + noise(y, 2) * 0.08);
+		const spent = take * (0.42 + noise(y, 3) * 0.35);
+		return [y, { net, take, spent, saved: net - spent }];
+	}));
+	const SERIES = [['net', 'Net income', 'var(--net)'], ['take', 'Take-home', 'var(--take)'], ['spent', 'Spent', 'var(--spent)'], ['saved', 'Saved', 'var(--saved)']];
+	const NS = 'http://www.w3.org/2000/svg';
+	const el = (tag, attrs = {}, text) => {
+		const n = document.createElementNS(NS, tag);
+		for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+		if (text != null) n.textContent = text;
+		return n;
+	};
+	const kfmt = (v) => (v >= 1000 ? `$${Math.round(v / 1000)}k` : `$${Math.round(v)}`);
+
+	/** The current Year-view bar chart over `years`, labels thinned so none overlap. */
+	function draw(card, years, caption) {
+		card.innerHTML = '';
+		const head = document.createElement('div');
+		head.className = 'ct';
+		head.innerHTML = `<b>Net income vs take-home vs spending vs saved</b><span>${caption}</span>`;
+		const legend = document.createElement('div');
+		legend.className = 'legend';
+		legend.innerHTML = SERIES.map(([, n, c]) => `<span><i style="background:${c}"></i>${n}</span>`).join('');
+		const W = 720, H = 210, L = 44, R = 8, T = 10, B = 24;
+		const svg = el('svg', { class: 'chart', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Bar chart across ${years.length} years` });
+		const max = Math.max(1, ...years.flatMap((y) => (DATA[y] ? [DATA[y].net] : [])));
+		const step = max > 100000 ? 50000 : max > 40000 ? 20000 : 10000;
+		const top = Math.ceil(max / step) * step;
+		const yv = (v) => T + (H - T - B) * (1 - v / top);
+		for (let v = 0; v <= top; v += step) {
+			svg.append(el('line', { class: 'gl', x1: L, x2: W - R, y1: yv(v), y2: yv(v) }));
+			svg.append(el('text', { x: L - 6, y: yv(v) + 4, 'text-anchor': 'end' }, kfmt(v)));
+		}
+		const gw = (W - L - R) / years.length;
+		const bw = Math.max(1, Math.min(14, (gw * 0.72) / 4));
+		const every = Math.max(1, Math.ceil(36 / gw));
+		years.forEach((y, i) => {
+			const cx = L + gw * i + gw / 2;
+			const d = DATA[y];
+			if (!d) {
+				const w = bw * 4;
+				svg.append(el('rect', { class: 'gap', x: cx - w / 2, y: yv(top * 0.15), width: w, height: yv(0) - yv(top * 0.15), rx: 3 }));
+				if (gw > 30) svg.append(el('text', { class: 'gaplab', x: cx, y: yv(top * 0.15) - 5, 'text-anchor': 'middle' }, 'none'));
+			} else {
+				SERIES.forEach(([k, n, c], j) => {
+					const v = Math.max(0, d[k]);
+					const r = el('rect', { class: 'b', x: cx - bw * 2 + j * bw, y: yv(v), width: Math.max(0.6, bw - 0.8), height: yv(0) - yv(v), rx: Math.min(2.5, bw / 3), fill: c });
+					r.append(el('title', {}, `${y} · ${n}: $${Math.round(d[k]).toLocaleString('en-US')}`));
+					svg.append(r);
+				});
+			}
+			if ((years.length - 1 - i) % every === 0) svg.append(el('text', { x: cx, y: H - 6, 'text-anchor': 'middle' }, String(y)));
+		});
+		card.append(head, legend, svg);
+	}
+
+	const last = YEARS[YEARS.length - 1];
+	const lastN = (n) => (n ? YEARS.slice(-n) : YEARS);
+	const spanLabel = (ys) => `${ys[0]}–${ys[ys.length - 1]}`;
+
+	draw(document.getElementById('c0'), YEARS, 'per year');
+
+	// A: presets ending at the latest year.
+	const aSeg = document.getElementById('a-seg');
+	const presets = [[5, '5Y'], [10, '10Y'], [20, '20Y'], [0, 'All']];
+	let aN = 10;
+	function renderA() {
+		aSeg.innerHTML = '';
+		for (const [n, lab] of presets) {
+			const b = document.createElement('button');
+			b.type = 'button';
+			b.textContent = lab;
+			b.className = n === aN ? 'on' : '';
+			b.setAttribute('aria-pressed', String(n === aN));
+			b.onclick = () => { aN = n; renderA(); };
+			aSeg.append(b);
+		}
+		const ys = lastN(aN);
+		document.getElementById('a-cap').textContent = spanLabel(ys);
+		draw(document.getElementById('c1'), ys, 'per year');
+	}
+	renderA();
+
+	// B: a window of a chosen size, stepped a whole span at a time.
+	let bSize = 10, bEnd = last;
+	const bSel = document.getElementById('b-size');
+	function renderB() {
+		const size = bSize || YEARS.length;
+		bEnd = Math.min(last, Math.max(YEARS[0] + size - 1, bEnd));
+		const ys = YEARS.filter((y) => y > bEnd - size && y <= bEnd);
+		document.getElementById('b-span').textContent = spanLabel(ys);
+		document.getElementById('b-prev').disabled = ys[0] <= YEARS[0];
+		document.getElementById('b-next').disabled = bEnd >= last;
+		draw(document.getElementById('c2'), ys, 'per year');
+	}
+	document.getElementById('b-prev').onclick = () => { bEnd -= bSize || YEARS.length; renderB(); };
+	document.getElementById('b-next').onclick = () => { bEnd += bSize || YEARS.length; renderB(); };
+	bSel.onchange = () => { bSize = Number(bSel.value); bEnd = last; renderB(); };
+	renderB();
+
+	// C: an overview strip with a draggable, resizable window.
+	const strip = document.getElementById('strip');
+	const SW = 720, SL = 44, SR = 8, SH = 64;
+	const sgw = (SW - SL - SR) / YEARS.length;
+	let cFrom = YEARS.length - 10, cTo = YEARS.length; // indexes, [from, to)
+	const smax = Math.max(...YEARS.map((y) => (DATA[y] ? DATA[y].net : 0)));
+	function renderC() {
+		strip.innerHTML = '';
+		YEARS.forEach((y, i) => {
+			const d = DATA[y];
+			const h = d ? (d.net / smax) * 34 : 0;
+			if (d) strip.append(el('rect', { x: SL + sgw * i + sgw * 0.2, y: 40 - h, width: sgw * 0.6, height: h, rx: 1.5, fill: 'var(--net)' }));
+			else strip.append(el('rect', { class: 'gap', x: SL + sgw * i + sgw * 0.2, y: 32, width: sgw * 0.6, height: 8, rx: 1.5 }));
+			if (y % 5 === 0 || ((i === 0 || i === YEARS.length - 1) && y % 5 > 1 && y % 5 < 4)) strip.append(el('text', { x: SL + sgw * i + sgw / 2, y: 58, 'text-anchor': 'middle' }, String(y)));
+		});
+		strip.append(el('rect', { class: 'shade', x: SL, y: 2, width: sgw * cFrom, height: 42 }));
+		strip.append(el('rect', { class: 'shade', x: SL + sgw * cTo, y: 2, width: sgw * (YEARS.length - cTo), height: 42 }));
+		const g = el('g', { class: 'brush' });
+		const win = el('rect', { class: 'win', x: SL + sgw * cFrom, y: 2, width: sgw * (cTo - cFrom), height: 42, rx: 4 });
+		const hl = el('rect', { class: 'handle', x: SL + sgw * cFrom - 3, y: 12, width: 6, height: 22, rx: 3 });
+		const hr = el('rect', { class: 'handle', x: SL + sgw * cTo - 3, y: 12, width: 6, height: 22, rx: 3 });
+		g.append(win, hl, hr);
+		strip.append(g);
+		drag(win, 'move'); drag(hl, 'from'); drag(hr, 'to');
+		const ys = YEARS.slice(cFrom, cTo);
+		document.getElementById('c-cap').textContent = spanLabel(ys);
+		draw(document.getElementById('c3'), ys, 'per year');
+	}
+	function drag(node, mode) {
+		node.addEventListener('pointerdown', (e) => {
+			e.preventDefault();
+			const box = strip.getBoundingClientRect();
+			const toIdx = (x) => Math.round(((x - box.left) * (SW / box.width) - SL) / sgw);
+			const start = toIdx(e.clientX), f0 = cFrom, t0 = cTo;
+			const move = (ev) => {
+				const d = toIdx(ev.clientX) - start;
+				if (mode === 'move') {
+					const w = t0 - f0;
+					cFrom = Math.min(YEARS.length - w, Math.max(0, f0 + d));
+					cTo = cFrom + w;
+				} else if (mode === 'from') cFrom = Math.min(cTo - 2, Math.max(0, f0 + d));
+				else cTo = Math.max(cFrom + 2, Math.min(YEARS.length, t0 + d));
+				renderC();
+			};
+			const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+			window.addEventListener('pointermove', move);
+			window.addEventListener('pointerup', up);
+		});
+	}
+	renderC();
+})();
+</script>

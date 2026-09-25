@@ -98,10 +98,23 @@ Clicking a period in a bar chart narrows the page's other panes to that period i
 
 Supersedes the app shell's rule that a sidebar link carries only the focus month. What you pick on a chart persists across pages: a sidebar link reopens its page with the URL state it was last left with in this tab (picks, filters, range), moved to the current focus month. It is kept in session storage, so it survives a reload but not a new tab. State that belongs to another month, such as a chosen calendar day, is dropped by the page that reads it.
 
+### D22 · A page also reopens at its scroll (2026-09-25)
+
+Extends D21. A sidebar link returns to where the page was scrolled when you left it, once its board is tall enough to hold that position. Back and forward keep the router's own restore; a drill-in opens its page at the top.
+
+### D23 · Year axes keep gap years (2026-09-25)
+
+A year with nothing logged keeps its place on every year axis, so the record reads as continuous. How far back the Year view reaches is open: see [mocks/analytics-year-ranges.html](mocks/analytics-year-ranges.html).
+
+### D24 · Carets and I-beams only where you type (2026-09-25)
+
+The text caret and the I-beam pointer appear only in fields that take typing. A click on a chart or control never places a caret or starts a text selection.
+
 ## Open
 
 - **A card filter's figure.** When the history is filtered to one card, show "Charged to card" (full bills) beside Spent, so the gap reads as what was fronted? Or nothing. "Charged − paid" was rejected: it mostly reflects statement timing.
 - **The open entry in the URL (D9).** The modal's open entry is not in the URL yet, so back does not close it.
+- **Year view time frame.** Presets, a stepped window, or an overview strip, and whether the window scopes the whole board. Mock: [mocks/analytics-year-ranges.html](mocks/analytics-year-ranges.html).
 - **Phone layout.** Suggested: bottom tab bar with the four main pages.
 
 ## Resolved elsewhere

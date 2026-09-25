@@ -114,6 +114,8 @@ Month rows (Transactions), net worth (Accounts), projections (Planning).
 
 ## Open questions
 
+- **Time frame on Year.** Every year from the first to the last shows, gap years included (D23); decades of data would crowd it. Four styles are mocked in [mocks/analytics-year-ranges.html](../mocks/analytics-year-ranges.html). The bar chart does not yet thin its labels as the line chart does.
+
 - **Stat matrices.** They repeat figures the KPI cards show. Rework them once dogfooding shows which comparisons are used.
 - **Header while narrowed.** Only the panes' captions and the marks say a period is picked. A chip in the header, with a clear, may read better.
 - **A year against its average.** A year's KPI cards carry no badge; a run-rate comparison could stand in if one is missed.
