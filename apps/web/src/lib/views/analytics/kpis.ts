@@ -6,14 +6,15 @@ import { words } from '$lib/ui/label';
 
 /**
  * Two columns, each read top to bottom: the income chain, then net income and the rates it is the base
- * of. A month reads against its own average, with its trailing twelve behind it; a year or the lifetime
- * carries its running total and no badge, since a partial year would read as a collapse.
+ * of. Every amount draws an area, so narrowing to a month does not swap the chart's shape: a month reads
+ * against its own average over its trailing twelve, and a year or the lifetime carries its running total
+ * and no badge, since a partial year would read as a collapse.
  */
 export function incomeChain(scope: Scope): KpiBoardDefs {
 	const month = scope.level === 'month';
 	const amount = (field: string): KpiSpec =>
 		month
-			? { figure: `vsavg.${field}`, scope, chart: 'bar', series: `trend.${field}` }
+			? { figure: `vsavg.${field}`, scope, chart: 'area', series: `trend.${field}` }
 			: { figure: `income.${field}`, scope, chart: 'area', series: `running.${field}` };
 	const rate = (figure: string): KpiSpec => ({ figure, scope, chart: 'ring' });
 	return {

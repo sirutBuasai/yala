@@ -114,10 +114,15 @@ The text caret and the I-beam pointer appear only in fields that take typing. A 
 
 Style A of [mocks/analytics-year-ranges.html](mocks/analytics-year-ranges.html). The Year view's header offers 5Y, 10Y, 20Y, 50Y and All, each ending at the latest year, default 10Y, in the URL as `span`. The window scopes the whole board: KPI cards, stat matrix, Sankey and every year axis. A picked year the window moves past is dropped. A window reaching back past the first tracked year is the lifetime, and reads as one.
 
+### D26 · A reload starts the view over (2026-09-25)
+
+Amends D21 and D22. Reloading returns the page to its defaults (latest month, no picks, no filters, the top of the page) and forgets where every other page was left, so the sidebar opens them fresh too. Preferences in local storage, such as board arrangements and the theme, are kept. A link opened in a new tab still opens exactly what it names.
+
 ## Open
 
 - **A card filter's figure.** When the history is filtered to one card, show "Charged to card" (full bills) beside Spent, so the gap reads as what was fronted? Or nothing. "Charged − paid" was rejected: it mostly reflects statement timing.
 - **The open entry in the URL (D9).** The modal's open entry is not in the URL yet, so back does not close it.
+- **KPI shading in light mode.** Deeper hues or stronger pastels. Mock: [mocks/kpi-underlay-strength.html](mocks/kpi-underlay-strength.html).
 - **Phone layout.** Suggested: bottom tab bar with the four main pages.
 
 ## Resolved elsewhere

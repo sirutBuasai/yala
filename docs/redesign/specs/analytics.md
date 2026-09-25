@@ -53,7 +53,7 @@ The prototype's "Where it went" category bars are not carried; the Sankeys are (
 
 A bar chart selects; it never leaves the page. Picking a period narrows the board to it, and picking it again widens the board back.
 
-- **Month:** picking a month's bars narrows the KPI cards and the Sankey to that month and outlines its row in Category by month. The KPI amounts then read against the month's average, with the difference as their badge and the trailing twelve months behind them; the rates read that month. The stat matrix and bars stay on the year.
+- **Month:** picking a month's bars narrows the KPI cards and the Sankey to that month and outlines its row in Category by month. The KPI amounts then read against the month's average, with the difference as their badge and the trailing twelve months drawn as an area behind them, the same shape as the year's running total; the rates read that month. The stat matrix and bars stay on the year.
 - **Year:** picking a year's bars, on either bar chart, narrows the KPI cards and the Sankey to that year and marks it on both bar charts, in Category by year and in the category lines. A year's KPI cards carry their running total and no badge, since a part-finished year would read as a collapse. The stat matrix stays on the lifetime.
 - The picked period's bars stay full strength and the rest recede, with its column shaded and its label raised.
 - A group of bars with nothing in it, such as a month still to come, cannot be picked.

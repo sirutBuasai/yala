@@ -1,6 +1,6 @@
 // Where each page was left in this tab, so reopening it from the sidebar restores its picks and its scroll
-// (D21). Session storage rather than local: it is about this visit, not a preference, and it still survives
-// a reload.
+// (D21). Session storage rather than local: it is about this visit, not a preference, and a reload clears
+// it (D26).
 
 const KEY = 'yala-page-state';
 
@@ -28,6 +28,15 @@ function write(pathname: string, patch: Partial<Left>): void {
 }
 
 export const remember = (url: URL) => write(url.pathname, { search: url.search });
+
+/** Forget every page, so each opens at its defaults. */
+export function forgetPages(): void {
+	try {
+		sessionStorage.removeItem(KEY);
+	} catch {
+		// Nothing was stored.
+	}
+}
 export const rememberScroll = (pathname: string, scroll: number) => write(pathname, { scroll });
 
 /** The query `pathname` was last left with, or nothing. */
