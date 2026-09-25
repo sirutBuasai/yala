@@ -162,7 +162,8 @@
 		margin: 0;
 		padding: 0;
 		background: none;
-		font: inherit;
+		font-family: inherit;
+		line-height: inherit;
 		color: inherit;
 		text-align: left;
 		cursor: pointer;
