@@ -175,7 +175,9 @@
 		monthKeys={data.meta.month_keys}
 		onchange={(k) => navigate({ [MONTH_PARAM]: k, [DAY_PARAM]: null })}
 	/>
-	<button class="btn-accent pill" onclick={() => add()}>+ Add entry</button>
+	{#snippet actions()}
+		<button class="btn-accent pill" onclick={() => add()}>+ Add entry</button>
+	{/snippet}
 </ViewHeader>
 
 <Board key="transactions" layout={PANES} names={Object.keys(KPIS)} onreset={() => kpis.reset()}>

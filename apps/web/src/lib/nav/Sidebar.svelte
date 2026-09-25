@@ -3,6 +3,7 @@
 	// slot of the rail's width in the page and expands over the content on hover or keyboard focus, so
 	// opening it never reflows the board.
 	import Brand from '$lib/nav/Brand.svelte';
+	import YalaMark from '$lib/icons/YalaMark.svelte';
 	import NavLinks from '$lib/nav/NavLinks.svelte';
 	import { DEV_PAGE, PAGES } from '$lib/nav/pages';
 	import { RAIL_W, SIDEBAR_W } from '$lib/nav/sidebar';
@@ -13,8 +14,8 @@
 <div class="slot" style:width="{rail ? RAIL_W : SIDEBAR_W}px">
 	<aside class="sidebar" class:rail style:--open-w="{SIDEBAR_W}px" style:--rail-w="{RAIL_W}px">
 		<div class="lead">
-			<!-- The app's own icon, the same file as the favicon, stands in for the wordmark on the rail. -->
-			<img class="mark" src="/favicon.svg" alt="" width="20" height="20" />
+			<!-- The app's mark stands in for the wordmark on the rail. -->
+			<span class="mark"><YalaMark /></span>
 			<span class="brand"><Brand /></span>
 		</div>
 		<NavLinks links={PAGES} ariaLabel="Pages" />
@@ -67,6 +68,7 @@
 	}
 	/* Centred on the rail, where the glyphs below sit. */
 	.mark {
+		display: flex;
 		position: absolute;
 		top: 0;
 		left: calc((var(--rail-w) - 20px) / 2);

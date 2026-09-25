@@ -2,9 +2,26 @@
 	// The page links, shared by the sidebar, its icon rail and the hamburger sheet. Each link carries the
 	// focus month, so switching pages keeps your place.
 	import { page } from '$app/stores';
-	import PageIcon from '$lib/icons/PageIcon.svelte';
 	import { withFocus } from '$lib/nav/focus';
 	import type { NavLink } from '$lib/nav/pages';
+	import type { Component } from 'svelte';
+	import Bank from '$lib/icons/Bank.svelte';
+	import Bars from '$lib/icons/Bars.svelte';
+	import Code from '$lib/icons/Code.svelte';
+	import Flag from '$lib/icons/Flag.svelte';
+	import Grid from '$lib/icons/Grid.svelte';
+	import Rows from '$lib/icons/Rows.svelte';
+	import Sliders from '$lib/icons/Sliders.svelte';
+
+	const ICONS: Record<string, Component<{ size?: number }>> = {
+		'/': Grid,
+		'/transactions': Rows,
+		'/cash-flow': Bars,
+		'/accounts': Bank,
+		'/planning': Flag,
+		'/manage': Sliders,
+		'/dev': Code
+	};
 
 	interface Props {
 		links: readonly NavLink[];
@@ -17,13 +34,14 @@
 <nav class="links" aria-label={ariaLabel}>
 	{#each links as link (link.href)}
 		{@const current = $page.url.pathname === link.href}
+		{@const Icon = ICONS[link.href]}
 		<a
 			href={withFocus(link.href, $page.url)}
 			class:active={current}
 			aria-current={current ? 'page' : undefined}
 			{onclick}
 		>
-			<PageIcon glyph={link.glyph} />
+			{#if Icon}<Icon />{/if}
 			<span class="label">{link.label}</span>
 		</a>
 	{/each}

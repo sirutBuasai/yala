@@ -1,21 +1,19 @@
 // The app's pages in sidebar order. The sidebar, its icon rail and the hamburger sheet all read this list,
-// so they cannot disagree about what exists.
-
-import type { PageGlyph } from '$lib/icons/PageIcon.svelte';
+// so they cannot disagree about what exists. Plain data, with no components, so the browser tests can
+// import it too; each page's icon is paired with it in `NavLinks`.
 
 export interface NavLink {
 	href: string;
 	label: string;
-	glyph: PageGlyph;
 }
 
 export const PAGES: readonly NavLink[] = [
-	{ href: '/', label: 'Dashboard', glyph: 'dashboard' },
-	{ href: '/transactions', label: 'Transactions', glyph: 'transactions' },
-	{ href: '/cash-flow', label: 'Cash flow', glyph: 'cashflow' },
-	{ href: '/accounts', label: 'Accounts', glyph: 'accounts' },
-	{ href: '/planning', label: 'Planning', glyph: 'planning' },
-	{ href: '/manage', label: 'Manage', glyph: 'manage' }
+	{ href: '/', label: 'Dashboard' },
+	{ href: '/transactions', label: 'Transactions' },
+	{ href: '/cash-flow', label: 'Cash flow' },
+	{ href: '/accounts', label: 'Accounts' },
+	{ href: '/planning', label: 'Planning' },
+	{ href: '/manage', label: 'Manage' }
 ];
 
-export const DEV_PAGE: NavLink = { href: '/dev', label: 'Development', glyph: 'development' };
+export const DEV_PAGE: NavLink = { href: '/dev', label: 'Development' };
