@@ -1,0 +1,14 @@
+**/.git
+**/node_modules
+**/.venv
+**/__pycache__
+**/.ruff_cache
+**/.pytest_cache
+**/.svelte-kit
+**/build
+**/*.beancount
+**/data.json
+.worktrees
+.claude
+apps/api/tests
+apps/web/e2e

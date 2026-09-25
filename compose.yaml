@@ -1,0 +1,16 @@
+name: yala
+
+services:
+  yala:
+    build:
+      context: .
+      args:
+        REVISION: ${REVISION:-dev}
+    image: yala:${REVISION:-dev}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${YALA_PORT:-8001}:8000"
+    volumes:
+      - ${YALA_LEDGER_DIR:?set YALA_LEDGER_DIR to the host ledger directory}:/data
+    labels:
+      autoheal: "true"
