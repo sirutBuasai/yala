@@ -32,8 +32,8 @@
 			tokens: [
 				{
 					name: 'text-display',
-					px: 28,
-					primitive: 'fs-1000',
+					px: 22,
+					primitive: 'fs-800',
 					role: 'Hero stat number (a KPI value)',
 					font: 'serif'
 				},

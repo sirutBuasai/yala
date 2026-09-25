@@ -1,6 +1,6 @@
 # Transactions spec
 
-Status: step 1 built, in review · Branch: `redesign/transactions`
+Status: step 1 revised to the new layout, in review · Branch: `redesign/transactions`
 
 ## Job
 
@@ -35,15 +35,21 @@ Home's three-card strip (Income, Spent, Saved) is not carried: Activity · Month
 | Balances and their checks | No | Accounts (D12) |
 | Year totals, run-rates, multi-year trends, the Sankey | No | Cash flow |
 
-## Layout
+## Layout (revised 2026-09-25)
 
-A board with arranging on (D14). The default below follows today's rectangles; the user's own arrangement replaces it once they have one.
+A board with arranging on (D14). Mock: [mocks/transactions-layout.html](../mocks/transactions-layout.html).
 
-1. **Header:** `Transactions`, the month picker, `+ Add entry`, the theme toggle.
-2. **The month at a glance:** the two KPI chains, Where your income went, Unusual this month. The same row as Activity · Month today.
-3. **Category by month** for the focus month's year. Its rows are months and its columns categories, with sums in every cell and Total rows and columns, so the focus month's row is the spreadsheet's Total row: how much each category has taken so far. The focus month's row is marked; that mark is the one visual change on this page.
-4. **Log activity** calendar with its day list and Pending transactions beside it, as on Home.
-5. **Transaction history**, then **Paychecks** and **Bill pay & transfers**, as on Activity · Month.
+1. **Header:** `Transactions` and the month picker; at the right, `+ Add entry` beside Edit and the theme toggle.
+2. **KPI bar:** Income, Take-home, Saved and Spent, four KPI cards opened merged along one row, each with its bar underlay and its distance from your average (`vsavg.*`). KPI values now use the figure size (the `--text-display` token moved to 22px).
+3. **Log activity**, with Pending transactions and the day's entries beside it.
+4. **Transaction history** (left): transactions, paychecks and bill pay in one list, newest first and grouped by day, with type chips, category and account menus, Pending only and search, all in the URL. **Spending by category** (right): each category's total as a bar on one shared scale, its usual range and average over it, then Total and vs avg columns (`range-bars`, replacing the dumbbell).
+5. **Where your income went** and **Category by month**, the focus month's row marked.
+
+Dropped: the six KPI cards (Spending rate and vs your average with them), Unusual this month, and the separate Paychecks and Bill pay & transfers panes.
+
+### History summary
+
+It reads the rows the filters leave, never the filters: Spent when transactions remain (refunds netted), Take-home when paychecks remain, Bill pay & transfers when bill pay remains, and vs your average when every transaction left shares one category. The caption counts rows, as `N of M in <month>` while filtered.
 
 ## Click map
 

@@ -21,7 +21,7 @@ import HBarChart from '$lib/charts/HBarChart.svelte';
 import LineChart from '$lib/charts/LineChart.svelte';
 import BarChart from '$lib/charts/BarChart.svelte';
 import Sankey from '$lib/charts/Sankey.svelte';
-import Dumbbell from '$lib/charts/Dumbbell.svelte';
+import RangeBars from '$lib/charts/RangeBars.svelte';
 import StackedArea from '$lib/charts/StackedArea.svelte';
 import BulletChart from '$lib/charts/BulletChart.svelte';
 import Heatmap from './Heatmap.svelte';
@@ -276,14 +276,17 @@ export const CHARTS: ChartDef[] = [
 		}
 	}),
 	def({
-		id: 'dumbbell',
-		label: 'Range dumbbell',
+		id: 'range-bars',
+		label: 'Range bars',
 		accepts: ['deviation'],
-		component: Dumbbell,
+		component: RangeBars,
 		adapt(p, opts = {}) {
 			const d = p as Deviation;
+			// Biggest first: on one shared scale, the order is the ranking.
 			return {
-				rows: d.rows.map((r) => ({ ...r, color: keyColor(r.label, opts.colorBy) })),
+				rows: [...d.rows]
+					.sort((a, b) => b.value - a.value)
+					.map((r) => ({ ...r, color: keyColor(r.label, opts.colorBy) })),
 				unit: d.unit
 			};
 		}

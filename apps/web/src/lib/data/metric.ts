@@ -449,26 +449,26 @@ export function extremum(
 	});
 }
 
-/** A month against its own recent norm: the month less the trailing average of the prior `window` months
-    with data. `null` without the history to form one. */
-export function vsTypical(
+/** A month's level, with how far it sits from its own recent norm (the average of the prior `window`
+    months with data) as the delta. No delta without the history to form one. */
+export function vsAverage(
 	data: DashboardData,
 	monthKey: string,
 	m: Measure,
 	opts: Opts & { window?: number } = {}
 ): Scalar {
-	const prior = priorMonths(data, monthKey, opts.window);
+	const unit = MONEY(data.currency);
 	const label = opts.label ?? words(measureLabel(m));
-	if (!prior.length) {
-		return scalar(MONEY(data.currency), label, null, { note: opts.note });
-	}
+	const now = measureValue(data, { level: 'month', monthKey }, m);
+	const prior = priorMonths(data, monthKey, opts.window);
+	if (!prior.length) return scalar(unit, label, now, { note: opts.note });
 
 	const avg =
 		sumBy(prior, (k) => measureValue(data, { level: 'month', monthKey: k }, m)) / prior.length;
-	const delta = measureValue(data, { level: 'month', monthKey }, m) - avg;
+	const delta = now - avg;
 
-	return scalar(MONEY(data.currency), label, delta, {
-		tone: toneOf(m, delta),
+	return scalar(unit, label, now, {
+		delta: { value: delta, unit, tone: toneOf(m, delta), note: 'vs avg' },
 		note: opts.note ?? live(`vs your ${money(avg)} / mo average`)
 	});
 }

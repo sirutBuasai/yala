@@ -75,7 +75,7 @@ import {
 	measureLabel,
 	ratio,
 	signed,
-	vsTypical,
+	vsAverage,
 	type Countable,
 	type ExtremumOf,
 	type Field,
@@ -171,7 +171,7 @@ const CHART_DEFS: DataDef[] = [
 	},
 	{
 		id: 'spending.vs_average',
-		label: 'Unusual this month',
+		label: 'Spending by category',
 		kind: 'deviation',
 		scopes: ['month'],
 		build: (data, scope) =>
@@ -644,13 +644,14 @@ const CHANGES: { field: Field; period: 'year' | 'month' }[] = (['year', 'month']
 	(period) => CHANGE_FIELDS.map((field) => ({ field, period }))
 );
 
-const VS_TYPICAL: DataDef[] = [
-	scalarDef('spending.vs_typical', 'vs your average', ['month'], (data, scope) =>
+// A month's level against its own recent average: the KPI bar's figures.
+const VS_AVERAGE: DataDef[] = (['income', 'takehome', 'saved', 'spending'] as const).map((field) =>
+	scalarDef(`vsavg.${field}`, measureLabel(field), ['month'], (data, scope) =>
 		scope.monthKey
-			? vsTypical(data, scope.monthKey, 'spending', { label: words('vs your average') })
-			: scalar(MONEY(data.currency), words('vs your average'), null)
+			? vsAverage(data, scope.monthKey, field)
+			: scalar(MONEY(data.currency), words(measureLabel(field)), null)
 	)
-];
+);
 
 const STAT_DEFS: DataDef[] = [
 	...AMOUNTS.map((a) =>
@@ -692,7 +693,7 @@ export const CATALOG: DataDef[] = [
 	...CHART_DEFS,
 	...SERIES_DEFS,
 	...STAT_DEFS,
-	...VS_TYPICAL,
+	...VS_AVERAGE,
 	...NETWORTH_STATS,
 	...NET_WORTH_GROWTH_DEFS
 ];

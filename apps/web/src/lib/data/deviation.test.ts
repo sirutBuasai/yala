@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { categoryDeviation } from '$lib/data/deviation';
-import { vsTypical } from '$lib/data/metric';
+import { vsAverage } from '$lib/data/metric';
 import { categorySpendByYear } from '$lib/data/series';
 import { makeData } from '$lib/data/__fixtures__/dashboard';
 
@@ -73,11 +73,12 @@ describe('categorySpendByYear', () => {
 	});
 });
 
-describe('vsTypical', () => {
-	it('measures a month against the average of the months before it', () => {
+describe('vsAverage', () => {
+	it('shows the month and how far it sits from the average of the months before it', () => {
 		// Only one month precedes this one, so the norm is that month's spend.
-		const s = vsTypical(makeData(), '2025-01', 'spending');
-		expect(s.value).toBeCloseTo(45.5 - 120);
+		const s = vsAverage(makeData(), '2025-01', 'spending');
+		expect(s.value).toBeCloseTo(45.5);
+		expect(s.delta?.value).toBeCloseTo(45.5 - 120);
 	});
 
 	// Aggregates are memoized per document, so each case needs its own fixture.
@@ -88,26 +89,26 @@ describe('vsTypical', () => {
 	}
 
 	it('marks spending under the norm as good', () => {
-		expect(vsTypical(makeData(), '2025-01', 'spending').tone).toBe('good');
+		expect(vsAverage(makeData(), '2025-01', 'spending').delta?.tone).toBe('good');
 	});
 
 	it('marks spending over the norm as bad', () => {
-		expect(vsTypical(overspending(), '2025-01', 'spending').tone).toBe('bad');
+		expect(vsAverage(overspending(), '2025-01', 'spending').delta?.tone).toBe('bad');
 	});
 
 	// Polarity comes from the measure, so the same overshoot reads the other way for income.
 	it('marks income over the norm as good', () => {
 		const data = makeData();
 		data.months['2025-01']!.total_income = 9000;
-		expect(vsTypical(data, '2025-01', 'income').tone).toBe('good');
+		expect(vsAverage(data, '2025-01', 'income').delta?.tone).toBe('good');
 	});
 
-	it('is null on the first tracked month, where no norm exists', () => {
-		expect(vsTypical(makeData(), '2024-12', 'spending').value).toBeNull();
+	it('has no delta on the first tracked month, where no norm exists', () => {
+		expect(vsAverage(makeData(), '2024-12', 'spending').delta).toBeUndefined();
 	});
 
 	it('names the average it compared against', () => {
 		// Derived, so the average lands in the half a rename cannot swallow.
-		expect(vsTypical(makeData(), '2025-01', 'spending').note?.context).toContain('average');
+		expect(vsAverage(makeData(), '2025-01', 'spending').note?.context).toContain('average');
 	});
 });

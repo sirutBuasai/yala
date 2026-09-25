@@ -31,7 +31,8 @@
 	import { categoryVar } from '$lib/utils/theme';
 	import RowList from '$lib/lists/RowList.svelte';
 	import Amount from '$lib/ui/Amount.svelte';
-	import Badge from '$lib/ui/Badge.svelte';
+	import TxnMain from '$lib/lists/parts/TxnMain.svelte';
+	import MetaCol from '$lib/lists/parts/MetaCol.svelte';
 
 	interface Props {
 		transactions: TxnRow[];
@@ -101,49 +102,12 @@
 	dateOf={showDate ? (t) => t.date : undefined}
 >
 	{#snippet main(t)}
-		<span class="main">
-			<span class="title">
-				<span class="payee">{t.payee}</span>
-				{#if t.pending}<Badge tone="warn" dot>pending</Badge>{/if}
-			</span>
-			<span class="cat">{t.category}</span>
-		</span>
+		<TxnMain {t} />
 	{/snippet}
 	{#snippet columns(t)}
-		{#each fields as f (f)}<span class="col">{column(t, f)}</span>{/each}
+		{#each fields as f (f)}<MetaCol text={column(t, f)} />{/each}
 	{/snippet}
 	{#snippet amount(t)}
 		<Amount value={t.amount} sign="refund" />
 	{/snippet}
 </RowList>
-
-<style>
-	.main {
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-	}
-	.title {
-		display: flex;
-		align-items: baseline;
-		gap: var(--space-3);
-		min-width: 0;
-		font-size: var(--text-row);
-		font-weight: var(--fw-medium);
-	}
-	.payee {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		min-width: 0;
-	}
-	.cat {
-		color: var(--ink-3);
-		font-size: var(--text-badge);
-	}
-	.col {
-		color: var(--ink-2);
-		font-size: var(--text-caption);
-		white-space: nowrap;
-	}
-</style>
