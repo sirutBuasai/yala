@@ -52,7 +52,7 @@ YALA_WEB_DIR=$PWD/.worktrees/redesign-<topic>/apps/web/build \
 | Piece | Spec | Build | Dogfood |
 |---|---|---|---|
 | App shell (sidebar, routes, URL state) | [done](specs/app-shell.md) | merged | partial: month history waits for a page with a period |
-| Transactions | not started | not started | not started |
+| Transactions | [draft](specs/transactions.md) | not started | not started |
 | Cash flow | not started | not started | not started |
 | Accounts | not started | not started | not started |
 | Dashboard | not started | not started | not started |
