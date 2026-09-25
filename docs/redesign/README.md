@@ -27,6 +27,8 @@ A figure has one owning page. Anywhere else it appears only as a headline that l
 - Every chart, title and caption carries over (D6). Mock anything new or anything the user cannot picture, publish the mock, keep a copy in `mocks/`, and list every new UI string for review.
 - Never read and write the same state in an `$effect`: it loops until Svelte's guard stops it, costing CPU with nothing on screen. The browser tests fail on any uncaught page error, which is what catches it.
 - Chart marks are SVG (`lib/charts/marks`).
+- A bar chart selects and narrows its page; only a heatmap navigates (D20). `BarChart` takes `onpick` and `picked`, `LineChart` takes `mark`, and a `Scope` at `all` takes `since` for a trailing window.
+- Every pick lives in the URL, so the sidebar reopens a page as it was left (`lib/nav/left.ts`) and `lib/nav/step.ts` is the one way to change it.
 - A page's view is a path and a pick is a query parameter (D27): a reload keeps the first and drops the second. Decide which a new setting is by where it lives.
 - Each worktree needs its own `npm install` in `apps/web`; the primary checkout has none.
 
@@ -62,7 +64,7 @@ YALA_WEB_DIR=$PWD/.worktrees/redesign-<topic>/apps/web/build \
 |---|---|---|---|
 | App shell (sidebar, routes, URL state) | [done](specs/app-shell.md) | merged | partial: month history waits for a page with a period |
 | Transactions | [done](specs/transactions.md) | merged | reviewed on 8800; keep logging real months |
-| Analytics (was Cash flow) | [done](specs/analytics.md) | built on `redesign/analytics` | not started |
+| Analytics (was Cash flow) | [done](specs/analytics.md) | merged | started on 8800; keep reading real months |
 | Accounts | not started | not started | not started |
 | Dashboard | not started | not started | not started |
 | Planning (moved) | not started | not started | not started |
