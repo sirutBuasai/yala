@@ -62,6 +62,11 @@ function currentNetWorth(data: DashboardData): number | null {
 	return data.networth?.current?.net_worth ?? null;
 }
 
+/** The month of the latest snapshot, which today's balances were logged in; '' before any. */
+export function latestSnapshotMonth(data: DashboardData): string {
+	return snapshots(data).at(-1)?.date.slice(0, 7) ?? '';
+}
+
 /** Every year a snapshot falls in, ascending. */
 export function snapshotYears(data: DashboardData): number[] {
 	return [...new Set(snapshots(data).map((p) => yearOf(p.date)))];
@@ -85,21 +90,24 @@ function assetAccounts(data: DashboardData) {
 function axisOf(
 	data: DashboardData,
 	year?: number
-): { points: NetWorthSnapshot[]; labels: string[] } {
+): { points: NetWorthSnapshot[]; labels: string[]; periods: string[] } {
 	const points = year == null ? snapshots(data) : forYear(data, year);
 	const label = year == null ? monthLabel : dateShort;
-	return { points, labels: points.map((p) => label(p.date)) };
+	return { points, labels: points.map((p) => label(p.date)), periods: points.map((p) => p.date) };
 }
 
 /** One snapshot field per logged snapshot — lifetime (`year` omitted) or one year's. */
 function snapshotSeries(data: DashboardData, field: SnapshotField, year?: number): Series {
-	const { points, labels } = axisOf(data, year);
-	return series(
-		FIELD_NAME[field],
-		labels,
-		points.map((p) => p[field]),
-		MONEY(data.currency)
-	);
+	const { points, labels, periods } = axisOf(data, year);
+	return {
+		...series(
+			FIELD_NAME[field],
+			labels,
+			points.map((p) => p[field]),
+			MONEY(data.currency)
+		),
+		periods
+	};
 }
 
 function bySign(value: number): Tone {
@@ -133,7 +141,7 @@ export function netWorthByMonth(data: DashboardData, year?: number): Series {
 /** Net worth and assets over time; the gap between them is what is owed. */
 export function netWorthVsAssets(data: DashboardData, year?: number): MultiSeries {
 	const unit = MONEY(data.currency);
-	const { points, labels } = axisOf(data, year);
+	const { points, labels, periods } = axisOf(data, year);
 
 	return multiseries(
 		unit,
@@ -146,7 +154,8 @@ export function netWorthVsAssets(data: DashboardData, year?: number): MultiSerie
 				points.map((p) => p[field]),
 				unit
 			)
-		)
+		),
+		periods
 	);
 }
 
@@ -177,6 +186,7 @@ interface Window {
 /** One window per period, labelled for an ordinal axis or a table's first column. */
 interface Run {
 	labels: string[];
+	periods: string[];
 	windows: Window[];
 }
 
@@ -227,7 +237,11 @@ function move(w: Window, r: Reading): { value: number; percent: number } {
 /** A year's months as a run — month over month, so the freshest reading counts. See `monthOverMonth`. */
 function monthlyRun(data: DashboardData, year: number): Run {
 	const keys = snapshotMonths(data, year);
-	return { labels: keys.map(monthName), windows: keys.map((k) => monthOverMonth(data, k)) };
+	return {
+		labels: keys.map(monthName),
+		periods: keys,
+		windows: keys.map((k) => monthOverMonth(data, k))
+	};
 }
 
 function yearlyRun(data: DashboardData, newestFirst = false): Run {
@@ -236,6 +250,7 @@ function yearlyRun(data: DashboardData, newestFirst = false): Run {
 
 	return {
 		labels: years.map(String),
+		periods: years.map(String),
 		windows: years.map((year) => bounds(data, { level: 'year', year }))
 	};
 }
@@ -247,6 +262,7 @@ function snapshotRun(data: DashboardData, year: number): Run {
 
 	return {
 		labels: points.map((p) => dateShort(p.date)),
+		periods: points.map((p) => p.date),
 		windows: points.map((p) => {
 			const i = all.findIndex((q) => q.date === p.date);
 			return { open: i > 0 ? all[i - 1]! : null, close: p };
@@ -281,7 +297,8 @@ function moveSeries(
 				'ordinal',
 				{ unit: altUnit, values: moves.map((m) => m[other]) }
 			);
-		})
+		}),
+		run.periods
 	);
 }
 
@@ -302,6 +319,7 @@ function deltaTable(data: DashboardData, period: string, run: Run, readings: Rea
 	return {
 		kind: 'table',
 		columns: deltaColumns(period, readings, MONEY(data.currency)),
+		periods: run.periods,
 		rows: run.labels.map((label, i) => {
 			const w = run.windows[i]!;
 			return [
@@ -377,7 +395,7 @@ function allocation(data: DashboardData, of: 'share' | 'value', year?: number): 
 	const cash = MONEY(data.currency);
 	const unit = of === 'share' ? PERCENT : cash;
 	const altUnit = of === 'share' ? cash : PERCENT;
-	const { points, labels } = axisOf(data, year);
+	const { points, labels, periods } = axisOf(data, year);
 
 	const held = (p: NetWorthSnapshot, b: string) => p.breakdown[b] ?? 0;
 	const share = (p: NetWorthSnapshot, b: string) => (p.assets ? (held(p, b) / p.assets) * 100 : 0);
@@ -397,7 +415,8 @@ function allocation(data: DashboardData, of: 'share' | 'value', year?: number): 
 				'time',
 				{ unit: altUnit, values: points.map((p) => other(p, b)) }
 			)
-		)
+		),
+		periods
 	);
 }
 
@@ -464,11 +483,6 @@ function bounds(data: DashboardData, scope: Scope): Window {
 	return { open: upTo(start) ?? inside[0] ?? null, close: upTo(next) };
 }
 
-function changeOver(data: DashboardData, scope: Scope): number {
-	const { open, close } = bounds(data, scope);
-	return open && close ? close.net_worth - open.net_worth : 0;
-}
-
 /**
  * The snapshots a month-over-month bar spans: the freshest reading in the month before to the freshest in the
  * month itself. Deliberately not `bounds` — the newest balance rather than the one at the period's edge is
@@ -508,9 +522,17 @@ function momParts(data: DashboardData, monthKey: string): Record<GrowthPart, num
 /** The whole move, and the two parts that sum to it. `change` is the growth itself, not a part of it. */
 export type GrowthPart = 'change' | 'saved' | 'other';
 
+/** The snapshots a scope's move is read between. A month reads its bar's window, so a card narrowed to a
+    month agrees with the bar it was picked from. */
+function windowOf(data: DashboardData, scope: Scope): Window {
+	return scope.level === 'month' ? monthOverMonth(data, scope.monthKey ?? '') : bounds(data, scope);
+}
+
 /** A scope's growth, split. One source, so a card, a bar and a matrix cell cannot disagree. */
 function growthParts(data: DashboardData, scope: Scope): Record<GrowthPart, number> {
-	const change = changeOver(data, scope);
+	if (scope.level === 'month') return momParts(data, scope.monthKey ?? '');
+	const { open, close } = bounds(data, scope);
+	const change = open && close ? close.net_worth - open.net_worth : 0;
 	const saved = measureValue(data, scope, 'saved');
 	return { change, saved, other: change - saved };
 }
@@ -522,7 +544,7 @@ function shareNote(part: number, change: number, fallback: string): Label {
 /** Net worth at the end of a scope, with its change over that scope as a delta. */
 export function netWorthChange(data: DashboardData, scope: Scope): Scalar {
 	const unit = MONEY(data.currency);
-	const { open, close } = bounds(data, scope);
+	const { open, close } = windowOf(data, scope);
 	const value = close?.net_worth ?? null;
 	const s = scalar(unit, words('Net worth'), value);
 
@@ -532,7 +554,7 @@ export function netWorthChange(data: DashboardData, scope: Scope): Scalar {
 			value: delta,
 			unit,
 			tone: bySign(delta),
-			note: scope.level === 'all' ? 'since first snapshot' : 'this year'
+			note: { all: 'since first snapshot', year: 'this year', month: 'this month' }[scope.level]
 		};
 	}
 
@@ -552,7 +574,7 @@ export function netWorthSaved(data: DashboardData, scope: Scope): Scalar {
 /** The rest of the scope's change: market movement plus anything that wasn't logged. */
 export function netWorthOther(data: DashboardData, scope: Scope): Scalar {
 	const label = words('Market & other');
-	const { open, close } = bounds(data, scope);
+	const { open, close } = windowOf(data, scope);
 	if (!open || !close) return scalar(MONEY(data.currency), label, null);
 
 	const { change, other } = growthParts(data, scope);
@@ -568,23 +590,31 @@ export function netWorthOther(data: DashboardData, scope: Scope): Scalar {
 function growthSeries(
 	data: DashboardData,
 	labels: string[],
+	periods: string[],
 	parts: Record<GrowthPart, number>[]
 ): MultiSeries {
 	const unit = MONEY(data.currency);
 	const read = (part: GrowthPart) => parts.map((p) => p[part]);
 
-	return multiseries(unit, 'ordinal', labels, [
-		series('Saved', labels, read('saved'), unit),
-		series('Market & other', labels, read('other'), unit)
-	]);
+	return multiseries(
+		unit,
+		'ordinal',
+		labels,
+		[
+			series('Saved', labels, read('saved'), unit),
+			series('Market & other', labels, read('other'), unit)
+		],
+		periods
+	);
 }
 
 export function savedVsOther(data: DashboardData): MultiSeries {
-	const years = snapshotYears(data);
+	const years = snapshotYears(data).map(String);
 	return growthSeries(
 		data,
-		years.map(String),
-		years.map((year) => growthParts(data, { level: 'year', year }))
+		years,
+		years,
+		years.map((year) => growthParts(data, { level: 'year', year: Number(year) }))
 	);
 }
 
@@ -595,7 +625,8 @@ export function savedVsOtherByMonth(data: DashboardData, year: number): MultiSer
 	return growthSeries(
 		data,
 		keys.map(monthName),
-		keys.map((monthKey) => momParts(data, monthKey))
+		keys,
+		keys.map((monthKey) => growthParts(data, { level: 'month', monthKey }))
 	);
 }
 

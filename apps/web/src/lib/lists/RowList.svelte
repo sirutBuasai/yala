@@ -143,7 +143,7 @@
 		cursor: pointer;
 	}
 	.row.clickable:hover {
-		background: color-mix(in srgb, var(--lav) 9%, transparent);
+		background: color-mix(in srgb, var(--lav-wash) calc(9% * var(--wash-scale)), transparent);
 	}
 	.date {
 		color: var(--ink-3);

@@ -164,6 +164,9 @@ export interface Series {
 	axis: Axis;
 	name: string;
 	points: SeriesPoint[];
+	/** Each point's period key (ISO, as coarse as the point), where a label alone cannot place it in a
+	    period: a snapshot's date says which month it falls in, where its label names only the day. */
+	periods?: string[];
 	/** A second unit the same points can be read in, reported beside the value wherever a chart states an
 	    exact figure — so a pair of readings at two scales costs one chart rather than two. */
 	altUnit?: Unit;
@@ -177,6 +180,8 @@ export interface MultiSeries {
 	unit: Unit;
 	axis: Axis;
 	labels: string[];
+	/** As on `Series`, for the shared axis. */
+	periods?: string[];
 	series: Series[];
 }
 
@@ -234,6 +239,8 @@ export interface Table {
 	kind: 'table';
 	columns: TableColumn[];
 	rows: (string | number)[][];
+	/** Each row's period key, as on `Series`. */
+	periods?: string[];
 }
 
 /** One value against its threshold. The threshold is the row's full scale, so rows measured in

@@ -7,7 +7,7 @@
 	import { clamp, sumBy } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Empty from '$lib/ui/Empty.svelte';
-	import { chartLabel } from '$lib/charts/aria';
+	import { chartLabel, onPress } from '$lib/charts/aria';
 
 	interface Item {
 		label: string;
@@ -20,13 +20,17 @@
 		unit: Unit;
 		/** Total for tooltip percentages; defaults to the sum of values. */
 		total?: number;
+		/** Makes each row a button choosing its label. */
+		onpick?: (label: string) => void;
 	}
-	let { items, unit, total }: Props = $props();
+	let { items, unit, total, onpick }: Props = $props();
 
 	const f = $derived(chartFormat(unit));
 
 	const rows = $derived([...items].sort((a, b) => b.value - a.value));
 	const sum = $derived(total ?? sumBy(rows, (r) => r.value));
+	const tip = (d: Item) =>
+		`<b>${esc(d.label)}</b><br>${f.exact(d.value)} · ${sum ? Math.round((d.value / sum) * 100) : 0}%`;
 
 	// Measured on both axes so labels keep a constant on-screen size; a fixed viewBox made them
 	// unreadable in a narrow card.
@@ -65,7 +69,7 @@
 
 <div class="figurebox" bind:clientWidth={box.clientWidth} bind:clientHeight={box.clientHeight}>
 	{#if rows.length}
-		<svg class="chart" viewBox="0 0 {W} {H}" role="img" aria-label={label}>
+		<svg class="chart" viewBox="0 0 {W} {H}" role={onpick ? 'group' : 'img'} aria-label={label}>
 			{#each rows as d, i (d.label)}
 				{@const yy = m.t + i * rowH}
 				{@const bw = Math.max(2, (iw * Math.abs(d.value)) / max)}
@@ -85,17 +89,48 @@
 					rx="4"
 					fill={d.color}
 					role="presentation"
-					onmousemove={(e) =>
-						showTip(
-							`<b>${esc(d.label)}</b><br>${f.exact(d.value)} · ${sum ? Math.round((d.value / sum) * 100) : 0}%`,
-							e
-						)}
+					onmousemove={(e) => showTip(tip(d), e)}
 					onmouseleave={hideTip}
 				/>
 				<text class="vlabel" x={m.l + bw + 8} y={yy + rowH / 2 + 4}>{f.compact(d.value)}</text>
+				<!-- The whole row is the target, name and bar alike, so a short bar is as easy to hit as a
+				     long one. It lies over the bar, so it carries the bar's tooltip too. -->
+				{#if onpick}
+					<rect
+						class="rowhit"
+						x={0}
+						y={yy}
+						width={W}
+						height={rowH}
+						rx="6"
+						role="button"
+						tabindex="0"
+						aria-label={d.label}
+						onclick={() => onpick(d.label)}
+						onkeydown={(e) => onPress(e, () => onpick(d.label))}
+						onmousemove={(e) => showTip(tip(d), e)}
+						onmouseleave={hideTip}
+					/>
+				{/if}
 			{/each}
 		</svg>
 	{:else}
 		<Empty>No data.</Empty>
 	{/if}
 </div>
+
+<style>
+	/* Drawn over the row, so its hover shade must stay faint enough to read the bar through. */
+	.rowhit {
+		fill: transparent;
+		cursor: pointer;
+		outline: none;
+	}
+	.rowhit:hover {
+		fill: color-mix(in srgb, var(--inset) 60%, transparent);
+	}
+	.rowhit:focus-visible {
+		stroke: var(--ring-color);
+		stroke-width: var(--ring-width);
+	}
+</style>

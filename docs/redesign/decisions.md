@@ -131,6 +131,10 @@ A reload keeps the path and drops the query, on the current page and on every pa
 
 Chosen from [mocks/kpi-underlay-strength.html](mocks/kpi-underlay-strength.html). In light mode a KPI's wash and hairline take their hue at one OKLCH lightness (0.52) before mixing, with the wash at 11%, so every hue shades about equally, survives a warm-shifted display, and the badge over it keeps AA. Dark mode is unchanged.
 
+### D29 · Every wash takes the deep hue in light mode (2026-09-25)
+
+Extends D28 across the app. In light mode every accent wash behind a control, a badge or a row (a selected pill, a chosen option, the current page, a hovered row, a pending day, a modal's tinted header) takes its hue at D28's lightness and carries a smaller share of it, so a selected pill lands on the KPI wash beside it. Hairlines, rings and chart marks are unchanged, and so is dark mode.
+
 ## Open
 
 - **A card filter's figure.** When the history is filtered to one card, show "Charged to card" (full bills) beside Spent, so the gap reads as what was fronted? Or nothing. "Charged − paid" was rejected: it mostly reflects statement timing.

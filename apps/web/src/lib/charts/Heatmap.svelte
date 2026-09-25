@@ -1,94 +1,53 @@
 <script lang="ts">
-	// Heatmap over a Matrix: a real table, so the axes are headers a screen reader can announce. It scales
-	// rather than scrolls — columns divide the pane's width and type is sized off the row height.
-	//
-	// Each band scales to its own max, since categories span orders of magnitude and one grid-wide scale leaves
-	// the median cell near-blank; intensity is comparable down a band, not between them. `normalize` names the
-	// axis a band runs along, so the scale follows the categories whichever way the grid is turned.
-	import { numCompact, esc } from '$lib/utils/format';
-	import { formatUnitExact, type Unit } from '$lib/data/primitives';
+	// Heatmap over a grid of tiles (see `heat.ts`): a real table, so the axes are headers a screen reader can
+	// announce. It scales rather than scrolls: columns divide the pane's width and type is sized off the row
+	// height.
+	import { esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import { chartLabel } from '$lib/charts/aria';
-
-	/** For a band with no colour of its own. */
-	const FALLBACK = 'var(--lav)';
+	import type { HeatGrid } from '$lib/charts/heat';
 
 	interface Props {
-		/** Row-axis labels. */
-		rows: string[];
-		/** Column-axis labels. */
-		cols: string[];
-		/** Cell values indexed as values[rowIndex][colIndex]. */
-		values: number[][];
-		/** What the cells measure. The tiles abbreviate; the tooltip renders the figure in full. */
-		unit: Unit;
-		/** Which axis a band runs along: 'row' (default) or 'col'; 'global' uses one scale for the grid. */
-		normalize?: 'row' | 'col' | 'global';
-		/** One colour per band, along `normalize`'s axis. Short or absent, bands fall back to `FALLBACK`. */
-		colors?: string[];
-		/** Row to mark as the one in focus, by its label. */
-		mark?: string;
+		grid: HeatGrid;
+		/** Rows in focus, by position. */
+		marked?: number[];
 		/** Makes row labels and cells buttons: a row label picks its row, a cell its row and column. */
 		onpick?: (row: string, col: string | null) => void;
 		/** Column currently chosen, which its header marks. */
 		picked?: string | null;
 	}
-	let {
-		rows,
-		cols,
-		values,
-		unit,
-		normalize = 'row',
-		colors,
-		mark,
-		onpick,
-		picked
-	}: Props = $props();
+	let { grid, marked = [], onpick, picked }: Props = $props();
 
-	const globalMax = $derived(Math.max(1, ...values.flat().map(Math.abs)));
-	const rowMax = $derived(rows.map((_, i) => Math.max(1, ...(values[i] ?? []).map(Math.abs))));
-	const colMax = $derived(
-		cols.map((_, j) => Math.max(1, ...values.map((row) => Math.abs(row[j] ?? 0))))
-	);
-	const scaleOf = (i: number, j: number) =>
-		normalize === 'row' ? rowMax[i]! : normalize === 'col' ? colMax[j]! : globalMax;
+	const totals = $derived(grid.totals);
 
-	const rowTotal = $derived(values.map((row) => row.reduce((a, b) => a + b, 0)));
-	const colTotal = $derived(cols.map((_, j) => values.reduce((a, row) => a + (row[j] ?? 0), 0)));
-	const grand = $derived(colTotal.reduce((a, b) => a + b, 0));
+	/** Header row, body rows and any totals row: what the pane's height is divided between. */
+	const tracks = $derived(grid.rows.length + (totals ? 2 : 1));
 
-	/** Header row, body rows and the totals row — what the pane's height is divided between. */
-	const tracks = $derived(rows.length + 2);
+	const label = $derived(chartLabel('Heatmap', grid.rows, ` by ${grid.cols.join(', ')}`));
 
-	/** A cell against the heaviest of its band, 0..1. A credit carries no heat: it is not small spending. */
-	function share(v: number, i: number, j: number): number {
-		return v <= 0 ? 0 : Math.min(1, v / scaleOf(i, j));
-	}
-
-	/** The hue a cell's band carries. `global` has no bands to colour. */
-	function tile(i: number, j: number): string {
-		if (normalize === 'global') return FALLBACK;
-		return colors?.[normalize === 'row' ? i : j] ?? FALLBACK;
-	}
-
-	const label = $derived(chartLabel('Heatmap', rows, ` by ${cols.join(', ')}`));
+	/** The row labels' column, in `ch` so it holds its longest label at whatever size type scaled to. */
+	const gutter = $derived(Math.max(3, ...grid.rows.map((r) => r.length)) + 1);
 </script>
 
 <div class="sizebox">
-	<table style:--tracks={tracks} aria-label={label}>
+	<table style:--tracks={tracks} style:--gutter={`${gutter}ch`} aria-label={label}>
 		<thead>
 			<tr>
 				<td class="corner"></td>
-				{#each cols as c (c)}
+				<!-- Keyed by position: a heading may repeat beside each level it belongs to. -->
+				{#each grid.cols as c, j (j)}
 					<th scope="col" title={c} class:picked={c === picked}>{c}</th>
 				{/each}
-				<td class="gap"></td>
-				<th scope="col" class="sum">Total</th>
+				{#if totals}
+					<td class="gap"></td>
+					<th scope="col" class="sum">Total</th>
+				{/if}
 			</tr>
 		</thead>
 		<tbody>
-			{#each rows as r, i (r)}
-				<tr class:marked={r === mark} aria-current={r === mark ? 'true' : undefined}>
+			{#each grid.rows as r, i (i)}
+				{@const on = marked.includes(i)}
+				<tr class:marked={on} aria-current={on ? 'true' : undefined}>
 					<th scope="row">
 						{r}
 						{#if onpick}
@@ -96,17 +55,16 @@
 							></button>
 						{/if}
 					</th>
-					{#each cols as c, j (c)}
-						{@const v = values[i]?.[j] ?? 0}
+					{#each grid.cols as c, j (j)}
+						{@const cell = grid.cells[i]![j]!}
 						<td
 							class="cell"
-							style:--a={share(v, i, j).toFixed(3)}
-							style:--tile={tile(i, j)}
-							onmousemove={(e) =>
-								showTip(`<b>${esc(r)} · ${esc(c)}</b><br>${formatUnitExact(v, unit)}`, e)}
+							style:--a={cell.a.toFixed(3)}
+							style:--tile={cell.tile}
+							onmousemove={(e) => showTip(`<b>${esc(r)} · ${esc(c)}</b><br>${esc(cell.tip)}`, e)}
 							onmouseleave={hideTip}
 						>
-							{numCompact(v)}
+							{cell.text}
 							{#if onpick}
 								<button
 									type="button"
@@ -117,21 +75,25 @@
 							{/if}
 						</td>
 					{/each}
-					<td class="gap"></td>
-					<td class="sum">{numCompact(rowTotal[i] ?? 0)}</td>
+					{#if totals}
+						<td class="gap"></td>
+						<td class="sum">{totals.rows[i]}</td>
+					{/if}
 				</tr>
 			{/each}
 		</tbody>
-		<tfoot>
-			<tr>
-				<th scope="row">Total</th>
-				{#each cols as c, j (c)}
-					<td class="sum">{numCompact(colTotal[j] ?? 0)}</td>
-				{/each}
-				<td class="gap"></td>
-				<td class="sum">{numCompact(grand)}</td>
-			</tr>
-		</tfoot>
+		{#if totals}
+			<tfoot>
+				<tr>
+					<th scope="row">Total</th>
+					{#each grid.cols as _c, j (j)}
+						<td class="sum">{totals.cols[j]}</td>
+					{/each}
+					<td class="gap"></td>
+					<td class="sum">{totals.grand}</td>
+				</tr>
+			</tfoot>
+		{/if}
 	</table>
 </div>
 
@@ -140,9 +102,8 @@
 		/* One row's share of the pane, which every size below is pitched against. */
 		--row: calc(100cqh / var(--tracks));
 		--tile-radius: var(--radius-md);
-		/* In `ch` rather than a fixed width, so both hold their content at whatever size type scaled to.
-		   `--totals` is wide enough for the letterspaced uppercase header, which outruns any figure. */
-		--gutter: 4ch;
+		/* In `ch` rather than a fixed width, so it holds its content at whatever size type scaled to. Wide
+		   enough for the letterspaced uppercase header, which outruns any figure. */
 		--totals: 9ch;
 
 		width: 100%;

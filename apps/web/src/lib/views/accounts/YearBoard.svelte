@@ -3,6 +3,7 @@
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
 	import type { KpiBoardDefs } from '$lib/kpi/spec';
+	import { page } from '$app/stores';
 	import Board from '$lib/layout/grid/Board.svelte';
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import { figurePanes } from '$lib/layout/grid/figure';
@@ -25,6 +26,7 @@
 		SNAPSHOT_LEVELS,
 		TREND
 	} from './copy';
+	import { openAccount } from './drill';
 
 	interface Props {
 		data: DashboardData;
@@ -174,12 +176,11 @@
 				y: 60,
 				w: 48,
 				h: 16,
-				content: 'flow',
-				mode: 'fit',
+				content: 'scale',
 				figure: {
 					figure: 'networth.year_table',
 					scope: all,
-					chart: 'table',
+					chart: 'heatmap',
 					title: words('Yearly snapshots'),
 					caption: words(`${SNAPSHOT_LEVELS} YoY`)
 				}
@@ -214,6 +215,11 @@
 	</Pane>
 
 	{#each figurePanes(PANES) as [id, figure] (id)}
-		<FigurePane {id} {data} spec={figure} />
+		<FigurePane
+			{id}
+			{data}
+			spec={figure}
+			onpick={id === 'accounts' ? (label) => openAccount($page.url, data, label) : undefined}
+		/>
 	{/each}
 </Board>

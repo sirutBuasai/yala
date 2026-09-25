@@ -4,16 +4,15 @@
 	import { page } from '$app/stores';
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
-	import { latestMonthKey } from '$lib/data/scope';
 	import { snapshotYears } from '$lib/data/networth';
 	import { yearSpan } from '$lib/utils/format';
-	import { focusMonth, MONTH_PARAM } from '$lib/nav/focus';
-	import { step } from '$lib/nav/step';
+	import { periodPicks } from '$lib/nav/picks';
 	import { viewOf } from '$lib/nav/views';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import ViewSwitch from '$lib/nav/ViewSwitch.svelte';
-	import MonthNav from '$lib/nav/MonthNav.svelte';
+	import YearNav from '$lib/nav/YearNav.svelte';
 	import MonthBoard from './MonthBoard.svelte';
+	import { ACCOUNT_PARAM } from './drill';
 	import YearBoard from './YearBoard.svelte';
 
 	interface Props {
@@ -24,7 +23,9 @@
 	let { data, accounts, onsaved }: Props = $props();
 
 	const view = $derived(viewOf($page.params.view));
-	const monthKey = $derived(focusMonth($page.url, latestMonthKey(data)));
+	const p = $derived(periodPicks($page.url, data, view));
+	/** The account Log balances opens at, from Where the money sits. */
+	const account = $derived($page.url.searchParams.get(ACCOUNT_PARAM));
 	const hasData = $derived(!!data.meta.domains.networth);
 	const span = $derived(yearSpan(snapshotYears(data)));
 </script>
@@ -32,11 +33,7 @@
 <ViewHeader title="Accounts">
 	<ViewSwitch ariaLabel="Accounts time range" />
 	{#if view === 'month'}
-		<MonthNav
-			value={monthKey}
-			monthKeys={data.meta.month_keys}
-			onchange={(k) => step($page.url, { [MONTH_PARAM]: k })}
-		/>
+		<YearNav value={p.year} years={p.years} onchange={p.moveToYear} />
 	{:else if hasData}
 		<span class="cap">Lifetime · {span}</span>
 	{/if}
@@ -44,7 +41,15 @@
 
 <!-- Month always shows, since Log balances on it is how the first balance gets logged. -->
 {#if view === 'month'}
-	<MonthBoard {data} {accounts} {onsaved} {monthKey} />
+	<MonthBoard
+		{data}
+		{accounts}
+		{onsaved}
+		monthKey={p.monthKey}
+		scoped={p.scoped}
+		onpick={p.pickMonth}
+		{account}
+	/>
 {:else if hasData}
 	<YearBoard {data} />
 {:else}

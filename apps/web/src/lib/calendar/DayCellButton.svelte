@@ -76,7 +76,11 @@
 	}
 	.cell.pending {
 		border-color: var(--pend);
-		background: color-mix(in srgb, var(--pend) 13%, var(--surface-2));
+		background: color-mix(
+			in srgb,
+			oklch(from var(--pend) var(--wash-lightness) c h) calc(13% * var(--wash-scale)),
+			var(--surface-2)
+		);
 	}
 	.cell.sel {
 		border-color: var(--sel);

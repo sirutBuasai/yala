@@ -4,6 +4,7 @@
 	import type { Table } from '$lib/data/primitives';
 	import { formatUnit } from '$lib/data/primitives';
 	import Empty from '$lib/ui/Empty.svelte';
+	import { shadeHue, tableShades } from '$lib/charts/heat';
 
 	interface Props {
 		table: Table;
@@ -15,33 +16,7 @@
 		return typeof value === 'number' && unit ? formatUnit(value, unit) : String(value);
 	}
 
-	/** Each tinted column's largest magnitude, which its shading is scaled against. Per column, never
-	    across the table, or a column of hundreds would never tint beside one of tens of thousands. */
-	const peaks = $derived(
-		table.columns.map((c, j) =>
-			c.tint
-				? Math.max(
-						...table.rows.map((r) => (typeof r[j] === 'number' ? Math.abs(r[j] as number) : 0))
-					)
-				: 0
-		)
-	);
-
-	/** A cell's shade: which way the news runs, and how strongly, or null where nothing is shaded. The
-	    depth is a fraction here and scaled by the theme in CSS. */
-	function shade(value: string | number, col: number): { good: boolean; a: number } | null {
-		const dir = table.columns[col]?.tint;
-		if (!dir || typeof value !== 'number' || value === 0) return null;
-
-		const peak = peaks[col] ?? 0;
-		if (!peak) return null;
-
-		return {
-			good: value > 0 === (dir === 'up-good'),
-			// Floored, so the smallest real movement is still distinguishable from none.
-			a: 0.25 + 0.75 * (Math.abs(value) / peak)
-		};
-	}
+	const shades = $derived(tableShades(table));
 </script>
 
 {#if table.rows.length}
@@ -63,12 +38,12 @@
 				{#each table.rows as row, i (i)}
 					<tr>
 						{#each row as v, j (j)}
-							{@const sh = shade(v, j)}
+							{@const sh = shades[i]?.[j]}
 							<td
 								class:num={!!table.columns[j]?.unit}
 								class:tinted={!!sh}
 								style:--a={sh ? sh.a : null}
-								style:--tint={sh ? `var(--${sh.good ? 'good' : 'crit'})` : null}
+								style:--tint={sh ? shadeHue(sh.good) : null}
 							>
 								{cell(v, j)}
 							</td>

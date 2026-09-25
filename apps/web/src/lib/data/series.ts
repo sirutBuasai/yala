@@ -33,8 +33,14 @@ export function series(
 }
 
 /** Series that overlay, bundled under the axis and labels they share. */
-export function multiseries(unit: Unit, axis: Axis, labels: string[], list: Series[]): MultiSeries {
-	return { kind: 'multiseries', unit, axis, labels, series: list };
+export function multiseries(
+	unit: Unit,
+	axis: Axis,
+	labels: string[],
+	list: Series[],
+	periods?: string[]
+): MultiSeries {
+	return { kind: 'multiseries', unit, axis, labels, series: list, periods };
 }
 
 // --- one measure over time ---

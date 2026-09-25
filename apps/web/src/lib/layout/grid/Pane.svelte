@@ -423,7 +423,7 @@
 	}
 	.cell.invalid .grab {
 		outline: 2px solid var(--crit);
-		background: color-mix(in srgb, var(--crit) 10%, transparent);
+		background: color-mix(in srgb, var(--crit-wash) calc(10% * var(--wash-scale)), transparent);
 	}
 	/* The pointer's target. Inset and rounded like a card so it reads as the pane's own footprint, and
 	   above the panes it crosses, since where it is going is what the user is looking at. */

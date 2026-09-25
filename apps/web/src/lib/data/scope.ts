@@ -2,6 +2,7 @@
 // primitive catalog and the metric layer can depend on it without importing each other.
 
 import type { DashboardData } from '$lib/data/types';
+import { yearOf } from '$lib/utils/period';
 
 export type ScopeLevel = 'all' | 'year' | 'month';
 
@@ -58,7 +59,7 @@ export function latestEntryDate(data: DashboardData): string {
 
 /** The year a scope targets, defaulting to the latest tracked year. */
 export function scopeYear(data: DashboardData, scope: Scope): number {
-	return scope.year ?? latestYear(data);
+	return scope.year ?? (scope.monthKey ? yearOf(scope.monthKey) : latestYear(data));
 }
 
 /** A stable string key for a scope — used to memoize per-scope computations. */

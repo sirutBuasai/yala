@@ -48,7 +48,8 @@
 		height: 9px;
 		border-radius: var(--radius-pill);
 		background: var(--lav);
-		box-shadow: 0 0 0 4px color-mix(in srgb, var(--lav) 20%, transparent);
+		box-shadow: 0 0 0 4px
+			color-mix(in srgb, var(--lav-wash) calc(20% * var(--wash-scale)), transparent);
 		align-self: center;
 	}
 </style>

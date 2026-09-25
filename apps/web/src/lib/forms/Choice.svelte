@@ -39,7 +39,7 @@
 	}
 	.choice[aria-pressed='true'] {
 		border-color: var(--lav);
-		background: color-mix(in srgb, var(--lav) 16%, transparent);
+		background: color-mix(in srgb, var(--lav-wash) calc(16% * var(--wash-scale)), transparent);
 	}
 	.choice:disabled {
 		opacity: 0.5;

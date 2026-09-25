@@ -6,10 +6,11 @@
 	import { type Unit } from '$lib/data/primitives';
 	import { chartFormat } from '$lib/charts/format';
 	import { showTip, hideTip, withAlt } from '$lib/utils/tooltip';
-	import { labelAnchor, labelIndices, plotSize } from '$lib/charts/axis';
+	import { focusPad, labelAnchor, labelIndices, plotSize } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import Legend from '$lib/charts/Legend.svelte';
 	import { chartLabel } from '$lib/charts/aria';
+	import FocusBand from '$lib/charts/marks/FocusBand.svelte';
 
 	interface Band {
 		name: string;
@@ -25,8 +26,10 @@
 		/** The unit each band's `alt` is in — a band's other reading, so one hover answers both "how much"
 		    and "what fraction". */
 		altUnit?: Unit;
+		/** The points of the period in focus, shaded behind the bands. */
+		marked?: number[];
 	}
-	let { labels, series, unit, altUnit }: Props = $props();
+	let { labels, series, unit, altUnit, marked = [] }: Props = $props();
 
 	const box = new ChartBox();
 	const W = $derived(box.w);
@@ -38,6 +41,7 @@
 	const n = $derived(labels.length);
 
 	const xPos = (i: number) => (n > 1 ? (iw * i) / (n - 1) : iw / 2);
+	const markWidth = $derived(focusPad(n, iw));
 
 	const label = $derived(
 		chartLabel(
@@ -111,6 +115,8 @@
 				<text x={-8} y={y(t) + 4} text-anchor="end">{f.tick(t)}</text>
 			{/each}
 
+			<FocusBand xs={marked.map(xPos)} pad={markWidth} height={ih + 26} />
+
 			{#each paths as p (p.band.name)}
 				<path d={p.fill} fill={p.band.color} opacity="0.75" />
 				<path d={p.edge} fill="none" stroke={p.band.color} stroke-width="1.5" />
@@ -118,7 +124,12 @@
 
 			{#each labels as lb, i (lb + i)}
 				{#if shown.has(i)}
-					<text x={xPos(i)} y={ih + 19} text-anchor={labelAnchor(i, n)}>{lb}</text>
+					<text
+						class:focused={marked.includes(i)}
+						x={xPos(i)}
+						y={ih + 19}
+						text-anchor={labelAnchor(i, n)}>{lb}</text
+					>
 				{/if}
 			{/each}
 

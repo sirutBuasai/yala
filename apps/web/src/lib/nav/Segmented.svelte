@@ -87,7 +87,7 @@
 		white-space: nowrap;
 	}
 	.seg button.active {
-		background: color-mix(in srgb, var(--lav) 20%, transparent);
+		background: color-mix(in srgb, var(--lav-wash) calc(20% * var(--wash-scale)), transparent);
 		color: var(--ink);
 	}
 	.seg button:hover:not(.active) {

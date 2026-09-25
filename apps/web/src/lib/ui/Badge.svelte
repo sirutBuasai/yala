@@ -79,19 +79,19 @@
 		border-color: color-mix(in srgb, var(--ink-3) 40%, transparent);
 	}
 	.filled.good {
-		background: color-mix(in srgb, var(--good) 15%, transparent);
+		background: color-mix(in srgb, var(--good-wash) calc(15% * var(--wash-scale)), transparent);
 		border-color: color-mix(in srgb, var(--good) 40%, transparent);
 	}
 	.filled.warn {
-		background: color-mix(in srgb, var(--gold) 18%, transparent);
+		background: color-mix(in srgb, var(--gold-wash) calc(18% * var(--wash-scale)), transparent);
 		border-color: color-mix(in srgb, var(--gold) 42%, transparent);
 	}
 	.filled.crit {
-		background: color-mix(in srgb, var(--crit) 15%, transparent);
+		background: color-mix(in srgb, var(--crit-wash) calc(15% * var(--wash-scale)), transparent);
 		border-color: color-mix(in srgb, var(--crit) 45%, transparent);
 	}
 	.filled.accent {
-		background: color-mix(in srgb, var(--lav) 18%, transparent);
+		background: color-mix(in srgb, var(--lav-wash) calc(18% * var(--wash-scale)), transparent);
 		border-color: color-mix(in srgb, var(--lav) 42%, transparent);
 	}
 </style>

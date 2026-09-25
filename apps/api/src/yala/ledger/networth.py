@@ -78,6 +78,18 @@ class LoggedBalance:
 
 
 @dataclass(frozen=True)
+class StandingBalance:
+    """An account's latest snapshot as of a reading, and whether it was snapshotted again after.
+
+    ``amount`` is as stored, so a liability's is negative."""
+
+    date: dt.date
+    #: USD at ``date``; share lots valued at that date's prices.
+    amount: Decimal
+    later: bool
+
+
+@dataclass(frozen=True)
 class CardCheck:
     """What a card's bank app should show at the end of a day, and whether a reading taken then must
     match it (see :func:`yala.ledger.cards.must_agree`)."""
@@ -183,30 +195,60 @@ class NetWorth:
         assertion: reaching back to an earlier one would rewrite a date the displayed figure did not
         come from, silently restating it and plugging the difference, and rewriting one leg of a
         share-based snapshot is not a balance edit."""
-        in_month: dict[str, list[data.Balance]] = {}
-        for e in self._led.entries:
-            if isinstance(e, data.Balance) and month_of(e.date) == month_of(any_day):
-                in_month.setdefault(e.account, []).append(e)
-
         out: dict[str, LoggedBalance] = {}
-        for account, entries in in_month.items():
-            latest = max(e.date for e in entries)
-            at_latest = [e for e in entries if e.date == latest]
-
-            held: dict[str, Decimal] = {}
-            for e in at_latest:
-                held[e.amount.currency] = held.get(e.amount.currency, Decimal(0)) + (
-                    e.amount.number or Decimal(0)
-                )
-
+        for account, entries in self._assertions().items():
+            in_month = [e for e in entries if month_of(e.date) == month_of(any_day)]
+            if not in_month:
+                continue
+            latest, amount, at_latest = self._latest_of(in_month)
             rewritable = len(at_latest) == 1 and at_latest[0].amount.currency == DEFAULT_CURRENCY
             out[account] = LoggedBalance(
                 date=latest,
-                amount=self._led.value_of(held, latest),
+                amount=amount,
                 locator=locator_of(at_latest[0].meta) if rewritable else None,
             )
 
         return out
+
+    def standing_at(self, as_of: dt.date) -> dict[str, StandingBalance]:
+        """Each account's latest snapshot as of a reading taken at the end of ``as_of``, which is
+        asserted the day after, and whether a later one exists. An account with no snapshot by then
+        is absent."""
+        asserted = as_of + dt.timedelta(days=1)
+        out: dict[str, StandingBalance] = {}
+        for account, entries in self._assertions().items():
+            upto = [e for e in entries if e.date <= asserted]
+            if not upto:
+                continue
+            latest, amount, _ = self._latest_of(upto)
+            out[account] = StandingBalance(
+                date=latest, amount=amount, later=any(e.date > asserted for e in entries)
+            )
+
+        return out
+
+    def _assertions(self) -> dict[str, list[data.Balance]]:
+        """Every ``balance`` assertion, by account."""
+        out: dict[str, list[data.Balance]] = {}
+        for e in self._led.entries:
+            if isinstance(e, data.Balance):
+                out.setdefault(e.account, []).append(e)
+        return out
+
+    def _latest_of(
+        self, entries: list[data.Balance]
+    ) -> tuple[dt.date, Decimal, list[data.Balance]]:
+        """The latest date among one account's ``entries``, the figure its legs there sum to, and
+        the legs themselves. Share legs are summed at that date's prices, the figure the account
+        was snapshotted to."""
+        latest = max(e.date for e in entries)
+        at_latest = [e for e in entries if e.date == latest]
+        held: dict[str, Decimal] = {}
+        for e in at_latest:
+            held[e.amount.currency] = held.get(e.amount.currency, Decimal(0)) + (
+                e.amount.number or Decimal(0)
+            )
+        return latest, self._led.value_of(held, latest), at_latest
 
     def card_checks(self, as_of: dt.date) -> dict[str, CardCheck]:
         """Every card's :class:`CardCheck` for a reading taken at the end of ``as_of``, which is

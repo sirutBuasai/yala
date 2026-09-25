@@ -624,7 +624,7 @@
 		gap: var(--space-1);
 	}
 	.padbox {
-		background: color-mix(in srgb, var(--lav) 14%, transparent);
+		background: color-mix(in srgb, var(--lav-wash) calc(14% * var(--wash-scale)), transparent);
 		border: 1px dashed color-mix(in srgb, var(--lav) 55%, var(--border));
 		border-radius: var(--radius-md);
 		width: fit-content;
@@ -638,7 +638,7 @@
 	}
 	.radbox {
 		height: 60px;
-		background: color-mix(in srgb, var(--lav) 18%, transparent);
+		background: color-mix(in srgb, var(--lav-wash) calc(18% * var(--wash-scale)), transparent);
 		border: 1px solid var(--lav);
 		margin-bottom: var(--space-2);
 	}
@@ -705,7 +705,7 @@
 		background: var(--border);
 	}
 	.blrow:hover {
-		background: color-mix(in srgb, var(--lav) 9%, transparent);
+		background: color-mix(in srgb, var(--lav-wash) calc(9% * var(--wash-scale)), transparent);
 	}
 	.blamt {
 		font-variant-numeric: tabular-nums;

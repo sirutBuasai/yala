@@ -1,5 +1,6 @@
 import { scaleLinear, scaleLog, type ScaleLinear, type ScaleLogarithmic } from 'd3-scale';
 import { money, moneyK } from '$lib/utils/format';
+import { inPeriod } from '$lib/utils/period';
 
 /** A value→pixel mapping plus the ticks to label it with. Generic so a builder keeps its d3 surface. */
 export interface ValueScale<S extends (v: number) => number = (v: number) => number> {
@@ -131,7 +132,8 @@ export function labelAnchor(i: number, count: number): 'start' | 'middle' | 'end
 }
 
 /** Which x-label indices to draw: budget each the width of the longest, keep every nth, and always keep the
-    last. Its neighbour is dropped when the two would overlap. */
+    last. A label is dropped where it would overlap one already kept, measured as drawn: the end labels are
+    anchored inward (`labelAnchor`), so they reach a whole width into the plot where the rest reach half. */
 export function labelIndices(count: number, innerWidth: number, labels: string[]): number[] {
 	if (count <= 1) return count === 1 ? [0] : [];
 
@@ -139,15 +141,44 @@ export function labelIndices(count: number, innerWidth: number, labels: string[]
 	const fits = Math.max(2, Math.min(12, Math.floor(innerWidth / room)));
 	const stride = Math.max(1, Math.ceil(count / fits));
 
-	const out: number[] = [];
-	for (let i = 0; i < count - 1; i += stride) out.push(i);
-
-	// Drop the label before the last when the two would not both fit. Measured in PIXELS, not as a fraction
-	// of the stride, which let a gap of most of a stride still overlap on a long axis.
 	const last = count - 1;
-	const prev = out[out.length - 1];
-	if (prev !== undefined && ((last - prev) * innerWidth) / last < room) out.pop();
+	const x = (i: number) => (i * innerWidth) / last;
+	const reach = (i: number): [number, number] => {
+		const anchor = labelAnchor(i, count);
+		if (anchor === 'start') return [x(i), x(i) + room];
+		if (anchor === 'end') return [x(i) - room, x(i)];
+		return [x(i) - room / 2, x(i) + room / 2];
+	};
+	const clear = (a: number, b: number) => reach(a)[1] <= reach(b)[0];
+
+	const out: number[] = [];
+	for (let i = 0; i < last; i += stride) {
+		const prev = out.at(-1);
+		if (prev === undefined || clear(prev, i)) out.push(i);
+	}
+	while (out.length && !clear(out.at(-1)!, last)) out.pop();
 	out.push(last);
 
 	return out;
+}
+
+/** How wide a focus band reaches around a lone point on a continuous axis of `count` points. */
+export function focusPad(count: number, innerWidth: number): number {
+	return Math.min(48, count > 1 ? (innerWidth / (count - 1)) * 0.6 : 24);
+}
+
+/**
+ * The positions `mark` names along an axis: those whose period falls within it, or, on an axis without
+ * periods, the one it labels.
+ */
+export function markedIndices(
+	labels: string[],
+	periods: string[] | undefined,
+	mark?: string
+): number[] {
+	if (mark == null) return [];
+	return labels.flatMap((label, i) => {
+		const period = periods?.[i];
+		return (period != null ? inPeriod(period, mark) : label === mark) ? [i] : [];
+	});
 }

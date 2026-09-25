@@ -8,19 +8,58 @@ test.beforeEach(async ({ page }) => openApp(page));
 const pane = (page: Page, title: string) =>
 	page.locator('.card', { has: page.getByRole('heading', { name: title, exact: true }) });
 
-test('the month picker moves Log balances and the board to that month', async ({ page }) => {
+const band = (page: Page, card: string, label: string) =>
+	pane(page, card).locator(`rect.band[aria-label="${label}"]`);
+
+test("a month's bars narrow the KPI cards to it and mark it on every chart, and again widen", async ({
+	page
+}) => {
+	await page.goto('/accounts?month=2026-07');
+	await settle(page);
+	const apr = band(page, 'You vs the market, by month', 'Apr');
+
+	await apr.click();
+	await settle(page);
+	await expect(page).toHaveURL(/month=2026-04/);
+	await expect(page).toHaveURL(/scope=month/);
+	await expect(apr).toHaveAttribute('aria-pressed', 'true');
+	await expect(band(page, 'Change by asset type', 'Apr')).toHaveAttribute('aria-pressed', 'true');
+	await expect(page.getByText('end of Apr 2026')).toBeVisible();
+	await expect(pane(page, 'Net worth & assets').locator('.focusband')).toHaveCount(1);
+	await expect(pane(page, 'Monthly snapshots').locator('tr.marked th[scope=row]')).toContainText(
+		'Apr'
+	);
+
+	await apr.click();
+	await settle(page);
+	await expect(page).not.toHaveURL(/scope=/);
+	await expect(page.getByText('end of 2026')).toBeVisible();
+	await expect(pane(page, 'Monthly snapshots').locator('tr.marked')).toHaveCount(0);
+});
+
+test('the year stepper moves the board and Log balances to the same month of that year', async ({
+	page
+}) => {
 	await page.goto('/accounts?month=2026-01');
 	await settle(page);
 	await expect(pane(page, 'Log balances')).toBeVisible();
-	await expect(pane(page, 'Net worth & assets')).toContainText('2026');
 
-	await page.getByRole('button', { name: 'Previous month' }).click();
+	await page.getByRole('button', { name: 'Previous year' }).click();
 	await settle(page);
-	await expect(page).toHaveURL(/month=2025-12/);
+	await expect(page).toHaveURL(/month=2025-/);
 	await expect(pane(page, 'Net worth & assets')).toContainText('2025');
+});
+
+test('an account in Where the money sits opens it in Log balances', async ({ page }) => {
+	await page.goto('/accounts/year');
+	await settle(page);
+	await pane(page, 'Where the money sits').getByRole('button').first().click();
+	await settle(page);
+	await expect(page).toHaveURL(/\/accounts\?month=\d{4}-\d{2}&account=/);
+	await expect(pane(page, 'Log balances')).toBeVisible();
 
 	await page.goBack();
-	await expect(page).toHaveURL(/month=2026-01/);
+	await expect(page).toHaveURL(/\/accounts\/year/);
 });
 
 test('Year is a path a reload keeps, and it logs nothing', async ({ page }) => {

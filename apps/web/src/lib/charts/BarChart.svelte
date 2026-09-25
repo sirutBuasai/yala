@@ -9,7 +9,7 @@
 	import { chartFormat } from '$lib/charts/format';
 	import { showTip, hideTip, withAlt } from '$lib/utils/tooltip';
 	import Legend from '$lib/charts/Legend.svelte';
-	import { chartLabel } from '$lib/charts/aria';
+	import { chartLabel, onPress } from '$lib/charts/aria';
 	import { type Unit } from '$lib/data/primitives';
 
 	interface Series {
@@ -49,12 +49,6 @@
 
 	const pickable = (i: number) => !!onpick && series.some((s) => (s.values[i] ?? 0) !== 0);
 	const receded = (lb: string) => picked != null && lb !== picked;
-
-	function pickKey(e: KeyboardEvent, lb: string) {
-		if (e.key !== 'Enter' && e.key !== ' ') return;
-		e.preventDefault();
-		onpick?.(lb);
-	}
 
 	const single = $derived(series.length <= 1);
 
@@ -143,7 +137,7 @@
 							aria-label={lb}
 							aria-pressed={lb === picked}
 							onclick={() => onpick?.(lb)}
-							onkeydown={(e) => pickKey(e, lb)}
+							onkeydown={(e) => onPress(e, () => onpick?.(lb))}
 						/>
 					{/if}
 					{#each series as s, j (s.name)}

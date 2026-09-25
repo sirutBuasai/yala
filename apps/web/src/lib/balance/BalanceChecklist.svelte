@@ -43,8 +43,10 @@
 		onsaved: () => void;
 		/** Selected month, "YYYY-MM". */
 		monthKey: string;
+		/** An account to open at, by ledger path: its row is marked, scrolled to and its field focused. */
+		account?: string | null;
 	}
-	let { id, data, accounts, onsaved, monthKey }: Props = $props();
+	let { id, data, accounts, onsaved, monthKey, account }: Props = $props();
 
 	/** Which accounts the shown month had, once the dated read lands. The props are today's lists, so
 	    they stand in only until then, and on their own would offer a card opened months later. */
@@ -79,8 +81,10 @@
 	let adjBefore = $state<Map<string, number>>(new Map());
 	let prevVals = $state<Map<string, number>>(new Map());
 	let cardChecks = $state<Map<string, NetWorthAt['cards'][string]>>(new Map());
-	/** What this month already holds per account: the figure to ghost, and where a correction goes. */
+	/** What this month already holds per account, and where a correction goes. */
 	let logged = $state<Map<string, NetWorthAt['logged'][string]>>(new Map());
+	/** Where each account stood as of the reading, for its field's ghost. */
+	let standingAt = $state<Map<string, NetWorthAt['standing'][string]>>(new Map());
 	let loading = $state(false);
 
 	const toMap = (list: { account: string; value: number }[]) =>
@@ -97,6 +101,7 @@
 			prevVals = new Map();
 			cardChecks = new Map();
 			logged = new Map();
+			standingAt = new Map();
 			monthRoster = null;
 			return;
 		}
@@ -115,6 +120,7 @@
 			atRead = toMap(read.accounts);
 			adjRead = toMap(read.adjustments);
 			cardChecks = new Map(Object.entries(read.cards ?? {}));
+			standingAt = new Map(Object.entries(read.standing ?? {}));
 		}
 		if (before) adjBefore = toMap(before.adjustments);
 		if (prev) prevVals = toMap(prev.accounts);
@@ -137,6 +143,27 @@
 	/** What this month's latest snapshot puts the account at, in the ledger's sign. Zero is a figure,
 	    so this is null only when the month holds nothing for the account. */
 	const onRecord = (account: string) => logged.get(account)?.amount ?? null;
+	/**
+	 * What the reading's date stood at, to ghost in its field: the snapshot on that date, else the latest
+	 * before it. Past the account's last snapshot there is nothing yet to show, since the field is where
+	 * the next one goes.
+	 */
+	function ghost(account: string): number | null {
+		const s = standingAt.get(account);
+		return s && (s.later || s.date === snapshotDate) ? s.amount : null;
+	}
+
+	/** Rows by account, for opening at one. Plain, not state: only the effect below reads it. */
+	const rowEls: Record<string, HTMLTableRowElement> = {};
+	/** The account last opened at, so a refresh of the rows does not pull focus back to it. */
+	let opened = '';
+	$effect(() => {
+		const el = account ? rowEls[account] : undefined;
+		if (!account || !el || opened === account) return;
+		opened = account;
+		el.scrollIntoView({ block: 'center' });
+		el.querySelector('input')?.focus({ preventScroll: true });
+	});
 
 	// Keyed by month so switching months never carries an entry across. Liabilities are typed as the
 	// amount owed and stored negative.
@@ -321,10 +348,16 @@
 							{#each members as row (row.account)}
 								{@const value = standing(row)}
 								{@const rec = onRecord(row.account)}
+								{@const shown = ghost(row.account)}
 								{@const prev = previous(row.account)}
 								{@const exp = expected(row)}
 								{@const chk = check(row)}
-								<tr class:done={value != null && !blockedRow(row)} class:bad={blockedRow(row)}>
+								<tr
+									bind:this={rowEls[row.account]}
+									class:done={value != null && !blockedRow(row)}
+									class:bad={blockedRow(row)}
+									class:opened={row.account === account}
+								>
 									<td class="nm">
 										<span class="who">
 											<i class="dot" style:background={accountVar(row.account)}></i>
@@ -334,11 +367,11 @@
 									<td class="num muted">{prev == null ? NO_VALUE : moneyExact(prev)}</td>
 									<td class="num muted">{exp == null ? NO_VALUE : moneyExact(exp)}</td>
 									<td class="entrycell">
-										<!-- A logged month ghosts its own figure, so stepping back to one shows what it
-										     holds without prefilling a field that would then look edited. -->
+										<!-- A past reading ghosts what it stood at, so stepping back to one shows it without
+										     prefilling a field that would then look edited. -->
 										<AmountInput
 											prefix="$"
-											placeholder={rec == null ? NO_VALUE : amountExact(asTyped(row, rec))}
+											placeholder={shown == null ? NO_VALUE : amountExact(asTyped(row, shown))}
 											signed
 											disabled={busy}
 											ariaLabel={`Balance for ${formatAccount(row.account)}`}
@@ -463,8 +496,9 @@
 	.bal thead th:not(.num) {
 		text-align: left;
 	}
-	.bal tbody tr:not(.glabel):hover td {
-		background: color-mix(in srgb, var(--lav) 7%, transparent);
+	.bal tbody tr:not(.glabel):hover td,
+	.bal tbody tr.opened td {
+		background: color-mix(in srgb, var(--lav-wash) calc(7% * var(--wash-scale)), transparent);
 	}
 	.glabel th,
 	.glabel td {

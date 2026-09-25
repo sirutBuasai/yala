@@ -131,7 +131,11 @@
 		padding: var(--space-8) var(--space-11);
 	}
 	.head.tinted {
-		background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+		background: color-mix(
+			in srgb,
+			oklch(from var(--accent) var(--wash-lightness) c h) calc(14% * var(--wash-scale)),
+			var(--surface)
+		);
 		border-bottom: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
 	}
 	.titlerow {

@@ -66,7 +66,7 @@
 		display: block;
 		width: 100%;
 		height: 100%;
-		--mark-hue: oklch(from var(--mark) var(--mark-lightness) c h);
+		--mark-hue: oklch(from var(--mark) var(--wash-lightness) c h);
 	}
 	/* How faint is pitched at the BADGE, not the number: it is the smallest type on the card, and a red
 	   badge over a red fill is the tightest pair there is. Strength is per theme (see app.css). */

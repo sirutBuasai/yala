@@ -176,6 +176,17 @@ describe('labelIndices', () => {
 		expect(shown.at(-1)).toBe(69);
 	});
 
+	// Bug: the first label is anchored at its start, so it reaches a whole width right, where the stride
+	// only budgeted half; the first two labels of a lifetime axis printed over each other.
+	it('keeps the first label clear of the next, though it reaches a whole width into the plot', () => {
+		const months = Array.from({ length: 46 }, (_, i) => `Mon ${2023 + Math.floor(i / 12)}`);
+		const innerWidth = 666;
+		const shown = labelIndices(46, innerWidth, months);
+		const room = 8 * 6.2 + 12;
+		const gap = (shown[1]! * innerWidth) / 45;
+		expect(gap).toBeGreaterThanOrEqual(room * 1.5);
+	});
+
 	it('handles degenerate series', () => {
 		expect(labelIndices(0, 500, [])).toEqual([]);
 		expect(labelIndices(1, 500, ['2026-01-01'])).toEqual([0]);

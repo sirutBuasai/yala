@@ -77,7 +77,7 @@
 		background: var(--inset);
 	}
 	.links a.active {
-		background: color-mix(in srgb, var(--lav) 16%, transparent);
+		background: color-mix(in srgb, var(--lav-wash) calc(16% * var(--wash-scale)), transparent);
 		color: var(--ink);
 	}
 </style>

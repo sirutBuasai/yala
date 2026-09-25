@@ -88,9 +88,9 @@ const LIFETIME: ScopeLevel[] = ['all'];
 const YEARLY: ScopeLevel[] = ['all', 'year'];
 const ALL_SCOPES: ScopeLevel[] = ['all', 'year', 'month'];
 
-/** The scope's year, or undefined at lifetime scope — what a builder that spans both takes. */
+/** The scope's year (a month's own), or undefined at lifetime scope: what a builder that spans both takes. */
 const optionalYear = (data: DashboardData, scope: Scope) =>
-	scope.level === 'year' ? scopeYear(data, scope) : undefined;
+	scope.level === 'all' ? undefined : scopeYear(data, scope);
 
 interface DataDef {
 	id: string;
@@ -479,7 +479,7 @@ const NETWORTH_STATS: DataDef[] = [
 			['networth.saved', 'Saved', netWorthSaved],
 			['networth.other', 'Market & other', netWorthOther]
 		] as const
-	).map(([id, label, build]) => scalarDef(id, label, YEARLY, build)),
+	).map(([id, label, build]) => scalarDef(id, label, ALL_SCOPES, build)),
 	...(
 		[
 			['networth.fi_number', 'FI number', fiNumber],

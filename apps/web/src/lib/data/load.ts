@@ -399,6 +399,9 @@ export interface NetWorthAt {
 	    where that snapshot can be rewritten; a share-based one cannot. `amount` is as stored, so a
 	    liability's is negative. */
 	logged: Record<string, { date: string; amount: number; locator: string | null }>;
+	/** account -> its latest snapshot as of a reading at the END of the date, as stored, and whether a
+	    later snapshot follows it. Absent for an account not yet snapshotted by then. */
+	standing: Record<string, { date: string; amount: number; later: boolean }>;
 	/** card -> what its bank app should read at the END of the date, as stored (owed negative), and
 	    whether a reading then must match it rather than set the card's starting balance. */
 	cards: Record<string, { expected: number; must_agree: boolean }>;

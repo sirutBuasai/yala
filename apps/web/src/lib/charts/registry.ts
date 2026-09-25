@@ -15,6 +15,8 @@ import type {
 	Table
 } from '$lib/data/primitives';
 import { accountVar, CATEGORY_TOKEN, categoryVar } from '$lib/utils/theme';
+import { markedIndices } from '$lib/charts/axis';
+import { matrixGrid, tableGrid } from '$lib/charts/heat';
 
 import Donut from '$lib/charts/Donut.svelte';
 import HBarChart from '$lib/charts/HBarChart.svelte';
@@ -49,7 +51,7 @@ interface AdaptOpts {
 	dashed?: string[];
 	/** Print each bar's own figure above it (a lone series only) — see `BarChart`. */
 	valueLabels?: boolean;
-	/** The row (heatmap) or period (line) in focus, by its label. */
+	/** The period in focus: its period key where the axis carries them, else its label. */
 	mark?: string;
 }
 
@@ -157,12 +159,16 @@ const FLOW_ROLE_SERIES = {
 
 // --- series collection ---
 
-/** Flatten a series/multiseries into its series list and the labels they share. */
-function seriesOf(p: Series | MultiSeries): { labels: string[]; list: Series[] } {
+/** Flatten a series/multiseries into its series list and the labels and periods they share. */
+function seriesOf(p: Series | MultiSeries): {
+	labels: string[];
+	periods?: string[];
+	list: Series[];
+} {
 	const list = p.kind === 'series' ? [p] : [...p.series];
 	const base = list[0];
 	if (!base) return { labels: [], list };
-	return { labels: base.points.map((pt) => pt.label), list };
+	return { labels: base.points.map((pt) => pt.label), periods: p.periods, list };
 }
 
 /** A lone series may be given an explicit fill; an override can't speak for a set of them. */
@@ -264,7 +270,7 @@ export const CHARTS: ChartDef[] = [
 		component: LineChart,
 		adapt(p, opts = {}) {
 			const sm = p as Series | MultiSeries;
-			const { labels, list } = seriesOf(sm);
+			const { labels, periods, list } = seriesOf(sm);
 			return {
 				labels,
 				series: toLineSeries(list, opts),
@@ -272,7 +278,7 @@ export const CHARTS: ChartDef[] = [
 				log: opts.log,
 				endLabels: opts.endLabels,
 				ceiling: opts.ceiling,
-				mark: opts.mark
+				marked: markedIndices(labels, periods, opts.mark)
 			};
 		}
 	}),
@@ -303,7 +309,8 @@ export const CHARTS: ChartDef[] = [
 				labels: m.labels,
 				series: toPlainSeries(m.series, opts),
 				unit: m.unit,
-				altUnit: altUnitOf(m.series)
+				altUnit: altUnitOf(m.series),
+				marked: markedIndices(m.labels, m.periods, opts.mark)
 			};
 		}
 	}),
@@ -336,21 +343,23 @@ export const CHARTS: ChartDef[] = [
 	def({
 		id: 'heatmap',
 		label: 'Heatmap',
-		accepts: ['matrix'],
+		// A table draws as one too: its tinted columns shade their tiles as they would its cells.
+		accepts: ['matrix', 'table'],
 		component: Heatmap,
 		adapt(p, opts = {}) {
+			if (p.kind === 'table') {
+				const grid = tableGrid(p);
+				return { grid, marked: markedIndices(grid.rows, p.periods, opts.mark) };
+			}
 			const m = p as Matrix;
 			const normalize = opts.normalize ?? 'row';
 			// Band members carry the hue, whichever axis they sit on. `global` has no bands to colour by.
 			const band = normalize === 'row' ? m.rows : m.cols;
+			const colors =
+				normalize === 'global' ? undefined : band.map((key) => keyColor(key, opts.colorBy));
 			return {
-				rows: m.rows,
-				cols: m.cols,
-				values: m.values,
-				unit: m.unit,
-				normalize,
-				mark: opts.mark,
-				colors: normalize === 'global' ? undefined : band.map((key) => keyColor(key, opts.colorBy))
+				grid: matrixGrid(m, normalize, colors),
+				marked: markedIndices(m.rows, undefined, opts.mark)
 			};
 		}
 	}),

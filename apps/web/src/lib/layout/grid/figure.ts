@@ -28,7 +28,8 @@ export interface FigureSpec {
 	dashed?: string[];
 	/** Print each bar's own figure above it (a lone series only). */
 	valueLabels?: boolean;
-	/** The row (heatmap) or period (line) in focus, by its label. */
+	/** The period in focus: its period key where the axis carries them (`YYYY-MM` names a month's
+	    snapshots), else its label. */
 	mark?: string;
 	/** Heatmap scaling: per row (default) or one scale for the whole grid. */
 	normalize?: 'row' | 'col' | 'global';

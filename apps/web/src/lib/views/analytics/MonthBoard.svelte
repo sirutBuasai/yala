@@ -14,7 +14,7 @@
 	import { statCells } from '$lib/charts/statMatrix';
 	import { live, words } from '$lib/ui/label';
 	import { monthLabel, MONTHS } from '$lib/utils/format';
-	import { monthOf, yearOf } from '$lib/utils/period';
+	import { monthKey as monthKeyOf, monthOf, yearOf } from '$lib/utils/period';
 	import { MONTH_PARAM } from '$lib/nav/focus';
 	import { incomeChain, INCOME_CHAIN_MERGES } from './kpis';
 
@@ -115,7 +115,7 @@
 		}
 	]);
 
-	const keyOf = (month: string) => `${year}-${String(MONTHS.indexOf(month) + 1).padStart(2, '0')}`;
+	const keyOf = (month: string) => monthKeyOf(year, MONTHS.indexOf(month) + 1);
 
 	/** A month label opens that month's rows; a cell opens them filtered to its category. */
 	function openRows(month: string, category: string | null) {

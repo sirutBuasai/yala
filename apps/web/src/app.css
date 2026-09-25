@@ -79,8 +79,18 @@
 	   the dark surface and the same mix all but disappears over the light one. */
 	--mark-wash: 9%; /* fill behind a KPI figure */
 	--mark-line: 32%; /* hairline over it */
-	/* The OKLCH lightness a KPI's wash and hairline take their hue at; `l` keeps the accent's own. */
-	--mark-lightness: l;
+	/* The OKLCH lightness every wash and a KPI's hairline take their hue at; `l` keeps the accent's own. */
+	--wash-lightness: l;
+	/* How much of what a control or badge wash asks for it carries. The light theme deepens the hue, so
+	   it carries less of it. */
+	--wash-scale: 1;
+	/* Each accent a wash is mixed from, at the wash lightness. An accent a component sets for itself takes
+	   the same form inline, since a token here would resolve it before the component could. */
+	--lav-wash: oklch(from var(--lav) var(--wash-lightness) c h);
+	--good-wash: oklch(from var(--good) var(--wash-lightness) c h);
+	--gold-wash: oklch(from var(--gold) var(--wash-lightness) c h);
+	--crit-wash: oklch(from var(--crit) var(--wash-lightness) c h);
+	--warn-wash: oklch(from var(--warn) var(--wash-lightness) c h);
 	--mark-area: 0.28; /* gradient under a line */
 	--mark-flow: 0.32; /* a flow diagram's links */
 	/* The heaviest tile on a heatmap. The HUE is a shared `--cat-*` token either way; only how much of it a
@@ -312,8 +322,10 @@
 	/* Every hue is taken at one deep lightness before it is mixed: the pastel accents faded unevenly into
 	   the cream card, lavender and blue first, and further still on a warm-shifted display. At this depth
 	   and strength every hue shades about equally and the badge over the wash keeps AA (worst 4.5:1). */
-	--mark-lightness: 0.52;
+	--wash-lightness: 0.52;
 	--mark-wash: 11%;
+	/* A selected control lands on the KPI wash, so a pill and the card beside it shade alike. */
+	--wash-scale: 0.55;
 	--mark-line: 52%;
 	--mark-area: 0.45;
 	--mark-flow: 0.5;
@@ -648,7 +660,7 @@ input[type='checkbox']:checked {
 	cursor: pointer;
 }
 .btn-danger-quiet:hover:not(:disabled) {
-	background: color-mix(in srgb, var(--crit) 12%, transparent);
+	background: color-mix(in srgb, var(--crit-wash) calc(12% * var(--wash-scale)), transparent);
 	border-color: var(--crit);
 }
 .btn-ghost:hover:not(:disabled),
@@ -659,7 +671,7 @@ input[type='checkbox']:checked {
 /* Accent-tinted secondary action — louder than a ghost, quieter than the solid primary. */
 .btn-accent {
 	border: 1px solid var(--border);
-	background: color-mix(in srgb, var(--lav) 20%, transparent);
+	background: color-mix(in srgb, var(--lav-wash) calc(20% * var(--wash-scale)), transparent);
 	color: var(--ink);
 	border-radius: var(--radius-md);
 	padding: var(--pad-control);
@@ -782,7 +794,7 @@ input[type='checkbox']:checked {
 	border-color: var(--lav);
 }
 .pill.active {
-	background: color-mix(in srgb, var(--lav) 20%, transparent);
+	background: color-mix(in srgb, var(--lav-wash) calc(20% * var(--wash-scale)), transparent);
 	color: var(--ink);
 	border-color: var(--lav);
 }
@@ -992,7 +1004,7 @@ svg.chart {
 }
 
 .banner {
-	background: color-mix(in srgb, var(--warn) 14%, transparent);
+	background: color-mix(in srgb, var(--warn-wash) calc(14% * var(--wash-scale)), transparent);
 	border: 1px solid var(--border);
 	color: var(--ink-2);
 	border-radius: var(--radius-lg);

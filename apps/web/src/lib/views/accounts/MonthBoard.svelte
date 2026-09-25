@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Accounts · Month: one year of balances read month by month, and the month's balances logged under the
-	// KPI cards. Logging lives here alone, since a balance belongs to the month it was taken in.
+	// KPI cards. Logging lives here alone, since a balance belongs to the month it was taken in. Picking a
+	// month's bars narrows the KPI cards to it, which is the net worth bridge, and marks it on every chart.
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
 	import type { Scope } from '$lib/data/scope';
@@ -15,7 +16,8 @@
 	import { NET_WORTH_GROWTH, columnHeading } from '$lib/data/catalog';
 	import { statCells } from '$lib/charts/statMatrix';
 	import { live, words } from '$lib/ui/label';
-	import { yearOf } from '$lib/utils/period';
+	import { monthKey as keyOf, yearOf } from '$lib/utils/period';
+	import { monthLabel, monthName, MONTHS } from '$lib/utils/format';
 	import BalanceChecklist from '$lib/balance/BalanceChecklist.svelte';
 	import {
 		ALLOCATION,
@@ -34,12 +36,23 @@
 		onsaved: () => void;
 		/** The focus month, "YYYY-MM": Log balances logs it, and the board reads its year. */
 		monthKey: string;
+		/** Whether the board reads at the focus month rather than its year. */
+		scoped: boolean;
+		/** Picks a month of the focus year, by key. */
+		onpick: (monthKey: string) => void;
+		/** An account for Log balances to open at, by ledger path. */
+		account?: string | null;
 	}
-	let { data, accounts, onsaved, monthKey }: Props = $props();
+	let { data, accounts, onsaved, monthKey, scoped, onpick, account }: Props = $props();
 
 	const year = $derived(yearOf(monthKey));
 
 	const yr = $derived<Scope>({ level: 'year', year });
+	const scope = $derived<Scope>(scoped ? { level: 'month', monthKey } : yr);
+	const mark = $derived(scoped ? monthKey : undefined);
+	/** The bars that pick a month, which mark it by its label. */
+	const PICKS = new Set(['attribution', 'buckets']);
+	const pickedMonth = $derived(scoped ? monthName(monthKey) : undefined);
 
 	// The widths are what the two merged cards divide themselves by.
 	const KPIS = $derived<KpiBoardDefs>({
@@ -47,8 +60,8 @@
 			rect: { x: 0, y: 0, w: 11, h: 5 },
 			spec: {
 				figure: 'networth.change',
-				scope: yr,
-				caption: live(`end of ${year}`),
+				scope,
+				caption: live(`end of ${scoped ? monthLabel(monthKey) : year}`),
 				// A line, where the two parts below it take an area: the spark is zero-anchored, and a
 				// position that never approaches zero fills the whole box as a flat wash.
 				chart: 'line',
@@ -57,13 +70,13 @@
 		},
 		rate: {
 			rect: { x: 11, y: 0, w: 7, h: 5 },
-			spec: { figure: 'ratio.savings_rate', scope: yr, chart: 'ring' }
+			spec: { figure: 'ratio.savings_rate', scope, chart: 'ring' }
 		},
 		saved: {
 			rect: { x: 0, y: 5, w: 9, h: 5 },
 			spec: {
 				figure: 'networth.saved',
-				scope: yr,
+				scope,
 				chart: 'bar',
 				series: 'networth.saved_by_month'
 			}
@@ -72,7 +85,7 @@
 			rect: { x: 9, y: 5, w: 9, h: 5 },
 			spec: {
 				figure: 'networth.other',
-				scope: yr,
+				scope,
 				chart: 'bar',
 				series: 'networth.other_by_month'
 			}
@@ -100,6 +113,7 @@
 				figure: {
 					figure: 'networth.vs_assets',
 					scope: yr,
+					mark,
 					chart: 'line',
 					area: true,
 					dashed: ['Assets'],
@@ -116,6 +130,7 @@
 				figure: {
 					figure: 'networth.allocation_value',
 					scope: yr,
+					mark,
 					chart: 'stacked-area',
 					title: words(ALLOCATION),
 					caption: words(ALLOCATION_CAPTION)
@@ -130,6 +145,7 @@
 				figure: {
 					figure: 'networth.liabilities_trend',
 					scope: yr,
+					mark,
 					chart: 'line',
 					area: true,
 					title: words(LIABILITIES),
@@ -169,12 +185,12 @@
 				y: 61,
 				w: 48,
 				h: 16,
-				content: 'flow',
-				mode: 'fit',
+				content: 'scale',
 				figure: {
 					figure: 'networth.monthly_table',
 					scope: yr,
-					chart: 'table',
+					chart: 'heatmap',
+					mark,
 					title: words('Monthly snapshots'),
 					caption: words(`${SNAPSHOT_LEVELS} MoM`)
 				}
@@ -211,9 +227,16 @@
 		<StatMatrix {data} {columns} rows={growth} />
 	</Pane>
 
-	<BalanceChecklist id="balances" {data} {accounts} {onsaved} {monthKey} />
+	<BalanceChecklist id="balances" {data} {accounts} {onsaved} {monthKey} {account} />
 
 	{#each figurePanes(PANES) as [id, figure] (id)}
-		<FigurePane {id} {data} spec={figure} />
+		{@const picks = PICKS.has(id)}
+		<FigurePane
+			{id}
+			{data}
+			spec={figure}
+			picked={picks ? pickedMonth : undefined}
+			onpick={picks ? (label) => onpick(keyOf(year, MONTHS.indexOf(label) + 1)) : undefined}
+		/>
 	{/each}
 </Board>
