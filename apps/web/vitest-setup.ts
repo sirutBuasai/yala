@@ -38,6 +38,9 @@ HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) {
 	this.dispatchEvent(new Event('close'));
 };
 
+// jsdom does no layout, so there is nothing to scroll; Select scrolls its active option into view.
+Element.prototype.scrollIntoView ??= () => {};
+
 // jsdom implements no Web Animations API, and Svelte drives every transition through
 // `element.animate` — without this, rendering anything that transitions in (an overlay) throws. The
 // stub reports itself already finished: a test asserts what a panel shows, never how it arrived.

@@ -4,6 +4,7 @@
 	// outside-click dismiss; consumers own the panel's contents and the while-open keys (onkeynav).
 	import type { Snippet } from 'svelte';
 	import { autoUpdate, computePosition, flip, offset, shift, size } from '@floating-ui/dom';
+	import { isTypeKey } from '$lib/utils/typeahead';
 
 	interface Props {
 		open?: boolean;
@@ -27,6 +28,8 @@
 		onopen?: () => void;
 		/** Key handling while open (arrows, Enter, Esc); the closed→open keys are handled here. */
 		onkeynav?: (e: KeyboardEvent) => void;
+		/** Typeahead while closed: a typed character opens the panel, then is passed here to seek with. */
+		ontype?: (key: string) => void;
 		trigger: Snippet;
 		children: Snippet;
 	}
@@ -43,6 +46,7 @@
 		activeDescendant,
 		onopen,
 		onkeynav,
+		ontype,
 		trigger,
 		children
 	}: Props = $props();
@@ -62,6 +66,10 @@
 			if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
 				e.preventDefault();
 				openPopup();
+			} else if (ontype && isTypeKey(e)) {
+				e.preventDefault();
+				openPopup();
+				ontype(e.key);
 			}
 			return;
 		}

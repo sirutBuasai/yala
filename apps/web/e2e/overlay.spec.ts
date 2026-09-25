@@ -101,3 +101,32 @@ test('a date picker with no room below flips above its trigger', async ({ page }
 	expect(placed.flipped).toBe(true);
 	expect(placed.pastTop).toBeLessThanOrEqual(0);
 });
+
+test('typing in a dropdown highlights the match and scrolls it into view', async ({ page }) => {
+	// The fixture's lists are short, so the panel is capped to leave the last option out of view.
+	await page.addStyleTag({ content: '.listbox { --panel-max: 48px !important; }' });
+
+	const trigger = page.locator('[role=combobox][aria-label="Year"]');
+	await trigger.click();
+	await settle(page);
+	const last = (await page.getByRole('option').last().textContent())!.trim();
+	await page.keyboard.press('Escape');
+	await settle(page);
+
+	await page.keyboard.type(last.toUpperCase());
+	await settle(page);
+
+	const highlighted = page.locator('[role=option].hl');
+	await expect(highlighted).toHaveText(last);
+	await expect(trigger).toHaveAttribute(
+		'aria-activedescendant',
+		(await highlighted.getAttribute('id'))!
+	);
+	const view = await page.evaluate(() => {
+		const list = document.querySelector('[role=listbox].listbox')!;
+		const l = list.getBoundingClientRect();
+		const o = document.querySelector('[role=option].hl')!.getBoundingClientRect();
+		return { scrolled: list.scrollTop > 0, inside: o.top >= l.top && o.bottom <= l.bottom };
+	});
+	expect(view).toEqual({ scrolled: true, inside: true });
+});

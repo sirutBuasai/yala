@@ -5,9 +5,10 @@
 
 <script lang="ts">
 	// On-brand replacement for a native <select>: a Popup-hosted listbox. Keyboard: Up/Down move,
-	// Enter/Space select, Esc close, Home/End jump.
-	import { untrack, type Snippet } from 'svelte';
+	// Enter/Space select, Esc close, Home/End jump, typing seeks by label.
+	import { tick, untrack, type Snippet } from 'svelte';
 	import { onKey } from '$lib/utils/keys';
+	import { isTypeKey, Typeahead } from '$lib/utils/typeahead';
 	import Popup from '$lib/overlay/Popup.svelte';
 
 	interface Props {
@@ -48,6 +49,23 @@
 	const uid = untrack(() => id) ?? `sel-${++seq}`;
 	const listboxId = `${uid}-listbox`;
 	const optionId = (i: number) => `${uid}-opt-${i}`;
+	const typeahead = new Typeahead();
+
+	// The trigger keeps focus (aria-activedescendant), so the browser never scrolls the list to the
+	// active option; a keyboard move off the visible part of a long list has to scroll it here.
+	function seek(i: number) {
+		if (i < 0) return;
+		active = i;
+		void tick().then(() =>
+			document.getElementById(optionId(i))?.scrollIntoView({ block: 'nearest' })
+		);
+	}
+	function type(key: string) {
+		// With nothing chosen, the highlight on the first option is only a resting place: a search must
+		// be able to land on it rather than cycle past it.
+		const from = options.includes(value) || typeahead.pending() ? active : -1;
+		seek(typeahead.type(key, options.map(optionLabel), from));
+	}
 
 	function choose(opt: string) {
 		value = opt;
@@ -64,12 +82,17 @@
 		if (opt !== undefined) choose(opt);
 	}
 	function onkeynav(e: KeyboardEvent) {
+		if (isTypeKey(e) && (e.key !== ' ' || typeahead.pending())) {
+			e.preventDefault();
+			type(e.key);
+			return;
+		}
 		onKey(e, {
 			Escape: dismiss,
-			ArrowDown: () => (active = Math.min(options.length - 1, active + 1)),
-			ArrowUp: () => (active = Math.max(0, active - 1)),
-			Home: () => (active = 0),
-			End: () => (active = options.length - 1),
+			ArrowDown: () => seek(Math.min(options.length - 1, active + 1)),
+			ArrowUp: () => seek(Math.max(0, active - 1)),
+			Home: () => seek(0),
+			End: () => seek(options.length - 1),
 			Enter: commit,
 			' ': commit
 		});
@@ -87,8 +110,9 @@
 	{align}
 	controls={listboxId}
 	activeDescendant={active >= 0 ? optionId(active) : undefined}
-	onopen={() => (active = Math.max(0, options.indexOf(value)))}
+	onopen={() => seek(Math.max(0, options.indexOf(value)))}
 	{onkeynav}
+	ontype={type}
 >
 	{#snippet trigger()}
 		{#if customTrigger}

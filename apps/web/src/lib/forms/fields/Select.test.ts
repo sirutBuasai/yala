@@ -55,4 +55,58 @@ describe('Select', () => {
 		await fireEvent.keyDown(trigger, { key: 'Enter' });
 		expect(onchange).toHaveBeenCalledWith('Assets:Cash:BankA');
 	});
+
+	describe('typeahead', () => {
+		const accounts = [
+			'Assets:Cash:Wallet',
+			'Assets:Bank:Checking',
+			'Liabilities:CC:Card',
+			'Assets:Bank:Savings'
+		];
+		const setup = (value = '') => {
+			const onchange = vi.fn();
+			render(Select, {
+				props: { value, options: accounts, ariaLabel: 'Account', optionLabel: label, onchange }
+			});
+			return { trigger: screen.getByLabelText('Account'), onchange };
+		};
+		const highlighted = () => document.querySelector('[role="option"].hl');
+
+		it('opens on a typed letter and highlights the first match, ignoring case', async () => {
+			const { trigger } = setup();
+			await fireEvent.keyDown(trigger, { key: 's' });
+			expect(highlighted()).toHaveTextContent('Savings');
+			expect(trigger).toHaveAttribute('aria-activedescendant', highlighted()?.id);
+		});
+
+		it('can land on the first option when nothing is chosen', async () => {
+			const { trigger } = setup();
+			await fireEvent.keyDown(trigger, { key: 'W' });
+			expect(highlighted()).toHaveTextContent('Wallet');
+		});
+
+		it('narrows by a typed prefix, then Enter selects it', async () => {
+			const { trigger, onchange } = setup();
+			await fireEvent.keyDown(trigger, { key: 'c' });
+			expect(highlighted()).toHaveTextContent('Checking');
+			await fireEvent.keyDown(trigger, { key: 'a' });
+			expect(highlighted()).toHaveTextContent('Card');
+			await fireEvent.keyDown(trigger, { key: 'Enter' });
+			expect(onchange).toHaveBeenCalledWith('Liabilities:CC:Card');
+		});
+
+		it('moves past the chosen option when its first letter is typed again', async () => {
+			const { trigger } = setup('Assets:Bank:Checking');
+			await fireEvent.keyDown(trigger, { key: 'Enter' });
+			await fireEvent.keyDown(trigger, { key: 'c' });
+			expect(highlighted()).toHaveTextContent('Card');
+		});
+
+		it('keeps Space as a commit key when no query is being typed', async () => {
+			const { trigger, onchange } = setup();
+			await fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+			await fireEvent.keyDown(trigger, { key: ' ' });
+			expect(onchange).toHaveBeenCalledWith('Assets:Cash:Wallet');
+		});
+	});
 });
