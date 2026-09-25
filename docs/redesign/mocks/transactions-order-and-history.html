@@ -1,0 +1,352 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body>
+<title>Transactions Layout Options</title>
+<style>
+:root {
+	--bg: #f0ebdd; --surface: #faf6ec; --surface-2: #f1ead9; --inset: #ece4d2; --border: #ddd2bb; --grid: #e6ddca;
+	--ink: #2e2a22; --ink-2: #5c5443; --ink-3: #6e6652;
+	--lav: #6a49bd; --lav-fill: #bb9af7; --gold: #806211; --gold-fill: #e0af68; --salmon: #b33b54; --green: #457124; --green-fill: #9ece6a;
+	--shadow: 0 1px 2px rgba(120, 90, 40, 0.06), 0 14px 34px -18px rgba(120, 90, 40, 0.28);
+	--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+	--sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		color-scheme: dark;
+		--bg: #16161f; --surface: #1f1f2b; --surface-2: #26263a; --inset: #2a2a3c; --border: #33334a; --grid: #2a2a3c;
+		--ink: #e6e0c8; --ink-2: #a8a28c; --ink-3: #969380; --lav: #bb9af7; --gold: #e0af68; --salmon: #f7768e; --green: #9ece6a;
+		--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+	}
+}
+:root[data-theme='dark'] {
+	color-scheme: dark;
+	--bg: #16161f; --surface: #1f1f2b; --surface-2: #26263a; --inset: #2a2a3c; --border: #33334a; --grid: #2a2a3c;
+	--ink: #e6e0c8; --ink-2: #a8a28c; --ink-3: #969380; --lav: #bb9af7; --gold: #e0af68; --salmon: #f7768e; --green: #9ece6a;
+	--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; padding-inline: 20px; }
+.page { max-width: 1100px; margin: 0 auto; padding-block: 52px 110px; display: grid; gap: 64px; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 { font-size: clamp(30px, 5vw, 42px); line-height: 1.12; }
+h2 { font-size: 25px; }
+h3 { font-size: 16px; }
+p { margin: 0; }
+.eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.lede, .head p { color: var(--ink-2); max-width: 70ch; }
+section { display: grid; gap: 18px; }
+.head { display: grid; gap: 8px; }
+.tabs { display: inline-flex; flex-wrap: wrap; padding: 4px; gap: 3px; border-radius: 999px; background: var(--inset); justify-self: start; }
+.tabs button { border: 0; background: none; font: inherit; font-size: 13.5px; color: var(--ink-2); padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.tabs button.on { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--lav); outline-offset: 2px; }
+.note { font-size: 13px; color: var(--ink-3); }
+.why { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.why > div { padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font-size: 14px; color: var(--ink-2); display: grid; gap: 6px; align-content: start; }
+.why b { color: var(--ink); }
+.plus::before { content: '+ '; color: var(--green); font-weight: 700; }
+.minus::before { content: '− '; color: var(--salmon); font-weight: 700; }
+
+/* Part A wireframes */
+.wf-scroll { overflow-x: auto; }
+.wf { min-width: 760px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); padding: 16px 18px; display: grid; gap: 10px; box-shadow: var(--shadow); position: relative; }
+.wf .bar { display: flex; align-items: center; gap: 10px; }
+.wf .bar h3 { font-size: 20px; margin-right: auto; }
+.pill { border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 3px 12px; font-size: 12.5px; }
+.seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--inset); gap: 2px; }
+.seg button { border: 0; background: none; font: inherit; font-size: 12px; padding: 3px 11px; border-radius: 999px; color: var(--ink-2); cursor: pointer; }
+.seg button.on { background: var(--surface); color: var(--ink); font-weight: 600; }
+.grid48 { display: grid; grid-template-columns: repeat(48, 1fr); grid-auto-rows: 12px; gap: 5px; }
+.box { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 6px 9px; font-size: 11.5px; color: var(--ink-2); overflow: hidden; display: flex; flex-direction: column; gap: 2px; transition: all 0.35s ease; }
+.box b { font-family: var(--serif); font-size: 12.5px; color: var(--ink); font-weight: 600; }
+.box.fig { background: color-mix(in srgb, var(--lav-fill) 9%, var(--surface)); }
+.box.log { background: color-mix(in srgb, var(--green-fill) 11%, var(--surface)); }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-3); }
+.legend i { display: inline-block; width: 12px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1px solid var(--border); }
+.jump { display: flex; gap: 6px; }
+.jump span { font-size: 12px; padding: 2px 10px; border-radius: 999px; background: var(--inset); color: var(--ink-2); }
+.jump span.on { background: color-mix(in srgb, var(--lav-fill) 25%, transparent); color: var(--ink); font-weight: 600; }
+.strip { position: sticky; top: 0; display: flex; gap: 16px; align-items: baseline; padding: 6px 10px; border-radius: 8px; background: var(--surface); border: 1px dashed color-mix(in srgb, var(--lav-fill) 60%, var(--border)); font-size: 12px; color: var(--ink-2); }
+.strip b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* Part B list */
+.lst-scroll { overflow-x: auto; }
+.lst { min-width: 760px; }
+.pane { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
+.ph { display: flex; align-items: baseline; gap: 10px; padding: 14px 18px 6px; flex-wrap: wrap; }
+.ph .t { font-family: var(--serif); font-size: 17px; font-weight: 600; }
+.ph .c { color: var(--ink-3); font-size: 12.5px; margin-right: auto; }
+.btn-ghost { border: 0; background: none; color: var(--lav); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 6px 18px 10px; }
+.chip { border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); font: inherit; font-size: 12.5px; padding: 3px 11px; border-radius: 999px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.chip.on { border-color: color-mix(in srgb, var(--lav-fill) 60%, var(--border)); background: color-mix(in srgb, var(--lav-fill) 15%, var(--surface)); color: var(--ink); }
+.chip .x { color: var(--ink-3); }
+.fsel { border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12.5px; }
+.search { margin-left: auto; border: 1px solid var(--border); background: var(--bg); color: var(--ink); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 12.5px; width: 180px; }
+.sum { margin: 0 18px 10px; padding: 10px 14px; border-radius: 10px; background: var(--surface-2); display: flex; flex-wrap: wrap; gap: 8px 26px; align-items: baseline; font-size: 12.5px; color: var(--ink-3); }
+.sum .k { display: grid; gap: 1px; }
+.sum .k b { font-family: var(--serif); font-size: 18px; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.sum .k b.pos { color: var(--green); }
+.sum .k b.neg { color: var(--salmon); }
+.sum .scope { margin-left: auto; align-self: center; }
+.row { display: grid; grid-template-columns: 44px 10px minmax(0, 1fr) auto 96px; gap: 12px; align-items: center; padding: 8px 18px; border-top: 1px solid var(--grid); font-size: 13.5px; }
+.row:hover { background: color-mix(in srgb, var(--surface-2) 70%, transparent); }
+.row .d { color: var(--ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.dot { width: 8px; height: 8px; border-radius: 8px; }
+.row .m { display: flex; flex-direction: column; min-width: 0; }
+.row .p { font-weight: 500; display: flex; gap: 8px; align-items: baseline; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .k2 { color: var(--ink-3); font-size: 11.5px; }
+.row .s { color: var(--ink-2); font-size: 12px; white-space: nowrap; display: flex; gap: 14px; }
+.row .s .fig { display: grid; text-align: right; }
+.row .s .fig small { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.row .a { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+.row .a.pos { color: var(--green); }
+.badge { font-size: 10.5px; padding: 0 7px; border-radius: 999px; color: var(--gold); background: color-mix(in srgb, var(--gold-fill) 18%, transparent); font-weight: 600; }
+.dayh { display: flex; justify-content: space-between; padding: 6px 18px; background: var(--surface-2); font-size: 11.5px; color: var(--ink-3); font-weight: 600; border-top: 1px solid var(--grid); letter-spacing: 0.02em; }
+.empty { padding: 24px; text-align: center; color: var(--ink-3); }
+
+/* spreadsheet variant */
+table.sheet { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.sheet th { text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.sheet th.r, table.sheet td.r { text-align: right; }
+table.sheet th select { border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 6px; font: inherit; font-size: 11px; text-transform: none; letter-spacing: 0; padding: 1px 4px; margin-left: 4px; }
+table.sheet td { padding: 7px 12px; border-bottom: 1px solid var(--grid); }
+table.sheet tfoot td { border-top: 2px solid var(--border); border-bottom: 0; font-weight: 600; background: var(--surface-2); }
+table.sheet td .dot { display: inline-block; margin-right: 7px; }
+
+/* facet variant */
+.facet { display: grid; grid-template-columns: 210px minmax(0, 1fr); }
+.facets { border-right: 1px solid var(--border); padding: 12px 14px; display: grid; gap: 14px; align-content: start; }
+.facets .g { display: grid; gap: 2px; }
+.facets .g > span { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-bottom: 3px; }
+.facets label { display: flex; gap: 7px; align-items: center; font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
+.facets label small { margin-left: auto; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.rec { padding: 16px 18px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--green) 45%, var(--border)); background: color-mix(in srgb, var(--green) 7%, var(--surface)); display: grid; gap: 6px; font-size: 14.5px; }
+.rec b { color: var(--green); }
+@media (max-width: 760px) { .why { grid-template-columns: 1fr; } }
+</style>
+
+<div class="page">
+	<header class="head">
+		<span class="eyebrow">Yala redesign · Transactions</span>
+		<h1>Page order and one history list</h1>
+		<p class="lede">Mocks for two open questions. Pane titles, captions and row layouts are today's; every figure here is a sample.</p>
+	</header>
+
+	<section>
+		<div class="head">
+			<span class="eyebrow">3.1</span>
+			<h2>Logging first or figures first?</h2>
+			<p>Four ways to serve both habits: log then analyze, or step through months while analyzing. Lavender boxes are figures, green boxes are logging.</p>
+		</div>
+		<div class="tabs" id="ta"></div>
+		<div class="wf-scroll"><div class="wf" id="wa"></div></div>
+		<div class="legend"><span><i style="background:color-mix(in srgb, var(--lav-fill) 25%, var(--surface))"></i>Figures</span><span><i style="background:color-mix(in srgb, var(--green-fill) 30%, var(--surface))"></i>Logging</span></div>
+		<div class="why" id="whya"></div>
+	</section>
+
+	<section>
+		<div class="head">
+			<span class="eyebrow">3.2</span>
+			<h2>One history list with filters and a sum</h2>
+			<p>Transaction history, Paychecks and Bill pay &amp; transfers merged into one list sorted by date. The calendar, its day list and Pending stay as they are. Try the filters: the summary recomputes for whatever is left.</p>
+		</div>
+		<div class="tabs" id="tb"></div>
+		<div class="lst-scroll"><div class="lst" id="wb"></div></div>
+		<div class="why" id="whyb"></div>
+	</section>
+
+	<section>
+		<div class="rec">
+			<span class="eyebrow">My suggestion</span>
+			<p><b>3.1:</b> Log / Review, since it uses the arranging you already have: one switch, two orders you arrange once each. <b>3.2:</b> Filter chips with a summary bar, rows grouped by day like the first prototype. The spreadsheet table is the closest to your old sheets if you'd rather keep that feel.</p>
+		</div>
+	</section>
+</div>
+
+<script>
+(() => {
+	// ---------- Part A ----------
+	const FIG = [
+		['KPI cards', 'Income · Spent · Take-home · vs your average · Saved · Spending rate', 16, 12],
+		['Where your income went', 'Sep 2026 · income and spending split', 21, 12],
+		['Unusual this month', 'deviation from monthly averages', 11, 12],
+		['Category by month', 'category spending split per month', 48, 11]
+	];
+	const LOG = [
+		['Log activity', 'Sep 2026', 31, 16],
+		['Pending transactions', 'waiting for posting, refunds, or credits', 17, 7],
+		['Sep 23, 2026', '4 transactions · $214', 17, 8],
+		['History', 'transactions, paychecks and bill pay', 48, 10]
+	];
+	const box = (kind, [t, c, w, h], extra = '') => `<div class="box ${kind}" style="grid-column: span ${w}; grid-row: span ${h}; ${extra}"><b>${t}</b><span>${c}</span></div>`;
+	const figs = () => FIG.map((b) => box('fig', b)).join('');
+	const logs = () => {
+		const [cal, pend, day, hist] = LOG;
+		return `<div class="box log" style="grid-column: span ${cal[2]}; grid-row: span ${cal[3]}"><b>${cal[0]}</b><span>${cal[1]}</span></div>
+			<div style="grid-column: span 17; grid-row: span 16; display:grid; grid-template-rows: 7fr 9fr; gap:5px">${box('log', pend, 'grid-row:auto')}${box('log', day, 'grid-row:auto')}</div>${box('log', hist)}`;
+	};
+	const A = { opt: 'switch', mode: 'log' };
+	const OPTS = [
+		['figs', 'Figures first'],
+		['logs', 'Logging first'],
+		['switch', 'Log / Review switch'],
+		['strip', 'Logging first + pinned summary']
+	];
+	const WHY = {
+		figs: [['Figures first (today)', ['Stepping months to compare keeps the figures in view.'], ['Logging starts a screen down, every time.']]],
+		logs: [['Logging first', ['Matches the spreadsheet habit: log, then scroll to check.'], ['Analysis across months means scrolling past the calendar each step.']]],
+		switch: [['Log / Review switch', ['Each habit gets its own order, one click apart. Uses the arranging you already have: arrange each once.', 'The switch is kept in the URL, so back and a reload keep it.'], ['Two arrangements to maintain instead of one.']]],
+		strip: [['Pinned summary', ['Logging first, with the month\'s Income, Spent and Saved always in view while you scroll.'], ['A new element (D6), and it repeats three KPI figures.']]]
+	};
+	function renderA() {
+		document.getElementById('ta').innerHTML = OPTS.map(([v, l]) => `<button class="${A.opt === v ? 'on' : ''}" data-a="${v}">${l}</button>`).join('');
+		let head = `<div class="bar"><h3>Transactions</h3><span class="pill">‹ Sep 2026 ›</span>`;
+		if (A.opt === 'switch') head += `<div class="seg"><button class="${A.mode === 'log' ? 'on' : ''}" data-m="log">Log</button><button class="${A.mode === 'review' ? 'on' : ''}" data-m="review">Review</button></div>`;
+		head += `<span class="pill">+ Add entry</span><span class="pill">Edit</span></div>`;
+		let body;
+		if (A.opt === 'figs' || (A.opt === 'switch' && A.mode === 'review')) body = figs() + logs();
+		else body = logs() + figs();
+		const strip = A.opt === 'strip' ? `<div class="strip"><span>Sep 2026 so far</span><span>Income <b>$7,420</b></span><span>Spent <b>$4,203</b></span><span>Saved <b>$3,217</b></span><span style="margin-left:auto">pinned while scrolling</span></div>` : '';
+		document.getElementById('wa').innerHTML = head + strip + `<div class="grid48">${body}</div>`;
+		document.getElementById('whya').innerHTML = WHY[A.opt].map(([t, p, m]) => `<div><b>${t}</b>${p.map((x) => `<span class="plus">${x}</span>`).join('')}${m.map((x) => `<span class="minus">${x}</span>`).join('')}</div>`).join('') + (A.opt === 'switch' ? '<div><b>Try it</b><span>Flip Log and Review in the mock header. Months stay put; only the order changes.</span></div>' : '');
+	}
+
+	// ---------- Part B ----------
+	const CAT = { Housing: '#f7768e', Takeouts: '#bb9af7', Grocery: '#f295c5', Travel: '#6f8fe8', Personal: '#7dcfff', Health: '#2bb673', Transport: '#ffd27f', Subscription: '#ffd5d2', Utilities: '#ff9e64' };
+	const ROWS = [
+		{ d: 23, type: 'txn', payee: 'Ramen shop', cat: 'Takeouts', acct: 'Amex Gold', amt: 48.2, pending: true },
+		{ d: 23, type: 'txn', payee: 'Coffee bar', cat: 'Takeouts', acct: 'Amex Gold', amt: 6.75, pending: true },
+		{ d: 22, type: 'txn', payee: 'Transit card', cat: 'Transport', acct: 'C1 Venture X', amt: 42.28 },
+		{ d: 21, type: 'txn', payee: "Trader Joe's", cat: 'Grocery', acct: 'C1 Venture X', amt: 86.14 },
+		{ d: 20, type: 'xfer', payee: 'Autopay', from: 'Checking', to: 'C1 Venture X', amt: 1236.4 },
+		{ d: 19, type: 'txn', payee: 'Taqueria', cat: 'Takeouts', acct: 'BofA Cash', amt: 23.4 },
+		{ d: 18, type: 'txn', payee: 'Uniqlo', cat: 'Personal', acct: 'C1 Venture X', amt: 59.9 },
+		{ d: 17, type: 'txn', payee: 'Uniqlo', cat: 'Personal', acct: 'C1 Venture X', amt: -19.9, note: 'refund' },
+		{ d: 15, type: 'pay', payee: 'Employer', gross: 6250, takehome: 3890, net: 4410 },
+		{ d: 15, type: 'txn', payee: 'Pharmacy', cat: 'Health', acct: 'BofA Cash', amt: 24.5 },
+		{ d: 14, type: 'xfer', payee: 'Monthly savings', from: 'Checking', to: 'High-yield savings', amt: 1500 },
+		{ d: 12, type: 'txn', payee: 'Internet', cat: 'Utilities', acct: 'Checking', amt: 65 },
+		{ d: 11, type: 'txn', payee: 'Airline', cat: 'Travel', acct: 'C1 Venture X', amt: 412.6 },
+		{ d: 9, type: 'txn', payee: 'Pizza place', cat: 'Takeouts', acct: 'Amex Gold', amt: 31.2 },
+		{ d: 8, type: 'txn', payee: 'Spotify', cat: 'Subscription', acct: 'Amex Gold', amt: 11.99 },
+		{ d: 6, type: 'txn', payee: 'Whole Foods', cat: 'Grocery', acct: 'Amex Gold', amt: 64.3 },
+		{ d: 5, type: 'xfer', payee: 'Autopay', from: 'Checking', to: 'Amex Gold', amt: 402.1 },
+		{ d: 3, type: 'txn', payee: 'Thai Basil', cat: 'Takeouts', acct: 'C1 Venture X', amt: 38.5 },
+		{ d: 1, type: 'pay', payee: 'Employer', gross: 6250, takehome: 3890, net: 4410 },
+		{ d: 1, type: 'txn', payee: 'Rent', cat: 'Housing', acct: 'Checking', amt: 2250 }
+	];
+	const TYPICAL = { Takeouts: 612, Grocery: 318, Transport: 131, Personal: 240, Health: 180, Utilities: 88, Travel: 420, Subscription: 110, Housing: 2250 };
+	const ACCTS = ['Amex Gold', 'C1 Venture X', 'BofA Cash', 'Checking', 'High-yield savings'];
+	const TYPES = [['all', 'All'], ['txn', 'Transactions'], ['pay', 'Paychecks'], ['xfer', 'Bill pay']];
+	const B = { variant: 'chips', type: 'all', cat: '', acct: '', pending: false, q: '' };
+	const money = (v, sign) => `${v < 0 ? '−' : sign && v > 0 ? '+' : ''}$${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+	const touches = (r, a) => r.acct === a || r.from === a || r.to === a;
+	const filtered = () => ROWS.filter((r) =>
+		(B.type === 'all' || r.type === B.type) &&
+		(!B.cat || r.cat === B.cat) &&
+		(!B.acct || touches(r, B.acct)) &&
+		(!B.pending || r.pending) &&
+		(!B.q || r.payee.toLowerCase().includes(B.q.toLowerCase())));
+
+	function summary(rows) {
+		const tx = rows.filter((r) => r.type === 'txn'), pay = rows.filter((r) => r.type === 'pay'), xf = rows.filter((r) => r.type === 'xfer');
+		const k = (label, v, cls = '') => `<span class="k">${label}<b class="${cls}">${v}</b></span>`;
+		let out = k('Rows', rows.length);
+		if (tx.length) out += k('Spent', money(tx.reduce((a, r) => a + r.amt, 0)));
+		if (pay.length) out += k('Take-home', money(pay.reduce((a, r) => a + r.takehome, 0)), 'pos');
+		if (xf.length) out += k(B.acct ? `Paid to ${B.acct}` : 'Bill pay & transfers', money(xf.filter((r) => !B.acct || r.to === B.acct).reduce((a, r) => a + r.amt, 0)));
+		if (B.cat && TYPICAL[B.cat]) {
+			const s = tx.reduce((a, r) => a + r.amt, 0), d = s / TYPICAL[B.cat] - 1;
+			out += k('vs your average', `${d < 0 ? '−' : '+'}${Math.abs(Math.round(d * 100))}%`, d > 0.1 ? 'neg' : '');
+		}
+		if (B.acct && ['Amex Gold', 'C1 Venture X', 'BofA Cash'].includes(B.acct)) {
+			const charged = tx.reduce((a, r) => a + r.amt, 0), paid = xf.filter((r) => r.to === B.acct).reduce((a, r) => a + r.amt, 0);
+			out += k('Charged − paid', money(charged - paid));
+		}
+		const parts = [B.type !== 'all' && TYPES.find((t) => t[0] === B.type)[1], B.cat, B.acct, B.pending && 'Pending', B.q && `"${B.q}"`].filter(Boolean);
+		return `<div class="sum">${out}<span class="scope">${parts.length ? `Filtered: ${parts.join(' · ')}` : 'All of Sep 2026'}</span></div>`;
+	}
+
+	function row(r) {
+		const date = `<span class="d">9/${r.d}</span>`;
+		if (r.type === 'pay') return `<div class="row">${date}<span class="dot" style="background:var(--green-fill)"></span><span class="m"><span class="p">${r.payee}</span><span class="k2">Paycheck</span></span><span class="s"><span class="fig"><small>Gross</small>${money(r.gross)}</span><span class="fig"><small>Take-home</small>${money(r.takehome)}</span></span><span class="a pos">${money(r.net, true)}</span></div>`;
+		if (r.type === 'xfer') return `<div class="row">${date}<span class="dot" style="background:var(--ink-3)"></span><span class="m"><span class="p">${r.from} → ${r.to}</span><span class="k2">${r.payee}</span></span><span class="s"></span><span class="a">${money(r.amt)}</span></div>`;
+		return `<div class="row">${date}<span class="dot" style="background:${CAT[r.cat]}"></span><span class="m"><span class="p">${r.payee}${r.pending ? '<span class="badge">pending</span>' : ''}</span><span class="k2">${r.cat}</span></span><span class="s">${r.acct}</span><span class="a">${money(r.amt)}</span></div>`;
+	}
+
+	const filterBar = () => `<div class="filters">
+		${TYPES.map(([v, l]) => `<button class="chip ${B.type === v ? 'on' : ''}" data-type="${v}">${l}</button>`).join('')}
+		<select class="fsel" data-f="cat" aria-label="Category"><option value="">Any category</option>${Object.keys(CAT).map((c) => `<option ${B.cat === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+		<select class="fsel" data-f="acct" aria-label="Account"><option value="">Any account</option>${ACCTS.map((a) => `<option ${B.acct === a ? 'selected' : ''}>${a}</option>`).join('')}</select>
+		<button class="chip ${B.pending ? 'on' : ''}" data-pending="1">Pending only</button>
+		<input class="search" id="q" placeholder="Search titles" value="${B.q}" aria-label="Search titles">
+	</div>`;
+	const header = (rows) => `<div class="ph"><span class="t">History</span><span class="c">${rows.length} in Sep 2026</span><button class="btn-ghost">+ Add</button></div>`;
+
+	function renderB() {
+		document.getElementById('tb').innerHTML = [['chips', 'Chips + summary'], ['sheet', 'Spreadsheet table'], ['facets', 'Facet panel']].map(([v, l]) => `<button class="${B.variant === v ? 'on' : ''}" data-v="${v}">${l}</button>`).join('');
+		const rows = filtered();
+		let html;
+		if (B.variant === 'chips') {
+			const days = [...new Set(rows.map((r) => r.d))];
+			html = `<div class="pane">${header(rows)}${filterBar()}${summary(rows)}${days.length ? days.map((d) => {
+				const g = rows.filter((r) => r.d === d);
+				const spent = g.filter((r) => r.type === 'txn').reduce((a, r) => a + r.amt, 0);
+				return `<div class="dayh"><span>Sep ${d}</span><span>${spent ? money(spent) : ''}</span></div>${g.map(row).join('')}`;
+			}).join('') : '<div class="empty">Nothing matches these filters.</div>'}</div>`;
+		} else if (B.variant === 'sheet') {
+			const sel = (f, list, cur) => `<select data-f="${f}" aria-label="${f}"><option value="">All</option>${list.map((x) => `<option value="${x[0] ?? x}" ${cur === (x[0] ?? x) ? 'selected' : ''}>${x[1] ?? x}</option>`).join('')}</select>`;
+			const tx = rows.filter((r) => r.type === 'txn');
+			html = `<div class="pane">${header(rows)}<div style="padding:0 6px 10px"><table class="sheet"><thead><tr>
+				<th>Date</th><th>Title</th><th>Type ${sel('type', TYPES.slice(1), B.type === 'all' ? '' : B.type)}</th><th>Category ${sel('cat', Object.keys(CAT), B.cat)}</th><th>Account ${sel('acct', ACCTS, B.acct)}</th><th class="r">Amount</th></tr></thead><tbody>
+				${rows.map((r) => `<tr><td>9/${r.d}</td><td>${r.payee}${r.pending ? ' <span class="badge">pending</span>' : ''}</td><td>${r.type === 'txn' ? 'Transaction' : r.type === 'pay' ? 'Paycheck' : 'Bill pay'}</td><td>${r.cat ? `<span class="dot" style="background:${CAT[r.cat]}"></span>${r.cat}` : ''}</td><td>${r.acct ?? `${r.from} → ${r.to}`}</td><td class="r">${r.type === 'pay' ? money(r.net, true) : money(r.amt)}</td></tr>`).join('')}
+				</tbody><tfoot><tr><td>Total</td><td>${rows.length} rows</td><td></td><td></td><td></td><td class="r">${tx.length ? `${money(tx.reduce((a, r) => a + r.amt, 0))} spent` : '—'}</td></tr></tfoot></table></div></div>`;
+		} else {
+			const count = (pred) => ROWS.filter(pred).length;
+			const opt = (name, val, cur, n, label = val) => `<label><input type="radio" name="${name}" data-f="${name}" value="${val}" ${cur === val ? 'checked' : ''}> ${label}<small>${n}</small></label>`;
+			html = `<div class="pane">${header(rows)}<div class="facet"><div class="facets">
+				<div class="g"><span>Type</span>${opt('type', 'all', B.type, ROWS.length, 'All')}${TYPES.slice(1).map(([v, l]) => opt('type', v, B.type, count((r) => r.type === v), l)).join('')}</div>
+				<div class="g"><span>Category</span>${opt('cat', '', B.cat, count((r) => r.cat), 'Any')}${Object.keys(CAT).map((c) => opt('cat', c, B.cat, count((r) => r.cat === c))).join('')}</div>
+				<div class="g"><span>Account</span>${opt('acct', '', B.acct, ROWS.length, 'Any')}${ACCTS.map((a) => opt('acct', a, B.acct, count((r) => touches(r, a)))).join('')}</div>
+			</div><div>${summary(rows).replace('class="sum"', 'class="sum" style="margin-top:12px"')}${rows.map(row).join('') || '<div class="empty">Nothing matches these filters.</div>'}</div></div></div>`;
+		}
+		document.getElementById('wb').innerHTML = html;
+		const W = {
+			chips: [['Chips + summary', ['Rows grouped by day with a day subtotal, like the first prototype.', 'The summary names what it sums: spent, take-home, bill pay, and against your average when one category is picked.', 'Picking a card shows what was charged, what was paid to it, and the difference.'], ['Filters beyond the chips hide in dropdowns.']]],
+			sheet: [['Spreadsheet table', ['Closest to your old sheets: one row per entry, filters in the column headers, a Total row at the bottom.'], ['Loses today\'s row design (dots, category under the title, paycheck figures).', 'Wide: needs the full board width.']]],
+			facets: [['Facet panel', ['Every filter visible at once, with how many rows each would leave.'], ['Takes a column of width from the list.', 'Heavier than the other two for a quick check.']]]
+		};
+		document.getElementById('whyb').innerHTML = W[B.variant].map(([t, p, m]) => `<div><b>${t}</b>${p.map((x) => `<span class="plus">${x}</span>`).join('')}${m.map((x) => `<span class="minus">${x}</span>`).join('')}</div>`).join('') + '<div><b>Every variant</b><span>Filters live in the URL (D9), so a drill-in from a donut slice or a Category by month cell lands here already filtered, and back undoes it.</span></div>';
+	}
+
+	document.addEventListener('click', (e) => {
+		const t = e.target.closest('button');
+		if (!t) return;
+		if (t.dataset.a) { A.opt = t.dataset.a; A.mode = 'log'; renderA(); }
+		else if (t.dataset.m) { A.mode = t.dataset.m; renderA(); }
+		else if (t.dataset.v) { B.variant = t.dataset.v; renderB(); }
+		else if (t.dataset.type) { B.type = t.dataset.type; renderB(); }
+		else if (t.dataset.pending) { B.pending = !B.pending; renderB(); }
+	});
+	document.addEventListener('change', (e) => {
+		const f = e.target.dataset && e.target.dataset.f;
+		if (!f) return;
+		const v = e.target.value;
+		if (f === 'type') B.type = v || 'all';
+		else B[f] = v;
+		renderB();
+	});
+	document.addEventListener('input', (e) => {
+		if (e.target.id !== 'q') return;
+		B.q = e.target.value;
+		const pos = e.target.selectionStart;
+		renderB();
+		const el = document.getElementById('q');
+		el.focus();
+		el.setSelectionRange(pos, pos);
+	});
+	renderA();
+	renderB();
+})();
+</script>
+</body></html>
