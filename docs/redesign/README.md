@@ -65,7 +65,7 @@ YALA_WEB_DIR=$PWD/.worktrees/redesign-<topic>/apps/web/build \
 | App shell (sidebar, routes, URL state) | [done](specs/app-shell.md) | merged | partial: month history waits for a page with a period |
 | Transactions | [done](specs/transactions.md) | merged | reviewed on 8800; keep logging real months |
 | Analytics (was Cash flow) | [done](specs/analytics.md) | merged | started on 8800; keep reading real months |
-| Accounts | not started | not started | not started |
+| Accounts | [draft](specs/accounts.md) | not started | not started |
 | Dashboard | not started | not started | not started |
 | Planning (moved) | not started | not started | not started |
 | Manage (moved) | not needed | moved in with the shell | not started |
