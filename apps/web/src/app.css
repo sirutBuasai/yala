@@ -94,7 +94,6 @@
 	--entry-transaction: var(--salmon);
 	--entry-paycheck: var(--green);
 	--entry-transfer: var(--teal);
-	--entry-balance: var(--lav);
 	/* ── Text accents ─────────────────────────────────────────────────────────
 	   An accent that reads well as a FILL often doesn't as TYPE. Every value here, and every
 	   `--ink-*` above, clears WCAG AA against the tightest surface it can land on (`--inset`) in
@@ -115,7 +114,6 @@
 	--entry-transaction-text: var(--salmon-text);
 	--entry-paycheck-text: var(--good-text);
 	--entry-transfer-text: var(--teal-text);
-	--entry-balance-text: var(--lav-text);
 	--grid: #2a2a3c;
 	--s1: #26263a;
 	--s2: #3c3560;

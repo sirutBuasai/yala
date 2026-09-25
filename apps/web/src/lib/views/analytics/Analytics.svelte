@@ -8,14 +8,14 @@
 	import { monthForYear, pickableMonths, yearOf } from '$lib/utils/period';
 	import { focusMonth, MONTH_PARAM } from '$lib/nav/focus';
 	import { step } from '$lib/nav/step';
-	import { pageOf } from '$lib/nav/pages';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import Segmented from '$lib/nav/Segmented.svelte';
+	import ViewSwitch from '$lib/nav/ViewSwitch.svelte';
 	import YearNav from '$lib/nav/YearNav.svelte';
+	import { viewOf } from '$lib/nav/views';
 	import MonthBoard from './MonthBoard.svelte';
 	import YearBoard from './YearBoard.svelte';
 
-	type View = 'month' | 'year';
 	type Span = '5' | '10' | '20' | '50' | 'all';
 
 	interface Props {
@@ -23,10 +23,6 @@
 	}
 	let { data }: Props = $props();
 
-	const VIEWS: { id: View; label: string }[] = [
-		{ id: 'month', label: 'Month' },
-		{ id: 'year', label: 'Year' }
-	];
 	// How far back Year reaches, always ending at the latest year (D25).
 	const SPANS: { id: Span; label: string }[] = [
 		{ id: '5', label: '5Y' },
@@ -42,8 +38,7 @@
 	const P = { scope: 'scope', span: 'span' } as const;
 
 	const params = $derived($page.url.searchParams);
-	const view = $derived<View>($page.params.view === 'year' ? 'year' : 'month');
-	const base = $derived(pageOf($page.url.pathname));
+	const view = $derived(viewOf($page.params.view));
 	const span = $derived(SPANS.find((s) => s.id === params.get(P.span))?.id ?? DEFAULT_SPAN);
 	const last = $derived(latestYear(data));
 
@@ -92,13 +87,7 @@
 </script>
 
 <ViewHeader title="Analytics">
-	<Segmented
-		options={VIEWS}
-		value={view}
-		onchange={(v) =>
-			step($page.url, { [P.scope]: null }, { pathname: v === 'month' ? base : `${base}/${v}` })}
-		ariaLabel="Analytics time range"
-	/>
+	<ViewSwitch ariaLabel="Analytics time range" />
 	{#if view === 'month'}
 		<YearNav value={year} {years} onchange={moveToYear} />
 	{:else}

@@ -1,6 +1,6 @@
 # Accounts spec
 
-Status: draft, in review · Branch: `redesign/accounts`
+Status: step 1 built, dogfooding · Branch: `redesign/accounts`
 
 ## Job
 
@@ -103,7 +103,7 @@ The month picker offers every tracked month and the one after the latest, so a n
 
 ## Build steps
 
-1. **The page.** Both boards with every carried pane, the view path and its matcher, `month`, the month picker and Log balances on Month. Net Worth's `Pref`s (`networth-range`, `networth-year`) go, and `BalanceForm` with the modal's balance kind if nothing else uses them.
+1. **The page (built).** Both boards with every carried pane, the view path and its matcher, `month`, the month picker and Log balances on Month. Net Worth's `Pref`s (`networth-range`, `networth-year`) go, and so do `BalanceForm` and the modal's balance kind. The Month and Year switch and the view matcher are shared with Analytics (`lib/nav/ViewSwitch.svelte`, `lib/nav/views.ts`).
 2. **Picks and time frame.** Bars take `onpick` and `picked`, lines and areas take `mark`, KPI cards narrow, and `span` scopes the Year board. Net worth series take the window (`since`) and keep gap years, as the cash-flow series did for Analytics.
 3. **Account drill-in.** Where the money sits opens Log balances at the account.
 
@@ -117,7 +117,7 @@ Each step is dogfooded before the next.
 
 ## Tests
 
-Accounts joins `BOARD_PAGES`, so `charts` and `steady` cover its Month board. Restored from `master`: `arrange`'s merged-section cases, which the Month board's merged KPI rows bring back. A new `accounts.spec.ts` covers narrowing and widening on both views, the view switch, the span, logging a month from the checklist with the ledger checks, and the account drill-in. `planning` and `slider` still wait for Planning.
+Accounts joins `BOARD_PAGES`, so `charts` and `steady` cover its Month board, and `arrange` runs its random gestures on it as it did on Net Worth. A new `accounts.spec.ts` covers narrowing and widening on both views, the view switch, the span, logging a month from the checklist with the ledger checks, and the account drill-in. `planning` and `slider` still wait for Planning.
 
 ## Decisions (2026-09-25)
 

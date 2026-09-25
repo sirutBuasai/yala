@@ -19,11 +19,16 @@ describe('resolveKinds', () => {
 	});
 
 	it('drops requested kinds the page does not permit', () => {
-		expect(resolveKinds(['paycheck', 'balance'], [...page])).toEqual(['paycheck']);
+		expect(resolveKinds(['paycheck', 'transfer'], ['transaction', 'paycheck'])).toEqual([
+			'paycheck'
+		]);
 	});
 
 	it("falls back to the page's set when the request is entirely disallowed", () => {
-		expect(resolveKinds('balance', [...page])).toEqual([...page]);
+		expect(resolveKinds('transfer', ['transaction', 'paycheck'])).toEqual([
+			'transaction',
+			'paycheck'
+		]);
 	});
 
 	it('preserves the requested order rather than the palette order', () => {

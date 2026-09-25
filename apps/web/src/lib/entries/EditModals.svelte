@@ -7,14 +7,12 @@
 	const LABELS: Record<EntryKind, string> = {
 		transaction: 'Transaction',
 		paycheck: 'Paycheck',
-		transfer: 'Bill pay',
-		balance: 'Balance'
+		transfer: 'Bill pay'
 	};
 	const ICONS: Record<EntryKind, 'up' | 'down' | 'swap'> = {
 		transaction: 'up',
 		paycheck: 'down',
-		transfer: 'swap',
-		balance: 'swap'
+		transfer: 'swap'
 	};
 
 	const KINDS = ENTRY_KINDS.map((value) => ({
@@ -61,7 +59,6 @@
 	import TransactionForm from '$lib/entries/transaction/TransactionForm.svelte';
 	import PaycheckForm from '$lib/entries/paycheck/PaycheckForm.svelte';
 	import TransferForm from '$lib/entries/transfer/TransferForm.svelte';
-	import BalanceForm from '$lib/balance/BalanceForm.svelte';
 
 	interface Props {
 		accounts: AccountsInfo | null;
@@ -192,10 +189,8 @@
 			<TransactionForm {accounts} presetDate={openDate} onsaved={afterSave} />
 		{:else if addKind === 'paycheck'}
 			<PaycheckForm {accounts} presetDate={openDate} onsaved={afterSave} />
-		{:else if addKind === 'transfer'}
-			<TransferForm {accounts} presetDate={openDate} onsaved={afterSave} />
 		{:else}
-			<BalanceForm {accounts} presetDate={openDate} onsaved={afterSave} />
+			<TransferForm {accounts} presetDate={openDate} onsaved={afterSave} />
 		{/if}
 	</Overlay>
 {/if}

@@ -34,7 +34,7 @@ export const lastTransferTo = persisted('last-transfer-to', '', anyString);
 /** ISO "YYYY-MM-DD". Logging is a batch job, so the date just used beats today as the next default. */
 export const lastEntryDate = persisted('last-entry-date', '', matching(/^\d{4}-\d{2}-\d{2}$/));
 
-export const ENTRY_KINDS = ['transaction', 'paycheck', 'transfer', 'balance'] as const;
+export const ENTRY_KINDS = ['transaction', 'paycheck', 'transfer'] as const;
 export type EntryKind = (typeof ENTRY_KINDS)[number];
 
 /** Only honoured when the invocation actually offers that kind. */
