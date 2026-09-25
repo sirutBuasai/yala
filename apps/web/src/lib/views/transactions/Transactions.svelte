@@ -2,7 +2,6 @@
 	// Transactions: log a month and check it as you go (docs/redesign/specs/transactions.md). The layout
 	// here is the user's own arrangement adopted as the default (D14); a later rearrangement is stored under
 	// this board's key.
-	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
@@ -13,7 +12,8 @@
 	import { build } from '$lib/data/catalog';
 	import { dateShort, monthLabel, MONTHS } from '$lib/utils/format';
 	import { monthOf, yearOf } from '$lib/utils/period';
-	import { focusMonth, MONTH_PARAM, withParams } from '$lib/nav/focus';
+	import { focusMonth, MONTH_PARAM } from '$lib/nav/focus';
+	import { step } from '$lib/nav/step';
 	import {
 		historyOf,
 		type EntryType,
@@ -59,14 +59,8 @@
 		search: params.get(P.search) ?? ''
 	});
 
-	/** Every step is its own history entry (D9), so back undoes it; `replace` is for typing. */
-	function navigate(patch: Record<string, string | null>, replace = false) {
-		void goto(withParams($page.url, patch), {
-			keepFocus: true,
-			noScroll: true,
-			replaceState: replace
-		});
-	}
+	const navigate = (patch: Record<string, string | null>, replace = false) =>
+		step($page.url, patch, replace);
 
 	function setFilter(patch: Partial<HistoryFilter>) {
 		const next = { ...filter, ...patch };

@@ -31,8 +31,30 @@
 		valueLabels?: boolean;
 		/** A level the whole chart is judged against, drawn behind the bars. */
 		reference?: { value: number; label: string };
+		/** Makes each period's group of bars choosable, by its label. A group with nothing in it is not. */
+		onpick?: (label: string) => void;
+		/** The label currently chosen: its group is shaded and the rest recede. */
+		picked?: string | null;
 	}
-	let { labels, series, unit, altUnit, valueLabels = false, reference }: Props = $props();
+	let {
+		labels,
+		series,
+		unit,
+		altUnit,
+		valueLabels = false,
+		reference,
+		onpick,
+		picked
+	}: Props = $props();
+
+	const pickable = (i: number) => !!onpick && series.some((s) => (s.values[i] ?? 0) !== 0);
+	const receded = (lb: string) => picked != null && lb !== picked;
+
+	function pickKey(e: KeyboardEvent, lb: string) {
+		if (e.key !== 'Enter' && e.key !== ' ') return;
+		e.preventDefault();
+		onpick?.(lb);
+	}
 
 	const single = $derived(series.length <= 1);
 
@@ -91,7 +113,9 @@
 {/if}
 
 <div class="figurebox" bind:clientWidth={box.clientWidth} bind:clientHeight={box.clientHeight}>
-	<svg class="chart" viewBox="0 0 {W} {H}" role="img" aria-label={label}>
+	<!-- A group, not an image, once its bars are buttons: an image's children are hidden from assistive
+	     tech. -->
+	<svg class="chart" viewBox="0 0 {W} {H}" role={onpick ? 'group' : 'img'} aria-label={label}>
 		<g class="axis" transform="translate({m.l},{m.t})">
 			{#each ticks as t (t)}
 				<line class="gridline" x1={0} x2={iw} y1={y(t)} y2={y(t)} />
@@ -103,37 +127,66 @@
 			<!-- Keyed by slot, not by text: two bands can share a label, and a duplicate key is fatal. -->
 			{#each labels as lb, i (i)}
 				{@const gx = outer(lb) ?? 0}
-				{#each series as s, j (s.name)}
-					{@const v = s.values[i]!}
-					{@const yv = y(v)}
-					{@const bx = gx + (inner(String(j)) ?? 0)}
-					{@const bw = inner.bandwidth()}
-					<rect
-						x={bx}
-						y={Math.min(yv, base)}
-						width={bw}
-						height={Math.abs(yv - base)}
-						rx="3"
-						fill={s.color}
-						role="presentation"
-						onmousemove={(e) =>
-							showTip(
-								`<b>${esc(lb)}</b><br>${single ? '' : esc(s.name) + ': '}${tipValue(s, i)}`,
-								e
-							)}
-						onmouseleave={hideTip}
-					/>
-					{#if valueLabels && single && v !== 0}
-						<text
-							class="vlabel"
-							class:below={v < 0}
-							x={labelX(bx + bw / 2, fmt(v))}
-							y={labelY(v, yv)}
-							text-anchor="middle">{fmt(v)}</text
-						>
+				{@const pad = (outer.step() - outer.bandwidth()) / 2}
+				<g class="period">
+					{#if pickable(i)}
+						<rect
+							class="band"
+							class:focusband={lb === picked}
+							x={gx - pad}
+							y={0}
+							width={outer.step()}
+							height={ih + 26}
+							rx="6"
+							role="button"
+							tabindex="0"
+							aria-label={lb}
+							aria-pressed={lb === picked}
+							onclick={() => onpick?.(lb)}
+							onkeydown={(e) => pickKey(e, lb)}
+						/>
 					{/if}
-				{/each}
-				<text x={gx + outer.bandwidth() / 2} y={ih + 20} text-anchor="middle">{lb}</text>
+					{#each series as s, j (s.name)}
+						{@const v = s.values[i]!}
+						{@const yv = y(v)}
+						{@const bx = gx + (inner(String(j)) ?? 0)}
+						{@const bw = inner.bandwidth()}
+						<rect
+							x={bx}
+							y={Math.min(yv, base)}
+							width={bw}
+							height={Math.abs(yv - base)}
+							rx="3"
+							fill={s.color}
+							class:receded={receded(lb)}
+							class:pickthrough={pickable(i)}
+							role="presentation"
+							onclick={pickable(i) ? () => onpick?.(lb) : undefined}
+							onmousemove={(e) =>
+								showTip(
+									`<b>${esc(lb)}</b><br>${single ? '' : esc(s.name) + ': '}${tipValue(s, i)}`,
+									e
+								)}
+							onmouseleave={hideTip}
+						/>
+						{#if valueLabels && single && v !== 0}
+							<text
+								class="vlabel"
+								class:below={v < 0}
+								x={labelX(bx + bw / 2, fmt(v))}
+								y={labelY(v, yv)}
+								text-anchor="middle">{fmt(v)}</text
+							>
+						{/if}
+					{/each}
+					<text
+						class:focused={lb === picked}
+						x={gx + outer.bandwidth() / 2}
+						y={ih + 20}
+						text-anchor="middle"
+						pointer-events="none">{lb}</text
+					>
+				</g>
 			{/each}
 			{#if reference}
 				<line class="reference" x1={0} x2={iw} y1={y(reference.value)} y2={y(reference.value)} />
@@ -164,5 +217,27 @@
 	}
 	.vlabel.below {
 		fill: var(--crit-text);
+	}
+	/* The whole period is the target, bars and gaps alike, so a short bar is as easy to hit as a tall one. */
+	.band {
+		cursor: pointer;
+		outline: none;
+	}
+	.band:not(.focusband) {
+		fill: transparent;
+	}
+	.period:hover .band,
+	.band:focus-visible {
+		fill: var(--inset);
+	}
+	.band:focus-visible {
+		stroke: var(--ring-color);
+		stroke-width: var(--ring-width);
+	}
+	.pickthrough {
+		cursor: pointer;
+	}
+	.receded {
+		opacity: 0.4;
 	}
 </style>

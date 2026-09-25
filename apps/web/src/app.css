@@ -900,6 +900,14 @@ svg.chart {
 	stroke: var(--grid);
 	stroke-width: 1;
 }
+/* The period in focus on a time axis: its column shaded and its label raised, on bars and lines alike. */
+.chart .focusband {
+	fill: var(--inset);
+}
+.chart .axis text.focused {
+	fill: var(--ink);
+	font-weight: var(--fw-semibold);
+}
 /* Right-edge series labels: direct labelling, so a many-line chart needs no colour→name lookup. */
 .chart .endlab {
 	fill: var(--ink-2);

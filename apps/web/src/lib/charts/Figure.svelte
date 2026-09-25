@@ -26,7 +26,7 @@
 		normalize?: 'row' | 'col' | 'global';
 		/** Fix a line chart's value axis to end here, so a level partway up is not squashed to the floor. */
 		ceiling?: number;
-		/** Heatmap row to mark as the one in focus, by its label. */
+		/** The row (heatmap) or period (line) in focus, by its label. */
 		mark?: string;
 		/** Makes a chart's rows (or cells) choosable, where the chart offers it: the key picked, and for a
 		    grid the column within it, null when a whole row was picked. */

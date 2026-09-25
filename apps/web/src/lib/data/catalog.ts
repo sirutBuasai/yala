@@ -17,7 +17,7 @@ import {
 	savingsRate
 } from '$lib/data/series';
 import { moneyFlow } from './flow';
-import { categoryByMonth } from './matrix';
+import { categoryByMonth, categoryByYear } from './matrix';
 import { paychecks } from './table';
 import {
 	balanceGrowth,
@@ -170,6 +170,13 @@ const CHART_DEFS: DataDef[] = [
 		build: (data) => categorySpendByYear(data)
 	},
 	{
+		id: 'spending.category_by_year_grid',
+		label: 'Category by year',
+		kind: 'matrix',
+		scopes: LIFETIME,
+		build: (data) => categoryByYear(data)
+	},
+	{
 		id: 'spending.vs_average',
 		label: 'Spending by category',
 		kind: 'deviation',
@@ -208,8 +215,8 @@ const CHART_DEFS: DataDef[] = [
 		id: 'money.flow',
 		label: 'Money flow',
 		kind: 'flow',
-		scopes: YEARLY,
-		build: (data, scope) => moneyFlow(data, optionalYear(data, scope))
+		scopes: ALL_SCOPES,
+		build: (data, scope) => moneyFlow(data, scope)
 	},
 	{
 		id: 'networth.by_month',
@@ -405,8 +412,18 @@ const CHART_DEFS: DataDef[] = [
 //
 // Generated over the same measures the scalars use, so a KPI's chart and its number agree.
 
-/** Measures with a period-by-period trend. Month scope reads as the trailing twelve. */
-const TRENDS: Field[] = ['income', 'spending', 'saved', 'takehome'];
+/** Measures with a period-by-period trend, and a month's reading against its average. Month scope
+    reads as the trailing twelve. */
+const TRENDS: Field[] = [
+	'income',
+	'spending',
+	'saved',
+	'takehome',
+	'gross',
+	'deductions',
+	'contributions',
+	'net'
+];
 
 /** Measures with a running total. */
 const RUNNING: Field[] = ['gross', 'deductions', 'contributions', 'net', 'takehome', 'saved'];
@@ -645,7 +662,7 @@ const CHANGES: { field: Field; period: 'year' | 'month' }[] = (['year', 'month']
 );
 
 // A month's level against its own recent average: the KPI bar's figures.
-const VS_AVERAGE: DataDef[] = (['income', 'takehome', 'saved', 'spending'] as const).map((field) =>
+const VS_AVERAGE: DataDef[] = TRENDS.map((field) =>
 	scalarDef(`vsavg.${field}`, measureLabel(field), ['month'], (data, scope) =>
 		scope.monthKey
 			? vsAverage(data, scope.monthKey, field)

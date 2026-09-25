@@ -1,5 +1,5 @@
 // Money-flow primitive: gross → deductions / contributions + take-home → spending categories + savings.
-// Totals come from the yearly rollup, but the split into named buckets exists only per-paycheck, so
+// Totals come from the scope's rollup, but the split into named buckets exists only per-paycheck, so
 // paycheck proportions are scaled onto the rollup totals — keeping the diagram reconciled with the KPIs
 // even when paychecks are sparse.
 
@@ -7,6 +7,8 @@ import type { DashboardData } from '$lib/data/types';
 import type { Flow, FlowLink, FlowNode } from './primitives';
 import { MONEY } from './primitives';
 import { sumBy, sumValues } from '$lib/utils/num';
+import { componentKeys, measureValue } from './metric';
+import { type Scope, scopeYear } from './scope';
 
 /** Split `total` across named buckets by their `shares` proportions. Nothing when the total is zero,
  * and a single `fallbackLabel` bucket when there's no breakdown to split by. */
@@ -23,12 +25,21 @@ function distribute(
 	return out;
 }
 
-/** Spending per category within one year, biggest first. */
-function yearCategories(data: DashboardData, year: number): { category: string; amount: number }[] {
-	const rows = data.years[String(year)]?.matrix ?? [];
+/** Spending per category in `scope`, biggest first. */
+function scopeCategories(
+	data: DashboardData,
+	scope: Scope
+): { category: string; amount: number }[] {
 	const totals: Record<string, number> = {};
-	for (const row of rows) {
-		for (const [c, v] of Object.entries(row.spent)) totals[c] = (totals[c] ?? 0) + v;
+	if (scope.level === 'month') {
+		for (const c of (scope.monthKey && data.months[scope.monthKey]?.by_category) || [])
+			totals[c.category] = (totals[c.category] ?? 0) + c.amount;
+	} else if (scope.level === 'year') {
+		for (const row of data.years[String(scopeYear(data, scope))]?.matrix ?? []) {
+			for (const [c, v] of Object.entries(row.spent)) totals[c] = (totals[c] ?? 0) + v;
+		}
+	} else {
+		for (const c of data.overview.all_time_by_category) totals[c.category] = c.amount;
 	}
 	return Object.entries(totals)
 		.filter(([, v]) => v > 0)
@@ -36,40 +47,30 @@ function yearCategories(data: DashboardData, year: number): { category: string; 
 		.sort((a, b) => b.amount - a.amount);
 }
 
-/** Lifetime flow, or one year's when `year` is given. */
-export function moneyFlow(data: DashboardData, year?: number): Flow {
-	const rows =
-		year == null ? data.income.by_year : data.income.by_year.filter((r) => r.year === year);
-	let gross = 0;
-	let takeHome = 0;
-	let dedTotal = 0;
-	let conTotal = 0;
-	for (const iy of rows) {
-		gross += iy.gross;
-		takeHome += iy.take_home;
-		dedTotal += iy.deductions;
-		conTotal += iy.contributions;
-	}
+/** Each line item's total over the scope's paychecks. */
+function componentTotals(
+	data: DashboardData,
+	scope: Scope,
+	group: 'deductions' | 'contributions'
+): Record<string, number> {
+	return Object.fromEntries(
+		componentKeys(data, scope)[group].map((key) => [key, measureValue(data, scope, { group, key })])
+	);
+}
 
-	// Breakdown proportions from the individual paychecks in scope.
-	const prefix = year == null ? '' : `${year}-`;
-	const dedShares: Record<string, number> = {};
-	const conShares: Record<string, number> = {};
-	for (const [key, month] of Object.entries(data.months)) {
-		if (prefix && !key.startsWith(prefix)) continue;
-		for (const p of month.paychecks) {
-			for (const [k, v] of Object.entries(p.deductions)) dedShares[k] = (dedShares[k] ?? 0) + v;
-			// One bucket per label, so a label absent from every paycheck draws no zero-width leg.
-			for (const [k, v] of Object.entries(p.contributions)) conShares[k] = (conShares[k] ?? 0) + v;
-		}
-	}
-	const ded = distribute(dedShares, dedTotal, 'Deductions');
-	const con = distribute(conShares, conTotal, 'Contributions');
+const FROM_SAVINGS = 'From savings';
 
-	const cats =
-		year == null
-			? [...data.overview.all_time_by_category].sort((a, b) => b.amount - a.amount)
-			: yearCategories(data, year);
+/** The flow of one month, one year, or the lifetime. */
+export function moneyFlow(data: DashboardData, scope: Scope): Flow {
+	const gross = measureValue(data, scope, 'gross');
+	const takeHome = measureValue(data, scope, 'takehome');
+	const dedTotal = measureValue(data, scope, 'deductions');
+	const conTotal = measureValue(data, scope, 'contributions');
+
+	const ded = distribute(componentTotals(data, scope, 'deductions'), dedTotal, 'Deductions');
+	const con = distribute(componentTotals(data, scope, 'contributions'), conTotal, 'Contributions');
+
+	const cats = scopeCategories(data, scope);
 	const spent = sumBy(cats, (c) => c.amount);
 	const cashSavings = Math.max(0, takeHome - spent);
 
@@ -87,6 +88,10 @@ export function moneyFlow(data: DashboardData, year?: number): Flow {
 	}
 	nodes.push({ id: 'Take-home', label: 'Take-home', value: takeHome, col: 1, role: 'takehome' });
 	links.push({ source: 'Gross', target: 'Take-home', value: takeHome });
+	// Spending past take-home was paid from savings: without its own source the take-home fan would
+	// overflow its node, which a month without a paycheck always does.
+	const shortfall = Math.max(0, spent - takeHome);
+	nodes.push({ id: FROM_SAVINGS, label: FROM_SAVINGS, value: shortfall, col: 1, role: 'saving' });
 
 	// Saved sits atop the last column, aligned with its feeders, so those ribbons miss the spending fan.
 	nodes.push({
@@ -104,7 +109,20 @@ export function moneyFlow(data: DashboardData, year?: number): Flow {
 	// links must precede the category links to stay at the top.
 	for (const [k, v] of Object.entries(con)) links.push({ source: k, target: 'Saved', value: v });
 	links.push({ source: 'Take-home', target: 'Saved', value: cashSavings });
-	for (const c of cats) links.push({ source: 'Take-home', target: c.category, value: c.amount });
+	// Take-home covers the biggest categories first, so the savings fan stays at the bottom by the tail.
+	let left = Math.min(takeHome, spent);
+	for (const c of cats) {
+		const fromPay = Math.min(left, c.amount);
+		left -= fromPay;
+		links.push({ source: 'Take-home', target: c.category, value: fromPay });
+		links.push({ source: FROM_SAVINGS, target: c.category, value: c.amount - fromPay });
+	}
 
-	return { kind: 'flow', unit: MONEY(data.currency), nodes, links };
+	// A zero node or link would still draw as a sliver.
+	return {
+		kind: 'flow',
+		unit: MONEY(data.currency),
+		nodes: nodes.filter((n) => n.value > 0),
+		links: links.filter((l) => l.value > 0)
+	};
 }

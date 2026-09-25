@@ -1,5 +1,8 @@
 <script lang="ts">
-	import Rebuilding from '$lib/layout/Rebuilding.svelte';
+	import { data } from '$lib/data/load';
+	import Analytics from '$lib/views/analytics/Analytics.svelte';
 </script>
 
-<Rebuilding title="Analytics" />
+{#if $data}
+	<Analytics data={$data} />
+{/if}

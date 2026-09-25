@@ -49,7 +49,7 @@ interface AdaptOpts {
 	dashed?: string[];
 	/** Print each bar's own figure above it (a lone series only) — see `BarChart`. */
 	valueLabels?: boolean;
-	/** Heatmap row to mark as the one in focus, by its label. */
+	/** The row (heatmap) or period (line) in focus, by its label. */
 	mark?: string;
 }
 
@@ -271,7 +271,8 @@ export const CHARTS: ChartDef[] = [
 				unit: sm.unit,
 				log: opts.log,
 				endLabels: opts.endLabels,
-				ceiling: opts.ceiling
+				ceiling: opts.ceiling,
+				mark: opts.mark
 			};
 		}
 	}),

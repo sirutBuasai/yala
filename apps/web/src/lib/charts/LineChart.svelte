@@ -32,8 +32,10 @@
 		    level partway up. Lines running past it flatten against the top; tooltips still state the true
 		    figure. */
 		ceiling?: number;
+		/** The label of the period in focus, shaded behind the lines. */
+		mark?: string;
 	}
-	let { labels, series, unit, log = false, endLabels = false, ceiling }: Props = $props();
+	let { labels, series, unit, log = false, endLabels = false, ceiling, mark }: Props = $props();
 
 	/** What is drawn: the readings, held to the ceiling. Everything the reader is TOLD comes off `series`,
 	    so the frame narrows the view without misreporting a figure. */
@@ -125,6 +127,9 @@
 
 	let hover = $state<number | null>(null);
 
+	const marked = $derived(mark == null ? -1 : labels.indexOf(mark));
+	const markWidth = $derived(Math.min(48, n > 1 ? (iw / (n - 1)) * 0.6 : 24));
+
 	function onMove(e: MouseEvent) {
 		const r = (e.currentTarget as SVGRectElement).getBoundingClientRect();
 		let i = Math.round(((e.clientX - r.left) / r.width) * (n - 1));
@@ -168,6 +173,17 @@
 				<text x={-8} y={y(t) + 4} text-anchor="end">{f.tick(t)}</text>
 			{/each}
 
+			{#if marked >= 0}
+				<rect
+					class="focusband"
+					x={xPos(marked) - markWidth / 2}
+					y={0}
+					width={markWidth}
+					height={ih + 26}
+					rx="6"
+				/>
+			{/if}
+
 			{#each plotted as s, si (s.name)}
 				{@const pth = paths[si]!}
 				{#if s.area}
@@ -187,7 +203,9 @@
 			<!-- Keyed by slot, not by text: two points can share a label, and a duplicate key is fatal. -->
 			{#each labels as lb, i (i)}
 				{#if shown.has(i)}
-					<text x={xPos(i)} y={ih + 20} text-anchor={labelAnchor(i, n)}>{lb}</text>
+					<text class:focused={i === marked} x={xPos(i)} y={ih + 20} text-anchor={labelAnchor(i, n)}
+						>{lb}</text
+					>
 				{/if}
 			{/each}
 
