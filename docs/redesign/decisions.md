@@ -54,10 +54,14 @@ The focus period, filters and the open row live in the URL, so browser back and 
 
 When a row is edited inline and the form has more than the row can hold (reimbursements, for example), the extra fields sit in a More section that expands under the row. The editor does not hand off to another surface for them.
 
+### D11 · No side panel (2026-09-24)
+
+Supersedes D7's side panel. No place in Yala suits one: the calendar already has its day pane beside it, and on Transactions a panel would cover the context used to verify an entry. Rows are edited inline, growing a More section (D10), or in a modal when the inline row does not fit.
+
 ## Open
 
 - **Month from a year.** Moving from a year-level view to a month-level page: which month becomes the focus? Candidates are the previous focus month's calendar month within that year, or the latest month with data in that year.
-- **How a host picks its editing surface (D7).** Whether each list declares its surface, or one editor measures the space it has and picks inline, then side panel, then modal.
+- **How a host picks its editing surface (D7).** Suggested: one editor measures the list's width with the existing `lib/ui/fit.ts` helpers (`levelThatFits` and the size watch) and picks inline when the row fits, otherwise modal, switching live on resize. No per-page setting and no breakpoint.
 - **URL names (D9).** The parameter names and value formats for the focus period, each filter and the open row, fixed once in the app shell spec.
 - **Drag-to-arrange boards.** Suggested: keep only on Dashboard.
 - **Typical month or budgets.** Suggested: trailing twelve-month median as "typical" now; budgets later if missed.
