@@ -36,6 +36,22 @@ test('the focus month carries over to the next page', async ({ page }) => {
 	await expect(page).toHaveURL(/\/transactions\?month=2025-09$/);
 });
 
+test('a page reopens with its picks, moved to wherever the focus went since', async ({ page }) => {
+	await page.goto('/analytics?month=2025-09&view=year&scope=year');
+	await pages(page).getByRole('link', { name: 'Transactions', exact: true }).click();
+	await expect(page).toHaveURL(/\/transactions\?month=2025-09$/);
+
+	await page.goto('/transactions?month=2025-08&category=Grocery');
+	await pages(page).getByRole('link', { name: 'Analytics', exact: true }).click();
+	await expect(page).toHaveURL(/\/analytics\?/);
+	await expect(page).toHaveURL(/view=year/);
+	await expect(page).toHaveURL(/scope=year/);
+	await expect(page).toHaveURL(/month=2025-08/);
+
+	await pages(page).getByRole('link', { name: 'Transactions', exact: true }).click();
+	await expect(page).toHaveURL(/category=Grocery/);
+});
+
 test('a deep link opens its page directly', async ({ page }) => {
 	await page.goto('/manage');
 	await expect(page.getByRole('heading', { level: 2, name: 'Manage', exact: true })).toBeVisible();

@@ -59,7 +59,7 @@ Page filters (category, account, type, pending, search) are named by each page's
 
 **One focus, two grains (D4).** There is no `year` parameter: a year-level view reads its year from `month`. Stepping a year view from 2026 to 2024 moves the focus to the same calendar month in 2024, clamped to the tracked range. Going back to a month-level page then lands on that month.
 
-**Carrying it over.** Sidebar links and every drill-down are built from the current focus, so `/transactions` opened from Cash flow keeps the month or year you were on.
+**Carrying it over.** Sidebar links and every drill-down are built from the current focus, so `/transactions` opened from Cash flow keeps the month or year you were on. Since D21, a sidebar link also restores the page's own state as it was last left in this tab (`lib/nav/left.ts`), moved to the current focus month.
 
 **History.** Every deliberate step adds a history entry: changing page, stepping the period, choosing a range, applying a filter, opening or closing an entry. Typing in a search box replaces the current entry instead, so back does not replay each keystroke.
 

@@ -94,6 +94,10 @@ The range switch reads Month (a year, month by month; was Activity · Year) and 
 
 Clicking a period in a bar chart narrows the page's other panes to that period in place: KPI cards (a month against its average), the Sankey, and a mark on every chart sharing that axis. Clicking it again widens the page back. A heatmap is the one chart whose click leaves the page, for the rows behind a cell on Transactions. This is the rule for clickable charts on every page.
 
+### D21 · A page reopens as you left it (2026-09-25)
+
+Supersedes the app shell's rule that a sidebar link carries only the focus month. What you pick on a chart persists across pages: a sidebar link reopens its page with the URL state it was last left with in this tab (picks, filters, range), moved to the current focus month. It is kept in session storage, so it survives a reload but not a new tab. State that belongs to another month, such as a chosen calendar day, is dropped by the page that reads it.
+
 ## Open
 
 - **A card filter's figure.** When the history is filtered to one card, show "Charged to card" (full bills) beside Spent, so the gap reads as what was fronted? Or nothing. "Charged − paid" was rejected: it mostly reflects statement timing.

@@ -2,10 +2,12 @@
 	// The app shell: loads the ledger once for every page and shows the sidebar in full, as an icon rail,
 	// or folded into the hamburger sheet. Adding entries belongs to each page, which offers the kinds its context logs.
 	import { onMount, type Snippet } from 'svelte';
+	import { afterNavigate } from '$app/navigation';
 	import '../../app.css';
 	import { live, loadData, loadState } from '$lib/data/load';
 	import { sidebarMode } from '$lib/nav/sidebar';
 	import Brand from '$lib/nav/Brand.svelte';
+	import { remember } from '$lib/nav/left';
 	import NavMenu from '$lib/nav/NavMenu.svelte';
 	import Sidebar from '$lib/nav/Sidebar.svelte';
 	import Tooltip from '$lib/overlay/Tooltip.svelte';
@@ -26,6 +28,9 @@
 	let bannerClosed = $state(false);
 
 	onMount(loadData);
+	afterNavigate(({ to }) => {
+		if (to) remember(to.url);
+	});
 </script>
 
 <svelte:window bind:innerWidth={viewport} />

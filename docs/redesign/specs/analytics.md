@@ -81,6 +81,8 @@ Only the heatmap leaves the page: on Month, a Category by month label opens that
 | `view` | `year` | Month |
 | `scope` | `month` on Month, `year` on Year | The board's whole span: the focus year on Month, the lifetime on Year |
 
+Leaving the page keeps its picks (D21): the sidebar reopens it with its `view` and `scope`, at whatever month the focus moved to meanwhile.
+
 The Month board reads its year from `month`. The stepper offers only years holding a pickable month, since `month` cannot name a month in any other.
 
 ## Layout

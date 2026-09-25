@@ -51,7 +51,11 @@
 
 	const params = $derived($page.url.searchParams);
 	const monthKey = $derived(focusMonth($page.url, latestMonthKey(data)));
-	const day = $derived(params.get(P.day) ?? '');
+	// A day outside the focus month is one the page was left at before the month moved on (D21).
+	const day = $derived.by(() => {
+		const d = params.get(P.day) ?? '';
+		return d.startsWith(`${monthKey}-`) ? d : '';
+	});
 	const filter = $derived<HistoryFilter>({
 		type: ENTRY_TYPES.find((t) => t === params.get(P.type)) ?? null,
 		category: params.get(P.category),
