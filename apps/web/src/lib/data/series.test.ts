@@ -7,7 +7,8 @@ import {
 	measureActive,
 	measureByMonth,
 	measureByYear,
-	measureTrailing
+	measureTrailing,
+	yearAxis
 } from '$lib/data/series';
 import { measureValue } from '$lib/data/metric';
 import { build } from '$lib/data/catalog';
@@ -170,5 +171,22 @@ describe('savingsRate', () => {
 		const p = build(d, 'overview.savings_rate', { level: 'all' });
 		if (p.kind !== 'series') throw new Error('expected series');
 		expect(p.reference?.value).toBeCloseTo(45, 6);
+	});
+});
+
+describe('yearAxis', () => {
+	it('keeps a year with nothing logged in its place, at zero', () => {
+		const data = makeData();
+		data.meta.years = [2022, 2024, 2025];
+		expect(yearAxis(data)).toEqual([2022, 2023, 2024, 2025]);
+		const spent = measureByYear(data, 'spending');
+		expect(spent.points.map((p) => p.label)).toEqual(['2022', '2023', '2024', '2025']);
+		expect(spent.points[1]!.value).toBe(0);
+	});
+
+	it('is empty with no tracked years', () => {
+		const data = makeData();
+		data.meta.years = [];
+		expect(yearAxis(data)).toEqual([]);
 	});
 });

@@ -86,9 +86,18 @@ export function measureTrailing(
 	return overMonths(data, m, keys, keys.map(monthName));
 }
 
-/** One point per tracked year. */
+/** Every year from the first tracked to the last, so a year with nothing logged still holds its place
+    on an axis rather than closing the gap. */
+export function yearAxis(data: DashboardData): number[] {
+	const ys = data.meta.years;
+	if (!ys.length) return [];
+	const first = Math.min(...ys);
+	return Array.from({ length: Math.max(...ys) - first + 1 }, (_, i) => first + i);
+}
+
+/** One point per year, gaps included. */
 export function measureByYear(data: DashboardData, m: Measure): Series {
-	const years = data.meta.years;
+	const years = yearAxis(data);
 	return series(
 		measureLabel(m),
 		years.map(String),
@@ -126,12 +135,12 @@ export function cashFlowBars(data: DashboardData, year?: number): MultiSeries {
 }
 
 /**
- * One series per spending category across the tracked years, ordered by lifetime total. Categories span
+ * One series per spending category across every year from the first tracked, ordered by lifetime total. Categories span
  * orders of magnitude, so this wants a log axis — see `logYScale`.
  */
 export function categorySpendByYear(data: DashboardData): MultiSeries {
 	const unit = MONEY(data.currency);
-	const years = data.meta.years;
+	const years = yearAxis(data);
 	const labels = years.map(String);
 
 	const totalFor = (year: number, cat: string) =>
