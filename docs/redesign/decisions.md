@@ -50,10 +50,14 @@ A transaction shown on another page (Accounts, Dashboard, a drill-down) opens it
 
 The focus period, filters and the open row live in the URL, so browser back and forward undo and redo each step, including a drill-down.
 
+### D10 · An inline editor grows a More section (2026-09-24)
+
+When a row is edited inline and the form has more than the row can hold (reimbursements, for example), the extra fields sit in a More section that expands under the row. The editor does not hand off to another surface for them.
+
 ## Open
 
 - **Month from a year.** Moving from a year-level view to a month-level page: which month becomes the focus? Candidates are the previous focus month's calendar month within that year, or the latest month with data in that year.
-- **How a host picks its editing surface (D7).** Whether each list declares its surface, or one editor measures the space it has and picks inline, then side panel, then modal. Also, what inline shows for a form too large for a row, such as reimbursements: a "More" expansion or a hand-off to the panel.
+- **How a host picks its editing surface (D7).** Whether each list declares its surface, or one editor measures the space it has and picks inline, then side panel, then modal.
 - **URL names (D9).** The parameter names and value formats for the focus period, each filter and the open row, fixed once in the app shell spec.
 - **Drag-to-arrange boards.** Suggested: keep only on Dashboard.
 - **Typical month or budgets.** Suggested: trailing twelve-month median as "typical" now; budgets later if missed.
