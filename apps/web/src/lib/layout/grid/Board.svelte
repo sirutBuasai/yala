@@ -3,7 +3,7 @@
 	// which panes the board HAS, and the arrangement derives its ids from the layout at construction,
 	// so it is rebuilt when that set changes rather than being left reserving rows for a pane nobody
 	// renders any more. Keyed on the ids alone — a caption changing must not throw the board away.
-	import type { Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import BoardGrid from './BoardGrid.svelte';
 	import { getGridEnv } from './context';
 	import type { BoardLayout } from './types';
@@ -23,8 +23,10 @@
 
 	const panes = $derived(Object.keys(layout).join(' '));
 
+	// onMount, not $effect: `boards++` reads the count it writes, so an effect would retrigger itself
+	// without end.
 	const env = getGridEnv();
-	$effect(() => {
+	onMount(() => {
 		env.boards++;
 		return () => env.boards--;
 	});

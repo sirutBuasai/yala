@@ -137,12 +137,15 @@
 			{#each options as opt, i (opt)}
 				<!-- Keyboard selection is handled on the trigger, which keeps focus. -->
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<!-- Mousedown does nothing, so a pick leaves focus on the trigger and no text caret on the
+				     option's label. -->
 				<li
 					id={optionId(i)}
 					role="option"
 					aria-selected={opt === value}
 					class:hl={i === active}
 					onpointerenter={() => (active = i)}
+					onmousedown={(e) => e.preventDefault()}
 					onclick={() => choose(opt)}
 				>
 					<span class="check" aria-hidden="true"
