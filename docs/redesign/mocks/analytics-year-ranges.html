@@ -83,7 +83,7 @@ svg.chart .gaplab { font-size: 9.5px; font-style: italic; }
 	<header class="head">
 		<span class="eyebrow">Analytics · Year view · mock</span>
 		<h1>How far back the Year view reaches</h1>
-		<p class="lede">The Year view draws every year from the first one you logged to the last, gaps included. After decades that is dozens of bars. Below are four ways to pick a time frame, each drawn with the current chart. Sample figures, not your ledger: 26 years, 2001 to 2026, with nothing logged in 2009.</p>
+		<p class="lede">The Year view draws every year from the first one you logged to the last, gaps included. After decades that is dozens of bars. Below are four ways to pick a time frame, each drawn with the current chart. Sample figures, not your ledger: 81 years, 2000 to 2080, with nothing logged in 2009, 2041 and 2042.</p>
 	</header>
 
 	<section>
@@ -92,7 +92,7 @@ svg.chart .gaplab { font-size: 9.5px; font-style: italic; }
 			<p class="note">No time frame. A gap year keeps its slot, drawn as an empty outline so the axis stays continuous. The bar chart's labels are thinned so they never overlap, which it does not do yet. This is the baseline the others are measured against.</p>
 		</div>
 		<div class="frame">
-			<div class="bar"><h3>Analytics</h3><div class="seg"><button type="button">Month</button><button type="button" class="on">Year</button></div><span class="cap">Lifetime · 2001–2026</span></div>
+			<div class="bar"><h3>Analytics</h3><div class="seg"><button type="button">Month</button><button type="button" class="on">Year</button></div><span class="cap">Lifetime · 2000–2080</span></div>
 			<div class="chartcard" id="c0"></div>
 		</div>
 	</section>
@@ -101,7 +101,7 @@ svg.chart .gaplab { font-size: 9.5px; font-style: italic; }
 		<div class="head">
 			<span class="tag">A</span>
 			<h2>Preset spans in the header</h2>
-			<p class="note">A second switch beside Month and Year, always ending at the latest year. Fastest to use, and it reads like a stock chart. Older decades are reached only through All.</p>
+			<p class="note">A second switch beside Month and Year, always ending at the latest year. Fastest to use, and it reads like a stock chart. Older decades are reached only through 50Y or All.</p>
 		</div>
 		<div class="frame">
 			<div class="bar"><h3>Analytics</h3><div class="seg"><button type="button">Month</button><button type="button" class="on">Year</button></div>
@@ -119,7 +119,7 @@ svg.chart .gaplab { font-size: 9.5px; font-style: italic; }
 		<div class="frame">
 			<div class="bar"><h3>Analytics</h3><div class="seg"><button type="button">Month</button><button type="button" class="on">Year</button></div>
 				<div class="nav"><button type="button" class="arrow" id="b-prev" aria-label="Earlier years">‹</button><span class="span" id="b-span"></span><button type="button" class="arrow" id="b-next" aria-label="Later years">›</button></div>
-				<label class="cap" for="b-size">Show</label><select id="b-size"><option value="5">5 years</option><option value="10" selected>10 years</option><option value="20">20 years</option><option value="0">All years</option></select></div>
+				<label class="cap" for="b-size">Show</label><select id="b-size"><option value="5">5 years</option><option value="10" selected>10 years</option><option value="20">20 years</option><option value="50">50 years</option><option value="0">All years</option></select></div>
 			<div class="chartcard" id="c2"></div>
 		</div>
 	</section>
@@ -143,7 +143,7 @@ svg.chart .gaplab { font-size: 9.5px; font-style: italic; }
 		</div>
 		<div class="qs">
 			<div class="q"><h3>Which control</h3><p>A is quickest, B reaches any decade, C shows context.</p><p class="rec"><b>Suggested:</b> B. It matches the Month view's stepper, and the header names the years on screen.</p></div>
-			<div class="q"><h3>What the window covers</h3><p>Only the year-axis charts (bars, Category by year, lines), or the whole board, so the KPI cards, Sankey and stat matrix read "2017–2026" instead of the lifetime.</p><p class="rec"><b>Suggested:</b> the whole board. A Sankey of fifty years beside a ten-year chart would answer a different question.</p></div>
+			<div class="q"><h3>What the window covers</h3><p>Only the year-axis charts (bars, Category by year, lines), or the whole board, so the KPI cards, Sankey and stat matrix read "2071–2080" instead of the lifetime.</p><p class="rec"><b>Suggested:</b> the whole board. A Sankey of fifty years beside a ten-year chart would answer a different question.</p></div>
 			<div class="q"><h3>The default</h3><p>All years, or the last ten.</p><p class="rec"><b>Suggested:</b> the last ten, which is every year you have today. The span lives in the URL and persists across pages like the other picks.</p></div>
 			<div class="q"><h3>A picked year outside the window</h3><p>Stepping the window away from a picked year could keep the pick or drop it.</p><p class="rec"><b>Suggested:</b> drop it, so the board never reads a year it no longer shows.</p></div>
 		</div>
@@ -152,13 +152,13 @@ svg.chart .gaplab { font-size: 9.5px; font-style: italic; }
 
 <script>
 (() => {
-	const YEARS = Array.from({ length: 26 }, (_, i) => 2001 + i);
-	const GAP = new Set([2009]);
+	const YEARS = Array.from({ length: 81 }, (_, i) => 2000 + i);
+	const GAP = new Set([2009, 2041, 2042]);
 	const noise = (y, k) => Math.sin(y * 12.9898 + k * 78.233) * 0.5 + 0.5;
 	const DATA = Object.fromEntries(YEARS.map((y, i) => {
 		if (GAP.has(y)) return [y, null];
-		const part = y === 2026 ? 0.75 : 1;
-		const net = (26000 + i * 4200 + noise(y, 1) * 9000) * part;
+		const part = y === YEARS[YEARS.length - 1] ? 0.75 : 1;
+		const net = (26000 + i * 3000 + noise(y, 1) * 12000) * part;
 		const take = net * (0.6 + noise(y, 2) * 0.08);
 		const spent = take * (0.42 + noise(y, 3) * 0.35);
 		return [y, { net, take, spent, saved: net - spent }];
@@ -185,7 +185,7 @@ svg.chart .gaplab { font-size: 9.5px; font-style: italic; }
 		const W = 720, H = 210, L = 44, R = 8, T = 10, B = 24;
 		const svg = el('svg', { class: 'chart', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Bar chart across ${years.length} years` });
 		const max = Math.max(1, ...years.flatMap((y) => (DATA[y] ? [DATA[y].net] : [])));
-		const step = max > 100000 ? 50000 : max > 40000 ? 20000 : 10000;
+		const step = max > 200000 ? 100000 : max > 100000 ? 50000 : max > 40000 ? 20000 : 10000;
 		const top = Math.ceil(max / step) * step;
 		const yv = (v) => T + (H - T - B) * (1 - v / top);
 		for (let v = 0; v <= top; v += step) {
@@ -223,7 +223,7 @@ svg.chart .gaplab { font-size: 9.5px; font-style: italic; }
 
 	// A: presets ending at the latest year.
 	const aSeg = document.getElementById('a-seg');
-	const presets = [[5, '5Y'], [10, '10Y'], [20, '20Y'], [0, 'All']];
+	const presets = [[5, '5Y'], [10, '10Y'], [20, '20Y'], [50, '50Y'], [0, 'All']];
 	let aN = 10;
 	function renderA() {
 		aSeg.innerHTML = '';
@@ -272,7 +272,7 @@ svg.chart .gaplab { font-size: 9.5px; font-style: italic; }
 			const h = d ? (d.net / smax) * 34 : 0;
 			if (d) strip.append(el('rect', { x: SL + sgw * i + sgw * 0.2, y: 40 - h, width: sgw * 0.6, height: h, rx: 1.5, fill: 'var(--net)' }));
 			else strip.append(el('rect', { class: 'gap', x: SL + sgw * i + sgw * 0.2, y: 32, width: sgw * 0.6, height: 8, rx: 1.5 }));
-			if (y % 5 === 0 || ((i === 0 || i === YEARS.length - 1) && y % 5 > 1 && y % 5 < 4)) strip.append(el('text', { x: SL + sgw * i + sgw / 2, y: 58, 'text-anchor': 'middle' }, String(y)));
+			if (y % 10 === 0) strip.append(el('text', { x: SL + sgw * i + sgw / 2, y: 58, 'text-anchor': 'middle' }, String(y)));
 		});
 		strip.append(el('rect', { class: 'shade', x: SL, y: 2, width: sgw * cFrom, height: 42 }));
 		strip.append(el('rect', { class: 'shade', x: SL + sgw * cTo, y: 2, width: sgw * (YEARS.length - cTo), height: 42 }));
