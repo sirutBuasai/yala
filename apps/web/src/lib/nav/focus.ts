@@ -29,13 +29,17 @@ export function withFocus(href: string, url: URL, left = ''): string {
 	return query ? `${href}?${query}` : href;
 }
 
-/** `url`'s path and query with `patch` applied: a string sets a parameter, null removes it. */
-export function withParams(url: URL, patch: Record<string, string | null>): string {
+/** `url`'s query with `patch` applied (a string sets a parameter, null removes it), at `pathname`. */
+export function withParams(
+	url: URL,
+	patch: Record<string, string | null>,
+	pathname = url.pathname
+): string {
 	const next = new URLSearchParams(url.searchParams);
 	for (const [key, value] of Object.entries(patch)) {
 		if (value === null) next.delete(key);
 		else next.set(key, value);
 	}
 	const query = next.toString();
-	return query ? `${url.pathname}?${query}` : url.pathname;
+	return query ? `${pathname}?${query}` : pathname;
 }

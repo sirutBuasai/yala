@@ -51,7 +51,7 @@ The Home, Activity and Net Worth views were deleted, with the e2e suites that dr
 | Param | Values | Used by | Absent or invalid |
 |---|---|---|---|
 | `month` | `YYYY-MM` | Every page with a period | The latest tracked month; an invalid value is replaced in place, not reported |
-| `view` | Page-defined, e.g. `month`, `year`, `all` | Pages with more than one range | The page's default |
+| Path segment | Page-defined, e.g. `/analytics/year` | Pages with more than one view | The page's default view; since D27 a view is a path, not a `view` parameter |
 | `day` | `YYYY-MM-DD` | The calendar | No day chosen |
 | `entry` | An entry locator | Any list with an open editor | Nothing open |
 

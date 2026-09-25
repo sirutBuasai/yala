@@ -39,7 +39,7 @@ test("a month's bars narrow the board to that month, and again widen it", async 
 });
 
 test("a year's bars narrow the Year view to it on every year axis", async ({ page }) => {
-	await page.goto('/analytics?view=year');
+	await page.goto('/analytics/year');
 	await settle(page);
 
 	// By keyboard, which is also how a tall bar over the band's centre is stepped around.
@@ -64,7 +64,7 @@ test('switching the range widens the board again', async ({ page }) => {
 	await page.goto('/analytics?month=2025-09&scope=month');
 	await page.getByRole('tab', { name: 'Year' }).click();
 	await settle(page);
-	await expect(page).toHaveURL(/view=year/);
+	await expect(page).toHaveURL(/\/analytics\/year/);
 	await expect(page).not.toHaveURL(/scope=/);
 });
 
@@ -85,7 +85,7 @@ test('a Category by month cell opens its rows on Transactions, and back returns'
 });
 
 test('the Year view shows the last ten years unless another span is picked', async ({ page }) => {
-	await page.goto('/analytics?view=year');
+	await page.goto('/analytics/year');
 	await settle(page);
 	const spans = page.getByRole('tablist', { name: 'Years shown' });
 	await expect(spans.getByRole('tab', { name: '10Y' })).toHaveAttribute('aria-selected', 'true');

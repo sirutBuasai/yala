@@ -64,7 +64,7 @@
 	});
 
 	const navigate = (patch: Record<string, string | null>, replace = false) =>
-		step($page.url, patch, replace);
+		step($page.url, patch, { replace });
 
 	function setFilter(patch: Partial<HistoryFilter>) {
 		const next = { ...filter, ...patch };

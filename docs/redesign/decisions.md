@@ -118,11 +118,23 @@ Style A of [mocks/analytics-year-ranges.html](mocks/analytics-year-ranges.html).
 
 Amends D21 and D22. Reloading returns the page to its defaults (latest month, no picks, no filters, the top of the page) and forgets where every other page was left, so the sidebar opens them fresh too. Preferences in local storage, such as board arrangements and the theme, are kept. A link opened in a new tab still opens exactly what it names.
 
+### D27 · A view is a path; a pick is a query parameter (2026-09-25)
+
+Amends D26. Where you are and what you picked are told apart by where they sit in the URL, not by a list of names:
+
+- **Path, kept on reload:** the page and its view, such as `/analytics/year`. A page's views are paths under it, matched by a param matcher in `src/params`.
+- **Query, dropped on reload:** everything picked or filtered, such as `month`, `scope`, `span`, `category`, `q`.
+
+A reload keeps the path and drops the query, on the current page and on every page the sidebar would reopen. A new setting chooses its behaviour by choosing where it lives.
+
+### D28 · KPI shading takes deeper hues in light mode (2026-09-25)
+
+Chosen from [mocks/kpi-underlay-strength.html](mocks/kpi-underlay-strength.html). In light mode a KPI's wash and hairline take their hue at one OKLCH lightness (0.52) before mixing, with the wash at 11%, so every hue shades about equally, survives a warm-shifted display, and the badge over it keeps AA. Dark mode is unchanged.
+
 ## Open
 
 - **A card filter's figure.** When the history is filtered to one card, show "Charged to card" (full bills) beside Spent, so the gap reads as what was fronted? Or nothing. "Charged − paid" was rejected: it mostly reflects statement timing.
 - **The open entry in the URL (D9).** The modal's open entry is not in the URL yet, so back does not close it.
-- **KPI shading in light mode.** Deeper hues or stronger pastels. Mock: [mocks/kpi-underlay-strength.html](mocks/kpi-underlay-strength.html).
 - **Phone layout.** Suggested: bottom tab bar with the four main pages.
 
 ## Resolved elsewhere

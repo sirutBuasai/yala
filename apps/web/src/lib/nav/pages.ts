@@ -17,3 +17,9 @@ export const PAGES: readonly NavLink[] = [
 ];
 
 export const DEV_PAGE: NavLink = { href: '/dev', label: 'Development' };
+
+/** The page a path belongs to, by its first segment: a page's views are paths under it (D27). */
+export function pageOf(pathname: string): string {
+	const first = pathname.split('/')[1];
+	return first ? `/${first}` : '/';
+}

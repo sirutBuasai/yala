@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { focusMonth, withFocus, withParams } from './focus';
+import { pageOf } from './pages';
 import { RAIL_W, SIDEBAR_W, sidebarMode } from './sidebar';
 import { CONTENT, ONE_COLUMN, WRAP_PAD } from '$lib/layout/grid/units';
 
@@ -70,5 +71,13 @@ describe('sidebarMode', () => {
 	it('folds into the sheet once even the rail would leave a one-column board', () => {
 		expect(sidebarMode(at(RAIL_W, ONE_COLUMN) + 1)).toBe('rail');
 		expect(sidebarMode(at(RAIL_W, ONE_COLUMN))).toBe('sheet');
+	});
+});
+
+describe('pageOf', () => {
+	it('names the page a view path belongs to', () => {
+		expect(pageOf('/analytics/year')).toBe('/analytics');
+		expect(pageOf('/analytics')).toBe('/analytics');
+		expect(pageOf('/')).toBe('/');
 	});
 });

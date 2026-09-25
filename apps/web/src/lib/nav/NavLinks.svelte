@@ -4,6 +4,7 @@
 	import { page } from '$app/stores';
 	import { withFocus } from '$lib/nav/focus';
 	import { leftAt } from '$lib/nav/left';
+	import { pageOf } from '$lib/nav/pages';
 	import type { NavLink } from '$lib/nav/pages';
 	import type { Component } from 'svelte';
 	import Bank from '$lib/icons/Bank.svelte';
@@ -34,10 +35,13 @@
 
 <nav class="links" aria-label={ariaLabel}>
 	{#each links as link (link.href)}
-		{@const current = $page.url.pathname === link.href}
+		{@const current = pageOf($page.url.pathname) === link.href}
+		{@const left = current
+			? { path: $page.url.pathname, search: $page.url.search }
+			: leftAt(link.href)}
 		{@const Icon = ICONS[link.href]}
 		<a
-			href={withFocus(link.href, $page.url, current ? $page.url.search : leftAt(link.href))}
+			href={withFocus(left.path, $page.url, left.search)}
 			class:active={current}
 			aria-current={current ? 'page' : undefined}
 			{onclick}

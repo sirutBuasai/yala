@@ -8,6 +8,7 @@
 	import { monthForYear, pickableMonths, yearOf } from '$lib/utils/period';
 	import { focusMonth, MONTH_PARAM } from '$lib/nav/focus';
 	import { step } from '$lib/nav/step';
+	import { pageOf } from '$lib/nav/pages';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import Segmented from '$lib/nav/Segmented.svelte';
 	import YearNav from '$lib/nav/YearNav.svelte';
@@ -35,12 +36,14 @@
 		{ id: 'all', label: 'All' }
 	];
 	const DEFAULT_SPAN: Span = '10';
-	// Page state in the URL (D9). `scope` names the grain the board is narrowed to, and only counts on the
-	// view of that grain: `scope=month` on Month, `scope=year` on Year.
-	const P = { view: 'view', scope: 'scope', span: 'span' } as const;
+	// Page state in the URL (D9). The view is the path, which a reload keeps; the picks are the query, which
+	// it drops (D27). `scope` names the grain the board is narrowed to, and only counts on the view of that
+	// grain: `scope=month` on Month, `scope=year` on Year.
+	const P = { scope: 'scope', span: 'span' } as const;
 
 	const params = $derived($page.url.searchParams);
-	const view = $derived<View>(params.get(P.view) === 'year' ? 'year' : 'month');
+	const view = $derived<View>($page.params.view === 'year' ? 'year' : 'month');
+	const base = $derived(pageOf($page.url.pathname));
 	const span = $derived(SPANS.find((s) => s.id === params.get(P.span))?.id ?? DEFAULT_SPAN);
 	const last = $derived(latestYear(data));
 
@@ -92,7 +95,8 @@
 	<Segmented
 		options={VIEWS}
 		value={view}
-		onchange={(v) => navigate({ [P.view]: v === 'month' ? null : v, [P.scope]: null })}
+		onchange={(v) =>
+			step($page.url, { [P.scope]: null }, { pathname: v === 'month' ? base : `${base}/${v}` })}
 		ariaLabel="Analytics time range"
 	/>
 	{#if view === 'month'}

@@ -82,7 +82,7 @@ The Year view's header picks how far back the board reaches: 5Y, 10Y, 20Y, 50Y o
 | Param | Values | Absent or invalid |
 |---|---|---|
 | `month` | `YYYY-MM`, shared (D4) | The latest tracked month |
-| `view` | `year` | Month |
+| Path `/analytics/year` | The Year view; kept on reload (D27) | `/analytics` is Month |
 | `scope` | `month` on Month, `year` on Year | The board's whole span: the focus year on Month, the window on Year |
 | `span` | `5`, `20`, `50`, `all` (Year) | `10`: the last ten years (D25) |
 

@@ -27,6 +27,7 @@ A figure has one owning page. Anywhere else it appears only as a headline that l
 - Every chart, title and caption carries over (D6). Mock anything new or anything the user cannot picture, publish the mock, keep a copy in `mocks/`, and list every new UI string for review.
 - Never read and write the same state in an `$effect`: it loops until Svelte's guard stops it, costing CPU with nothing on screen. The browser tests fail on any uncaught page error, which is what catches it.
 - Chart marks are SVG (`lib/charts/marks`).
+- A page's view is a path and a pick is a query parameter (D27): a reload keeps the first and drops the second. Decide which a new setting is by where it lives.
 - Each worktree needs its own `npm install` in `apps/web`; the primary checkout has none.
 
 ## Branches

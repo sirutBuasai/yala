@@ -31,20 +31,19 @@ test('back and forward move between pages', async ({ page }) => {
 });
 
 test('the focus month carries over to the next page', async ({ page }) => {
-	await page.goto('/analytics?month=2025-09&view=year');
+	await page.goto('/analytics/year?month=2025-09');
 	await pages(page).getByRole('link', { name: 'Transactions', exact: true }).click();
 	await expect(page).toHaveURL(/\/transactions\?month=2025-09$/);
 });
 
 test('a page reopens with its picks, moved to wherever the focus went since', async ({ page }) => {
-	await page.goto('/analytics?month=2025-09&view=year&scope=year');
+	await page.goto('/analytics/year?month=2025-09&scope=year');
 	await pages(page).getByRole('link', { name: 'Transactions', exact: true }).click();
 	await expect(page).toHaveURL(/\/transactions\?month=2025-09$/);
 
 	await page.goto('/transactions?month=2025-08&category=Grocery');
 	await pages(page).getByRole('link', { name: 'Analytics', exact: true }).click();
-	await expect(page).toHaveURL(/\/analytics\?/);
-	await expect(page).toHaveURL(/view=year/);
+	await expect(page).toHaveURL(/\/analytics\/year\?/);
 	await expect(page).toHaveURL(/scope=year/);
 	await expect(page).toHaveURL(/month=2025-08/);
 
@@ -80,15 +79,21 @@ test('a click on a chart leaves no caret and selects no text', async ({ page }) 
 	).toBe('none');
 });
 
-test('a reload starts the view over', async ({ page }) => {
+test('a reload keeps the view and drops the picks, on every page', async ({ page }) => {
 	await page.goto('/transactions?month=2025-08&category=Grocery');
-	await page.goto('/analytics?view=year&scope=year&month=2025-09');
+	await page.goto('/analytics/year?scope=year&month=2025-09&span=5');
 
 	await page.reload();
-	await expect(page).toHaveURL(/\/analytics$/);
+	await expect(page).toHaveURL(/\/analytics\/year$/);
+	await expect(page.getByRole('tab', { name: 'Year', exact: true })).toHaveAttribute(
+		'aria-selected',
+		'true'
+	);
 
 	await pages(page).getByRole('link', { name: 'Transactions', exact: true }).click();
-	await expect(page).not.toHaveURL(/category=/);
+	await expect(page).toHaveURL(/\/transactions$/);
+	await pages(page).getByRole('link', { name: 'Analytics', exact: true }).click();
+	await expect(page).toHaveURL(/\/analytics\/year$/);
 });
 
 test('a deep link opens its page directly', async ({ page }) => {

@@ -79,6 +79,8 @@
 	   the dark surface and the same mix all but disappears over the light one. */
 	--mark-wash: 9%; /* fill behind a KPI figure */
 	--mark-line: 32%; /* hairline over it */
+	/* The OKLCH lightness a KPI's wash and hairline take their hue at; `l` keeps the accent's own. */
+	--mark-lightness: l;
 	--mark-area: 0.28; /* gradient under a line */
 	--mark-flow: 0.32; /* a flow diagram's links */
 	/* The heaviest tile on a heatmap. The HUE is a shared `--cat-*` token either way; only how much of it a
@@ -309,9 +311,11 @@
 	/* Retinted with the rest: a black shadow over a warm surface reads as grime, not elevation. */
 	--shadow-pop: 0 10px 30px -10px rgba(120, 90, 40, 0.45);
 	--shadow-modal: 0 24px 60px -20px rgba(120, 90, 40, 0.35);
-	/* Stronger than dark mode's for the same read; past roughly a fifth, a wash stops being a background
-	   and starts competing with the figure in front of it. */
-	--mark-wash: 16%;
+	/* Every hue is taken at one deep lightness before it is mixed: the pastel accents faded unevenly into
+	   the cream card, lavender and blue first, and further still on a warm-shifted display. At this depth
+	   and strength every hue shades about equally and the badge over the wash keeps AA (worst 4.5:1). */
+	--mark-lightness: 0.52;
+	--mark-wash: 11%;
 	--mark-line: 52%;
 	--mark-area: 0.45;
 	--mark-flow: 0.5;

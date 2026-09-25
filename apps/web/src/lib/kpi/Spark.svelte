@@ -66,15 +66,16 @@
 		display: block;
 		width: 100%;
 		height: 100%;
+		--mark-hue: oklch(from var(--mark) var(--mark-lightness) c h);
 	}
 	/* How faint is pitched at the BADGE, not the number: it is the smallest type on the card, and a red
 	   badge over a red fill is the tightest pair there is. Strength is per theme (see app.css). */
 	.fill {
-		fill: color-mix(in srgb, var(--mark) var(--mark-wash), transparent);
+		fill: color-mix(in srgb, var(--mark-hue) var(--mark-wash), transparent);
 	}
 	.stroke {
 		fill: none;
-		stroke: color-mix(in srgb, var(--mark) var(--mark-line), transparent);
+		stroke: color-mix(in srgb, var(--mark-hue) var(--mark-line), transparent);
 		stroke-width: 1.5;
 		/* The viewBox is stretched, so an unscaled width keeps the line the same weight at any pane size. */
 		vector-effect: non-scaling-stroke;
