@@ -15,7 +15,7 @@ import type {
 	Table
 } from '$lib/data/primitives';
 import { accountVar, CATEGORY_TOKEN, categoryVar } from '$lib/utils/theme';
-import { markedIndices } from '$lib/charts/axis';
+import { markedIndices, pickKeys, type PickGrain } from '$lib/charts/axis';
 import { matrixGrid, tableGrid } from '$lib/charts/heat';
 
 import Donut from '$lib/charts/Donut.svelte';
@@ -53,6 +53,8 @@ interface AdaptOpts {
 	valueLabels?: boolean;
 	/** The period in focus: its period key where the axis carries them, else its label. */
 	mark?: string;
+	/** The grain a continuous axis's click picks at. */
+	pickBy?: PickGrain;
 }
 
 export interface ChartDef<P extends Record<string, unknown> = Record<string, unknown>> {
@@ -110,7 +112,10 @@ const SERIES_ROLE: Record<string, string> = {
 	// Growth decomposition. `Saved` is above, shared with the cash-flow boards: one hue per measure.
 	'Market & other': 'var(--role-market)',
 	// A rate on the balance rather than the balance itself, so it takes its own hue and not net worth's.
-	'Balance growth': 'var(--role-growth)'
+	'Balance growth': 'var(--role-growth)',
+	// Spending pace's references, neutral so the month being read is the one reading in colour.
+	'Last month': 'var(--ink-3)',
+	Average: 'var(--ink-2)'
 };
 
 /** For series with no role and no category. */
@@ -139,7 +144,7 @@ export function seriesColor(name: string, index = 0): string {
     categories, ledger accounts, or roles. */
 export type ColorBy = 'category' | 'account' | 'role';
 
-function keyColor(key: string, mode: ColorBy = 'category'): string {
+export function keyColor(key: string, mode: ColorBy = 'category'): string {
 	// Neither the synthetic residual nor the rolled-up tail is a member of the set being coloured, so
 	// both outrank every mode.
 	if (key === 'Saved') return 'var(--role-saving)';
@@ -279,7 +284,8 @@ export const CHARTS: ChartDef[] = [
 				endLabels: opts.endLabels,
 				ceiling: opts.ceiling,
 				marked: markedIndices(labels, periods, opts.mark),
-				periods
+				periods,
+				picks: pickKeys(labels, periods, opts.pickBy)
 			};
 		}
 	}),
@@ -312,7 +318,8 @@ export const CHARTS: ChartDef[] = [
 				unit: m.unit,
 				altUnit: altUnitOf(m.series),
 				marked: markedIndices(m.labels, m.periods, opts.mark),
-				periods: m.periods
+				periods: m.periods,
+				picks: pickKeys(m.labels, m.periods, opts.pickBy)
 			};
 		}
 	}),

@@ -164,6 +164,7 @@ class NetWorthSnapshot(_Base):
     liabilities: float  # positive = owed
     net_worth: float  # assets - liabilities
     breakdown: dict[str, float]  # allocation bucket -> asset USD
+    owed: dict[str, float] = {}  # liability label -> USD owed (a credit is negative); zero omitted
 
 
 class NetWorthAccount(_Base):

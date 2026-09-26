@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { line, area } from 'd3-shape';
-	import { focusPad, moneyYScale, logYScale, plotSize, xAxisLabels } from '$lib/charts/axis';
+	import {
+		focusPad,
+		moneyYScale,
+		logYScale,
+		pickGroups,
+		plotSize,
+		xAxisLabels
+	} from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import { esc } from '$lib/utils/format';
 	import { chartFormat } from '$lib/charts/format';
@@ -11,6 +18,7 @@
 	import { chartLabel } from '$lib/charts/aria';
 	import FocusBand from '$lib/charts/marks/FocusBand.svelte';
 	import XLabels from '$lib/charts/marks/XLabels.svelte';
+	import PickBands from '$lib/charts/marks/PickBands.svelte';
 
 	interface Series {
 		name: string;
@@ -38,6 +46,10 @@
 		marked?: number[];
 		/** Each point's period key, which lets a crowded axis spanning years name each year once. */
 		periods?: string[];
+		/** The period each point picks (`pickKeys`); with `onpick`, a click picks the run a point is in. */
+		picks?: string[];
+		onpick?: (key: string) => void;
+		picked?: string | null;
 	}
 	let {
 		labels,
@@ -47,7 +59,10 @@
 		endLabels = false,
 		ceiling,
 		marked = [],
-		periods
+		periods,
+		picks,
+		onpick,
+		picked
 	}: Props = $props();
 
 	/** What is drawn: the readings, held to the ceiling. Everything the reader is TOLD comes off `series`,
@@ -141,6 +156,11 @@
 
 	let hover = $state<number | null>(null);
 
+	const pickable = $derived(!!onpick && !!picks);
+	const groups = $derived(pickable ? pickGroups(xs, picks!, iw) : []);
+	/** How far a pick reaches below the plot, so a click on a point's axis label picks it too. */
+	const LABEL_REACH = 26;
+
 	const markWidth = $derived(focusPad(n, iw));
 
 	function onMove(e: MouseEvent) {
@@ -169,7 +189,7 @@
 {/if}
 
 <div class="figurebox" bind:clientWidth={box.clientWidth} bind:clientHeight={box.clientHeight}>
-	<svg class="chart" viewBox="0 0 {W} {H}" role="img" aria-label={label}>
+	<svg class="chart" viewBox="0 0 {W} {H}" role={pickable ? 'group' : 'img'} aria-label={label}>
 		<defs>
 			{#each series as s, si (s.name)}
 				{#if s.area}
@@ -186,6 +206,15 @@
 				<text x={-8} y={y(t) + 4} text-anchor="end">{f.tick(t)}</text>
 			{/each}
 
+			{#if pickable}
+				<PickBands
+					{groups}
+					hovered={hover === null ? null : picks![hover]!}
+					{picked}
+					onpick={onpick!}
+					height={ih + LABEL_REACH}
+				/>
+			{/if}
 			<FocusBand xs={marked.map(xPos)} pad={markWidth} height={ih + 26} />
 
 			{#each plotted as s, si (s.name)}
@@ -248,12 +277,20 @@
 				x={0}
 				y={0}
 				width={iw}
-				height={ih}
+				height={pickable ? ih + LABEL_REACH : ih}
 				fill="transparent"
+				class:pick={pickable}
 				role="presentation"
 				onmousemove={onMove}
 				onmouseleave={onLeave}
+				onclick={pickable ? () => hover !== null && onpick!(picks![hover]!) : undefined}
 			/>
 		</g>
 	</svg>
 </div>
+
+<style>
+	.pick {
+		cursor: pointer;
+	}
+</style>

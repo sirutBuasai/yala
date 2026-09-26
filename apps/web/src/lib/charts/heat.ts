@@ -4,13 +4,14 @@
 
 import type { Matrix, Table, Unit } from '$lib/data/primitives';
 import { formatUnit, formatUnitExact } from '$lib/data/primitives';
-import { amountExact, numCompact } from '$lib/utils/format';
+import { amountExact, amountWhole, numCompact } from '$lib/utils/format';
 
 /** For a band with no colour of its own. */
 const FALLBACK = 'var(--lav)';
 
 export interface HeatCell {
-	text: string;
+	/** The figure, fullest first: shown as fully as every tile has room for (see `Reading`). */
+	readings: string[];
 	/** The exact figure, for the tooltip. */
 	tip: string;
 	/** The hue behind the tile, or null for a tile left unshaded. */
@@ -23,25 +24,19 @@ export interface HeatGrid {
 	rows: string[];
 	cols: string[];
 	cells: HeatCell[][];
-	/** A Total column and row, where the cells add up to anything. */
-	totals?: { rows: string[]; cols: string[]; grand: string };
+	/** A Total column and row, where the cells add up to anything; readings as a cell's. */
+	totals?: { rows: string[][]; cols: string[][]; grand: string[] };
 }
 
-/** A tile's own text, abbreviated or to the cent. Money drops its symbol: every tile of a band is money,
-    and it costs the width a narrow tile cannot spare. */
-function tileText(value: number, unit: Unit, exact: boolean): string {
-	if (unit.kind !== 'money') return formatUnit(value, unit);
-	return exact ? amountExact(value) : numCompact(value);
+/** A figure's readings on a tile: to the cent, whole, abbreviated. Money drops its symbol: every tile of a
+    band is money, and it costs the width a narrow tile cannot spare. */
+function tileReadings(value: number, unit: Unit): string[] {
+	if (unit.kind !== 'money') return [formatUnit(value, unit)];
+	return [...new Set([amountExact(value), amountWhole(value), numCompact(value)])];
 }
 
-function cellOf(
-	value: number,
-	unit: Unit,
-	tile: string | null,
-	a: number,
-	exact = false
-): HeatCell {
-	return { text: tileText(value, unit, exact), tip: formatUnitExact(value, unit), tile, a };
+function cellOf(value: number, unit: Unit, tile: string | null, a: number): HeatCell {
+	return { readings: tileReadings(value, unit), tip: formatUnitExact(value, unit), tile, a };
 }
 
 /**
@@ -80,9 +75,9 @@ export function matrixGrid(
 			})
 		),
 		totals: {
-			rows: rowTotal.map(numCompact),
-			cols: colTotal.map(numCompact),
-			grand: numCompact(grand)
+			rows: rowTotal.map((v) => tileReadings(v, unit)),
+			cols: colTotal.map((v) => tileReadings(v, unit)),
+			grand: tileReadings(grand, unit)
 		}
 	};
 }
@@ -119,8 +114,7 @@ export function tableShades(table: Table): ({ good: boolean; a: number } | null)
 export const shadeHue = (good: boolean): string => `var(--${good ? 'good' : 'crit'})`;
 
 /** A Table as tiles: its first column labels the rows, and only its tinted columns are shaded. Its levels
-    and changes do not add up, so it carries no totals. A table's figures are read one at a time, so they
-    keep their cents. */
+    and changes do not add up, so it carries no totals. */
 export function tableGrid(table: Table): HeatGrid {
 	const shades = tableShades(table);
 	const columns = table.columns.slice(1);
@@ -137,8 +131,7 @@ export function tableGrid(table: Table): HeatGrid {
 					value,
 					c.unit ?? { kind: 'count' },
 					sh ? shadeHue(sh.good) : null,
-					sh?.a ?? 0,
-					true
+					sh?.a ?? 0
 				);
 			})
 		)

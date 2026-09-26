@@ -1,7 +1,7 @@
 // Collision resolution: the whole geometry rule set, pure, with no DOM and no Svelte.
 //
 // Every collision resolves by pushing DOWN, never sideways: a 2D cascade has no termination guarantee. A
-// pane's top is the lowest of its authored top and the bottoms of the column-sharing panes ahead of it,
+// pane's top is its authored top, lowered past each pane ahead of it that it would overlap there,
 // recomputed from scratch each render — the authored top is a floor, not a target.
 
 import { COLS, MIN_H, MIN_W } from './units';
@@ -34,9 +34,11 @@ export function resolve(panes: SizedPane[]): PlacedPane[] {
 		for (let moved = true; moved;) {
 			moved = false;
 			for (const q of settled) {
-				const bottom = q.y + q.h;
-				if (bottom > y && sharesColumns(p, q)) {
-					y = bottom;
+				// Only a pane it actually overlaps pushes it. One settled first can sit wholly BELOW it,
+				// pushed there by a third pane, and pushing past that left a pane the user had put in
+				// the open space above it stranded underneath.
+				if (overlaps({ ...p, y }, q)) {
+					y = q.y + q.h;
 					moved = true;
 				}
 			}

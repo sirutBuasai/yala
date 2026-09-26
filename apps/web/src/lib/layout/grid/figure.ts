@@ -2,6 +2,7 @@
 // shape, so declaring it there would be a cycle.
 
 import type { ColorBy } from '$lib/charts/registry';
+import type { PickGrain } from '$lib/charts/axis';
 import type { Scope } from '$lib/data/scope';
 import type { Label } from '$lib/ui/label';
 
@@ -31,6 +32,8 @@ export interface FigureSpec {
 	/** The period in focus: its period key where the axis carries them (`YYYY-MM` names a month's
 	    snapshots), else its label. */
 	mark?: string;
+	/** The grain a line or area chart's click picks at, for an axis whose points are finer than it. */
+	pickBy?: PickGrain;
 	/** Heatmap scaling: per row (default) or one scale for the whole grid. */
 	normalize?: 'row' | 'col' | 'global';
 }

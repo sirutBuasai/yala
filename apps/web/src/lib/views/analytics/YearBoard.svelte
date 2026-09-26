@@ -35,15 +35,15 @@
 	const scope = $derived<Scope>(scoped ? { level: 'year', year } : all);
 	const pickedYear = $derived(scoped ? String(year) : undefined);
 
-	const KPIS = $derived(incomeChain(scope));
-	const kpis = useKpiBoard('analytics:year', () => KPIS, INCOME_CHAIN_MERGES);
+	const KPIS = $derived(incomeChain(scope, 'strip'));
+	const kpis = useKpiBoard('analytics:year', () => KPIS, INCOME_CHAIN_MERGES.strip);
 
 	const PANES = $derived(
 		kpis.board({
 			levels: {
-				x: 16,
-				y: 0,
-				w: 32,
+				x: 0,
+				y: 16,
+				w: 35,
 				h: 10,
 				content: 'scale',
 				figure: {
@@ -56,9 +56,9 @@
 			},
 			// Rate beside levels: how efficient, versus how big, which the bars alone can't say.
 			rate: {
-				x: 16,
-				y: 10,
-				w: 32,
+				x: 35,
+				y: 16,
+				w: 13,
 				h: 10,
 				content: 'scale',
 				figure: {
@@ -70,12 +70,12 @@
 				}
 			},
 			// `scale` so the matrix is given room or taken down to where its rows would clip, like a KPI card.
-			cashflow: { x: 0, y: 20, w: 48, h: 11, content: 'scale' },
+			cashflow: { x: 0, y: 5, w: 40, h: 11, content: 'scale' },
 			heatmap: {
 				x: 0,
-				y: 31,
+				y: 68,
 				w: 48,
-				h: 12,
+				h: 14,
 				content: 'scale',
 				figure: {
 					figure: 'spending.category_by_year_grid',
@@ -89,7 +89,7 @@
 			},
 			flow: {
 				x: 0,
-				y: 43,
+				y: 26,
 				w: 48,
 				h: 25,
 				content: 'scale',
@@ -107,9 +107,9 @@
 			// Log scale, since a linear axis crushes the small categories under the biggest ones.
 			categories: {
 				x: 0,
-				y: 68,
+				y: 51,
 				w: 48,
-				h: 18,
+				h: 17,
 				content: 'scale',
 				figure: {
 					figure: 'spending.category_by_year',
@@ -118,6 +118,7 @@
 					log: true,
 					endLabels: true,
 					mark: pickedYear,
+					pickBy: 'year',
 					title: words('Spending by category, by year'),
 					caption: words('log-scaled yearly trend of spending by category')
 				}
@@ -158,5 +159,5 @@
 	<FigurePane id="rate" {data} spec={PANES.rate.figure} picked={pickedYear} {onpick} />
 	<FigurePane id="heatmap" {data} spec={PANES.heatmap.figure} />
 	<FigurePane id="flow" {data} spec={PANES.flow.figure} />
-	<FigurePane id="categories" {data} spec={PANES.categories.figure} />
+	<FigurePane id="categories" {data} spec={PANES.categories.figure} picked={pickedYear} {onpick} />
 </Board>

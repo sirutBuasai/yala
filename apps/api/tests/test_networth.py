@@ -550,6 +550,13 @@ def test_networth_series_and_adjustments(ledger_dir: Path):
     assert {"BankA", "Investments:TaxAdvantaged:Employer401k"} <= labels
 
 
+def test_totals_split_what_is_owed_by_liability(ledger_dir: Path):
+    nw = _load(ledger_dir).net_worth
+    point = nw.totals()
+    assert all(v != 0 for v in point.owed.values())
+    assert sum(point.owed.values(), Decimal(0)) == point.liabilities
+
+
 def test_loggable_accounts_excludes_swept(ledger_dir: Path):
     """Stated, not inferred from a plug's absence: every cash and investment account is opened with
     a plug, so what excludes a passthrough is its `sweep_to`, not a missing one."""

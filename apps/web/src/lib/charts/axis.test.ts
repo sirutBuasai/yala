@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+	pickGroups,
+	pickKeys,
 	halfLabelWidth,
 	labelAnchor,
 	markedIndices,
@@ -227,5 +229,27 @@ describe('markedIndices', () => {
 
 	it('marks nothing without a mark', () => {
 		expect(markedIndices(['Jan'], undefined)).toEqual([]);
+	});
+});
+
+describe('pickKeys', () => {
+	it("cuts each point's period to the grain it picks at", () => {
+		const periods = ['2025-12-31', '2026-01-01', '2026-01-15'];
+		expect(pickKeys(['a', 'b', 'c'], periods, 'month')).toEqual(['2025-12', '2026-01', '2026-01']);
+		expect(pickKeys(['a', 'b', 'c'], periods, 'year')).toEqual(['2025', '2026', '2026']);
+	});
+
+	it('picks by label on an axis without periods', () => {
+		expect(pickKeys(['2024', '2025'], undefined, 'year')).toEqual(['2024', '2025']);
+	});
+});
+
+describe('pickGroups', () => {
+	it('tiles the plot, each run reaching halfway to the next', () => {
+		expect(pickGroups([0, 10, 20, 40], ['a', 'a', 'b', 'c'], 50)).toEqual([
+			{ key: 'a', from: 0, to: 15 },
+			{ key: 'b', from: 15, to: 30 },
+			{ key: 'c', from: 30, to: 50 }
+		]);
 	});
 });

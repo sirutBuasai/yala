@@ -100,7 +100,8 @@
 	}
 	.donut svg {
 		flex: 1 1 9rem;
-		min-width: 8.5rem;
+		/* A plot sets no floor (D43): the legend beside it is what holds the pane. */
+		min-width: 0;
 		max-width: 15rem;
 	}
 	/* A column width, not a column count: the browser fits as many columns as the legend's actual box

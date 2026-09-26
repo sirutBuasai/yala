@@ -201,11 +201,18 @@ describe('splitRects', () => {
 
 	// The ratchet: a measured floor prices in a card's padding the merged card was already paying, so
 	// obeying it on a plain unmerge widened the pair every cycle and shoved whatever sat below down.
-	it('restores the spans the sections came in at, over a floor that asks for more', () => {
+	it('restores the spans the sections came in at where the floors fit them', () => {
 		const group: KpiGroup = { ids: ['a', 'b'], axis: 'row', weights: [10, 10] };
-		const [left, right] = splitRects(group, rect(0, 0, 20, 7), 1, [12, 12]);
+		const [left, right] = splitRects(group, rect(0, 0, 20, 7), 1, [6, 6]);
 		expect(left).toEqual(rect(0, 0, 10, 7));
 		expect(right).toEqual(rect(10, 0, 10, 7));
+	});
+
+	it('gives a half its floor over its weight, since a section may hold more than its weight', () => {
+		const group: KpiGroup = { ids: ['a', 'b'], axis: 'row', weights: [10, 10] };
+		const [left, right] = splitRects(group, rect(0, 0, 20, 7), 1, [6, 13]);
+		expect(left).toEqual(rect(0, 0, 7, 7));
+		expect(right).toEqual(rect(7, 0, 13, 7));
 	});
 
 	it('gives a half the span its content needs once the card no longer spans its weights', () => {

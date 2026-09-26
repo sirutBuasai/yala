@@ -84,13 +84,13 @@ describe('fitted panes', () => {
 		expect(b.placed('wide').y).toBe(12);
 	});
 
-	it('holds a capped pane open to its whole ceiling while arranging, and not otherwise', () => {
+	it('reserves a capped pane the same room whether arranging or not, so Edit shows the saved board', () => {
 		const { arrangement: b, env } = arrangement();
 		b.setMeasured('wide', rows(3));
 
 		expect(b.placed('wide').h).toBe(3);
 		env.arrangeRequested = true;
-		expect(b.placed('wide').h).toBe(8);
+		expect(b.placed('wide').h).toBe(3);
 	});
 });
 
@@ -522,5 +522,25 @@ describe('a label being typed into', () => {
 			b.relaxDraft('top');
 			expect(b.placed('tall').h).toBe(16);
 		});
+	});
+});
+
+describe('rebasing at a resize', () => {
+	// `under` is authored at row 4 but drawn at 10, pushed down by `z`; `grower` is drawn above it at 6.
+	const STACK = {
+		z: { x: 0, y: 0, w: 20, h: 10, content: 'scale' },
+		under: { x: 0, y: 4, w: 24, h: 4, content: 'scale' },
+		grower: { x: 24, y: 6, w: 24, h: 3, content: 'scale' }
+	} satisfies BoardLayout;
+
+	it('lets a pane grown into one drawn below it push that one down, rather than jump beneath it', () => {
+		const b = new Arrangement(`test-${seq++}`, STACK, wideEnv());
+		expect(b.placed('under').y).toBe(10);
+
+		b.rebase('grower');
+		b.resizeTo('grower', { x: 20, y: 6, w: 28, h: 6 });
+
+		expect(b.placed('grower').y).toBe(6);
+		expect(b.placed('under').y).toBe(12);
 	});
 });

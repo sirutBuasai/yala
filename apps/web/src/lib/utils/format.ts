@@ -48,6 +48,13 @@ export function amountExact(n: number | null | undefined): string {
 	return withSign(v, cents(Math.abs(v)));
 }
 
+/** Whole dollars without the currency. */
+export function amountWhole(n: number | null | undefined): string {
+	const r = Math.round(n || 0);
+
+	return withSign(r, Math.abs(r).toLocaleString());
+}
+
 /** Money to the cent, for reconciliation figures the user has to match exactly. */
 export function moneyExact(n: number | null | undefined): string {
 	const v = n || 0;
@@ -159,4 +166,11 @@ export function monthDay(date: string): string {
 	if (!m || !d) return date;
 
 	return `${+m}/${+d}`;
+}
+
+/** A day of the month as it reads in prose: 1st, 2nd, 3rd, 11th, 24th. */
+export function ordinal(n: number): string {
+	const teen = n % 100 >= 11 && n % 100 <= 13;
+	const suffix = teen ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
+	return `${n}${suffix}`;
 }

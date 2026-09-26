@@ -1,0 +1,73 @@
+<title>Growth Matrix Rows</title>
+<style>
+:root {
+	--bg: #f0ebdd; --surface: #faf6ec; --surface-2: #f1ead9; --inset: #ece4d2; --border: #ddd2bb; --grid: #e6ddca;
+	--ink: #2e2a22; --ink-2: #5c5443; --ink-3: #6e6652;
+	--lav: #6a49bd; --lav-fill: #bb9af7; --gold: #806211; --gold-fill: #e0af68; --salmon: #b33b54; --green: #457124;
+	--c-food: #b86a1e; --c-travel: #2f7d8c; --c-shop: #9a3f86;
+	--shadow: 0 1px 2px rgba(120, 90, 40, 0.06), 0 14px 34px -18px rgba(120, 90, 40, 0.28);
+	--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+	--sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+	--wash: 20%;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		color-scheme: dark;
+		--bg: #16161f; --surface: #1f1f2b; --surface-2: #26263a; --inset: #2a2a3c; --border: #33334a; --grid: #2a2a3c;
+		--ink: #e6e0c8; --ink-2: #a8a28c; --ink-3: #969380; --lav: #bb9af7; --gold: #e0af68; --salmon: #f7768e; --green: #9ece6a;
+		--c-food: #e0a060; --c-travel: #7dcfdc; --c-shop: #e08ad0;
+		--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+		--wash: 28%;
+	}
+}
+:root[data-theme='dark'] {
+	color-scheme: dark;
+	--bg: #16161f; --surface: #1f1f2b; --surface-2: #26263a; --inset: #2a2a3c; --border: #33334a; --grid: #2a2a3c;
+	--ink: #e6e0c8; --ink-2: #a8a28c; --ink-3: #969380; --lav: #bb9af7; --gold: #e0af68; --salmon: #f7768e; --green: #9ece6a;
+	--c-food: #e0a060; --c-travel: #7dcfdc; --c-shop: #e08ad0;
+	--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+	--wash: 28%;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; padding-inline: 20px; }
+.page { max-width: 1120px; margin: 0 auto; padding-block: 52px 110px; display: grid; gap: 52px; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 { font-size: clamp(30px, 5vw, 42px); line-height: 1.12; }
+h2 { font-size: 25px; }
+p { margin: 0; }
+.eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.lede, .head p { color: var(--ink-2); max-width: 72ch; }
+
+section { display: grid; gap: 14px; }
+.oh { display: grid; gap: 4px; }
+.oh p { color: var(--ink-2); font-size: 14px; }
+.rec { font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--green); background: color-mix(in srgb, var(--green) 14%, transparent); padding: 2px 8px; border-radius: 999px; vertical-align: middle; margin-left: 6px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow); overflow-x: auto; }
+.ct { display: grid; gap: 2px; margin-bottom: 14px; }
+.ct b { font-family: var(--serif); font-size: 17px; font-weight: 600; }
+.ct span { font-size: 12.5px; color: var(--ink-3); }
+.matrix { width: 100%; min-width: 620px; border-collapse: collapse; }
+.matrix thead th { color: var(--ink-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; text-align: right; padding: 0 0 10px 18px; }
+.matrix .rh { text-align: left; padding-left: 0; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.matrix td { text-align: right; padding: 10px 0 10px 18px; border-top: 1px solid var(--border); vertical-align: top; }
+.matrix th[scope=row] { text-align: left; padding: 10px 0; border-top: 1px solid var(--border); font-size: 13.5px; font-weight: 500; color: var(--ink-2); white-space: nowrap; }
+.matrix small { display: block; font-size: 11.5px; color: var(--ink-3); font-weight: 400; }
+.fig { display: inline-flex; align-items: baseline; gap: 8px; font-family: var(--serif); font-size: 21px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.badge { font-family: var(--sans); font-size: 10.5px; font-weight: 700; }
+.badge.good { color: var(--green); }
+.badge.bad { color: var(--salmon); }
+tr.new th[scope=row], tr.new td { background: color-mix(in srgb, var(--lav-fill) 9%, transparent); }
+tr.new th[scope=row] { box-shadow: inset 3px 0 0 var(--lav); padding-left: 10px; }
+.grid2 { display: grid; gap: 40px; }
+</style>
+<div class="page">
+<header class="head"><span class="eyebrow">Accounts · Month · 2026 growth</span><h1>A third row for the growth matrix</h1>
+<p class="lede">Today's two rows, Total and Avg / month, with each candidate added below them and shaded. Sample figures, not your ledger. Whichever you pick could go on Analytics' cash flow matrix too.</p></header>
+<div class="grid2"><section><div class="oh"><span class="eyebrow">Option A</span><h2>Best month <span class="rec">recommended</span></h2><p>Each column's largest monthly figure, with the month it came in named under it.</p></div><div class="card"><div class="ct"><b>2026 growth</b><span>year total and monthly rates</span></div>
+<table class="matrix"><thead><tr><th class="rh"><span class="vh">Period</span></th><th>Change</th><th>Saved</th><th>Market &amp; other</th></tr></thead><tbody><tr><th scope="row">Total 2026<small>across the year, against last</small></th><td><span class="fig">$152,410.20<span class="badge good">+15% YoY</span></span></td><td><span class="fig">$58,930.55<span class="badge bad">−18% YoY</span></span></td><td><span class="fig">$93,479.65<span class="badge good">+61% YoY</span></span></td></tr><tr><th scope="row">Avg / month<small>9 active months</small></th><td><span class="fig">$16,934.47<span class="badge good">+49% YoY</span></span></td><td><span class="fig">$6,547.84<span class="badge good">+6% YoY</span></span></td><td><span class="fig">$10,386.63<span class="badge good">+115% YoY</span></span></td></tr><tr class="new"><th scope="row">Best month<small>largest monthly figure</small></th><td><span class="fig">$41,806.12</span><small>May</small></td><td><span class="fig">$11,902.40</span><small>Jul</small></td><td><span class="fig">$33,517.80</span><small>May</small></td></tr></tbody></table></div></section><section><div class="oh"><span class="eyebrow">Option B</span><h2>Worst month</h2><p>The smallest monthly figure in each column: where the dips were.</p></div><div class="card"><div class="ct"><b>2026 growth</b><span>year total and monthly rates</span></div>
+<table class="matrix"><thead><tr><th class="rh"><span class="vh">Period</span></th><th>Change</th><th>Saved</th><th>Market &amp; other</th></tr></thead><tbody><tr><th scope="row">Total 2026<small>across the year, against last</small></th><td><span class="fig">$152,410.20<span class="badge good">+15% YoY</span></span></td><td><span class="fig">$58,930.55<span class="badge bad">−18% YoY</span></span></td><td><span class="fig">$93,479.65<span class="badge good">+61% YoY</span></span></td></tr><tr><th scope="row">Avg / month<small>9 active months</small></th><td><span class="fig">$16,934.47<span class="badge good">+49% YoY</span></span></td><td><span class="fig">$6,547.84<span class="badge good">+6% YoY</span></span></td><td><span class="fig">$10,386.63<span class="badge good">+115% YoY</span></span></td></tr><tr class="new"><th scope="row">Worst month<small>smallest monthly figure</small></th><td><span class="fig">−$5,210.44</span><small>Mar</small></td><td><span class="fig">$1,874.09</span><small>Jun</small></td><td><span class="fig">−$9,655.18</span><small>Mar</small></td></tr></tbody></table></div></section><section><div class="oh"><span class="eyebrow">Option C</span><h2>Best and worst month</h2><p>Both extremes, one row each: the range the year moved in. Four rows instead of three.</p></div><div class="card"><div class="ct"><b>2026 growth</b><span>year total and monthly rates</span></div>
+<table class="matrix"><thead><tr><th class="rh"><span class="vh">Period</span></th><th>Change</th><th>Saved</th><th>Market &amp; other</th></tr></thead><tbody><tr><th scope="row">Total 2026<small>across the year, against last</small></th><td><span class="fig">$152,410.20<span class="badge good">+15% YoY</span></span></td><td><span class="fig">$58,930.55<span class="badge bad">−18% YoY</span></span></td><td><span class="fig">$93,479.65<span class="badge good">+61% YoY</span></span></td></tr><tr><th scope="row">Avg / month<small>9 active months</small></th><td><span class="fig">$16,934.47<span class="badge good">+49% YoY</span></span></td><td><span class="fig">$6,547.84<span class="badge good">+6% YoY</span></span></td><td><span class="fig">$10,386.63<span class="badge good">+115% YoY</span></span></td></tr><tr class="new"><th scope="row">Best month<small>largest monthly figure</small></th><td><span class="fig">$41,806.12</span><small>May</small></td><td><span class="fig">$11,902.40</span><small>Jul</small></td><td><span class="fig">$33,517.80</span><small>May</small></td></tr><tr class="new"><th scope="row">Worst month<small>smallest monthly figure</small></th><td><span class="fig">−$5,210.44</span><small>Mar</small></td><td><span class="fig">$1,874.09</span><small>Jun</small></td><td><span class="fig">−$9,655.18</span><small>Mar</small></td></tr></tbody></table></div></section><section><div class="oh"><span class="eyebrow">Option D</span><h2>On pace for</h2><p>Avg / month × 12: where 2026 lands if the pace holds. Mostly Avg / month restated.</p></div><div class="card"><div class="ct"><b>2026 growth</b><span>year total and monthly rates</span></div>
+<table class="matrix"><thead><tr><th class="rh"><span class="vh">Period</span></th><th>Change</th><th>Saved</th><th>Market &amp; other</th></tr></thead><tbody><tr><th scope="row">Total 2026<small>across the year, against last</small></th><td><span class="fig">$152,410.20<span class="badge good">+15% YoY</span></span></td><td><span class="fig">$58,930.55<span class="badge bad">−18% YoY</span></span></td><td><span class="fig">$93,479.65<span class="badge good">+61% YoY</span></span></td></tr><tr><th scope="row">Avg / month<small>9 active months</small></th><td><span class="fig">$16,934.47<span class="badge good">+49% YoY</span></span></td><td><span class="fig">$6,547.84<span class="badge good">+6% YoY</span></span></td><td><span class="fig">$10,386.63<span class="badge good">+115% YoY</span></span></td></tr><tr class="new"><th scope="row">On pace for<small>avg / month × 12</small></th><td><span class="fig">$203,213.64<span class="badge good">+21% YoY</span></span></td><td><span class="fig">$78,574.08<span class="badge bad">−4% YoY</span></span></td><td><span class="fig">$124,639.56<span class="badge good">+44% YoY</span></span></td></tr></tbody></table></div></section><section><div class="oh"><span class="eyebrow">Option E</span><h2>Last year</h2><p>2025's totals beside 2026's. The Total row's YoY badges already carry this comparison.</p></div><div class="card"><div class="ct"><b>2026 growth</b><span>year total and monthly rates</span></div>
+<table class="matrix"><thead><tr><th class="rh"><span class="vh">Period</span></th><th>Change</th><th>Saved</th><th>Market &amp; other</th></tr></thead><tbody><tr><th scope="row">Total 2026<small>across the year, against last</small></th><td><span class="fig">$152,410.20<span class="badge good">+15% YoY</span></span></td><td><span class="fig">$58,930.55<span class="badge bad">−18% YoY</span></span></td><td><span class="fig">$93,479.65<span class="badge good">+61% YoY</span></span></td></tr><tr><th scope="row">Avg / month<small>9 active months</small></th><td><span class="fig">$16,934.47<span class="badge good">+49% YoY</span></span></td><td><span class="fig">$6,547.84<span class="badge good">+6% YoY</span></span></td><td><span class="fig">$10,386.63<span class="badge good">+115% YoY</span></span></td></tr><tr class="new"><th scope="row">Total 2025<small>across the year</small></th><td><span class="fig">$132,531.03</span></td><td><span class="fig">$71,866.52</span></td><td><span class="fig">$58,054.44</span></td></tr></tbody></table></div></section></div>
+</div>

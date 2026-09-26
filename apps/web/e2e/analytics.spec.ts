@@ -62,7 +62,7 @@ test("a year's bars narrow the Year view to it on every year axis", async ({ pag
 
 test('switching the range widens the board again', async ({ page }) => {
 	await page.goto('/analytics?month=2025-09&scope=month');
-	await page.getByRole('tab', { name: 'Year' }).click();
+	await page.getByRole('tab', { name: 'Yearly' }).click();
 	await settle(page);
 	await expect(page).toHaveURL(/\/analytics\/year/);
 	await expect(page).not.toHaveURL(/scope=/);

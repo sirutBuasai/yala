@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Bind a data primitive to a chart: ask the registry to adapt it into props, then render the matching
 	// chart. Views bind data here so the data→visual coupling lives entirely in the registry.
+	import type { PickGrain } from '$lib/charts/axis';
 	import type { Primitive } from '$lib/data/primitives';
 	import { CHARTS_BY_ID, defaultChart, type ColorBy } from './registry';
 	import Empty from '$lib/ui/Empty.svelte';
@@ -28,6 +29,8 @@
 		ceiling?: number;
 		/** The period in focus; see `FigureSpec.mark`. */
 		mark?: string;
+		/** See `FigureSpec.pickBy`. */
+		pickBy?: PickGrain;
 		/** Makes a chart's rows (or cells) choosable, where the chart offers it: the key picked, and for a
 		    grid the column within it, null when a whole row was picked. */
 		onpick?: (key: string, sub: string | null) => void;
@@ -48,6 +51,7 @@
 		normalize,
 		ceiling,
 		mark,
+		pickBy,
 		onpick,
 		picked
 	}: Props = $props();
@@ -64,7 +68,8 @@
 		valueLabels,
 		normalize,
 		ceiling,
-		mark
+		mark,
+		pickBy
 	});
 	const chartProps = $derived(def ? def.adapt(primitive, opts) : null);
 </script>

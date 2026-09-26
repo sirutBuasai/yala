@@ -19,6 +19,8 @@
 	import { monthKey as keyOf, yearOf } from '$lib/utils/period';
 	import { monthLabel, monthName, MONTHS } from '$lib/utils/format';
 	import BalanceChecklist from '$lib/balance/BalanceChecklist.svelte';
+	import SplitPane from '$lib/kpi/SplitPane.svelte';
+	import { netWorthParts } from '$lib/data/networth';
 	import {
 		ALLOCATION,
 		ALLOCATION_CAPTION,
@@ -50,30 +52,16 @@
 	const yr = $derived<Scope>({ level: 'year', year });
 	const scope = $derived<Scope>(scoped ? { level: 'month', monthKey } : yr);
 	const mark = $derived(scoped ? monthKey : undefined);
-	/** The bars that pick a month, which mark it by its label. */
+	const parts = $derived(netWorthParts(data, scope));
+	/** The bars that pick a month, which mark it by its label. A line or area picks by its `pickBy`, by
+	    month key. */
 	const PICKS = new Set(['attribution', 'buckets']);
 	const pickedMonth = $derived(scoped ? monthName(monthKey) : undefined);
 
-	// The widths are what the two merged cards divide themselves by.
+	// Stacked, as the user arranged them (D14); the card splits evenly whatever the rectangles' spans.
 	const KPIS = $derived<KpiBoardDefs>({
-		networth: {
-			rect: { x: 0, y: 0, w: 11, h: 5 },
-			spec: {
-				figure: 'networth.change',
-				scope,
-				caption: live(`end of ${scoped ? monthLabel(monthKey) : year}`),
-				// A line, where the two parts below it take an area: the spark is zero-anchored, and a
-				// position that never approaches zero fills the whole box as a flat wash.
-				chart: 'line',
-				series: 'networth.by_month'
-			}
-		},
-		rate: {
-			rect: { x: 11, y: 0, w: 7, h: 5 },
-			spec: { figure: 'ratio.savings_rate', scope, chart: 'ring' }
-		},
 		saved: {
-			rect: { x: 0, y: 5, w: 9, h: 5 },
+			rect: { x: 41, y: 6, w: 7, h: 5 },
 			spec: {
 				figure: 'networth.saved',
 				scope,
@@ -82,7 +70,7 @@
 			}
 		},
 		other: {
-			rect: { x: 9, y: 5, w: 9, h: 5 },
+			rect: { x: 41, y: 0, w: 7, h: 6 },
 			spec: {
 				figure: 'networth.other',
 				scope,
@@ -93,20 +81,20 @@
 	});
 
 	const kpis = useKpiBoard('accounts:month', () => KPIS, [
-		{ ids: ['networth', 'rate'], axis: 'row' },
-		{ ids: ['saved', 'other'], axis: 'row' }
+		{ ids: ['other', 'saved'], axis: 'column', weights: [5, 5] }
 	]);
 
 	const PANES = $derived(
 		kpis.board({
 			// `scale` so each pane is given room or taken down to where its rows would clip, like a KPI card.
-			growth: { x: 18, y: 0, w: 30, h: 10, content: 'scale' },
+			growth: { x: 16, y: 0, w: 25, h: 11, content: 'scale' },
+			standing: { x: 0, y: 0, w: 16, h: 11, content: 'scale' },
 			// As long as your accounts are, so it fits its content rather than scaling.
-			balances: { x: 0, y: 10, w: 48, h: 18, content: 'flow', mode: 'fit' },
+			balances: { x: 0, y: 24, w: 48, h: 24, content: 'flow', mode: 'fixed' },
 			// Assets dashed so net worth stays the primary reading; the gap between the two is what is owed.
 			trend: {
 				x: 0,
-				y: 28,
+				y: 48,
 				w: 23,
 				h: 12,
 				content: 'scale',
@@ -114,6 +102,7 @@
 					figure: 'networth.vs_assets',
 					scope: yr,
 					mark,
+					pickBy: 'month',
 					chart: 'line',
 					area: true,
 					dashed: ['Assets'],
@@ -123,7 +112,7 @@
 			},
 			allocation: {
 				x: 23,
-				y: 28,
+				y: 48,
 				w: 25,
 				h: 20,
 				content: 'scale',
@@ -131,6 +120,7 @@
 					figure: 'networth.allocation_value',
 					scope: yr,
 					mark,
+					pickBy: 'month',
 					chart: 'stacked-area',
 					title: words(ALLOCATION),
 					caption: words(ALLOCATION_CAPTION)
@@ -138,7 +128,7 @@
 			},
 			liabilities: {
 				x: 0,
-				y: 40,
+				y: 60,
 				w: 23,
 				h: 8,
 				content: 'scale',
@@ -146,6 +136,7 @@
 					figure: 'networth.liabilities_trend',
 					scope: yr,
 					mark,
+					pickBy: 'month',
 					chart: 'line',
 					area: true,
 					title: words(LIABILITIES),
@@ -154,7 +145,7 @@
 			},
 			attribution: {
 				x: 0,
-				y: 48,
+				y: 11,
 				w: 20,
 				h: 13,
 				content: 'scale',
@@ -168,7 +159,7 @@
 			},
 			buckets: {
 				x: 20,
-				y: 48,
+				y: 11,
 				w: 28,
 				h: 13,
 				content: 'scale',
@@ -182,9 +173,9 @@
 			},
 			table: {
 				x: 0,
-				y: 61,
+				y: 68,
 				w: 48,
-				h: 16,
+				h: 19,
 				content: 'scale',
 				figure: {
 					figure: 'networth.monthly_table',
@@ -212,12 +203,29 @@
 			caption: words('across the year, against last'),
 			cells: cellsOf((c) => c.total)
 		},
-		{ label: words('Avg / month'), cells: cellsOf((c) => c.perMonth) }
+		{ label: words('Avg / month'), cells: cellsOf((c) => c.perMonth) },
+		{
+			label: words('On pace for'),
+			caption: words('avg / month × 12'),
+			cells: cellsOf((c) => c.pace)
+		}
 	]);
 </script>
 
 <Board key="accounts:month" layout={PANES} names={Object.keys(KPIS)} onreset={() => kpis.reset()}>
 	<KpiCards {data} />
+
+	<SplitPane
+		id="standing"
+		{data}
+		title={words('Net worth')}
+		caption={live(`end of ${scoped ? monthLabel(monthKey) : year}`)}
+		headline={{ figure: 'networth.change', scope }}
+		rows={[
+			{ label: 'Assets', parts: parts.assets, colorBy: 'role', fit: true },
+			{ label: 'Liabilities', parts: parts.liabilities, colorBy: 'account', fit: true }
+		]}
+	/>
 
 	<Pane
 		id="growth"
@@ -230,13 +238,17 @@
 	<BalanceChecklist id="balances" {data} {accounts} {onsaved} {monthKey} {account} />
 
 	{#each figurePanes(PANES) as [id, figure] (id)}
-		{@const picks = PICKS.has(id)}
+		{@const bars = PICKS.has(id)}
 		<FigurePane
 			{id}
 			{data}
 			spec={figure}
-			picked={picks ? pickedMonth : undefined}
-			onpick={picks ? (label) => onpick(keyOf(year, MONTHS.indexOf(label) + 1)) : undefined}
+			picked={bars ? pickedMonth : figure.pickBy ? mark : undefined}
+			onpick={bars
+				? (label) => onpick(keyOf(year, MONTHS.indexOf(label) + 1))
+				: figure.pickBy
+					? onpick
+					: undefined}
 		/>
 	{/each}
 </Board>

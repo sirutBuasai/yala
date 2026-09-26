@@ -305,8 +305,12 @@ export interface NetWorthSnapshot {
 	liabilities: Liabilities;
 	net_worth: NetWorth;
 	breakdown: Breakdown;
+	owed?: Owed;
 }
 export interface Breakdown {
+	[k: string]: number;
+}
+export interface Owed {
 	[k: string]: number;
 }
 export interface NetWorthAccount {

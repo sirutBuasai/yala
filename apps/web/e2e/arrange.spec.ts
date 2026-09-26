@@ -18,6 +18,8 @@ import {
 const LONG_WORDS =
 	'Quarterly discretionary spending against the rolling twelve month average and more';
 const LONG_RUN = 'W'.repeat(110);
+/** Wider than a whole merged card: its section's floor alone would outrun the board. */
+const OVERLONG_WORDS = `${LONG_WORDS} ${LONG_WORDS}`;
 
 test.beforeEach(async ({ page }) => openApp(page));
 
@@ -127,7 +129,7 @@ test('merging and splitting a KPI card returns it to exactly its former size', a
 });
 
 // A merged card's sections share one rectangle, so every limit that holds for a card has to hold for a
-// section of one: the room a section is handed is its weighted share, which can be less than its content.
+// section of one: a section is never handed less than its floor, so the card's floor is theirs added up.
 test.describe("a merged card's sections", () => {
 	/** The KPI bar: four sections sharing one row, the shape where they compete for width. */
 	async function strip(page: Page) {
@@ -152,7 +154,7 @@ test.describe("a merged card's sections", () => {
 		const before = await spans(page);
 
 		await cell.locator('.editable[aria-label*="rename title"]').nth(1).click();
-		await page.locator('[aria-label="Rename title"]').pressSequentially(LONG_WORDS);
+		await page.locator('[aria-label="Rename title"]').pressSequentially(OVERLONG_WORDS);
 		await page.keyboard.press('Enter');
 		await settle(page, 24);
 
@@ -160,18 +162,18 @@ test.describe("a merged card's sections", () => {
 		expect(await spans(page)).toBeGreaterThanOrEqual(before);
 		// Shorter than asked for: the card ran out of grid before the words ran out.
 		const shown = await cell.locator('.kpi h2').nth(1).innerText();
-		expect(shown.length).toBeLessThan(LONG_WORDS.length);
+		expect(shown.length).toBeLessThan(OVERLONG_WORDS.length);
 		expectClean('after a long title in a merged section', await audit(page));
 	});
 
 	test('refuse a resize that would squeeze a section rather than clip it', async ({ page }) => {
 		const cell = await strip(page);
 		await cell.locator('.editable[aria-label*="rename title"]').nth(1).click();
-		await page.locator('[aria-label="Rename title"]').pressSequentially(LONG_WORDS);
+		await page.locator('[aria-label="Rename title"]').pressSequentially(OVERLONG_WORDS);
 		await page.keyboard.press('Enter');
 		await settle(page, 24);
 
-		// The card is now as narrow as its widest section allows, so there is nothing left to give up.
+		// The card is now as narrow as its sections' floors added up, so there is nothing left to give up.
 		const grown = await spans(page);
 		await dragBy(cell.locator('.handle.e'), -700, 0);
 		expect(await spans(page)).toBe(grown);

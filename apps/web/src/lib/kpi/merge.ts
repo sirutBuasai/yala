@@ -178,11 +178,10 @@ export function sectionSpans(weights: number[], span: number): number[] {
 }
 
 /**
- * How a split divides the card's rectangle: each half takes the span its own sections occupy. While the
- * weights still add up to the card, they are the spans the sections came in at, so what fitted before the
- * merge fits again; `floors` speaks only for a card resized since, and consulting it otherwise ratcheted the
- * board wider on every merge-and-split cycle. Where neither floor fits, both keep theirs and the second
- * overlaps for the push rule to send below — the only case where the halves may exceed the card.
+ * How a split divides the card's rectangle: each half takes the span its sections came in at, by weight,
+ * unless that is less than its floor, the sections' own floors added up. Where neither floor fits, both keep
+ * theirs and the second overlaps for the push rule to send below: the only case where the halves may exceed
+ * the card.
  */
 export function splitRects(
 	group: KpiGroup,
@@ -196,10 +195,10 @@ export function splitRects(
 	const before = sum(sectionSpans(group.weights, span).slice(0, index));
 
 	const [first, second] = floors.map((f) => Math.max(min, f)) as [number, number];
-	const restoring = span === sum(group.weights);
-	const [low, high] = restoring ? [min, span - min] : [first, span - second];
-	const kept = Math.max(low, Math.min(high, before));
-	const rest = Math.max(restoring ? min : second, span - kept);
+	// Floors bind even when the card is at the span it was merged at: a section's track never goes below
+	// its floor, so it may hold a title wider than its weight, and restoring the weights alone would clip it.
+	const kept = Math.max(first, Math.min(span - second, before));
+	const rest = Math.max(second, span - kept);
 
 	return along<[Rect, Rect]>(
 		axis,

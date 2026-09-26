@@ -57,11 +57,11 @@
 	// picked, all read the year's close.
 	const KPIS = $derived<KpiBoardDefs>({
 		networth: {
-			rect: { x: 0, y: 11, w: 11, h: 5 },
+			rect: { x: 0, y: 0, w: 9, h: 5 },
 			spec: { figure: 'networth.current', scope, chart: 'bar', series: 'networth.by_year' }
 		},
 		assets: {
-			rect: { x: 0, y: 16, w: 11, h: 5 },
+			rect: { x: 9, y: 0, w: 9, h: 5 },
 			spec: {
 				figure: 'networth.assets',
 				scope,
@@ -70,7 +70,7 @@
 			}
 		},
 		liabilities: {
-			rect: { x: 0, y: 21, w: 11, h: 5 },
+			rect: { x: 18, y: 0, w: 9, h: 5 },
 			spec: {
 				figure: 'networth.liabilities',
 				scope,
@@ -81,7 +81,7 @@
 		// A bar per year rather than a ring: the ring clamps at 100 and a compound rate has no ceiling, so
 		// it would sit full at any growth worth having.
 		growthRate: {
-			rect: { x: 0, y: 26, w: 11, h: 5 },
+			rect: { x: 27, y: 0, w: 8, h: 5 },
 			spec: {
 				figure: 'networth.balance_growth',
 				scope,
@@ -92,19 +92,19 @@
 	});
 
 	const kpis = useKpiBoard('accounts:year', () => KPIS, [
-		{ ids: ['networth', 'assets', 'liabilities', 'growthRate'], axis: 'column' }
+		{ ids: ['networth', 'assets', 'liabilities', 'growthRate'], axis: 'row' }
 	]);
 
 	const PANES = $derived(
 		kpis.board({
 			// `scale` so each pane is given room or taken down to where its rows would clip, like a KPI card.
-			growth: { x: 0, y: 0, w: 48, h: 11, content: 'scale' },
+			growth: { x: 0, y: 5, w: 35, h: 11, content: 'scale' },
 			// Assets dashed so net worth stays the primary reading.
 			trend: {
-				x: 11,
-				y: 11,
-				w: 37,
-				h: 12,
+				x: 22,
+				y: 26,
+				w: 26,
+				h: 11,
 				content: 'scale',
 				figure: {
 					figure: 'networth.vs_assets',
@@ -113,14 +113,15 @@
 					area: true,
 					dashed: ['Assets'],
 					mark,
+					pickBy: 'year',
 					title: words(TREND),
 					caption: totalOf('net worth snapshots')
 				}
 			},
 			liabilitiesTrend: {
-				x: 11,
-				y: 23,
-				w: 37,
+				x: 22,
+				y: 37,
+				w: 26,
 				h: 8,
 				content: 'scale',
 				figure: {
@@ -129,15 +130,16 @@
 					chart: 'line',
 					area: true,
 					mark,
+					pickBy: 'year',
 					title: words(LIABILITIES),
 					caption: totalOf('liabilities snapshots')
 				}
 			},
 			accounts: {
-				x: 0,
-				y: 31,
-				w: 20,
-				h: 15,
+				x: 35,
+				y: 0,
+				w: 13,
+				h: 16,
 				content: 'scale',
 				figure: {
 					figure: 'networth.accounts',
@@ -150,25 +152,26 @@
 				}
 			},
 			allocation: {
-				x: 20,
-				y: 31,
-				w: 28,
-				h: 15,
+				x: 0,
+				y: 26,
+				w: 22,
+				h: 19,
 				content: 'scale',
 				figure: {
 					figure: 'networth.allocation_value',
 					scope: all,
 					chart: 'stacked-area',
 					mark,
+					pickBy: 'year',
 					title: words(ALLOCATION),
 					caption: words(ALLOCATION_CAPTION)
 				}
 			},
 			sources: {
-				x: 0,
-				y: 46,
-				w: 20,
-				h: 14,
+				x: 27,
+				y: 16,
+				w: 21,
+				h: 10,
 				content: 'scale',
 				figure: {
 					figure: 'networth.saved_vs_other',
@@ -179,10 +182,10 @@
 				}
 			},
 			buckets: {
-				x: 20,
-				y: 46,
-				w: 28,
-				h: 14,
+				x: 0,
+				y: 16,
+				w: 27,
+				h: 10,
 				content: 'scale',
 				figure: {
 					figure: 'networth.bucket_change_by_year',
@@ -197,9 +200,9 @@
 			},
 			table: {
 				x: 0,
-				y: 60,
+				y: 45,
 				w: 48,
-				h: 16,
+				h: 13,
 				content: 'scale',
 				figure: {
 					figure: 'networth.year_table',
@@ -248,10 +251,10 @@
 			{id}
 			{data}
 			spec={figure}
-			picked={PICKS.has(id) ? mark : undefined}
+			picked={PICKS.has(id) || figure.pickBy ? mark : undefined}
 			onpick={id === 'accounts'
 				? (label) => openAccount($page.url, data, label)
-				: PICKS.has(id)
+				: PICKS.has(id) || figure.pickBy
 					? onpick
 					: undefined}
 		/>

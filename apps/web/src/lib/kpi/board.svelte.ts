@@ -55,10 +55,10 @@ export class KpiBoard {
 	constructor(key: string, defs: () => KpiBoardDefs, merged: KpiMerge[] = []) {
 		this.#defs = defs;
 		const rects = defs();
-		this.#opening = merged.map(({ ids, axis }) => ({
+		this.#opening = merged.map(({ ids, axis, weights }) => ({
 			ids,
 			axis,
-			weights: ids.map((id) => spanOf(rects[id]!.rect, axis))
+			weights: weights ?? ids.map((id) => spanOf(rects[id]!.rect, axis))
 		}));
 		this.#pref = new Pref<KpiGroup[]>(`kpi-${key}`, this.#opening, storedGroups());
 	}

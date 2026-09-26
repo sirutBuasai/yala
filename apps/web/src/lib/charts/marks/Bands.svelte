@@ -51,8 +51,11 @@
 </svg>
 
 <style>
+	/* Sized by its box alone. Without `contain`, a box with no height of its own resolved `100%` to the
+	   150px an SVG defaults to: a progress track sat at its ceiling and held its pane's floor up. */
 	.bands {
 		display: block;
 		overflow: visible;
+		contain: size;
 	}
 </style>

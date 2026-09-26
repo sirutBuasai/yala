@@ -25,6 +25,10 @@ export interface KpiSpec {
 	chart?: KpiChart;
 	/** Catalog id of the series a bar / line / area chart draws. */
 	series?: string;
+	/** Scale the chart to the series' own range; see `Spark`. */
+	level?: boolean;
+	/** The page the title opens, by its path (D48). A card with none has no link. */
+	open?: string;
 }
 
 /** One KPI as a view declares it: the spec, plus where it sits when it is its own card. */
@@ -41,4 +45,7 @@ export type KpiBoardDefs = Record<string, KpiDef>;
 export interface KpiMerge {
 	ids: string[];
 	axis: MergeAxis;
+	/** How the card divides between its sections, where that is not their rectangles' spans: a card whose
+	    span the sections' whole units cannot split evenly. */
+	weights?: number[];
 }

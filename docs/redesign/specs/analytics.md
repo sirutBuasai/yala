@@ -105,7 +105,7 @@ Two boards, one per range, each arrangeable (D14) and stored under `analytics:mo
 
 ## New UI strings
 
-- `Month`, `Year`: the range switch; `Analytics time range` is its accessible name.
+- `Monthly`, `Yearly`: the range switch (D50); `Analytics time range` is its accessible name.
 - `Category by year` · `category spending split per year`.
 - `From savings`: the Sankey node.
 - Bar groups are named by their axis label, e.g. `Sep`, `2025`.

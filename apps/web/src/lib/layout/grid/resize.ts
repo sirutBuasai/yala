@@ -47,3 +47,41 @@ export function resizeRect(base: Rect, edge: Edge, dx: number, dy: number): Rect
 export function moveRect(base: Rect, dx: number, dy: number): Rect {
 	return { ...base, x: base.x + snapUnits(dx), y: base.y + snapUnits(dy) };
 }
+
+/** The least a pane's content fits in, in units: any rectangle at least this on both axes fits. */
+export interface Floor {
+	w: number;
+	h: number;
+}
+
+/**
+ * `rect` held at `floor` on each axis. The dragged edge stops where the floor is met, so the opposite edge
+ * stays where the press left it.
+ */
+export function holdFloor(base: Rect, edge: Edge, rect: Rect, floor: Floor): Rect {
+	const out = { ...rect };
+	if (out.w < floor.w) {
+		out.w = floor.w;
+		if (edge.includes('w')) out.x = base.x + base.w - floor.w;
+	}
+	if (out.h < floor.h) {
+		out.h = floor.h;
+		if (edge.includes('n')) out.y = base.y + base.h - floor.h;
+	}
+	return out;
+}
+
+/** The least `v` in `[lo, hi]` for which `ok` holds, given it holds from some point on; `hi` when it never
+    does. */
+export async function lowest(
+	lo: number,
+	hi: number,
+	ok: (v: number) => Promise<boolean>
+): Promise<number> {
+	while (lo < hi) {
+		const mid = Math.floor((lo + hi) / 2);
+		if (await ok(mid)) hi = mid;
+		else lo = mid + 1;
+	}
+	return hi;
+}

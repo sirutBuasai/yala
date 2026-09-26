@@ -18,11 +18,11 @@ const table: Table = {
 };
 
 describe('tableGrid', () => {
-	it('labels rows by the first column and keeps money to the cent', () => {
+	it('labels rows by the first column and reads money to the cent, whole, and abbreviated', () => {
 		const grid = tableGrid(table);
 		expect(grid.rows).toEqual(['Jan 1', 'Feb 1']);
 		expect(grid.cols).toEqual(['Net worth', 'Change', 'Change %']);
-		expect(grid.cells[0]![0]!.text).toBe('1,234.50');
+		expect(grid.cells[0]![0]!.readings).toEqual(['1,234.50', '1,235', '1.2k']);
 	});
 
 	it('shades only the tinted columns, by which way the news runs', () => {

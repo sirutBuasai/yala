@@ -93,13 +93,7 @@ export class Arrangement {
 
 	readonly #placed = $derived.by<PlacedPane[]>(() => {
 		const placed = resolve(
-			sizePanes(
-				this.#panes,
-				this.#specs,
-				this.#measured,
-				this.#effectiveFloors,
-				this.#env.arranging
-			)
+			sizePanes(this.#panes, this.#specs, this.#measured, this.#effectiveFloors)
 		);
 		if (import.meta.env.DEV) assertNoOverlap(placed);
 		return placed;
@@ -227,6 +221,20 @@ export class Arrangement {
 	/** One pointer move of a drag, in PLACED coordinates — where the pane is on screen (see `lift`). */
 	dragTo(id: string, x: number, y: number, origin: DragOrigin): void {
 		this.#panes = lift(id, x, y, origin);
+	}
+
+	/**
+	 * At a resize's press: `id` and every pane drawn below it take the top they are drawn at. Panes settle in
+	 * authored order, and a pane pushed down keeps its authored top above where it is drawn, so growing into
+	 * it made the growing pane jump below it instead of pushing it down. Rebased, the order they settle in is
+	 * the order they are seen in. Panes above are left alone, so their pushes stay transient.
+	 */
+	rebase(id: string): void {
+		const top = this.placed(id).y;
+		this.#panes = this.#panes.map((p) => {
+			const at = this.placed(p.id).y;
+			return p.id === id || at > top ? { ...p, y: at } : p;
+		});
 	}
 
 	/** Resize a pane. On a capped pane the bottom edge sets the CEILING, not the height. */

@@ -131,31 +131,34 @@ export function netWorthScalar(
 	scope: Scope = { level: 'all' }
 ): Scalar {
 	const unit = MONEY(data.currency);
+	/** A level's move, toned by which way is good for it: a debt growing is bad. */
+	const moved = (change: number, note: string): Scalar['delta'] => {
+		const good = READING[field].tint === 'up-good' ? change >= 0 : change <= 0;
+		return { value: change, unit, tone: good ? 'good' : 'bad', note };
+	};
 	if (scope.level === 'year') {
 		const w = bounds(data, scope);
 		const s = scalar(unit, label, w.close?.[field] ?? null);
 		if (w.open && w.close && w.open !== w.close) {
-			const change = w.close[field] - w.open[field];
-			const good = READING[field].tint === 'up-good' ? change >= 0 : change <= 0;
-			s.delta = { value: change, unit, tone: good ? 'good' : 'bad', note: 'this year' };
+			s.delta = moved(w.close[field] - w.open[field], 'this year');
 		}
 		return s;
 	}
 	const current = data.networth?.current ?? null;
 	const value = current ? current[field] : null;
-
 	const s = scalar(unit, label, value);
-
-	// `current` may share its date with the last series point; skip it so the delta isn't self-vs-self.
-	const points = snapshots(data);
-	const last = points[points.length - 1];
-	const prev = last && current && last.date === current.date ? points[points.length - 2] : last;
-	if (field === 'net_worth' && prev && value != null) {
-		const change = value - prev.net_worth;
-		s.delta = { value: change, unit, tone: bySign(change), note: 'since last' };
-	}
-
+	const prev = previousSnapshot(data);
+	if (prev && value != null) s.delta = moved(value - prev[field], 'since last');
 	return s;
+}
+
+/** The snapshot before today's reading. `current` may share its date with the last series point, which is
+    skipped so a delta is never a reading against itself. */
+function previousSnapshot(data: DashboardData): NetWorthSnapshot | undefined {
+	const current = data.networth?.current;
+	const points = snapshots(data);
+	const last = points.at(-1);
+	return last && current && last.date === current.date ? points.at(-2) : last;
 }
 
 export function netWorthByMonth(data: DashboardData, year?: number): Series {
@@ -752,6 +755,22 @@ export function netWorthGrowthPerMonth(
 	return out;
 }
 
+/** Where a year's growth part lands at its monthly run-rate held for twelve months, against last year's
+    whole total: how a year still running is heading. */
+export function netWorthGrowthPace(
+	data: DashboardData,
+	scope: Scope,
+	part: GrowthPart,
+	label: Label
+): Scalar {
+	const year = scopeYear(data, scope);
+	const now = (growthParts(data, scope)[part] / (activeMonthsIn(data, scope) || 1)) * 12;
+	const before = growthParts(data, { level: 'year', year: year - 1 })[part];
+	const s = scalar(MONEY(data.currency), label, now);
+	s.delta = percentDelta(now, before, bySign(now - before), 'YoY');
+	return s;
+}
+
 /** The monthly table's shape plus the decomposition only a whole year can carry. */
 export function netWorthYearTable(data: DashboardData, since?: number): Table {
 	const unit = MONEY(data.currency);
@@ -927,14 +946,16 @@ export function balanceGrowth(data: DashboardData, scope: Scope = { level: 'all'
 		return scalar(PERCENT, words('Balance growth'), change, { note: words('this year') });
 	}
 	const { open: first, close: last } = bounds(data, scope);
-
-	let value: number | null = null;
-	if (first && last && first.net_worth > 0 && last.net_worth > 0) {
-		const years = (Date.parse(last.date) - Date.parse(first.date)) / (365.25 * 24 * 60 * 60 * 1000);
-		if (years >= 0.5) value = ((last.net_worth / first.net_worth) ** (1 / years) - 1) * 100;
-	}
-
+	const value = first && last ? cagr(first, last) : null;
 	return scalar(PERCENT, words('Balance growth'), value, { note: words('CAGR') });
+}
+
+/** Compound yearly growth between two snapshots, in percent; null under half a year apart or where either
+    is not positive. */
+function cagr(first: NetWorthSnapshot, last: NetWorthSnapshot): number | null {
+	if (first.net_worth <= 0 || last.net_worth <= 0) return null;
+	const years = (Date.parse(last.date) - Date.parse(first.date)) / (365.25 * 24 * 60 * 60 * 1000);
+	return years >= 0.5 ? ((last.net_worth / first.net_worth) ** (1 / years) - 1) * 100 : null;
 }
 
 export function topAccountShare(data: DashboardData): Scalar {
@@ -972,4 +993,32 @@ export function netWorthThresholds(
 	];
 
 	return { kind: 'bullet', rows: rows.filter((r) => r.value !== null) };
+}
+
+/** What the scope's closing snapshot holds, split: assets by allocation bucket and what is owed by account.
+    A snapshot from before the split was exported owes as one `Liabilities` part. */
+export function netWorthParts(
+	data: DashboardData,
+	scope: Scope
+): { assets: Categorical; liabilities: Categorical } {
+	const unit = MONEY(data.currency);
+	const close = windowOf(data, scope).close;
+	const pathOf = new Map((data.networth?.accounts ?? []).map((a) => [a.label, a.account]));
+	const owed = close?.owed ?? (close ? { Liabilities: close.liabilities } : {});
+	return {
+		assets: categorical(
+			Object.entries(close?.breakdown ?? {}).map(([category, amount]) => ({ category, amount })),
+			unit,
+			Infinity
+		),
+		liabilities: categorical(
+			Object.entries(owed).map(([category, amount]) => ({
+				category,
+				amount,
+				colorKey: pathOf.get(category)
+			})),
+			unit,
+			Infinity
+		)
+	};
 }

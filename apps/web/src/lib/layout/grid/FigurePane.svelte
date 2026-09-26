@@ -19,8 +19,10 @@
 		/** See `Figure`: makes the chart's rows or cells choosable, and marks the chosen one. */
 		onpick?: (key: string, sub: string | null) => void;
 		picked?: string | null;
+		/** The page the title opens: the owner of a figure shown here as a headline (D48). */
+		open?: string;
 	}
-	let { id, data, spec, actions, onpick, picked }: Props = $props();
+	let { id, data, spec, actions, onpick, picked, open }: Props = $props();
 
 	const primitive = $derived(build(data, spec.figure, spec.scope));
 
@@ -31,6 +33,6 @@
 	});
 </script>
 
-<Pane {id} title={spec.title} caption={spec.caption} {actions}>
+<Pane {id} title={spec.title} caption={spec.caption} {actions} {open}>
 	<Figure {primitive} {...options} {onpick} {picked} />
 </Pane>

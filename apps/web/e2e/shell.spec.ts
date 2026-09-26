@@ -35,14 +35,14 @@ test('each view keeps its own picks: one view moving leaves the other as it was'
 }) => {
 	await page.goto('/analytics?month=2026-02&scope=month');
 	await settle(page);
-	await page.getByRole('tab', { name: 'Year', exact: true }).click();
+	await page.getByRole('tab', { name: 'Yearly', exact: true }).click();
 	await expect(page).toHaveURL(/\/analytics\/year$/);
 
 	await page.goto('/analytics/year?month=2024-09&scope=year');
 	await settle(page);
-	await page.getByRole('tab', { name: 'Month', exact: true }).click();
+	await page.getByRole('tab', { name: 'Monthly', exact: true }).click();
 	await expect(page).toHaveURL(/\/analytics\?month=2026-02&scope=month$/);
-	await page.getByRole('tab', { name: 'Year', exact: true }).click();
+	await page.getByRole('tab', { name: 'Yearly', exact: true }).click();
 	await expect(page).toHaveURL(/\/analytics\/year\?month=2024-09&scope=year$/);
 });
 
@@ -65,12 +65,12 @@ test('a view reopens at its own scroll', async ({ page }) => {
 	await page.evaluate(() => window.scrollTo(0, 500));
 	// Clicked where it is: a pointer click would first scroll the switch into view.
 	await page
-		.getByRole('tab', { name: 'Year', exact: true })
+		.getByRole('tab', { name: 'Yearly', exact: true })
 		.evaluate((el: HTMLElement) => el.click());
 	await expect(page).toHaveURL(/\/analytics\/year$/);
 	await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 
-	await page.getByRole('tab', { name: 'Month', exact: true }).click();
+	await page.getByRole('tab', { name: 'Monthly', exact: true }).click();
 	await expect(page).toHaveURL(/\/analytics\?month=2025-09$/);
 	await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(500);
 });
@@ -109,7 +109,7 @@ test('a reload keeps the view and drops the picks, on every page', async ({ page
 
 	await page.reload();
 	await expect(page).toHaveURL(/\/analytics\/year$/);
-	await expect(page.getByRole('tab', { name: 'Year', exact: true })).toHaveAttribute(
+	await expect(page.getByRole('tab', { name: 'Yearly', exact: true })).toHaveAttribute(
 		'aria-selected',
 		'true'
 	);

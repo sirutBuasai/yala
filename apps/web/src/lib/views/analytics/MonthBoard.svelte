@@ -33,8 +33,8 @@
 	const scope = $derived<Scope>(scoped ? { level: 'month', monthKey } : yr);
 	const pickedMonth = $derived(scoped ? MONTHS[monthOf(monthKey) - 1] : undefined);
 
-	const KPIS = $derived(incomeChain(scope));
-	const kpis = useKpiBoard('analytics:month', () => KPIS, INCOME_CHAIN_MERGES);
+	const KPIS = $derived(incomeChain(scope, 'columns'));
+	const kpis = useKpiBoard('analytics:month', () => KPIS, INCOME_CHAIN_MERGES.columns);
 
 	const PANES = $derived(
 		kpis.board({
@@ -44,7 +44,7 @@
 				x: 16,
 				y: 9,
 				w: 32,
-				h: 11,
+				h: 10,
 				content: 'scale',
 				figure: {
 					figure: 'overview.cash_flow_bars',
@@ -58,7 +58,7 @@
 			// since it is the categories that span orders of magnitude.
 			heatmap: {
 				x: 0,
-				y: 20,
+				y: 19,
 				w: 48,
 				h: 18,
 				content: 'scale',
@@ -74,7 +74,7 @@
 			},
 			flow: {
 				x: 0,
-				y: 38,
+				y: 37,
 				w: 48,
 				h: 24,
 				content: 'scale',

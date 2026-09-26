@@ -50,6 +50,7 @@
      `.cal`'s grid, so every column shares one ruler. -->
 <div
 	class="cal"
+	data-measure
 	role="grid"
 	aria-label={`${MONTHS[month - 1]} ${year} activity by day`}
 	tabindex="-1"
@@ -73,11 +74,16 @@
 </div>
 
 <style>
+	/* A day cell lays its number, dots and amounts out absolutely, so it has no size of its own for the
+	   board to measure; these are that content's size, and a pane's floor (D43). Both drop where the grid
+	   narrows and the amounts go (below). */
 	.cal-head,
 	.cal {
 		--wk-gutter: 3.25rem;
+		--cal-cell-w: 4rem;
+		--cal-cell-h: 3.5rem;
 		display: grid;
-		grid-template-columns: repeat(7, minmax(0, 1fr)) var(--wk-gutter);
+		grid-template-columns: repeat(7, minmax(var(--cal-cell-w), 1fr)) var(--wk-gutter);
 		gap: var(--gap-row);
 	}
 	.cal-head {
@@ -104,11 +110,15 @@
 		--sel: var(--lav);
 		--pend: var(--gold);
 		/* Floored at the tallest a month can be, so a shorter month gets taller cells rather than a
-		   blank trailing week. The constant height is what keeps the rest of the board still as you step
-		   through months. */
-		--cal-cell-h: 5.5rem;
+		   blank trailing week, and the pane's floor is the same whichever month it shows. */
 		grid-auto-rows: minmax(var(--cal-cell-h), 1fr);
 		min-height: calc(6 * var(--cal-cell-h) + 5 * var(--gap-row));
+	}
+	/* Folded, nothing is resized, so there is no floor to hold, and on a phone seven held cells outrun the
+	   screen. */
+	:global(.cell.folded) .cal-head,
+	:global(.cell.folded) .cal {
+		--cal-cell-w: 0px;
 	}
 	:global(:root[data-theme='light']) .cal {
 		--sel: var(--gold);
@@ -129,11 +139,10 @@
 	@container (max-width: 30rem) {
 		.cal-head,
 		.cal {
+			--cal-cell-w: 2.25rem;
+			--cal-cell-h: 2.75rem;
 			gap: var(--space-2);
-			grid-template-columns: repeat(7, minmax(0, 1fr));
-		}
-		.cal {
-			--cal-cell-h: 3.5rem;
+			grid-template-columns: repeat(7, minmax(var(--cal-cell-w), 1fr));
 		}
 		.cal-head .wkhd,
 		.wdlong {

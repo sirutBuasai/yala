@@ -16,3 +16,7 @@ export const CLOSE_MENU = 'Close menu';
 
 /** Stands in for a figure there is none of, in a cell that must keep its width. */
 export const NO_VALUE = '—';
+
+/** Planning owns it; Dashboard shows it as a headline that opens Planning. */
+export const PROGRESS = 'Financial progress';
+export const PROGRESS_CAPTION = 'key metrics for financial independence';

@@ -4,9 +4,10 @@
 import type { DashboardData } from '$lib/data/types';
 import type { Axis, MultiSeries, Series, SeriesPoint, Unit } from './primitives';
 import { MONEY, PERCENT } from './primitives';
+import { priorMonths } from './scope';
 import { MONTHS, monthName } from '$lib/utils/format';
 import { sum, sumBy } from '$lib/utils/num';
-import { addMonths, monthKey } from '$lib/utils/period';
+import { addMonths, daysIn, isoDate, monthKey } from '$lib/utils/period';
 import { measureLabel, measureValue, type Field, type Measure } from './metric';
 
 /** A second reading of the same points, for `series` to carry alongside the first. */
@@ -194,4 +195,81 @@ export function savingsRate(data: DashboardData, since?: number): Series {
 				}
 			: undefined
 	};
+}
+
+// --- a month's pace ---
+
+type MonthPage = DashboardData['months'][string];
+
+/** What a pace sums: each entry's date and its amount. */
+type Entries = (page: MonthPage) => { date: string; amount: number }[];
+
+/** A month's entries summed up to each day. A day past the month's end reads its last day, so a short
+    month can be compared against a long one. */
+function running(data: DashboardData, key: string, entries: Entries): (day: number) => number {
+	const days = daysIn(key);
+	const cum = new Array<number>(days + 1).fill(0);
+	const page = data.months[key];
+	for (const e of page ? entries(page) : []) cum[Number(e.date.slice(8))]! += e.amount;
+	for (let d = 1; d <= days; d++) cum[d]! += cum[d - 1]!;
+	return (day) => cum[Math.min(day, days)]!;
+}
+
+/**
+ * A month's `entries` run up day by day (`name`), against the month before it (`Last month`) and the mean
+ * of up to twelve prior months with data (`Average`), each summed to the same day. `through`, a date in
+ * the month, ends the month's own line there, as today does in a month still running. Each point's period
+ * is its date.
+ */
+function pace(
+	data: DashboardData,
+	key: string,
+	name: string,
+	entries: Entries,
+	through?: string
+): MultiSeries {
+	const unit = MONEY(data.currency);
+	const days = Array.from({ length: daysIn(key) }, (_, i) => i + 1);
+	const labels = days.map(String);
+	const until = through?.startsWith(key) ? Number(through.slice(8)) : Infinity;
+
+	const now = running(data, key, entries);
+	const last = running(data, addMonths(key, -1), entries);
+	const prior = priorMonths(data, key).map((k) => running(data, k, entries));
+
+	const line = (label: string, value: (day: number) => number | null): Series => ({
+		kind: 'series',
+		unit,
+		axis: 'time',
+		name: label,
+		points: days.map((d, i) => ({ label: labels[i]!, value: value(d) }))
+	});
+
+	return multiseries(
+		unit,
+		'time',
+		labels,
+		[
+			line(name, (d) => (d <= until ? now(d) : null)),
+			line('Last month', last),
+			line('Average', (d) => (prior.length ? sum(prior.map((f) => f(d))) / prior.length : null))
+		],
+		days.map((d) => isoDate(key, d))
+	);
+}
+
+/** Spending run up day by day, refunds netted as Spent nets them (`Spent`). */
+export function spendingPace(data: DashboardData, key: string, through?: string): MultiSeries {
+	return pace(data, key, 'Spent', (page) => page.transactions, through);
+}
+
+/** Net income, after tax and deductions, run up day by day as paychecks land (`Net income`). */
+export function earningPace(data: DashboardData, key: string, through?: string): MultiSeries {
+	return pace(
+		data,
+		key,
+		'Net income',
+		(page) => page.paychecks.map((p) => ({ date: p.date, amount: p.net })),
+		through
+	);
 }

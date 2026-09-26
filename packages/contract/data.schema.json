@@ -765,6 +765,14 @@
           },
           "title": "Breakdown",
           "type": "object"
+        },
+        "owed": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "default": {},
+          "title": "Owed",
+          "type": "object"
         }
       },
       "required": [

@@ -226,3 +226,42 @@ export function markedIndices(
 		return (period != null ? inPeriod(period, mark) : label === mark) ? [i] : [];
 	});
 }
+
+/** The grain a continuous axis picks at: a point picks the month or the year its period falls in. */
+export type PickGrain = 'month' | 'year';
+
+/** The period each point picks: its period cut to `grain`, else its label, on an axis without periods. */
+export function pickKeys(
+	labels: string[],
+	periods: string[] | undefined,
+	grain?: PickGrain
+): string[] {
+	const cut = grain === 'year' ? 4 : grain === 'month' ? 7 : undefined;
+	return labels.map((label, i) => periods?.[i]?.slice(0, cut) ?? label);
+}
+
+export interface PickGroup {
+	key: string;
+	from: number;
+	to: number;
+}
+
+/** Runs of neighbouring points that pick the same period, each reaching halfway to the next run, so the
+    runs tile the plot from 0 to `width` and a click anywhere lands on one. */
+export function pickGroups(xs: number[], keys: string[], width: number): PickGroup[] {
+	const groups: { key: string; first: number; last: number }[] = [];
+	keys.forEach((key, i) => {
+		const run = groups.at(-1);
+		if (run?.key === key) run.last = i;
+		else groups.push({ key, first: i, last: i });
+	});
+	return groups.map((g, n) => {
+		const prev = groups[n - 1];
+		const next = groups[n + 1];
+		return {
+			key: g.key,
+			from: prev ? (xs[prev.last]! + xs[g.first]!) / 2 : 0,
+			to: next ? (xs[g.last]! + xs[next.first]!) / 2 : width
+		};
+	});
+}

@@ -27,7 +27,31 @@
 	const kpis = getKpiBoard();
 
 	const group = $derived(kpis.group(id));
-	const dividers = $derived(kpis.dividers(id));
+
+	/** Where the sections meet, as fractions of the sections box. Measured: a section held at its floor
+	    takes more than its weight, so the weights alone would draw a divider off the boundary. */
+	let met = $state<number[] | null>(null);
+	$effect(() => {
+		const box = sectionsEl;
+		void group;
+		if (!box) return;
+		const measure = () => {
+			const outer = box.getBoundingClientRect();
+			const along = stacked ? outer.height : outer.width;
+			met = along
+				? [...box.children].slice(1).map((c) => {
+						const r = c.getBoundingClientRect();
+						return (stacked ? r.top - outer.top : r.left - outer.left) / along;
+					})
+				: null;
+		};
+		measure();
+		const observer = new ResizeObserver(measure);
+		observer.observe(box);
+		for (const cell of box.children) observer.observe(cell);
+		return () => observer.disconnect();
+	});
+	const dividers = $derived(met?.length === group.ids.length - 1 ? met : kpis.dividers(id));
 
 	/** The sections box, which both a split and the fit measure before they change the card. */
 	let sectionsEl = $state<HTMLElement>();
@@ -44,9 +68,11 @@
 		return rectOf(arrangement.authored(pane));
 	}
 
-	/** Grid tracks, not flex: `fr` shares are exact, so a divider lands on the fraction its control is
-	    drawn at. */
-	const tracks = $derived(group.weights.map((w) => `minmax(0, ${w}fr)`).join(' '));
+	/** Each section's own floor, then its share of the rest: a merged card's floor is its sections' floors
+	    added up, the same as the cards it was merged from. With `minmax(0, …)` a section could be given less
+	    than its floor, and the card refused to narrow as soon as the section with the smallest share ran
+	    out. */
+	const tracks = $derived(group.weights.map((w) => `minmax(min-content, ${w}fr)`).join(' '));
 	const stacked = $derived(group.axis === 'column' || env.folded);
 
 	/** A group merged the other way cannot gain a section without becoming a grid. */
@@ -144,10 +170,9 @@
 
 <Pane {id}>
 	<!-- Folded, there are no coordinates and no room to sit side by side: sections stack whatever the merge
-	     said. `data-measure` per SECTION, not on the box around them — only the LAST section's overhang
-	     reaches that box, so measuring it alone let every earlier section be squeezed until it painted over
-	     its neighbour (see `grid/spill.ts`). -->
-	<div class="sections" class:stacked style:--tracks={tracks} bind:this={sectionsEl}>
+	     said. `data-measure` per SECTION, as a section's own content can overrun it, and on the box around
+	     them, which the tracks overrun once the sections' floors add up to more than the card holds. -->
+	<div class="sections" class:stacked style:--tracks={tracks} data-measure bind:this={sectionsEl}>
 		{#each group.ids as member (member)}
 			<div class="section" data-measure>
 				<Kpi id={member} {data} spec={kpis.spec(member)} editing={env.arranging} />

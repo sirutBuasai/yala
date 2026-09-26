@@ -11,8 +11,8 @@
 	let { ariaLabel }: { ariaLabel: string } = $props();
 
 	const OPTIONS: { id: View; label: string }[] = [
-		{ id: 'month', label: 'Month' },
-		{ id: 'year', label: 'Year' }
+		{ id: 'month', label: 'Monthly' },
+		{ id: 'year', label: 'Yearly' }
 	];
 
 	const base = $derived(pageOf($page.url.pathname));

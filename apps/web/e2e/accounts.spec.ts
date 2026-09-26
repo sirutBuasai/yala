@@ -96,7 +96,7 @@ test('the span scopes the Year view to its years', async ({ page }) => {
 
 test('Year is a path a reload keeps, and it logs nothing', async ({ page }) => {
 	await page.goto('/accounts?month=2025-09');
-	await page.getByRole('tab', { name: 'Year' }).click();
+	await page.getByRole('tab', { name: 'Yearly' }).click();
 	await settle(page);
 	await expect(page).toHaveURL(/\/accounts\/year$/);
 	await expect(pane(page, 'Yearly snapshots')).toBeVisible();
@@ -105,7 +105,7 @@ test('Year is a path a reload keeps, and it logs nothing', async ({ page }) => {
 	await page.reload();
 	await settle(page);
 	await expect(page).toHaveURL(/\/accounts\/year$/);
-	await expect(page.getByRole('tab', { name: 'Year' })).toHaveAttribute('aria-selected', 'true');
+	await expect(page.getByRole('tab', { name: 'Yearly' })).toHaveAttribute('aria-selected', 'true');
 });
 
 test('planning figures have left for Planning', async ({ page }) => {
@@ -113,4 +113,37 @@ test('planning figures have left for Planning', async ({ page }) => {
 	await settle(page);
 	await expect(pane(page, 'Financial progress')).toHaveCount(0);
 	await expect(page.getByText('Years of freedom')).toHaveCount(0);
+});
+
+test("a click on a Year view line picks its point's year, and again widens", async ({ page }) => {
+	await page.goto('/accounts/year');
+	await settle(page);
+	const chart = pane(page, 'Net worth & assets').locator('svg.chart');
+	await chart.scrollIntoViewIfNeeded();
+	const box = (await chart.boundingBox())!;
+	const at = { x: box.x + box.width * 0.6, y: box.y + box.height * 0.4 };
+
+	await page.mouse.click(at.x, at.y);
+	await settle(page);
+	await expect(page).toHaveURL(/scope=year/);
+	await expect(
+		pane(page, 'Net worth & assets').locator('rect.band[aria-pressed="true"]')
+	).toHaveCount(1);
+	await expect(pane(page, 'Liabilities').locator('.focusband')).toHaveCount(1);
+
+	await page.mouse.click(at.x, at.y);
+	await settle(page);
+	await expect(page).not.toHaveURL(/scope=/);
+});
+
+test("a click on a Month view line picks its point's month", async ({ page }) => {
+	await page.goto('/accounts?month=2026-07');
+	await settle(page);
+	const chart = pane(page, 'Net worth & assets').locator('svg.chart');
+	await chart.scrollIntoViewIfNeeded();
+	const box = (await chart.boundingBox())!;
+	await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.4);
+	await settle(page);
+	await expect(page).toHaveURL(/month=2026-\d{2}&scope=month$/);
+	await expect(pane(page, 'Asset allocations').locator('.focusband')).toHaveCount(1);
 });

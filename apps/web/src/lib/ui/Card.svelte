@@ -5,6 +5,7 @@
 	import type { Snippet } from 'svelte';
 	import LabelLine from './LabelLine.svelte';
 	import { DOT, labelText, type Label, type Slot } from './label';
+	import { pageLink } from '$lib/nav/left';
 
 	interface Props {
 		title?: Label;
@@ -36,6 +37,8 @@
 		card?: HTMLElement;
 		/** The body element, likewise — `grid/spill.ts` measures inside it. */
 		body?: HTMLElement;
+		/** The page the title opens, by its path: the one that owns what this card shows (D48). */
+		open?: string;
 		children: Snippet;
 	}
 	let {
@@ -53,6 +56,7 @@
 		nameable = false,
 		card = $bindable(),
 		body = $bindable(),
+		open,
 		children
 	}: Props = $props();
 
@@ -65,6 +69,8 @@
 	// Freezing that body took the pencils with it and the press fell through to the drag surface beneath,
 	// so the click moved the pane. Such a body holds figures, never controls, so there is nothing to freeze.
 	const freezeBody = $derived(frozen && !!heading);
+	// Not while the labels are being named: a click on the title is then a rename.
+	const titleLink = $derived(open && !naming ? pageLink(open) : {});
 </script>
 
 {#snippet afterCaption()}
@@ -85,7 +91,12 @@
 				<!-- One level whatever the density: every card is a peer on its board, and picking the
 				     heading level by how the card LOOKS puts two neighbours at different depths. -->
 				{#if heading || nameable}
-					<h2 class:serif={density !== 'panel'} data-label-line>
+					<h2
+						class:serif={density !== 'panel'}
+						class:link={!!open && !naming}
+						data-label-line
+						{...titleLink}
+					>
 						<LabelLine
 							label={title ?? {}}
 							what="title"
@@ -123,6 +134,14 @@
 </section>
 
 <style>
+	.link {
+		cursor: pointer;
+	}
+	.link:hover,
+	.link:focus-visible {
+		text-decoration: underline;
+		text-underline-offset: 0.2em;
+	}
 	/* Flex column so a chart in the body can grow to fill a stretched pane's height. */
 	.card {
 		display: flex;

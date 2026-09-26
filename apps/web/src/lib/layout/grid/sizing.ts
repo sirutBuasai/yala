@@ -28,15 +28,14 @@ export function scrolls(content: PaneContent, mode: HeightMode): boolean {
 }
 
 /**
- * Rows a pane reserves on the board. While ARRANGING, a capped pane reserves its whole ceiling even
- * when the list has not reached it — otherwise the user places a neighbour in space the list is
- * entitled to grow into, and a little more data shoves it back out again.
+ * Rows a pane reserves on the board. A capped pane reserves its content up to its ceiling, arranging or
+ * not: reserving the whole ceiling only while arranging made the board shift the moment Edit closed, so
+ * what was arranged was not what showed. The ceiling is drawn as an outline instead (see `Pane`).
  */
 export function reservedRows(
 	authored: AuthoredPane,
 	content: PaneContent,
-	measured: number | undefined,
-	arranging: boolean
+	measured: number | undefined
 ): number {
 	const mode = effectiveMode(content, authored.mode);
 	if (mode === 'fixed') return authored.h;
@@ -45,7 +44,7 @@ export function reservedRows(
 	// stops the board collapsing for one frame.
 	const rows = measured === undefined ? authored.h : rowsForPx(measured);
 	if (mode === 'fit') return rows;
-	return arranging ? authored.cap : Math.min(rows, authored.cap);
+	return Math.min(rows, authored.cap);
 }
 
 /**
@@ -62,13 +61,12 @@ export function sizePanes(
 	authored: AuthoredPane[],
 	specs: Record<string, PaneSpec>,
 	measured: Record<string, number>,
-	floors: Record<string, ContentFloor>,
-	arranging: boolean
+	floors: Record<string, ContentFloor>
 ): SizedPane[] {
 	return authored.map((pane) => {
 		const content = specs[pane.id]?.content ?? 'flow';
 		const floor = floors[pane.id];
-		const rows = reservedRows(pane, content, measured[pane.id], arranging);
+		const rows = reservedRows(pane, content, measured[pane.id]);
 		const w = Math.min(COLS, Math.max(pane.w, floor?.w ?? 0));
 		return {
 			id: pane.id,

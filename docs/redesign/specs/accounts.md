@@ -21,8 +21,9 @@ Sources on `master`: `lib/views/networth/NetWorth.svelte`, `YearView.svelte`, `A
 
 | View | Pane | Title · caption |
 |---|---|---|
-| Month | KPI cards, two merged rows | Net worth (line), Savings rate (ring) · Saved, Market & other (bars) |
-| Month | Stat matrix | `<Year>` growth · year total and monthly rates |
+| Month | Split card | Net worth · `end of <period>`: the figure with its change, then Assets by bucket and Liabilities by account as split bars (D38). **Replaces** the Net worth and Savings rate KPIs |
+| Month | KPI cards, one merged row | Saved, Market & other (bars) |
+| Month | Stat matrix | `<Year>` growth · year total and monthly rates. Rows: Total, Avg / month, and **On pace for** (avg / month × 12, against last year's total; chosen from [mocks/growth-rows.html](../mocks/growth-rows.html)) |
 | Month | Checklist | Log balances · snapshot of each account's balance on `<date>`. **New to this board**, from Home |
 | Month | Line | Net worth & assets · `<Year>` total net worth and assets MoM |
 | Month | Stacked area | Asset allocations · dollar amount and shares by asset type |
@@ -30,7 +31,7 @@ Sources on `master`: `lib/views/networth/NetWorth.svelte`, `YearView.svelte`, `A
 | Month | Bars | You vs the market, by month · `<Year>` direct savings vs market gains + other income |
 | Month | Bars | Change by asset type · `<Year>` dollars gained or lost each month |
 | Month | Heatmap | Monthly snapshots · changes to net worth, assets, and liabilities MoM. **Was a table**; its tinted columns shade its tiles |
-| Year | KPI cards, one column | Net worth, Assets, Liabilities, Growth rate (bars by year) |
+| Year | KPI cards, one column | Net worth, Assets, Liabilities, Growth rate (bars by year), the three levels with their move since the last snapshot, a debt growing read as bad |
 | Year | Stat matrix | Lifetime growth · `<span>` totals, yearly, and monthly rates |
 | Year | Line | Net worth & assets · total lifetime net worth snapshots |
 | Year | Line | Liabilities · total lifetime liabilities snapshots |
@@ -49,7 +50,7 @@ Moved to Planning: Financial progress (with Adjust and the planning panel) and Y
 | Account balances, their checks against the ledger, and how many are logged for a month | Yes | Dashboard may show "N of M logged" as a headline linking to `/accounts?month=` |
 | Net worth, assets, liabilities, allocation, and their history | Yes | Dashboard may show net worth as a headline linking here |
 | The net worth bridge: a period's change split into Saved and Market & other | Yes, as the KPI cards narrowed to that period | Dashboard headline links here with `scope=month` |
-| Savings rate | No | Analytics. The ring stays on the Month board for now, an exception to D3. It is saved ÷ net income for the focus year; Analytics' `lifetime` line is the same ratio over the whole record |
+| Savings rate | No | Analytics. The Month board's ring was removed with D38 |
 | Financial progress, Years of freedom, the planning assumptions | No | Planning |
 | A month's rows | No | Transactions. Nothing here drills into rows: a balance has none behind it |
 
@@ -62,6 +63,7 @@ A bar chart selects in place; picking the picked period again widens back.
 - **Month:** picking a month on You vs the market or Change by asset type narrows the KPI cards to that month and marks it on every chart with a month axis, the lines and the stacked area included, and outlines its row in Monthly snapshots. Net worth then reads at the month's end with its change that month, and Saved and Market & other read that month's split: this is the bridge. The stat matrix stays on the year. A pick or year step resets Log balances' date to that month's default; the date then drives the pane on its own. The lines and the stacked area plot each snapshot, so a month with two marks both.
 - **Year:** picking a year on either bar chart narrows the KPI cards to that year's close, marks it on every year axis and outlines its row in Yearly snapshots. The stat matrix stays on the window.
 - A period with no snapshot has no bars and cannot be picked.
+- A click on a line or the stacked area picks too (D39): on Month the snapshot's month, on Year the snapshot's year, the hover still reading each snapshot.
 
 The narrowed KPI cards must read the same window as the month's bars (`monthOverMonth`, the freshest reading in each month), not `bounds`, or the card and the bar it was picked from would disagree.
 
@@ -110,7 +112,7 @@ The stepper offers every year holding a tracked month or the one after the lates
 ## New UI strings
 
 - `Accounts`: the page title, was `Net Worth`.
-- `Month`, `Year`: the view switch; `Accounts time range` is its accessible name, was `Net worth time range`.
+- `Monthly`, `Yearly`: the view switch (D50); `Accounts time range` is its accessible name, was `Net worth time range`.
 - Titles and captions under a window name its years, as on Analytics.
 - `Default to today`: resets Log balances' date.
 
@@ -123,7 +125,7 @@ Accounts joins `BOARD_PAGES`, so `charts` and `steady` cover its Month board, an
 1. **Logging:** Log balances only; no `+ Log balance` button.
 2. ~~Month picker.~~ Reversed on review: Month takes Analytics' year stepper, and a month's bars pick the month Log balances logs, as Analytics does.
 3. **Financial progress and Years of freedom** move to Planning.
-4. **Savings rate** stays on the Month board for now, despite D3; revisit after dogfooding.
+4. ~~Savings rate stays on the Month board.~~ Removed with the Net worth KPI when the split card replaced both (D38).
 5. **Where the money sits** opens Log balances at that account. Like a heatmap, it leaves its view, since it reads today's balances rather than a period.
 6. **Snapshot tables are heatmaps**, with the columns' own good and bad shading on their tiles.
 7. **Log balances' date drives the pane** (see the click map), from `standing` and `previous` on `/api/networth`.

@@ -56,8 +56,7 @@ function measure(sections: HTMLElement, axis: MergeAxis): Section[] {
  * The span each half of a split at `index` needs, in units. `span` is the merged card's own span along the
  * axis; the board's floor is `splitRects`' to apply.
  *
- * A half's sections divide its card by weight, so its floor is whichever section's share runs out first, not
- * the sections added up — added up, the widest relies on its neighbours to give room back.
+ * A section's track never goes below its floor, so a half's floor is its sections' floors added up.
  */
 export function splitFloors(
 	sections: HTMLElement,
@@ -65,7 +64,7 @@ export function splitFloors(
 	index: number,
 	span: number
 ): [number, number] {
-	const { axis, weights } = group;
+	const { axis } = group;
 	const measured = measure(sections, axis);
 	// Everything the card puts around its sections, which each half gets from a card of its own — and the
 	// reason a split needs more room than the merge did.
@@ -73,13 +72,12 @@ export function splitFloors(
 
 	function floor(from: number, to: number): number {
 		const members = measured.slice(from, to);
-		const total = sum(weights.slice(from, to));
-		const needed = Math.max(
-			...members.map(({ content, edges }, i) => {
+		const needed = sum(
+			members.map(({ content, edges }, i) => {
 				// The rule at the half's own outer edge goes with the section it was cut away from.
 				const lead = i === 0 ? 0 : edges[0];
 				const trail = i === members.length - 1 ? 0 : edges[1];
-				return ((content + lead + trail) * total) / weights[from + i]!;
+				return content + lead + trail;
 			})
 		);
 		// `SLACK` because that is what the resize probe forgives: without it a box a fraction of a pixel
@@ -87,5 +85,5 @@ export function splitFloors(
 		return Math.ceil((needed + chrome - SLACK) / UNIT);
 	}
 
-	return [floor(0, index), floor(index, weights.length)];
+	return [floor(0, index), floor(index, group.weights.length)];
 }

@@ -42,6 +42,7 @@ import {
 	netWorthChange,
 	netWorthGrowth,
 	netWorthGrowthPerYear,
+	netWorthGrowthPace,
 	netWorthGrowthPerMonth,
 	netWorthLiabilities,
 	netWorthMonthlyTable,
@@ -515,7 +516,8 @@ export const NET_WORTH_GROWTH = GROWTH_PARTS.map((part) => ({
 	slug: part.slug,
 	total: `networth.growth_${part.slug}`,
 	perYear: `avg.networth_${part.slug}_per_year`,
-	perMonth: `avg.networth_${part.slug}_per_month`
+	perMonth: `avg.networth_${part.slug}_per_month`,
+	pace: `networth.growth_${part.slug}_pace`
 }));
 
 export type NetWorthGrowthColumn = (typeof NET_WORTH_GROWTH)[number];
@@ -535,6 +537,9 @@ const NET_WORTH_GROWTH_DEFS: DataDef[] = GROWTH_PARTS.flatMap((part) => [
 		`Avg ${part.label.toLowerCase()} / month`,
 		YEARLY,
 		(data, scope) => netWorthGrowthPerMonth(data, scope, part.slug, words(part.label))
+	),
+	scalarDef(`networth.growth_${part.slug}_pace`, `${part.label} pace`, ['year'], (data, scope) =>
+		netWorthGrowthPace(data, scope, part.slug, words(part.label))
 	)
 ]);
 

@@ -96,6 +96,7 @@ class NetWorthSnapshot:
     liabilities: Decimal
     net_worth: Decimal
     breakdown: dict[str, Decimal]  # bucket -> asset USD (keys in BUCKETS order)
+    owed: dict[str, Decimal]  # liability label -> USD owed (a credit is negative); zero omitted
 
 
 @dataclass
@@ -121,16 +122,23 @@ class NetWorth:
             breakdown[bucket(a)] += self._led.value(a, as_of)
 
         assets = sum(breakdown.values(), Decimal(0))
-        liab_signed = sum(
-            (self._led.balance(a, as_of) for a in self._led.declared_accounts(LIABILITIES)),
-            Decimal(0),
-        )
+        meta = self._led.account_meta()
+        balances = {
+            a: self._led.balance(a, as_of) for a in self._led.declared_accounts(LIABILITIES)
+        }
+        liab_signed = sum(balances.values(), Decimal(0))
+        owed: dict[str, Decimal] = {}
+        for a, bal in balances.items():
+            if round_cents(bal):
+                label = account_name(a, meta.get(a))
+                owed[label] = owed.get(label, Decimal(0)) - bal
         return NetWorthSnapshot(
             (as_of or dt.date.today()).isoformat(),
             round_cents(assets),
             round_cents(-liab_signed),
             round_cents(assets + liab_signed),
             {b: round_cents(v) for b, v in breakdown.items()},
+            {k: round_cents(v) for k, v in owed.items()},
         )
 
     def accounts(self, as_of: dt.date | None = None) -> list[AccountValue]:

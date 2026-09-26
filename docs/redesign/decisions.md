@@ -167,12 +167,68 @@ Amends D25: the industry-standard set replaces 5Y, 10Y, 20Y, 50Y and All. 10Y st
 
 Every snapshot table and heatmap lists its periods oldest at the top, as the category heatmaps do; Yearly snapshots no longer opens on the latest year.
 
+### D38 · A split card reads a total by its parts (2026-09-25)
+
+A stat card may draw each total as one bar split into its parts, each keyed with its share, as the Accounts pane of the prototype did (`SplitPane`, `SplitBar`). A key that would overflow its line names the largest parts and rolls the rest into `Other`, so widening the pane names more. It replaces the Net worth and Savings rate KPIs on Accounts · Month and every KPI on Dashboard. Snapshots carry what each liability owes (`owed`), so the Liabilities bar splits by account for any period.
+
+### D39 · Line and area charts select too (2026-09-25)
+
+Extends D20. A click on a line or stacked area picks a period as a bar does, and again widens back. The hover still reads each point; the click, and its shaded band, cover every point in the period the view picks at (`pickBy`): a month on Accounts · Month, a year on Accounts · Year and Analytics · Year, whose snapshot lines plot months. The bands tile the plot and reach under the axis labels (`PickBands`, `pickGroups`). KPI underlays are not clickable.
+
+### D40 · Spending pace opens its day (2026-09-25)
+
+An exception to D20: a day on Dashboard's Spending pace opens that day in Transactions' calendar (D34), since a day is not a period any page picks.
+
+### D41 · A pane has one floor (2026-09-26) · amended by D43
+
+A pane resizes freely down to one fixed floor and is refused only below it. The floor is measured once when a resize starts (the narrowest width the content fits at any height, then the height it needs at that width), so it never depends on the pane's current shape: a pane made short and wide narrows back to the same floor. A merged KPI card's sections never go below their own floors (`minmax(min-content, …)` tracks), so its floor is theirs added up, as the cards it was merged from, and a split gives each half at least its floor.
+
+### D42 · Dashboard's cards open their owners (2026-09-26)
+
+Cash flow opens Analytics · Month narrowed to the month; Net worth opens Accounts at its card; a Spending pace day opens Transactions' calendar (D40); a Needs attention row opens the pane that clears it.
+
+### D43 · A floor is the content unwrapped (2026-09-26)
+
+Amends D41. A pane's floor is the height its text and values take laid out across the whole board, where nothing wraps, then the narrowest width they still fit in at that height. So the floor is never taller than the pane's default, which D41's narrowest-width-first rule made it. A plot scales and sets no floor of its own (`--figure-h-floor` is gone, and a donut's ring gives way to its legend); only text and figures hold a pane up. Where a box would otherwise hide its figures, it reports them: a KPI's floor is its abbreviated reading, never one capped in magnitude; a heatmap's figures clip and say so (`data-clip`); a table that scrolls sideways (`.scroller-x`) counts its full width while arranging; a calendar day is floored at the size of what it holds; a bar drawn by `Bands` fills its box rather than claiming an SVG's default height, which had held Financial progress's tracks at their tallest.
+
+### D44 · Dashboard headlines Recent transactions and Financial progress (2026-09-26)
+
+Recent transactions lists the latest entries from any month; a row opens its month's Transaction history. Financial progress is Planning's bullet chart; the pane opens Planning. Both reverse the spec's first cut, at the user's request.
+
+### D45 · Only an overlap pushes a pane (2026-09-26)
+
+A pane is pushed down only by a pane it would overlap, not by any pane ahead of it in its columns: one ahead of it can be drawn wholly below it, pushed there by a third, and a pane put in the open space above it was stranded underneath. At a resize's press, the pane and every pane drawn below it take the top they are drawn at, so a pane grown into one below it pushes that one down rather than jumping beneath it.
+
+### D46 · Earning pace beside Spending pace (2026-09-26)
+
+Dashboard runs the month's net income (after tax and deductions: each paycheck's `net`) up day by day against last month and your average, as Spending pace does for spending, and a day opens Transactions' calendar (D40). Recent transactions lists ten.
+
+### D47 · Figures read as fully as their room allows (2026-09-26)
+
+Every figure shows its fullest reading that fits: to the cent, then whole, then abbreviated (`k`), as its room shrinks. Figures read side by side switch together (a heatmap's tiles, a stat matrix, a heatmap's totals as their own set), so a column never mixes precisions. The most compact reading always holds a figure's place and is what a pane's floor is judged on (D43); a fuller one is laid over it (`Reading`, `fitReadings`). Built for KPI cards (a cents rung atop their ladder), heatmaps, stat matrices and the split card, whose headline's change moves under the figure, as the Accounts mock drew it. Still to do: figures in columns sized to their content (lists, Spending by category, the donut's legend, Log balances' totals, the calendar).
+
+### D48 · A headline links by its title (2026-09-26)
+
+A card that headlines another page's figures opens that page from its title alone, underlined on hover, and not while its labels are being named in Edit. It opens the page as the sidebar does, at the view and state it was left in (D33), with no period or scope of its own. The card's figures and bars do not link. Supersedes the whole-card links D42 built.
+
+### D49 · Edit shows the saved board (2026-09-26)
+
+A pane reserves the same room in Edit as out of it. A capped pane no longer holds its whole ceiling open while arranging; the ceiling is drawn as a dashed outline over what lies below, with its bottom edge where it is dragged. A table that scrolls sideways (`.scroller-x`) keeps its content's height out of Edit too, so a pane on a set height scrolls as a whole rather than clipping rows inside the table.
+
+### D50 · The range switch reads Monthly and Yearly (2026-09-26)
+
+Amends D19's labels: the switch on Analytics and Accounts reads Monthly and Yearly. The views and their paths are unchanged.
+
+### D51 · The user's arrangement is every board's default (2026-09-26)
+
+Per D14, every board's default is now the arrangement the user stored: panes, height modes, KPI merges and how each merged card divides (`KpiMerge.weights`). Analytics lays its income chain out as two columns on Monthly and as a strip with the rates stacked beside it on Yearly. A board rendered with no storage matches the stored one pane for pane.
+
 ## Open
+
 
 - **A card filter's figure.** When the history is filtered to one card, show "Charged to card" (full bills) beside Spent, so the gap reads as what was fronted? Or nothing. "Charged − paid" was rejected: it mostly reflects statement timing.
 - **The open entry in the URL (D9).** The modal's open entry is not in the URL yet, so back does not close it.
 - **Phone layout.** Suggested: bottom tab bar with the four main pages.
-- **Stored layouts.** Once dogfooding settles, adopt the user's stored arrangement for every page's boards at once as their defaults (D14).
 
 ## Resolved elsewhere
 

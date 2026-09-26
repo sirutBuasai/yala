@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EDGES, moveRect, resizeRect, snapUnits } from '$lib/layout/grid/resize';
+import { EDGES, holdFloor, lowest, moveRect, resizeRect, snapUnits } from '$lib/layout/grid/resize';
 import { UNIT } from '$lib/layout/grid/units';
 import type { Rect } from '$lib/layout/grid/types';
 
@@ -88,5 +88,36 @@ describe('EDGES', () => {
 		}
 		expect(EDGES.fit.some((e) => e.includes('n') || e.includes('s'))).toBe(false);
 		expect(EDGES.cap.some((e) => e.includes('n'))).toBe(false);
+	});
+});
+
+describe('holdFloor', () => {
+	const floor = { w: 8, h: 5 };
+
+	it('leaves a rectangle above the floor alone', () => {
+		expect(holdFloor(base, 'se', { ...base, w: 14, h: 7 }, floor)).toEqual({
+			...base,
+			w: 14,
+			h: 7
+		});
+	});
+
+	it('stops a west or north edge at the floor, keeping the far edge put', () => {
+		expect(holdFloor(base, 'nw', { x: 18, y: 9, w: 4, h: 1 }, floor)).toEqual({
+			x: 14,
+			y: 5,
+			w: 8,
+			h: 5
+		});
+	});
+});
+
+describe('lowest', () => {
+	it('finds the least value that holds', async () => {
+		expect(await lowest(1, 48, async (v) => v >= 17)).toBe(17);
+	});
+
+	it('answers the top of the range when nothing below it holds', async () => {
+		expect(await lowest(1, 48, async () => false)).toBe(48);
 	});
 });

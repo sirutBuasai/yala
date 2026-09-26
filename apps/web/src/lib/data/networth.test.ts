@@ -3,6 +3,7 @@ import { build, CATALOG_BY_ID, dataOfKind } from '$lib/data/catalog';
 import type { Scalar } from '$lib/data/primitives';
 import { formatUnit, MONTHS, PERCENT, YEARS } from '$lib/data/primitives';
 import { makeData, makeNetWorthData } from '$lib/data/__fixtures__/dashboard';
+import { netWorthParts } from '$lib/data/networth';
 import type { Scope, ScopeLevel } from '$lib/data/scope';
 
 const scopeFor = (level: ScopeLevel): Scope =>
@@ -872,5 +873,45 @@ describe('a window of years', () => {
 	it('names each snapshot’s date as its period, so a month marks every snapshot in it', () => {
 		const lines = build(makeNetWorthData(), 'networth.vs_assets', { level: 'year', year: 2024 });
 		expect(lines.kind === 'multiseries' && lines.periods).toEqual(['2024-01-01', '2024-12-01']);
+	});
+});
+
+describe('netWorthParts', () => {
+	const keyed = (points: { key: string; value: number }[]) =>
+		Object.fromEntries(points.map((p) => [p.key, p.value]));
+
+	it("splits the scope's closing snapshot into buckets and what each account owes", () => {
+		const data = makeNetWorthData();
+		data.networth!.series[2]!.owed = { CardA: 400, CardB: 100 };
+		const { assets, liabilities } = netWorthParts(data, { level: 'year', year: 2025 });
+		expect(keyed(assets.points)).toEqual({ Liquid: 1300, Taxable: 2600, 'Tax-advantaged': 2600 });
+		expect(keyed(liabilities.points)).toEqual({ CardA: 400, CardB: 100 });
+	});
+
+	it('owes as one part where the snapshot predates the split', () => {
+		const { liabilities } = netWorthParts(makeNetWorthData(), { level: 'year', year: 2025 });
+		expect(keyed(liabilities.points)).toEqual({ Liabilities: 500 });
+	});
+});
+
+describe('levels since the last snapshot', () => {
+	it('moves every level, a debt growing read as bad', () => {
+		const data = makeNetWorthData();
+		const all: Scope = { level: 'all' };
+		const assets = build(data, 'networth.assets', all) as Scalar;
+		const owed = build(data, 'networth.liabilities', all) as Scalar;
+		expect(assets.delta).toMatchObject({ value: 3500, tone: 'good', note: 'since last' });
+		expect(owed.delta).toMatchObject({ value: 500, tone: 'bad', note: 'since last' });
+	});
+});
+
+describe('growth pace', () => {
+	it("holds a year's monthly rate for twelve months, against last year's total", () => {
+		const data = makeNetWorthData();
+		const year: Scope = { level: 'year', year: 2025 };
+		const pace = build(data, 'networth.growth_change_pace', year) as Scalar;
+		const perMonth = build(data, 'avg.networth_change_per_month', year) as Scalar;
+		expect(pace.value).toBeCloseTo(perMonth.value! * 12);
+		expect(pace.delta).toMatchObject({ note: 'YoY' });
 	});
 });

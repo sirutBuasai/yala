@@ -13,6 +13,7 @@
 		formatUnit,
 		formatUnitCompact,
 		formatUnitExact,
+		readingsOf,
 		type DeltaDetail
 	} from '$lib/data/primitives';
 	import { contentFloor, levelThatFits, watchWidth } from '$lib/ui/fit';
@@ -23,6 +24,7 @@
 	import { DOT, labelText, type Slot } from '$lib/ui/label';
 	import { tryLabels } from '$lib/layout/grid/context';
 	import { kpiLabels } from './labels';
+	import { pageLink } from '$lib/nav/left';
 	import Spark from './Spark.svelte';
 	import Ring from './Ring.svelte';
 	import Meter from './Meter.svelte';
@@ -77,6 +79,10 @@
 	}
 
 	const value = $derived(reading());
+	/** Its fullest reading, to the cent, for a card with room to spare. */
+	const exact = $derived(
+		scalar.value === null ? NO_VALUE : readingsOf(scalar.value, scalar.unit, !!scalar.tone)[0]!
+	);
 	const behind = $derived(
 		spec.series && spec.chart && spec.chart !== 'ring' && spec.chart !== 'meter'
 			? { series: build(data, spec.series, spec.scope) as Series, shape: spec.chart }
@@ -101,21 +107,21 @@
 		delta && detail ? deltaLabel(delta, detail) : '';
 
 	/**
-	 * What this reading may give up to fit its pane, richest first: the delta's note, then the delta's
-	 * magnitude, then the figure's thousands, then the delta itself, and only last the figure's own magnitude.
-	 * The figure is never dropped and the type never shrinks — a wider pane stops higher up the ladder, so every
-	 * ceiling here is the pane's rather than a number written in this file.
+	 * What this reading may give up to fit its pane, richest first: the figure's cents, the delta's note, then
+	 * the delta's magnitude, then the figure's thousands, then the delta itself. The figure is never dropped and the type
+	 * never shrinks; a wider pane stops higher up the ladder, and the last rung is the card's floor.
 	 */
 	const LEVELS = $derived.by(() => {
 		const short = reading({ abbreviate: true });
 		const capping: DeltaDetail = { digits: CAP_DIGITS, note: false };
 		const rungs: Rung[] = [
+			{ num: exact, delta: {} },
 			{ num: value, delta: {} },
 			{ num: value, delta: { note: false } },
 			{ num: value, delta: capping },
 			{ num: short, delta: capping },
-			{ num: short, delta: null },
-			{ num: reading({ abbreviate: true, digits: CAP_DIGITS }), delta: null }
+			// No rung past this: a reading capped in magnitude states a figure that is not the value.
+			{ num: short, delta: null }
 		];
 
 		const seen = new Set<string>();
@@ -164,7 +170,10 @@
 			.filter(Boolean)
 			.join(' ')
 	);
-	const clamped = $derived(shown.num !== value || deltaText(shown.delta) !== full);
+	const clamped = $derived(shown.num !== exact || deltaText(shown.delta) !== full);
+
+	// On the title alone, and not while it is being named: a click on it is then a rename.
+	const link = $derived(spec.open && !naming ? pageLink(spec.open) : {});
 </script>
 
 <div
@@ -174,7 +183,7 @@
 	<!-- Held open by `nameable`, not by `naming`: a line that appeared only while editing made the card
 	     measure taller in one mode than the other, and the pane banked the difference. -->
 	{#if title || nameable}
-		<h2 class="serif" data-label-line>
+		<h2 class="serif" class:link={!!spec.open && !naming} data-label-line {...link}>
 			<LabelLine
 				label={named.title}
 				what="title"
@@ -200,7 +209,7 @@
 	<div class="stat">
 		{#if behind}
 			<div class="behind">
-				<Spark series={behind.series} shape={behind.shape} color={markColor} />
+				<Spark series={behind.series} shape={behind.shape} color={markColor} level={spec.level} />
 			</div>
 		{/if}
 		<!-- Its own layer, so the figure and badge paint over the chart untinted. -->
@@ -257,6 +266,14 @@
 		flex: 1 1 auto;
 		min-width: max(var(--content-floor, 0px), min-content);
 	}
+	.link {
+		cursor: pointer;
+	}
+	.link:hover,
+	.link:focus-visible {
+		text-decoration: underline;
+		text-underline-offset: 0.2em;
+	}
 	/* One line each, and neither may be shrunk: `[data-label-line]` clips to `--label-lines`, so a host
 	   that leaves it unset bounds nothing, and the column is then free to squeeze a line under its own
 	   box and clip the glyphs. */
@@ -282,7 +299,7 @@
 		display: flex;
 		align-items: flex-end;
 		margin-top: auto;
-		padding-top: var(--space-4);
+		padding-top: var(--space-2);
 		min-width: 0;
 	}
 	.behind {

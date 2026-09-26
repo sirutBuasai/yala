@@ -281,3 +281,19 @@ export interface Deviation {
 
 export type Primitive =
 	Scalar | Categorical | Series | MultiSeries | Flow | Matrix | Table | Bullet | Deviation;
+
+/**
+ * A figure's readings, fullest first, for a box that shows the fullest it has room for: to the cent, then
+ * whole, then abbreviated. `signed` prints a plus on a gain, for a figure whose sign is its meaning. Units
+ * with nothing to give up have one reading.
+ */
+export function readingsOf(value: number, unit: Unit, signed = false): string[] {
+	const plus = signed && value > 0 ? '+' : '';
+	const all =
+		unit.kind === 'money'
+			? [formatUnitExact(value, unit), formatUnit(value, unit), formatUnitCompact(value, unit)]
+			: unit.kind === 'count'
+				? [formatUnit(value, unit), formatUnitCompact(value, unit)]
+				: [formatUnit(value, unit)];
+	return [...new Set(all)].map((r) => plus + r);
+}

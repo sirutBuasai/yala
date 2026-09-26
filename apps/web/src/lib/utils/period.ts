@@ -24,6 +24,11 @@ export function isoOf(d: Date): string {
 	return isoDate(monthKey(d.getFullYear(), d.getMonth() + 1), d.getDate());
 }
 
+/** How many days the month "YYYY-MM" has. */
+export function daysIn(key: string): number {
+	return new Date(yearOf(key), monthOf(key), 0).getDate();
+}
+
 export function todayIso(): string {
 	return isoOf(new Date());
 }

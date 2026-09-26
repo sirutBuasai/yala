@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { categorical, rollup, whereItWent } from '$lib/data/categorical';
+import { categorical, incomeParts, rollup, whereItWent } from '$lib/data/categorical';
 
 describe('categorical', () => {
 	it('sorts descending and drops non-positive amounts', () => {
@@ -73,5 +73,28 @@ describe('whereItWent', () => {
 		expect(c.points).toHaveLength(10);
 		expect(c.points.filter((p) => p.key === 'Other')).toHaveLength(1);
 		expect(c.points[c.points.length - 1]!.key).toBe('Saved');
+	});
+});
+
+describe('incomeParts', () => {
+	const values = (income: number, spent: number) =>
+		incomeParts(income, spent).points.map((p) => [p.key, p.value]);
+
+	it('splits income into what was spent and what was kept', () => {
+		expect(values(1000, 400)).toEqual([
+			['Spent', 400],
+			['Saved', 600]
+		]);
+	});
+
+	it('keeps nothing when spending passes income, or there is no income', () => {
+		expect(values(1000, 1300)).toEqual([
+			['Spent', 1300],
+			['Saved', 0]
+		]);
+		expect(values(0, 250)).toEqual([
+			['Spent', 250],
+			['Saved', 0]
+		]);
 	});
 });

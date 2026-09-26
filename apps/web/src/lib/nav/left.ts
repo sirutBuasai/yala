@@ -2,6 +2,8 @@
 // its own scroll, so switching between views or pages returns each to how it was left, and a pick on one
 // never moves another. Session storage rather than local: it is about this visit, not a preference.
 
+import { goto } from '$app/navigation';
+import { onPress } from '$lib/charts/aria';
 import { pageOf } from './pages';
 
 const KEY = 'yala-page-state';
@@ -79,4 +81,17 @@ export function restoreScroll(y: number, frames = 60): void {
 		requestAnimationFrame(() => attempt(left - 1));
 	};
 	attempt(frames);
+}
+
+/** Attributes that make a card's title a link to `page`, opened as the sidebar opens it: at the view it
+    was left on, as that view was left (D33). A heading rather than an anchor, since the title is also what
+    a rename edits. Spread, so a title with no page gets none of them. */
+export function pageLink(page: string) {
+	const open = () => void goto(leftAt(viewAt(page)));
+	return {
+		role: 'link',
+		tabindex: 0,
+		onclick: open,
+		onkeydown: (e: KeyboardEvent) => onPress(e, open)
+	};
 }

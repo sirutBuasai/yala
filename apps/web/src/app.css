@@ -265,14 +265,9 @@
 	   Bounds on how far a chart grows to fill its pane, so one tall figure can't drag its
 	   neighbours out of alignment. An instance may widen its ceiling by setting --figure-h-max
 	   inline. On the pane grid the pane owns the height, so min/max are lifted there (see
-	   grid/Pane) — all except the FLOOR below, which is load-bearing. */
+	   grid/Pane). */
 	--figure-h-min: 240px;
 	--figure-h-max: 460px;
-	/* The universal floor for a plot area, shared by every vector chart. A vector chart never
-	   overflows — it only gets illegible — so a declared floor is its only limit. The floor is also
-	   what makes a DETACHED legend count towards the pane's minimum: at zero the plot collapses,
-	   the legend always fits, and the minimum is a constant instead of a function of the data. */
-	--figure-h-floor: 5rem;
 
 	/* How many lines a card's title and caption may wrap to. This is the ceiling on a pane growing to fit
 	   its own label: bound the words and the card is bounded with them, whatever its width. Without it a
@@ -526,6 +521,10 @@ a {
 }
 .scroller-x {
 	overflow-x: auto;
+	/* Bug: `overflow-x: auto` makes the other axis `auto` too, so a flex column could shrink the box and
+	   it became a vertical scroll area of its own, clipping rows the card around it had room to scroll
+	   to. Held at its content's height, the card is what scrolls. */
+	flex-shrink: 0;
 }
 /* Scroll chaining is DELIBERATELY on by default: reaching the end of a capped list carries on
    scrolling the page. `.trap` is the opt-in for a modal body or open dropdown. */

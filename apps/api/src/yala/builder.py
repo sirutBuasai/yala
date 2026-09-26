@@ -222,6 +222,7 @@ def _networth_snapshot(p) -> NetWorthSnapshot:
         liabilities=money(p.liabilities),
         net_worth=money(p.net_worth),
         breakdown={k: money(v) for k, v in p.breakdown.items()},
+        owed={k: money(v) for k, v in p.owed.items()},
     )
 
 

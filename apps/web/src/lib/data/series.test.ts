@@ -3,6 +3,8 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+	earningPace,
+	spendingPace,
 	accumulate,
 	measureActive,
 	measureByMonth,
@@ -194,5 +196,31 @@ describe('yearAxis', () => {
 		const data = makeData();
 		data.meta.years = [];
 		expect(yearAxis(data)).toEqual([]);
+	});
+});
+
+describe('paces', () => {
+	/** A month with paychecks and spending in the fixture, and each line's last point. */
+	const data = makeData();
+	const key = data.meta.month_keys.find((k) => data.months[k]!.paychecks.length)!;
+	const ends = (p: ReturnType<typeof spendingPace>) => p.series.map((s) => s.points.at(-1)!.value);
+
+	it("runs a month's spending up to the sum of its rows", () => {
+		const month = data.meta.month_keys.find((k) => data.months[k]!.transactions.length)!;
+		const pace = spendingPace(data, month);
+		expect(pace.series.map((s) => s.name)).toEqual(['Spent', 'Last month', 'Average']);
+		const rows = data.months[month]!.transactions.reduce((t, x) => t + x.amount, 0);
+		expect(ends(pace)[0]).toBeCloseTo(rows);
+	});
+
+	it("runs net income up as paychecks land, to the month's net income", () => {
+		const pace = earningPace(data, key);
+		expect(ends(pace)[0]).toBeCloseTo(measureValue(data, { level: 'month', monthKey: key }, 'net'));
+	});
+
+	it("ends the month's own line at `through`", () => {
+		const pace = earningPace(data, key, `${key}-03`);
+		expect(pace.series[0]!.points[2]!.value).not.toBeNull();
+		expect(pace.series[0]!.points[3]!.value).toBeNull();
 	});
 });

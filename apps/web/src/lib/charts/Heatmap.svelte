@@ -6,6 +6,8 @@
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import { chartLabel } from '$lib/charts/aria';
 	import type { HeatGrid } from '$lib/charts/heat';
+	import { fitReadings } from '$lib/ui/readings';
+	import Reading from '$lib/ui/Reading.svelte';
 
 	interface Props {
 		grid: HeatGrid;
@@ -27,10 +29,21 @@
 
 	/** The row labels' column, in `ch` so it holds its longest label at whatever size type scaled to. */
 	const gutter = $derived(Math.max(3, ...grid.rows.map((r) => r.length)) + 1);
+
+	/** How fully the figures read: one level for the tiles so they read alike, one for the totals, whose
+	    column is narrower (see `Reading`). */
+	let levels = $state<Record<string, number>>({});
+	const level = $derived(levels[''] ?? 0);
+	const sumLevel = $derived(levels.sum ?? 0);
 </script>
 
 <div class="sizebox">
-	<table style:--tracks={tracks} style:--gutter={`${gutter}ch`} aria-label={label}>
+	<table
+		style:--tracks={tracks}
+		style:--gutter={`${gutter}ch`}
+		aria-label={label}
+		use:fitReadings={(l) => (levels = l)}
+	>
 		<thead>
 			<tr>
 				<td class="corner"></td>
@@ -64,7 +77,7 @@
 							onmousemove={(e) => showTip(`<b>${esc(r)} · ${esc(c)}</b><br>${esc(cell.tip)}`, e)}
 							onmouseleave={hideTip}
 						>
-							{cell.text}
+							<Reading readings={cell.readings} {level} />
 							{#if onpick}
 								<button
 									type="button"
@@ -77,7 +90,7 @@
 					{/each}
 					{#if totals}
 						<td class="gap"></td>
-						<td class="sum">{totals.rows[i]}</td>
+						<td class="sum"><Reading readings={totals.rows[i]!} level={sumLevel} group="sum" /></td>
 					{/if}
 				</tr>
 			{/each}
@@ -87,10 +100,10 @@
 				<tr>
 					<th scope="row">Total</th>
 					{#each grid.cols as _c, j (j)}
-						<td class="sum">{totals.cols[j]}</td>
+						<td class="sum"><Reading readings={totals.cols[j]!} level={sumLevel} group="sum" /></td>
 					{/each}
 					<td class="gap"></td>
-					<td class="sum">{totals.grand}</td>
+					<td class="sum"><Reading readings={totals.grand} level={sumLevel} group="sum" /></td>
 				</tr>
 			</tfoot>
 		{/if}
@@ -147,6 +160,14 @@
 		font-weight: var(--fw-regular);
 		text-align: center;
 		white-space: nowrap;
+	}
+	/* A figure is clipped rather than laid over its neighbour, and its compact reading's clip is what the
+	   pane reads as its floor (see `Reading`): the columns divide the pane, so they would otherwise narrow
+	   past their values. */
+	.cell,
+	td.sum {
+		white-space: nowrap;
+		overflow: hidden;
 	}
 	.cell {
 		text-align: right;
