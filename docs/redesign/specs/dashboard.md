@@ -1,6 +1,6 @@
 # Dashboard spec
 
-Status: building · Branch: `redesign/dashboard`
+Status: merged, dogfooding
 
 ## Job
 

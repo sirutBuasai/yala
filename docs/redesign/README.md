@@ -27,7 +27,10 @@ A figure has one owning page. Anywhere else it appears only as a headline that l
 - Every chart, title and caption carries over (D6). Mock anything new or anything the user cannot picture, publish the mock, keep a copy in `mocks/`, and list every new UI string for review.
 - Never read and write the same state in an `$effect`: it loops until Svelte's guard stops it, costing CPU with nothing on screen. The browser tests fail on any uncaught page error, which is what catches it.
 - Chart marks are SVG (`lib/charts/marks`).
-- A pane's floor is measured once per resize (D41). Keep a pane's height independent of its width where you can, so its floor is not the worst case of a wrap.
+- A pane's floor is measured once per resize from its content unwrapped (D41, D43): only text and figures hold it up, never a plot. A figure that could clip reports it (`data-clip`).
+- A figure shows its fullest reading that fits (D47): give it `readingsOf` and render it with `Reading`, grouped by `fitReadings` so figures read side by side switch together.
+- Edit must show the board as saved (D49): nothing may reserve more or less room while arranging.
+- A headline card opens its owner from its title (`open`, D48), never from its figures.
 - A bar chart selects and narrows its page; only a heatmap navigates (D20). `BarChart` takes `onpick` and `picked`, a figure's `mark` names the period in focus (a period key where the axis carries `periods`, else a label), and a `Scope` at `all` takes `since` for a trailing window. `lib/nav/picks.ts` is a board's year stepper, bar picks and span.
 - Every pick lives in the URL, and every view remembers its own URL and scroll, so a page or view switch returns it as it was left (D33, `lib/nav/left.ts`). `lib/nav/step.ts` is the one way to change a pick.
 - A click that opens another page goes through `drillTo` (`lib/nav/drill.ts`) with the pane it lands on (D34); give the pane's board id.
@@ -78,6 +81,6 @@ PYTHONPATH=$PWD/.worktrees/redesign-<topic>/apps/api/src YALA_API_PORT=8800 \
 | Transactions | [done](specs/transactions.md) | merged | reviewed on 8800; keep logging real months |
 | Analytics (was Cash flow) | [done](specs/analytics.md) | merged | started on 8800; keep reading real months |
 | Accounts | [done](specs/accounts.md) | merged | started on 8800; keep logging real month ends |
-| Dashboard | [done](specs/dashboard.md) | built on `redesign/dashboard` | started on 8800 |
+| Dashboard | [done](specs/dashboard.md) | merged | started on 8800 |
 | Planning (moved) | not started | not started | not started |
 | Manage (moved) | not needed | moved in with the shell | not started |
