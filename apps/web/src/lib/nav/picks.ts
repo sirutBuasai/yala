@@ -24,17 +24,24 @@ const DEFAULT_SPAN: Span = '10';
 
 const P = { scope: 'scope', span: 'span' } as const;
 
-export function periodPicks(url: URL, data: DashboardData, view: View) {
+/** `record` is the years the page's figures span, ascending: the tracked years unless it reads another
+    record, as net worth reads its snapshots'. */
+export function periodPicks(
+	url: URL,
+	data: DashboardData,
+	view: View,
+	record: number[] = data.meta.years
+) {
 	const params = url.searchParams;
 	const navigate = (patch: Record<string, string | null>) => step(url, patch);
 
 	const span = SPANS.find((s) => s.id === params.get(P.span))?.id ?? DEFAULT_SPAN;
-	const last = latestYear(data);
+	const last = record.at(-1) ?? latestYear(data);
 	/** The window's first year, or nothing when it reaches back past the record: then it is the lifetime. */
 	const sinceOf = (s: Span): number | undefined => {
 		if (s === 'all') return undefined;
 		const from = last - Number(s) + 1;
-		return (data.meta.years[0] ?? from) < from ? from : undefined;
+		return (record[0] ?? from) < from ? from : undefined;
 	};
 	const since = sinceOf(span);
 
@@ -54,7 +61,7 @@ export function periodPicks(url: URL, data: DashboardData, view: View) {
 		scoped,
 		span,
 		since,
-		spanText: yearSpan(since == null ? data.meta.years : [since, last]),
+		spanText: yearSpan(since == null ? record : [since, last]),
 
 		/** A year's month, as close to the focus month as that year allows; nothing when it has none. */
 		moveToYear(y: number) {

@@ -95,7 +95,11 @@ export function measureTrailing(
 /** Every year from the first tracked (or `since`, when later) to the last, so a year with nothing logged
     still holds its place on an axis rather than closing the gap. */
 export function yearAxis(data: DashboardData, since?: number): number[] {
-	const ys = data.meta.years;
+	return spanYears(data.meta.years, since);
+}
+
+/** Every year from the first of `ys` (or `since`, when later) to the last, gaps included. */
+export function spanYears(ys: number[], since?: number): number[] {
 	if (!ys.length) return [];
 	const first = Math.max(Math.min(...ys), since ?? -Infinity);
 	return Array.from({ length: Math.max(0, Math.max(...ys) - first + 1) }, (_, i) => first + i);

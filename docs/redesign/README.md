@@ -28,7 +28,8 @@ A figure has one owning page. Anywhere else it appears only as a headline that l
 - Never read and write the same state in an `$effect`: it loops until Svelte's guard stops it, costing CPU with nothing on screen. The browser tests fail on any uncaught page error, which is what catches it.
 - Chart marks are SVG (`lib/charts/marks`).
 - A bar chart selects and narrows its page; only a heatmap navigates (D20). `BarChart` takes `onpick` and `picked`, a figure's `mark` names the period in focus (a period key where the axis carries `periods`, else a label), and a `Scope` at `all` takes `since` for a trailing window. `lib/nav/picks.ts` is a board's year stepper, bar picks and span.
-- Every pick lives in the URL, so the sidebar reopens a page as it was left (`lib/nav/left.ts`) and `lib/nav/step.ts` is the one way to change it.
+- Every pick lives in the URL for back and forward; a page or view switch opens with the focus month only, at that view's last scroll (D30, `lib/nav/left.ts`). `lib/nav/step.ts` is the one way to change a pick.
+- Every x-label is drawn, turned where crowded (D31, `XLabels`); a pickable bar list uses `PickRow` (D32).
 - A page's view is a path and a pick is a query parameter (D27): a reload keeps the first and drops the second. Decide which a new setting is by where it lives.
 - Each worktree needs its own `npm install` in `apps/web`; the primary checkout has none.
 
@@ -74,7 +75,7 @@ PYTHONPATH=$PWD/.worktrees/redesign-<topic>/apps/api/src YALA_API_PORT=8800 \
 | App shell (sidebar, routes, URL state) | [done](specs/app-shell.md) | merged | partial: month history waits for a page with a period |
 | Transactions | [done](specs/transactions.md) | merged | reviewed on 8800; keep logging real months |
 | Analytics (was Cash flow) | [done](specs/analytics.md) | merged | started on 8800; keep reading real months |
-| Accounts | [done](specs/accounts.md) | steps 1 and 3 built, Month picks built | started on 8800 |
+| Accounts | [done](specs/accounts.md) | built | started on 8800 |
 | Dashboard | not started | not started | not started |
 | Planning (moved) | not started | not started | not started |
 | Manage (moved) | not needed | moved in with the shell | not started |

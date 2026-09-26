@@ -6,6 +6,7 @@
 	import { esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Bands from '$lib/charts/marks/Bands.svelte';
+	import PickRow from '$lib/charts/marks/PickRow.svelte';
 
 	interface Row {
 		label: string;
@@ -58,24 +59,15 @@
 {/snippet}
 
 <div class="bars">
-	<div class="row head" aria-hidden="true">
+	<div class="head" aria-hidden="true">
 		<span>Category</span><span></span><span class="num">Total</span><span class="num"
 			>Δ average</span
 		>
 	</div>
 	{#each rows as r (r.label)}
 		{@const delta = r.value - r.base}
-		<svelte:element
-			this={onpick ? 'button' : 'div'}
-			class="row"
-			class:pickable={!!onpick}
-			class:picked={r.label === picked}
-			type={onpick ? 'button' : undefined}
-			role={onpick ? 'button' : undefined}
-			aria-pressed={onpick ? r.label === picked : undefined}
-			onclick={onpick ? () => onpick(r.label) : undefined}
-		>
-			<span class="name">{r.label}</span>
+		<PickRow label={r.label} {onpick} picked={r.label === picked}>
+			<span class="name" class:chosen={r.label === picked}>{r.label}</span>
 			<span
 				class="lane"
 				role="presentation"
@@ -107,7 +99,7 @@
 			<span class="num delta" class:over={delta > 0} class:under={delta < 0}>
 				{formatDelta(delta, unit)}
 			</span>
-		</svelte:element>
+		</PickRow>
 	{/each}
 	<div class="key" aria-hidden="true">
 		<span>{@render current('var(--ink-3)', false)}this month</span>
@@ -136,14 +128,10 @@
 		align-content: space-evenly;
 		gap: var(--gap-row) var(--gap-field);
 	}
-	.row {
+	.head {
 		display: grid;
 		grid-column: 1 / -1;
 		grid-template-columns: subgrid;
-		align-items: center;
-		font-size: var(--text-caption);
-	}
-	.head {
 		font-size: var(--text-column);
 		color: var(--ink-3);
 		text-transform: uppercase;
@@ -155,25 +143,7 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
-	/* A row that chooses its category reads as one control: no button chrome, a wash on hover and while
-	   chosen. */
-	.pickable {
-		border: 0;
-		margin: 0;
-		padding: 0;
-		background: none;
-		font-family: inherit;
-		line-height: inherit;
-		color: inherit;
-		text-align: left;
-		cursor: pointer;
-		border-radius: var(--radius-sm);
-	}
-	.pickable:hover,
-	.picked {
-		background: var(--inset);
-	}
-	.picked .name {
+	.name.chosen {
 		color: var(--ink);
 		font-weight: var(--fw-semibold);
 	}

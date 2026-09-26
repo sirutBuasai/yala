@@ -58,8 +58,39 @@ test('an account in Where the money sits opens it in Log balances', async ({ pag
 	await expect(page).toHaveURL(/\/accounts\?month=\d{4}-\d{2}&account=/);
 	await expect(pane(page, 'Log balances')).toBeVisible();
 
+	await expect(page.locator('.tooltip')).toHaveCSS('opacity', '0');
+
 	await page.goBack();
 	await expect(page).toHaveURL(/\/accounts\/year/);
+});
+
+test("a year's bars narrow the Year view's KPI cards to its close and mark it everywhere", async ({
+	page
+}) => {
+	await page.goto('/accounts/year');
+	await settle(page);
+	const year = band(page, 'You vs the market, by year', '2025');
+
+	await year.click();
+	await settle(page);
+	await expect(page).toHaveURL(/scope=year/);
+	await expect(band(page, 'Change by asset type', '2025')).toHaveAttribute('aria-pressed', 'true');
+	await expect(page.getByText('this year').first()).toBeVisible();
+	await expect(pane(page, 'Yearly snapshots').locator('tr.marked th[scope=row]')).toContainText(
+		'2025'
+	);
+
+	await year.click();
+	await settle(page);
+	await expect(page).not.toHaveURL(/scope=/);
+});
+
+test('the span scopes the Year view to its years', async ({ page }) => {
+	await page.goto('/accounts/year');
+	await settle(page);
+	await page.getByRole('tab', { name: '5Y', exact: true }).click();
+	await settle(page);
+	await expect(page).toHaveURL(/span=5/);
 });
 
 test('Year is a path a reload keeps, and it logs nothing', async ({ page }) => {

@@ -17,18 +17,6 @@ describe('withFocus', () => {
 		expect(withFocus('/accounts', at('?view=year&category=Takeouts'))).toBe('/accounts');
 	});
 
-	it('reopens a page as it was left, moved to the current focus month', () => {
-		expect(
-			withFocus('/transactions', at('?month=2026-03'), '?month=2025-01&category=Grocery')
-		).toBe('/transactions?month=2026-03&category=Grocery');
-	});
-
-	it('drops a remembered month when the current page has no focus', () => {
-		expect(withFocus('/analytics', at(''), '?month=2025-01&view=year&scope=year')).toBe(
-			'/analytics?view=year&scope=year'
-		);
-	});
-
 	it('ignores a month that is not a real calendar month', () => {
 		expect(withFocus('/', at('?month=2026-13'))).toBe('/');
 		expect(withFocus('/', at('?month=march'))).toBe('/');

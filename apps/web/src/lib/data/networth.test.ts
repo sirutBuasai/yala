@@ -833,3 +833,44 @@ describe('the year against last year', () => {
 		expect(CATALOG_BY_ID['networth.growth_other']!.label).toBe('Market & other');
 	});
 });
+
+describe('a picked period', () => {
+	it('reads a year’s levels at its close, each with its move over the year', () => {
+		const assets = scalar('networth.assets', { level: 'year', year: 2025 });
+		expect(assets.value).toBe(6500);
+		expect(assets.delta).toMatchObject({ value: 3500, tone: 'good', note: 'this year' });
+	});
+
+	it('reads a rise in what is owed as bad news', () => {
+		const owed = scalar('networth.liabilities', { level: 'year', year: 2025 });
+		expect(owed.delta).toMatchObject({ value: 500, tone: 'bad' });
+	});
+
+	it('reads a month over the window its bar spans, so the card agrees with the bar', () => {
+		const change = scalar('networth.change', { level: 'month', monthKey: '2025-06' });
+		expect(change.value).toBe(6000);
+		expect(change.delta).toMatchObject({ value: 3000, note: 'this month' });
+	});
+});
+
+describe('a window of years', () => {
+	it('reads only the years it covers', () => {
+		const bars = build(makeNetWorthData(), 'networth.saved_vs_other', {
+			level: 'all',
+			since: 2025
+		});
+		expect(bars.kind === 'multiseries' && bars.labels).toEqual(['2025']);
+	});
+
+	it('keeps a year with no snapshot on the year axis (D23)', () => {
+		const data = makeNetWorthData();
+		data.networth!.series.push({ ...data.networth!.series[2]!, date: '2027-01-01' });
+		const bars = build(data, 'networth.saved_vs_other', { level: 'all' });
+		expect(bars.kind === 'multiseries' && bars.labels).toEqual(['2024', '2025', '2026', '2027']);
+	});
+
+	it('names each snapshot’s date as its period, so a month marks every snapshot in it', () => {
+		const lines = build(makeNetWorthData(), 'networth.vs_assets', { level: 'year', year: 2024 });
+		expect(lines.kind === 'multiseries' && lines.periods).toEqual(['2024-01-01', '2024-12-01']);
+	});
+});

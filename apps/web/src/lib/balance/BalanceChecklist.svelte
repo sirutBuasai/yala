@@ -45,8 +45,10 @@
 		monthKey: string;
 		/** An account to open at, by ledger path: its row is marked, scrolled to and its field focused. */
 		account?: string | null;
+		/** Moves the page to another month, for a reading that lands in one. */
+		onmonth?: (monthKey: string) => void;
 	}
-	let { id, data, accounts, onsaved, monthKey, account }: Props = $props();
+	let { id, data, accounts, onsaved, monthKey, account, onmonth }: Props = $props();
 
 	/** Which accounts the shown month had, once the dated read lands. The props are today's lists, so
 	    they stand in only until then, and on their own would offer a card opened months later. */
@@ -143,15 +145,8 @@
 	/** What this month's latest snapshot puts the account at, in the ledger's sign. Zero is a figure,
 	    so this is null only when the month holds nothing for the account. */
 	const onRecord = (account: string) => logged.get(account)?.amount ?? null;
-	/**
-	 * What the reading's date stood at, to ghost in its field: the snapshot on that date, else the latest
-	 * before it. Past the account's last snapshot there is nothing yet to show, since the field is where
-	 * the next one goes.
-	 */
-	function ghost(account: string): number | null {
-		const s = standingAt.get(account);
-		return s && (s.later || s.date === snapshotDate) ? s.amount : null;
-	}
+	/** What the reading's date stood at, to ghost in its field; nothing in a month not yet logged. */
+	const ghost = (account: string) => standingAt.get(account)?.amount ?? null;
 
 	/** Rows by account, for opening at one. Plain, not state: only the effect below reads it. */
 	const rowEls: Record<string, HTMLTableRowElement> = {};
@@ -261,6 +256,14 @@
 			effective
 		);
 
+	/** Reads today, in the month today's reading lands in; moving there resets the day to today. */
+	function readToday() {
+		const today = todayIso();
+		const lands = addDays(today, 1).slice(0, 7);
+		if (lands === monthKey || !onmonth) readOn = today;
+		else onmonth(lands);
+	}
+
 	let busy = $state(false);
 	let err = $state('');
 	let note = $state('');
@@ -296,6 +299,7 @@
 <Pane {id} title={words('Log balances')} caption={words("snapshot of each account's balance on")}>
 	{#snippet captionAfter()}
 		<DatePicker inline ariaLabel="Logging date" bind:value={readOn} />
+		<button type="button" class="btn-ghost today" onclick={readToday}>Today</button>
 	{/snippet}
 	{#snippet actions()}
 		{#if rows.length}
@@ -453,6 +457,11 @@
 </Pane>
 
 <style>
+	.today {
+		margin-left: var(--space-3);
+		padding: var(--space-1) var(--space-4);
+		font-size: var(--text-caption);
+	}
 	/* Bug: bleed plus sideways scroll on the table itself scrolled the whole page when narrow, so the
 	   bleed lives on the wrapper that scrolls. */
 	.balbox {

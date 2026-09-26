@@ -18,7 +18,7 @@ import type {
 import { MONEY, MONTHS, PERCENT, YEARS, scalar } from './primitives';
 import { assumptionsOf, realRate, yearsToRetirement, type Assumptions } from './assumptions';
 import { categorical } from './categorical';
-import { multiseries, series } from './series';
+import { multiseries, series, spanYears } from './series';
 import {
 	activeMonthsIn,
 	activeMonthsNote,
@@ -89,16 +89,25 @@ function assetAccounts(data: DashboardData) {
     balances can be logged in one month; a lifetime run only has room for the month. */
 function axisOf(
 	data: DashboardData,
-	year?: number
+	year?: number,
+	since?: number
 ): { points: NetWorthSnapshot[]; labels: string[]; periods: string[] } {
-	const points = year == null ? snapshots(data) : forYear(data, year);
+	const points =
+		year == null
+			? snapshots(data).filter((p) => since == null || yearOf(p.date) >= since)
+			: forYear(data, year);
 	const label = year == null ? monthLabel : dateShort;
 	return { points, labels: points.map((p) => label(p.date)), periods: points.map((p) => p.date) };
 }
 
 /** One snapshot field per logged snapshot — lifetime (`year` omitted) or one year's. */
-function snapshotSeries(data: DashboardData, field: SnapshotField, year?: number): Series {
-	const { points, labels, periods } = axisOf(data, year);
+function snapshotSeries(
+	data: DashboardData,
+	field: SnapshotField,
+	year?: number,
+	since?: number
+): Series {
+	const { points, labels, periods } = axisOf(data, year, since);
 	return {
 		...series(
 			FIELD_NAME[field],
@@ -115,8 +124,23 @@ function bySign(value: number): Tone {
 }
 
 /** A current-value scalar; net worth also carries its change since the previous snapshot. */
-export function netWorthScalar(data: DashboardData, field: SnapshotField, label: Label): Scalar {
+export function netWorthScalar(
+	data: DashboardData,
+	field: SnapshotField,
+	label: Label,
+	scope: Scope = { level: 'all' }
+): Scalar {
 	const unit = MONEY(data.currency);
+	if (scope.level === 'year') {
+		const w = bounds(data, scope);
+		const s = scalar(unit, label, w.close?.[field] ?? null);
+		if (w.open && w.close && w.open !== w.close) {
+			const change = w.close[field] - w.open[field];
+			const good = READING[field].tint === 'up-good' ? change >= 0 : change <= 0;
+			s.delta = { value: change, unit, tone: good ? 'good' : 'bad', note: 'this year' };
+		}
+		return s;
+	}
 	const current = data.networth?.current ?? null;
 	const value = current ? current[field] : null;
 
@@ -139,9 +163,9 @@ export function netWorthByMonth(data: DashboardData, year?: number): Series {
 }
 
 /** Net worth and assets over time; the gap between them is what is owed. */
-export function netWorthVsAssets(data: DashboardData, year?: number): MultiSeries {
+export function netWorthVsAssets(data: DashboardData, year?: number, since?: number): MultiSeries {
 	const unit = MONEY(data.currency);
-	const { points, labels, periods } = axisOf(data, year);
+	const { points, labels, periods } = axisOf(data, year, since);
 
 	return multiseries(
 		unit,
@@ -172,8 +196,8 @@ export function netWorthByYear(data: DashboardData, field: SnapshotField): Serie
 }
 
 /** Liabilities over time on their own; illegible as a third line against a net-worth axis. */
-export function netWorthLiabilities(data: DashboardData, year?: number): Series {
-	return snapshotSeries(data, 'liabilities', year);
+export function netWorthLiabilities(data: DashboardData, year?: number, since?: number): Series {
+	return snapshotSeries(data, 'liabilities', year, since);
 }
 
 // --- a period's move, read the same way wherever it is drawn ---
@@ -244,8 +268,13 @@ function monthlyRun(data: DashboardData, year: number): Run {
 	};
 }
 
-function yearlyRun(data: DashboardData, newestFirst = false): Run {
-	const years = snapshotYears(data);
+/** The years a window of the record reads, gaps kept (D23): the lifetime when `since` is absent. */
+function windowYears(data: DashboardData, since?: number): number[] {
+	return spanYears(snapshotYears(data), since);
+}
+
+function yearlyRun(data: DashboardData, newestFirst = false, since?: number): Run {
+	const years = windowYears(data, since);
 	if (newestFirst) years.reverse();
 
 	return {
@@ -345,13 +374,13 @@ export function netWorthAssetsChange(data: DashboardData, year: number): MultiSe
 
 /** The same two levels a year at a time: whether growth is speeding up or slowing as the base grows,
     which the dollar decomposition beside it cannot say. */
-export function netWorthAssetsChangeByYear(data: DashboardData): MultiSeries {
-	return moveSeries(data, yearlyRun(data), PAIRED, 'percent');
+export function netWorthAssetsChangeByYear(data: DashboardData, since?: number): MultiSeries {
+	return moveSeries(data, yearlyRun(data, false, since), PAIRED, 'percent');
 }
 
 // Liabilities take an axis of their own, for the reason `PAIRED` gives.
-export function liabilitiesChangeByYear(data: DashboardData): MultiSeries {
-	return moveSeries(data, yearlyRun(data), [READING.liabilities], 'percent');
+export function liabilitiesChangeByYear(data: DashboardData, since?: number): MultiSeries {
+	return moveSeries(data, yearlyRun(data, false, since), [READING.liabilities], 'percent');
 }
 
 export function liabilitiesChange(data: DashboardData, year: number): MultiSeries {
@@ -364,22 +393,22 @@ export function bucketChangeByMonth(data: DashboardData, year: number): MultiSer
 	return moveSeries(data, monthlyRun(data, year), HOLDINGS, 'value');
 }
 
-export function bucketChangeByYear(data: DashboardData): MultiSeries {
-	return moveSeries(data, yearlyRun(data), HOLDINGS, 'value');
+export function bucketChangeByYear(data: DashboardData, since?: number): MultiSeries {
+	return moveSeries(data, yearlyRun(data, false, since), HOLDINGS, 'value');
 }
 
 export function bucketMonthlyTable(data: DashboardData, year: number): Table {
 	return deltaTable(data, 'Date', snapshotRun(data, year), HOLDINGS);
 }
 
-export function bucketYearTable(data: DashboardData): Table {
-	return deltaTable(data, 'Year', yearlyRun(data, true), HOLDINGS);
+export function bucketYearTable(data: DashboardData, since?: number): Table {
+	return deltaTable(data, 'Year', yearlyRun(data, true, since), HOLDINGS);
 }
 
 /** Net worth's percent move per logged year. Named for the rate rather than the balance, so the registry
     gives it its own hue instead of net worth's. */
-export function growthRateByYear(data: DashboardData): Series {
-	const run = yearlyRun(data);
+export function growthRateByYear(data: DashboardData, since?: number): Series {
+	const run = yearlyRun(data, false, since);
 	return series(
 		'Balance growth',
 		run.labels,
@@ -391,11 +420,16 @@ export function growthRateByYear(data: DashboardData): Series {
 
 /** One band per bucket, `of` deciding whether a band's thickness is a share of assets or the balance
     itself. Whichever it is not rides along as the points' alternate reading. */
-function allocation(data: DashboardData, of: 'share' | 'value', year?: number): MultiSeries {
+function allocation(
+	data: DashboardData,
+	of: 'share' | 'value',
+	year?: number,
+	since?: number
+): MultiSeries {
 	const cash = MONEY(data.currency);
 	const unit = of === 'share' ? PERCENT : cash;
 	const altUnit = of === 'share' ? cash : PERCENT;
-	const { points, labels, periods } = axisOf(data, year);
+	const { points, labels, periods } = axisOf(data, year, since);
 
 	const held = (p: NetWorthSnapshot, b: string) => p.breakdown[b] ?? 0;
 	const share = (p: NetWorthSnapshot, b: string) => (p.assets ? (held(p, b) / p.assets) * 100 : 0);
@@ -420,14 +454,22 @@ function allocation(data: DashboardData, of: 'share' | 'value', year?: number): 
 	);
 }
 
-export function netWorthAllocationShare(data: DashboardData, year?: number): MultiSeries {
-	return allocation(data, 'share', year);
+export function netWorthAllocationShare(
+	data: DashboardData,
+	year?: number,
+	since?: number
+): MultiSeries {
+	return allocation(data, 'share', year, since);
 }
 
 /** Each bucket's balance over time. The share view normalizes every column to 100%, so only this one
     says whether a band thinned because it shrank or because another grew. */
-export function netWorthAllocationValue(data: DashboardData, year?: number): MultiSeries {
-	return allocation(data, 'value', year);
+export function netWorthAllocationValue(
+	data: DashboardData,
+	year?: number,
+	since?: number
+): MultiSeries {
+	return allocation(data, 'value', year, since);
 }
 
 /** Every asset account by value, largest first; a liability has no share to draw. Labelled by display
@@ -453,6 +495,8 @@ export function netWorthAccounts(data: DashboardData): Categorical {
 
 /** The half-open span of dates a scope covers: `[start, next)`. */
 function span(data: DashboardData, scope: Scope): { start: string; next: string } {
+	// A window runs from its first year to past the last snapshot, so it closes on the latest.
+	if (scope.level === 'all') return { start: `${scope.since}-01-01`, next: '9999-12-31' };
 	if (scope.level === 'month') {
 		const key = scope.monthKey ?? '';
 		return { start: `${key}-01`, next: `${addMonths(key, 1)}-01` };
@@ -470,7 +514,7 @@ function span(data: DashboardData, scope: Scope): { start: string; next: string 
  */
 function bounds(data: DashboardData, scope: Scope): Window {
 	const all = snapshots(data);
-	if (scope.level === 'all') {
+	if (scope.level === 'all' && scope.since == null) {
 		return { open: all[0] ?? null, close: all[all.length - 1] ?? null };
 	}
 
@@ -554,7 +598,12 @@ export function netWorthChange(data: DashboardData, scope: Scope): Scalar {
 			value: delta,
 			unit,
 			tone: bySign(delta),
-			note: { all: 'since first snapshot', year: 'this year', month: 'this month' }[scope.level]
+			note:
+				scope.level === 'all'
+					? scope.since == null
+						? 'since first snapshot'
+						: `since ${scope.since}`
+					: `this ${scope.level}`
 		};
 	}
 
@@ -608,8 +657,8 @@ function growthSeries(
 	);
 }
 
-export function savedVsOther(data: DashboardData): MultiSeries {
-	const years = snapshotYears(data).map(String);
+export function savedVsOther(data: DashboardData, since?: number): MultiSeries {
+	const years = windowYears(data, since).map(String);
 	return growthSeries(
 		data,
 		years,
@@ -667,10 +716,15 @@ export function netWorthGrowth(
 }
 
 /** A growth part averaged over the years it spanned — the lifetime matrix's per-year row. */
-export function netWorthGrowthPerYear(data: DashboardData, part: GrowthPart, label: Label): Scalar {
-	const years = snapshotYears(data).length || 1;
+export function netWorthGrowthPerYear(
+	data: DashboardData,
+	scope: Scope,
+	part: GrowthPart,
+	label: Label
+): Scalar {
+	const years = windowYears(data, scope.since).length || 1;
 
-	return scalar(MONEY(data.currency), label, growthParts(data, { level: 'all' })[part] / years, {
+	return scalar(MONEY(data.currency), label, growthParts(data, scope)[part] / years, {
 		note: trackedYearsNote(years)
 	});
 }
@@ -700,10 +754,10 @@ export function netWorthGrowthPerMonth(
 }
 
 /** The monthly table's shape plus the decomposition only a whole year can carry. */
-export function netWorthYearTable(data: DashboardData): Table {
+export function netWorthYearTable(data: DashboardData, since?: number): Table {
 	const unit = MONEY(data.currency);
-	const years = snapshotYears(data).reverse();
-	const table = deltaTable(data, 'Year', yearlyRun(data, true), LEVELS);
+	const run = yearlyRun(data, true, since);
+	const table = deltaTable(data, 'Year', run, LEVELS);
 
 	return {
 		...table,
@@ -715,7 +769,7 @@ export function netWorthYearTable(data: DashboardData): Table {
 			{ label: 'Market & other', unit, tint: 'up-good' }
 		],
 		rows: table.rows.map((row, i) => {
-			const { saved, other } = growthParts(data, { level: 'year', year: years[i]! });
+			const { saved, other } = growthParts(data, { level: 'year', year: Number(run.labels[i]) });
 			return [...row, saved, other];
 		})
 	};
@@ -868,10 +922,12 @@ export function coastFi(data: DashboardData, a: Assumptions = assumptionsOf(data
 
 /** Compound annual growth of the balance, as a percentage. Not a return: contributions are included, so
     it overstates investment performance. Null under half a year of history. */
-export function balanceGrowth(data: DashboardData): Scalar {
-	const all = snapshots(data);
-	const first = all[0];
-	const last = all[all.length - 1];
+export function balanceGrowth(data: DashboardData, scope: Scope = { level: 'all' }): Scalar {
+	if (scope.level === 'year') {
+		const change = move(bounds(data, scope), READING.net_worth).percent;
+		return scalar(PERCENT, words('Balance growth'), change, { note: words('this year') });
+	}
+	const { open: first, close: last } = bounds(data, scope);
 
 	let value: number | null = null;
 	if (first && last && first.net_worth > 0 && last.net_worth > 0) {

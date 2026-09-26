@@ -36,19 +36,32 @@ test('the focus month carries over to the next page', async ({ page }) => {
 	await expect(page).toHaveURL(/\/transactions\?month=2025-09$/);
 });
 
-test('a page reopens with its picks, moved to wherever the focus went since', async ({ page }) => {
-	await page.goto('/analytics/year?month=2025-09&scope=year');
-	await pages(page).getByRole('link', { name: 'Transactions', exact: true }).click();
-	await expect(page).toHaveURL(/\/transactions\?month=2025-09$/);
-
+test('a page reopens at the view it was left on, with the focus month and no picks', async ({
+	page
+}) => {
 	await page.goto('/transactions?month=2025-08&category=Grocery');
-	await pages(page).getByRole('link', { name: 'Analytics', exact: true }).click();
-	await expect(page).toHaveURL(/\/analytics\/year\?/);
-	await expect(page).toHaveURL(/scope=year/);
-	await expect(page).toHaveURL(/month=2025-08/);
-
+	await page.goto('/analytics/year?month=2025-08&scope=year');
 	await pages(page).getByRole('link', { name: 'Transactions', exact: true }).click();
-	await expect(page).toHaveURL(/category=Grocery/);
+	await expect(page).toHaveURL(/\/transactions\?month=2025-08$/);
+
+	await pages(page).getByRole('link', { name: 'Analytics', exact: true }).click();
+	await expect(page).toHaveURL(/\/analytics\/year\?month=2025-08$/);
+});
+
+test('a view opens without the picks of the one it left, at its own scroll', async ({ page }) => {
+	await page.goto('/analytics?month=2025-09&scope=month');
+	await settle(page);
+	await page.evaluate(() => window.scrollTo(0, 500));
+	// Clicked where it is: a pointer click would first scroll the switch into view.
+	await page
+		.getByRole('tab', { name: 'Year', exact: true })
+		.evaluate((el: HTMLElement) => el.click());
+	await expect(page).toHaveURL(/\/analytics\/year\?month=2025-09$/);
+	await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+
+	await page.getByRole('tab', { name: 'Month', exact: true }).click();
+	await expect(page).toHaveURL(/\/analytics\?month=2025-09$/);
+	await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(500);
 });
 
 test('a page reopens at the scroll it was left at', async ({ page }) => {

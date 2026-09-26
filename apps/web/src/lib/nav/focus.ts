@@ -15,26 +15,15 @@ export function focusMonth(url: URL, fallback: string): string {
 	return validMonth(url) ?? fallback;
 }
 
-/**
- * `href` as that page was `left` (its query when you last saw it), moved to the current URL's focus month,
- * so moving between pages keeps both your place and each page's picks (D21).
- */
-export function withFocus(href: string, url: URL, left = ''): string {
-	const next = new URLSearchParams(left);
+/** `href` carrying the current URL's focus month and nothing else: a page or view opens fresh (D4, D30). */
+export function withFocus(href: string, url: URL): string {
 	const month = validMonth(url);
-	// No focus here means the latest month, which an older remembered month would contradict.
-	if (month) next.set(MONTH_PARAM, month);
-	else next.delete(MONTH_PARAM);
-	const query = next.toString();
-	return query ? `${href}?${query}` : href;
+	return month ? `${href}?${new URLSearchParams({ [MONTH_PARAM]: month })}` : href;
 }
 
-/** `url`'s query with `patch` applied (a string sets a parameter, null removes it), at `pathname`. */
-export function withParams(
-	url: URL,
-	patch: Record<string, string | null>,
-	pathname = url.pathname
-): string {
+/** `url`'s path and query with `patch` applied: a string sets a parameter, null removes it. */
+export function withParams(url: URL, patch: Record<string, string | null>): string {
+	const { pathname } = url;
 	const next = new URLSearchParams(url.searchParams);
 	for (const [key, value] of Object.entries(patch)) {
 		if (value === null) next.delete(key);

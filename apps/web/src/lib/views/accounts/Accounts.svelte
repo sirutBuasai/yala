@@ -5,12 +5,13 @@
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
 	import { snapshotYears } from '$lib/data/networth';
-	import { yearSpan } from '$lib/utils/format';
 	import { periodPicks } from '$lib/nav/picks';
+	import { MONTH_PARAM } from '$lib/nav/focus';
+	import { step } from '$lib/nav/step';
 	import { viewOf } from '$lib/nav/views';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import ViewSwitch from '$lib/nav/ViewSwitch.svelte';
-	import YearNav from '$lib/nav/YearNav.svelte';
+	import PeriodNav from '$lib/nav/PeriodNav.svelte';
 	import MonthBoard from './MonthBoard.svelte';
 	import { ACCOUNT_PARAM } from './drill';
 	import YearBoard from './YearBoard.svelte';
@@ -23,19 +24,16 @@
 	let { data, accounts, onsaved }: Props = $props();
 
 	const view = $derived(viewOf($page.params.view));
-	const p = $derived(periodPicks($page.url, data, view));
+	const p = $derived(periodPicks($page.url, data, view, snapshotYears(data)));
 	/** The account Log balances opens at, from Where the money sits. */
 	const account = $derived($page.url.searchParams.get(ACCOUNT_PARAM));
 	const hasData = $derived(!!data.meta.domains.networth);
-	const span = $derived(yearSpan(snapshotYears(data)));
 </script>
 
 <ViewHeader title="Accounts">
 	<ViewSwitch ariaLabel="Accounts time range" />
-	{#if view === 'month'}
-		<YearNav value={p.year} years={p.years} onchange={p.moveToYear} />
-	{:else if hasData}
-		<span class="cap">Lifetime · {span}</span>
+	{#if view === 'month' || hasData}
+		<PeriodNav {view} picks={p} />
 	{/if}
 </ViewHeader>
 
@@ -48,10 +46,18 @@
 		monthKey={p.monthKey}
 		scoped={p.scoped}
 		onpick={p.pickMonth}
+		onmonth={(k) => step($page.url, { [MONTH_PARAM]: k })}
 		{account}
 	/>
 {:else if hasData}
-	<YearBoard {data} />
+	<YearBoard
+		{data}
+		monthKey={p.monthKey}
+		scoped={p.scoped}
+		since={p.since}
+		spanText={p.spanText}
+		onpick={p.pickYear}
+	/>
 {:else}
 	<p class="cap pad">No balances logged yet. Log each account balance to start tracking.</p>
 {/if}

@@ -155,29 +155,29 @@ def test_logged_in_month_takes_each_accounts_own_latest_snapshot(ledger_dir: Pat
 
 
 def test_standing_at_reads_the_latest_snapshot_on_or_before_the_reading(ledger_dir: Path):
-    """A reading between two snapshots stands at the earlier one, and knows a later one follows."""
+    """A reading between two of a month's snapshots stands at the earlier one; one after the last
+    stands at the last; one on a snapshot's own reading day stands at it."""
     account = "Assets:Cash:BankA"
     _snapshot(ledger_dir, account, "100.00", dt.date(2026, 8, 1))
     _snapshot(ledger_dir, account, "200.00", dt.date(2026, 8, 26))
+    nw = _load(ledger_dir).net_worth
 
-    found = _load(ledger_dir).net_worth.standing_at(dt.date(2026, 8, 12))[account]
-    assert (found.date, found.amount, found.later) == (dt.date(2026, 8, 1), Decimal("100.00"), True)
+    def at(day: int) -> tuple[dt.date, Decimal]:
+        found = nw.standing_at(dt.date(2026, 8, day))[account]
+        return found.date, found.amount
+
+    assert at(12) == (dt.date(2026, 8, 1), Decimal("100.00"))
+    assert at(28) == (dt.date(2026, 8, 26), Decimal("200.00"))
+    # A reading at the end of a day asserts the day after: the 25th's is the 26th's snapshot.
+    assert at(25) == (dt.date(2026, 8, 26), Decimal("200.00"))
 
 
-def test_standing_at_counts_the_snapshot_a_reading_asserts(ledger_dir: Path):
-    """A reading at the end of a day asserts the day after, so the snapshot it wrote is its own."""
+def test_standing_at_leaves_a_month_not_yet_logged_empty(ledger_dir: Path):
+    """A new month shows nothing, though an earlier month's snapshot stands before it."""
     account = "Assets:Cash:BankA"
-    _snapshot(ledger_dir, account, "300.00", SEP)
+    _snapshot(ledger_dir, account, "100.00", dt.date(2026, 8, 1))
 
-    found = _load(ledger_dir).net_worth.standing_at(SEP - dt.timedelta(days=1))[account]
-    assert (found.date, found.amount, found.later) == (SEP, Decimal("300.00"), False)
-
-
-def test_standing_at_omits_an_account_not_yet_snapshotted(ledger_dir: Path):
-    account = "Assets:Cash:BankA"
-    _snapshot(ledger_dir, account, "100.00", SEP)
-
-    assert account not in _load(ledger_dir).net_worth.standing_at(dt.date(2026, 8, 1))
+    assert account not in _load(ledger_dir).net_worth.standing_at(dt.date(2026, 9, 12))
 
 
 def test_networth_at_reports_where_each_account_stood(client: TestClient):
@@ -185,7 +185,7 @@ def test_networth_at_reports_where_each_account_stood(client: TestClient):
     _post_balance(client, account, 500.0, dt.date(2026, 8, 1))
 
     standing = _networth_at(client, dt.date(2026, 8, 12))["standing"][account]
-    assert standing == {"date": "2026-08-01", "amount": 500.0, "later": False}
+    assert standing == {"date": "2026-08-01", "amount": 500.0}
 
 
 def test_logged_in_month_values_a_share_snapshot_at_its_own_prices(ledger_dir: Path):

@@ -79,14 +79,12 @@ class LoggedBalance:
 
 @dataclass(frozen=True)
 class StandingBalance:
-    """An account's latest snapshot as of a reading, and whether it was snapshotted again after.
-
-    ``amount`` is as stored, so a liability's is negative."""
+    """An account's latest snapshot as of a reading. ``amount`` is as stored, so a liability's is
+    negative."""
 
     date: dt.date
     #: USD at ``date``; share lots valued at that date's prices.
     amount: Decimal
-    later: bool
 
 
 @dataclass(frozen=True)
@@ -212,18 +210,18 @@ class NetWorth:
 
     def standing_at(self, as_of: dt.date) -> dict[str, StandingBalance]:
         """Each account's latest snapshot as of a reading taken at the end of ``as_of``, which is
-        asserted the day after, and whether a later one exists. An account with no snapshot by then
-        is absent."""
+        asserted the day after. Only accounts snapshotted in that month are present: a month not yet
+        logged has nothing to stand at, even where an earlier month does."""
         asserted = as_of + dt.timedelta(days=1)
         out: dict[str, StandingBalance] = {}
         for account, entries in self._assertions().items():
+            if not any(month_of(e.date) == month_of(asserted) for e in entries):
+                continue
             upto = [e for e in entries if e.date <= asserted]
             if not upto:
                 continue
             latest, amount, _ = self._latest_of(upto)
-            out[account] = StandingBalance(
-                date=latest, amount=amount, later=any(e.date > asserted for e in entries)
-            )
+            out[account] = StandingBalance(date=latest, amount=amount)
 
         return out
 

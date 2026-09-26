@@ -3,12 +3,11 @@
 	// own board with its own stored arrangement.
 	import { page } from '$app/stores';
 	import type { DashboardData } from '$lib/data/types';
-	import { periodPicks, SPANS } from '$lib/nav/picks';
+	import { periodPicks } from '$lib/nav/picks';
 	import { viewOf } from '$lib/nav/views';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
-	import Segmented from '$lib/nav/Segmented.svelte';
 	import ViewSwitch from '$lib/nav/ViewSwitch.svelte';
-	import YearNav from '$lib/nav/YearNav.svelte';
+	import PeriodNav from '$lib/nav/PeriodNav.svelte';
 	import MonthBoard from './MonthBoard.svelte';
 	import YearBoard from './YearBoard.svelte';
 
@@ -23,12 +22,7 @@
 
 <ViewHeader title="Analytics">
 	<ViewSwitch ariaLabel="Analytics time range" />
-	{#if view === 'month'}
-		<YearNav value={p.year} years={p.years} onchange={p.moveToYear} />
-	{:else}
-		<Segmented options={SPANS} value={p.span} onchange={p.pickSpan} ariaLabel="Years shown" />
-		<span class="cap">{p.since == null ? `Lifetime · ${p.spanText}` : p.spanText}</span>
-	{/if}
+	<PeriodNav {view} picks={p} />
 </ViewHeader>
 
 {#if view === 'month'}

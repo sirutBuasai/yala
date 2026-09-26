@@ -1,6 +1,6 @@
 # Accounts spec
 
-Status: steps 1 and 3 built, step 2 on Month built; dogfooding · Branch: `redesign/accounts`
+Status: built, dogfooding · Branch: `redesign/accounts` · Branch: `redesign/accounts`
 
 ## Job
 
@@ -84,7 +84,8 @@ The header: `Accounts`, the Month and Year switch, then on Month Analytics' year
 | Span picker (Year) | Reach back 5, 10, 20, 50 years or all; a picked year outside is dropped | `span` | The previous span |
 | You vs the market, Change by asset type (Month) | Narrow to that month; again widens | `month`, `scope=month` | The previous scope |
 | You vs the market, Change by asset type (Year) | Narrow to that year; again widens | `month`: the same calendar month in that year, else its latest; `scope=year` | The previous scope |
-| Log balances: date, fields, Save | Log the month's snapshot in place, as on Home (D12). Each field ghosts where the reading date stood: that date's snapshot, else the latest before it, else nothing once past the account's last snapshot | none | |
+| Log balances: date, fields, Save | Log the month's snapshot in place, as on Home (D12). Each field ghosts the account's latest snapshot as of the reading date; a month the account has no snapshot in shows it empty | none | |
+| Log balances: Today | Read today, moving to the month today's reading lands in | `month` when it moves | The previous month |
 | Where the money sits, an account's bar (Year) | Open Month at the latest month, scrolled to Log balances with that account's row marked and its field focused | `/accounts`, `month`, `account` | This view |
 | KPI cards, stat matrices, lines, stacked areas, Where the money sits, tables | Not clickable; hover explains, as today | | |
 | Edit | Arrange the board (D14) | none | |
@@ -104,7 +105,7 @@ The stepper offers every year holding a tracked month or the one after the lates
 ## Build steps
 
 1. **The page (built).** Both boards with every carried pane, the view path and its matcher, `month`, and Log balances on Month. Net Worth's `Pref`s (`networth-range`, `networth-year`) go, and so do `BalanceForm` and the modal's balance kind. The Month and Year switch and the view matcher are shared with Analytics (`lib/nav/ViewSwitch.svelte`, `lib/nav/views.ts`).
-2. **Picks and time frame (Month built).** Month is Analytics' year stepper and bar picks, shared through `lib/nav/picks.ts`. Still to build: Year's picks and `span`. Bars take `onpick` and `picked`, lines and areas take `mark`, KPI cards narrow, and `span` scopes the Year board. Net worth series take the window (`since`) and keep gap years, as the cash-flow series did for Analytics.
+2. **Picks and time frame (built).** Both views pick as Analytics does, through `lib/nav/picks.ts` and `lib/nav/PeriodNav.svelte`. A picked year reads its levels at the year's close, each with its move that year. Bars take `onpick` and `picked`, lines and areas take `mark`, KPI cards narrow, and `span` scopes the Year board. Net worth series take the window (`since`) and keep gap years, as the cash-flow series did for Analytics.
 3. **Account drill-in (built).** Where the money sits opens Log balances at the account.
 
 Each step is dogfooded before the next.
@@ -127,7 +128,8 @@ Accounts joins `BOARD_PAGES`, so `charts` and `steady` cover its Month board, an
 4. **Savings rate** stays on the Month board for now, despite D3; revisit after dogfooding.
 5. **Where the money sits** opens Log balances at that account. Like a heatmap, it leaves its view, since it reads today's balances rather than a period.
 6. **Snapshot tables are heatmaps**, with the columns' own good and bad shading on their tiles.
-7. **Log balances ghosts the reading date** (see the click map), from `standing` on `/api/networth`.
+7. **Log balances ghosts the reading date** (see the click map), from `standing` on `/api/networth`. Revised on review: a new month shows empty; a logged month shows the latest snapshot as of the date. A Today button snaps the date to today.
+9. **Page and view switches reset the URL** (D30), **every axis label is drawn** (D31) and **bar lists pick one way** (D32).
 8. **Every wash takes the deep hue in light mode** (D29).
 
 ## Out of scope

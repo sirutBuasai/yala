@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
 test('a Spending by category row filters the history to it, and again clears it', async ({
 	page
 }) => {
-	const row = page.locator('.bars button.row').first();
+	const row = page.locator('.bars button.pickrow').first();
 	const category = (await row.locator('.name').innerText()).trim();
 
 	await row.click();

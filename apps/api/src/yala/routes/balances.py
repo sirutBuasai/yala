@@ -104,10 +104,10 @@ def get_networth_at(date: str) -> dict:
             account: {"date": b.date.isoformat(), "amount": float(b.amount), "locator": b.locator}
             for account, b in nw.logged_in_month(as_of).items()
         },
-        # account -> its latest snapshot as of a reading at the end of ``date``, and whether one
-        # follows it, so the pane can ghost what a past reading stood at.
+        # account -> its latest snapshot as of a reading at the end of ``date``, for accounts
+        # logged in that month, so the pane can ghost what a past reading stood at.
         "standing": {
-            account: {"date": s.date.isoformat(), "amount": float(s.amount), "later": s.later}
+            account: {"date": s.date.isoformat(), "amount": float(s.amount)}
             for account, s in nw.standing_at(as_of).items()
         },
         "cards": {

@@ -100,17 +100,6 @@ export function moneyAxisFormat(ticks: number[]): (v: number) => string {
 	return (v) => (v === 0 ? money(0) : abbreviate ? moneyK(v) : money(v));
 }
 
-/** Average glyph width as a fraction of font size. Approximate on purpose: measuring needs a canvas or a
-    layout pass, and erring small only means smaller type, never a clipped label. */
-const GLYPH_RATIO = 0.55;
-
-/** The font size at which the longest of `labels` fits inside `gutter` px, clamped to stay legible: a
-    gutter shrinks its type rather than truncating. */
-export function fitFontSize(gutter: number, labels: string[], min = 8, max = 12): number {
-	const longest = Math.max(1, ...labels.map((l) => l.length));
-	return Math.max(min, Math.min(max, gutter / (GLYPH_RATIO * longest)));
-}
-
 /** Width one character of axis type takes, near enough to budget with. */
 const AXIS_GLYPH_W = 6.2;
 
@@ -131,35 +120,40 @@ export function labelAnchor(i: number, count: number): 'start' | 'middle' | 'end
 	return i === count - 1 ? 'end' : 'middle';
 }
 
-/** Which x-label indices to draw: budget each the width of the longest, keep every nth, and always keep the
-    last. A label is dropped where it would overlap one already kept, measured as drawn: the end labels are
-    anchored inward (`labelAnchor`), so they reach a whole width into the plot where the rest reach half. */
-export function labelIndices(count: number, innerWidth: number, labels: string[]): number[] {
-	if (count <= 1) return count === 1 ? [0] : [];
+/** Height of a line of axis type, near enough to budget with. */
+const AXIS_LINE_H = 11;
+/** Room a label leaves below the plot when it lies flat. */
+const FLAT_BOTTOM = 28;
 
-	const room = Math.max(...labels.map((l) => l.length), 1) * AXIS_GLYPH_W + 12;
-	const fits = Math.max(2, Math.min(12, Math.floor(innerWidth / room)));
-	const stride = Math.max(1, Math.ceil(count / fits));
+export interface XLabelLayout {
+	/** Degrees the labels turn upward from flat: 0, 45 or 90. */
+	angle: 0 | 45 | 90;
+	/** Room the labels take below the plot, in px: a chart's bottom margin. */
+	bottom: number;
+}
 
-	const last = count - 1;
-	const x = (i: number) => (i * innerWidth) / last;
+/**
+ * How to draw every x-label at `xs` without any two overlapping: flat where they fit, else turned 45
+ * degrees, else upright, with the room below the plot grown to hold them. `anchored` is for a continuous
+ * axis, whose end labels anchor inward (`labelAnchor`) and so reach a whole width into the plot.
+ */
+export function xLabelLayout(xs: number[], labels: string[], anchored: boolean): XLabelLayout {
+	const width = Math.max(1, ...labels.map((l) => l.length)) * AXIS_GLYPH_W + 8;
+	const count = xs.length;
 	const reach = (i: number): [number, number] => {
-		const anchor = labelAnchor(i, count);
-		if (anchor === 'start') return [x(i), x(i) + room];
-		if (anchor === 'end') return [x(i) - room, x(i)];
-		return [x(i) - room / 2, x(i) + room / 2];
+		const x = xs[i]!;
+		const anchor = anchored ? labelAnchor(i, count) : 'middle';
+		if (anchor === 'start') return [x, x + width];
+		if (anchor === 'end') return [x - width, x];
+		return [x - width / 2, x + width / 2];
 	};
-	const clear = (a: number, b: number) => reach(a)[1] <= reach(b)[0];
+	const gaps = xs.slice(1).map((x, i) => x - xs[i]!);
+	const flat = xs.slice(1).every((_, i) => reach(i)[1] <= reach(i + 1)[0]);
+	if (flat) return { angle: 0, bottom: FLAT_BOTTOM };
 
-	const out: number[] = [];
-	for (let i = 0; i < last; i += stride) {
-		const prev = out.at(-1);
-		if (prev === undefined || clear(prev, i)) out.push(i);
-	}
-	while (out.length && !clear(out.at(-1)!, last)) out.pop();
-	out.push(last);
-
-	return out;
+	const angle = Math.min(...gaps) >= AXIS_LINE_H * Math.SQRT2 ? 45 : 90;
+	const rise = angle === 45 ? width * Math.SQRT1_2 : width;
+	return { angle, bottom: Math.ceil(rise) + 12 };
 }
 
 /** How wide a focus band reaches around a lone point on a continuous axis of `count` points. */

@@ -135,6 +135,18 @@ Chosen from [mocks/kpi-underlay-strength.html](mocks/kpi-underlay-strength.html)
 
 Extends D28 across the app. In light mode every accent wash behind a control, a badge or a row (a selected pill, a chosen option, the current page, a hovered row, a pending day, a modal's tinted header) takes its hue at D28's lightness and carries a smaller share of it, so a selected pill lands on the KPI wash beside it. Hairlines, rings and chart marks are unchanged, and so is dark mode.
 
+### D30 · The URL is for back and forward, not for reopening (2026-09-25)
+
+Supersedes D21's picks. A sidebar link opens its page at the view it was left on, with the focus month (D4) and no picks; so does the Month and Year switch. Picks stay in the URL, so back and forward still undo each step (D9). What each view keeps is its scroll (D22), now per view: switching back returns to where that view was left. A drill-in's own state, such as the account Where the money sits opened, never follows you to another page.
+
+### D31 · Every axis label is drawn (2026-09-25)
+
+No x-label is dropped to make room. Labels lie flat where they fit and turn 45 degrees, or upright, where they would overlap, and the chart gives up the height they need. Bar, line and stacked area charts share one layout (`xLabelLayout`, `XLabels`).
+
+### D32 · Bar lists pick one way (2026-09-25)
+
+A bar list whose rows choose something (Spending by category, Where the money sits) uses one row, `PickRow`: a wash behind the row on hover and while chosen, never a layer over its bars, so their colour holds.
+
 ## Open
 
 - **A card filter's figure.** When the history is filtered to one card, show "Charged to card" (full bills) beside Spent, so the gap reads as what was fronted? Or nothing. "Charged − paid" was rejected: it mostly reflects statement timing.

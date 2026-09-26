@@ -2,7 +2,14 @@
 	// One bar chart for 1..n series: one renders as plain columns with value labels, more as grouped bars
 	// with a legend. Callers pick "Bar", never "column" vs "grouped bars".
 	import { scaleBand } from 'd3-scale';
-	import { halfLabelWidth, moneyYScale, signedYScale, plotSize } from '$lib/charts/axis';
+	import {
+		halfLabelWidth,
+		moneyYScale,
+		signedYScale,
+		plotSize,
+		xLabelLayout
+	} from '$lib/charts/axis';
+	import XLabels from '$lib/charts/marks/XLabels.svelte';
 	import { clamp } from '$lib/utils/num';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import { esc } from '$lib/utils/format';
@@ -55,10 +62,9 @@
 	const box = new ChartBox();
 	const W = $derived(box.w);
 	const H = $derived(box.h);
-	const m = { t: 22, r: 14, b: 30, l: 56 };
-	const plot = $derived(plotSize(W, H, m));
-	const iw = $derived(plot.iw);
-	const ih = $derived(plot.ih);
+	const side = { t: 22, r: 14, l: 56 };
+	// The bottom margin is whatever the x-labels need, so the width is found without it.
+	const iw = $derived(Math.max(0, W - side.l - side.r));
 
 	const flat = $derived(series.flatMap((s) => s.values));
 	const outer = $derived(scaleBand<string>().domain(labels).range([0, iw]).padding(0.28));
@@ -68,6 +74,10 @@
 			.range([0, outer.bandwidth()])
 			.padding(0.12)
 	);
+	const xs = $derived(labels.map((lb) => (outer(lb) ?? 0) + outer.bandwidth() / 2));
+	const xLayout = $derived(xLabelLayout(xs, labels, false));
+	const m = $derived({ ...side, b: xLayout.bottom + 2 });
+	const ih = $derived(plotSize(W, H, m).ih);
 	// Straddling zero makes the axis's position a reading, so those bounds are left unrounded; one-signed
 	// data keeps the rounder `nice` axis.
 	const straddles = $derived(Math.min(...flat, 0) < 0 && Math.max(...flat, 0) > 0);
@@ -173,15 +183,9 @@
 							>
 						{/if}
 					{/each}
-					<text
-						class:focused={lb === picked}
-						x={gx + outer.bandwidth() / 2}
-						y={ih + 20}
-						text-anchor="middle"
-						pointer-events="none">{lb}</text
-					>
 				</g>
 			{/each}
+			<XLabels {labels} {xs} top={ih} layout={xLayout} focused={(i) => labels[i] === picked} />
 			{#if reference}
 				<line class="reference" x1={0} x2={iw} y1={y(reference.value)} y2={y(reference.value)} />
 				<text class="rlabel" x={0} y={y(reference.value) - 5} text-anchor="start">

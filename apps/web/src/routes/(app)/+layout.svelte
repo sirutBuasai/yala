@@ -11,6 +11,7 @@
 	import NavMenu from '$lib/nav/NavMenu.svelte';
 	import Sidebar from '$lib/nav/Sidebar.svelte';
 	import Tooltip from '$lib/overlay/Tooltip.svelte';
+	import { hideTip } from '$lib/utils/tooltip';
 	import Banner from '$lib/ui/Banner.svelte';
 	import { GridEnv } from '$lib/layout/grid/env.svelte';
 	import { setGridEnv } from '$lib/layout/grid/context';
@@ -34,8 +35,10 @@
 	// Only a link returns you to where you were: back and forward get the router's own restore, and a
 	// drill-in opens its page from the top.
 	afterNavigate(({ to, type }) => {
+		// A click that navigates never gets the mouseleave that would have hidden its tooltip.
+		hideTip();
 		if (!to) return;
-		remember(to.url);
+		remember(to.url.pathname);
 		if (type === 'link') restoreScroll(scrollAt(to.url.pathname));
 	});
 </script>

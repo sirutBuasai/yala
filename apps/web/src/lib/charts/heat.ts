@@ -4,7 +4,7 @@
 
 import type { Matrix, Table, Unit } from '$lib/data/primitives';
 import { formatUnit, formatUnitExact } from '$lib/data/primitives';
-import { numCompact } from '$lib/utils/format';
+import { amountExact, numCompact } from '$lib/utils/format';
 
 /** For a band with no colour of its own. */
 const FALLBACK = 'var(--lav)';
@@ -27,14 +27,21 @@ export interface HeatGrid {
 	totals?: { rows: string[]; cols: string[]; grand: string };
 }
 
-/** A tile's own text. Money drops its symbol: every tile of a band is money, and it costs the width a
-    narrow tile cannot spare. */
-function tileText(value: number, unit: Unit): string {
-	return unit.kind === 'money' ? numCompact(value) : formatUnit(value, unit);
+/** A tile's own text, abbreviated or to the cent. Money drops its symbol: every tile of a band is money,
+    and it costs the width a narrow tile cannot spare. */
+function tileText(value: number, unit: Unit, exact: boolean): string {
+	if (unit.kind !== 'money') return formatUnit(value, unit);
+	return exact ? amountExact(value) : numCompact(value);
 }
 
-function cellOf(value: number, unit: Unit, tile: string | null, a: number): HeatCell {
-	return { text: tileText(value, unit), tip: formatUnitExact(value, unit), tile, a };
+function cellOf(
+	value: number,
+	unit: Unit,
+	tile: string | null,
+	a: number,
+	exact = false
+): HeatCell {
+	return { text: tileText(value, unit, exact), tip: formatUnitExact(value, unit), tile, a };
 }
 
 /**
@@ -112,7 +119,8 @@ export function tableShades(table: Table): ({ good: boolean; a: number } | null)
 export const shadeHue = (good: boolean): string => `var(--${good ? 'good' : 'crit'})`;
 
 /** A Table as tiles: its first column labels the rows, and only its tinted columns are shaded. Its levels
-    and changes do not add up, so it carries no totals. */
+    and changes do not add up, so it carries no totals. A table's figures are read one at a time, so they
+    keep their cents. */
 export function tableGrid(table: Table): HeatGrid {
 	const shades = tableShades(table);
 	const columns = table.columns.slice(1);
@@ -129,7 +137,8 @@ export function tableGrid(table: Table): HeatGrid {
 					value,
 					c.unit ?? { kind: 'count' },
 					sh ? shadeHue(sh.good) : null,
-					sh?.a ?? 0
+					sh?.a ?? 0,
+					true
 				);
 			})
 		)

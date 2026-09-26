@@ -1,5 +1,6 @@
 <script lang="ts">
 	// Accounts · Year: the record read year by year. Read-only: a balance belongs to the month it was taken in.
+	// Picking a year's bars narrows the KPI cards to its close and marks it on every chart with a year axis.
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
 	import type { KpiBoardDefs } from '$lib/kpi/spec';
@@ -13,9 +14,8 @@
 	import StatMatrix from '$lib/charts/StatMatrix.svelte';
 	import { NET_WORTH_GROWTH, columnHeading } from '$lib/data/catalog';
 	import { statCells } from '$lib/charts/statMatrix';
-	import { snapshotYears } from '$lib/data/networth';
-	import { yearSpan } from '$lib/utils/format';
 	import { live, words } from '$lib/ui/label';
+	import { yearOf } from '$lib/utils/period';
 	import {
 		ALLOCATION,
 		ALLOCATION_CAPTION,
@@ -30,23 +30,41 @@
 
 	interface Props {
 		data: DashboardData;
+		monthKey: string;
+		/** Whether the board reads at the focus year rather than its window. */
+		scoped: boolean;
+		/** The window's first year; absent, the board reads the lifetime. */
+		since?: number;
+		/** The years the window covers, as the header words them. */
+		spanText: string;
+		/** Picks a year, by its label. */
+		onpick: (year: string) => void;
 	}
-	let { data }: Props = $props();
+	let { data, monthKey, scoped, since, spanText, onpick }: Props = $props();
 
-	const all: Scope = { level: 'all' };
-	const span = $derived(yearSpan(snapshotYears(data)));
+	const all = $derived<Scope>({ level: 'all', since });
+	const lifetime = $derived(since == null);
+	const year = $derived(yearOf(monthKey));
+	const scope = $derived<Scope>(scoped ? { level: 'year', year } : all);
+	const mark = $derived(scoped ? String(year) : undefined);
+	/** The bars that pick a year. */
+	const PICKS = new Set(['sources', 'buckets']);
+	/** A lifetime caption `total lifetime <what>`; under a window, `<years> · total <what>`. */
+	const totalOf = (what: string) =>
+		lifetime ? words(`total lifetime ${what}`) : { context: spanText, text: `total ${what}` };
 
-	// All read today's live totals, so they cannot disagree about which snapshot they describe.
-	const KPIS: KpiBoardDefs = {
+	// Unpicked, all read today's live totals, so they cannot disagree about which snapshot they describe;
+	// picked, all read the year's close.
+	const KPIS = $derived<KpiBoardDefs>({
 		networth: {
 			rect: { x: 0, y: 11, w: 11, h: 5 },
-			spec: { figure: 'networth.current', scope: all, chart: 'bar', series: 'networth.by_year' }
+			spec: { figure: 'networth.current', scope, chart: 'bar', series: 'networth.by_year' }
 		},
 		assets: {
 			rect: { x: 0, y: 16, w: 11, h: 5 },
 			spec: {
 				figure: 'networth.assets',
-				scope: all,
+				scope,
 				chart: 'bar',
 				series: 'networth.assets_by_year'
 			}
@@ -55,7 +73,7 @@
 			rect: { x: 0, y: 21, w: 11, h: 5 },
 			spec: {
 				figure: 'networth.liabilities',
-				scope: all,
+				scope,
 				chart: 'bar',
 				series: 'networth.liabilities_by_year'
 			}
@@ -66,12 +84,12 @@
 			rect: { x: 0, y: 26, w: 11, h: 5 },
 			spec: {
 				figure: 'networth.balance_growth',
-				scope: all,
+				scope,
 				chart: 'bar',
 				series: 'networth.growth_rate_by_year'
 			}
 		}
-	};
+	});
 
 	const kpis = useKpiBoard('accounts:year', () => KPIS, [
 		{ ids: ['networth', 'assets', 'liabilities', 'growthRate'], axis: 'column' }
@@ -94,8 +112,9 @@
 					chart: 'line',
 					area: true,
 					dashed: ['Assets'],
+					mark,
 					title: words(TREND),
-					caption: words('total lifetime net worth snapshots')
+					caption: totalOf('net worth snapshots')
 				}
 			},
 			liabilitiesTrend: {
@@ -109,8 +128,9 @@
 					scope: all,
 					chart: 'line',
 					area: true,
+					mark,
 					title: words(LIABILITIES),
-					caption: words('total lifetime liabilities snapshots')
+					caption: totalOf('liabilities snapshots')
 				}
 			},
 			accounts: {
@@ -139,6 +159,7 @@
 					figure: 'networth.allocation_value',
 					scope: all,
 					chart: 'stacked-area',
+					mark,
 					title: words(ALLOCATION),
 					caption: words(ALLOCATION_CAPTION)
 				}
@@ -168,7 +189,10 @@
 					scope: all,
 					chart: 'bar',
 					title: words(BUCKET_CHANGE),
-					caption: { context: 'Lifetime', text: 'dollars gained or lost each year' }
+					caption: {
+						context: lifetime ? 'Lifetime' : spanText,
+						text: 'dollars gained or lost each year'
+					}
 				}
 			},
 			table: {
@@ -181,6 +205,7 @@
 					figure: 'networth.year_table',
 					scope: all,
 					chart: 'heatmap',
+					mark,
 					title: words('Yearly snapshots'),
 					caption: words(`${SNAPSHOT_LEVELS} YoY`)
 				}
@@ -197,7 +222,11 @@
 	// The rate rows carry no caption: each states its own divisor, and the matrix hoists it where they
 	// agree.
 	const growth = $derived([
-		{ label: words('Lifetime total'), caption: live(span), cells: cellsOf((c) => c.total) },
+		{
+			label: words(lifetime ? 'Lifetime total' : 'Total'),
+			caption: live(spanText),
+			cells: cellsOf((c) => c.total)
+		},
 		{ label: words('Avg / year'), cells: cellsOf((c) => c.perYear) },
 		{ label: words('Avg / month'), cells: cellsOf((c) => c.perMonth) }
 	]);
@@ -208,8 +237,8 @@
 
 	<Pane
 		id="growth"
-		title={words('Lifetime growth')}
-		caption={{ context: span, text: 'totals, yearly, and monthly rates' }}
+		title={words(lifetime ? 'Lifetime growth' : 'Growth')}
+		caption={{ context: spanText, text: 'totals, yearly, and monthly rates' }}
 	>
 		<StatMatrix {data} {columns} rows={growth} />
 	</Pane>
@@ -219,7 +248,12 @@
 			{id}
 			{data}
 			spec={figure}
-			onpick={id === 'accounts' ? (label) => openAccount($page.url, data, label) : undefined}
+			picked={PICKS.has(id) ? mark : undefined}
+			onpick={id === 'accounts'
+				? (label) => openAccount($page.url, data, label)
+				: PICKS.has(id)
+					? onpick
+					: undefined}
 		/>
 	{/each}
 </Board>

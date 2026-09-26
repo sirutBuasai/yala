@@ -1,13 +1,6 @@
 <script lang="ts">
 	import { line, area } from 'd3-shape';
-	import {
-		focusPad,
-		moneyYScale,
-		logYScale,
-		labelAnchor,
-		labelIndices,
-		plotSize
-	} from '$lib/charts/axis';
+	import { focusPad, moneyYScale, logYScale, plotSize, xLabelLayout } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import { esc } from '$lib/utils/format';
 	import { chartFormat } from '$lib/charts/format';
@@ -17,6 +10,7 @@
 	import Legend from '$lib/charts/Legend.svelte';
 	import { chartLabel } from '$lib/charts/aria';
 	import FocusBand from '$lib/charts/marks/FocusBand.svelte';
+	import XLabels from '$lib/charts/marks/XLabels.svelte';
 
 	interface Series {
 		name: string;
@@ -70,11 +64,14 @@
 	const W = $derived(box.w);
 	const H = $derived(box.h);
 	// A share of the box, not a constant, so a narrow card doesn't hand most of its plot to labels.
-	const m = $derived({ t: 16, r: endLabels ? clamp(W * 0.2, 96, 170) : 16, b: 28, l: 60 });
-	const plot = $derived(plotSize(W, H, m));
-	const iw = $derived(plot.iw);
-	const ih = $derived(plot.ih);
+	const side = $derived({ t: 16, r: endLabels ? clamp(W * 0.2, 96, 170) : 16, l: 60 });
+	// The bottom margin is whatever the x-labels need, so the width is found without it.
+	const iw = $derived(Math.max(0, W - side.l - side.r));
 	const n = $derived(labels.length);
+	const xs = $derived(labels.map((_, i) => xPos(i)));
+	const xLayout = $derived(xLabelLayout(xs, labels, true));
+	const m = $derived({ ...side, b: xLayout.bottom });
+	const ih = $derived(plotSize(W, H, m).ih);
 	// Unique per instance, so two area charts on one page can't share a gradient.
 	const gid = 'lg-' + Math.random().toString(36).slice(2, 9);
 
@@ -104,8 +101,6 @@
 			return { line: lineGen(s.values) ?? '', area: s.area ? (areaGen(s.values) ?? '') : '' };
 		})
 	);
-
-	const shown = $derived(new Set(labelIndices(n, iw, labels)));
 
 	/**
 	 * Right-edge labels nudged apart: push each down to clear its predecessor, then if the stack overruns
@@ -206,17 +201,14 @@
 				/>
 			{/each}
 
-			<!-- Keyed by slot, not by text: two points can share a label, and a duplicate key is fatal. -->
-			{#each labels as lb, i (i)}
-				{#if shown.has(i)}
-					<text
-						class:focused={marked.includes(i)}
-						x={xPos(i)}
-						y={ih + 20}
-						text-anchor={labelAnchor(i, n)}>{lb}</text
-					>
-				{/if}
-			{/each}
+			<XLabels
+				{labels}
+				{xs}
+				top={ih}
+				layout={xLayout}
+				anchored
+				focused={(i) => marked.includes(i)}
+			/>
 
 			{#each ends as e (e.name)}
 				<circle cx={xPos(e.i)} cy={e.y0} r="3" fill={e.color} />
