@@ -388,6 +388,12 @@ export async function updateBalance(
 }
 
 /** Per-account USD values + adjustment plugs as of a date (for the month-aware balance pane). */
+export interface LoggedSnapshot {
+	date: string;
+	amount: number;
+	locator: string | null;
+}
+
 export interface NetWorthAt {
 	/** Snapshot-able accounts as the MONTH had them, not as today has them: one opened later or
 	    closed earlier is absent, and the month it opened or closed in still counts. */
@@ -395,13 +401,12 @@ export interface NetWorthAt {
 	liability_accounts: string[];
 	accounts: { account: string; value: number }[];
 	adjustments: { account: string; value: number }[];
-	/** account -> what its latest snapshot in the date's MONTH stands at. `locator` is present only
-	    where that snapshot can be rewritten; a share-based one cannot. `amount` is as stored, so a
-	    liability's is negative. */
-	logged: Record<string, { date: string; amount: number; locator: string | null }>;
-	/** account -> its latest snapshot as of a reading at the END of the date, as stored. Only accounts
-	    snapshotted in that month are present. */
-	standing: Record<string, { date: string; amount: number }>;
+	/** account -> its latest snapshot as of a reading at the END of the date; only accounts snapshotted
+	    in that month are present. `locator` is present only where the snapshot can be rewritten; a
+	    share-based one cannot. `amount` is as stored, so a liability's is negative. */
+	standing: Record<string, LoggedSnapshot>;
+	/** account -> its snapshot before the standing one, or before the reading where none stands. */
+	previous: Record<string, LoggedSnapshot>;
 	/** card -> what its bank app should read at the END of the date, as stored (owed negative), and
 	    whether a reading then must match it rather than set the card's starting balance. */
 	cards: Record<string, { expected: number; must_agree: boolean }>;

@@ -180,12 +180,35 @@ def test_standing_at_leaves_a_month_not_yet_logged_empty(ledger_dir: Path):
     assert account not in _load(ledger_dir).net_worth.standing_at(dt.date(2026, 9, 12))
 
 
+def test_previous_at_reads_the_snapshot_before_the_one_standing(ledger_dir: Path):
+    """Previous is the snapshot before the one the reading stands at, not the month before's."""
+    account = "Assets:Cash:BankA"
+    _snapshot(ledger_dir, account, "50.00", dt.date(2026, 7, 1))
+    _snapshot(ledger_dir, account, "100.00", dt.date(2026, 8, 1))
+    _snapshot(ledger_dir, account, "200.00", dt.date(2026, 8, 26))
+    nw = _load(ledger_dir).net_worth
+
+    assert nw.previous_at(dt.date(2026, 8, 12))[account].amount == Decimal("50.00")
+    assert nw.previous_at(dt.date(2026, 8, 28))[account].amount == Decimal("100.00")
+
+
+def test_previous_at_reads_the_last_snapshot_before_a_month_not_yet_logged(ledger_dir: Path):
+    account = "Assets:Cash:BankA"
+    _snapshot(ledger_dir, account, "100.00", dt.date(2026, 8, 1))
+
+    assert _load(ledger_dir).net_worth.previous_at(dt.date(2026, 9, 12))[account].amount == Decimal(
+        "100.00"
+    )
+
+
 def test_networth_at_reports_where_each_account_stood(client: TestClient):
     account = "Assets:Cash:BankA"
     _post_balance(client, account, 500.0, dt.date(2026, 8, 1))
 
-    standing = _networth_at(client, dt.date(2026, 8, 12))["standing"][account]
-    assert standing == {"date": "2026-08-01", "amount": 500.0}
+    at = _networth_at(client, dt.date(2026, 8, 12))
+    assert at["standing"][account]["date"] == "2026-08-01"
+    assert at["standing"][account]["amount"] == 500.0
+    assert at["standing"][account]["locator"]
 
 
 def test_logged_in_month_values_a_share_snapshot_at_its_own_prices(ledger_dir: Path):
@@ -559,7 +582,7 @@ def test_patch_balance_edits_the_locator_from_networth_at(client: TestClient):
     assert _post_balance(client, account, 1000.0).status_code == 200
 
     at = _networth_at(client)
-    locator = at["logged"][account]["locator"]
+    locator = at["standing"][account]["locator"]
 
     r = client.post("/api/balance/update", json={"locator": locator, "amount": 1234.56})
     assert r.status_code == 200, r.text
@@ -632,7 +655,7 @@ def test_post_liability_balance_stores_the_owed_figure_negative(client: TestClie
 
     at = _networth_at(client)
     assert _value_of(at, CARD) == -CARD_LEDGER
-    assert at["logged"][CARD]["amount"] == -CARD_LEDGER
+    assert at["standing"][CARD]["amount"] == -CARD_LEDGER
 
 
 def test_post_liability_balance_that_agrees_writes_no_pad(client: TestClient):
@@ -679,7 +702,7 @@ def test_card_edit_after_the_baseline_must_agree(client: TestClient):
     assert _post_balance(client, CARD, CARD_OWED).status_code == 200
     owed = _app_owed(client, LATER)
     assert _post_balance(client, CARD, owed, LATER).status_code == 200
-    locator = _networth_at(client, LATER)["logged"][CARD]["locator"]
+    locator = _networth_at(client, LATER)["standing"][CARD]["locator"]
     before = _liability_text(client)
 
     edit = client.post("/api/balance/update", json={"locator": locator, "amount": owed - 5})
@@ -695,7 +718,7 @@ def test_card_edit_before_the_baseline_never_pads_past_it(client: TestClient):
     owed_aug = _app_owed(client, aug)
     assert _post_balance(client, CARD, owed_aug, aug).status_code == 200
     assert _post_balance(client, CARD, CARD_OWED, SEP).status_code == 200
-    locator = _networth_at(client, aug)["logged"][CARD]["locator"]
+    locator = _networth_at(client, aug)["standing"][CARD]["locator"]
     before = _liability_text(client)
 
     edit = client.post("/api/balance/update", json={"locator": locator, "amount": owed_aug + 50})
@@ -784,7 +807,7 @@ def test_card_whose_bank_counts_pending_is_read_with_it(client: TestClient):
 
 def test_patch_liability_balance_keeps_the_owed_sign(client: TestClient):
     assert _post_balance(client, CARD, CARD_OWED).status_code == 200
-    locator = _networth_at(client)["logged"][CARD]["locator"]
+    locator = _networth_at(client)["standing"][CARD]["locator"]
 
     # An edit before the baseline pads what it cannot explain, as the first log does.
     edit = client.post("/api/balance/update", json={"locator": locator, "amount": 999.0})
@@ -845,7 +868,7 @@ def test_post_liability_balance_accepts_a_credit(client: TestClient):
     assert r.status_code == 200, r.text
 
     at = _networth_at(client)
-    assert at["logged"][credit]["amount"] == 898.0  # stored as a credit, not as owed
+    assert at["standing"][credit]["amount"] == 898.0  # stored as a credit, not as owed
     assert _value_of(at, credit) == 898.0
 
 

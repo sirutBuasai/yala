@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from yala.ledger.accounts import snapshot_plug
 from yala.ledger.constants import CASH, INVESTMENTS, LIABILITIES
+from yala.ledger.networth import LoggedBalance
 from yala.routes.common import (
     SignedAmount,
     dec,
@@ -80,6 +81,13 @@ def post_balance_update(body: BalanceEditIn) -> dict:
     )
 
 
+def _snapshots(by_account: dict[str, LoggedBalance]) -> dict[str, dict]:
+    return {
+        account: {"date": b.date.isoformat(), "amount": float(b.amount), "locator": b.locator}
+        for account, b in by_account.items()
+    }
+
+
 @router.get("/api/networth")
 def get_networth_at(date: str) -> dict:
     """Per-account USD values and adjustment-plug balances as of ``date``, plus what ``date``'s own
@@ -98,18 +106,12 @@ def get_networth_at(date: str) -> dict:
         "adjustments": [
             {"account": a.account, "value": float(a.value)} for a in nw.adjustments(as_of)
         ],
-        # account -> what its latest snapshot in this month stands at, with a locator only where
-        # that snapshot can be rewritten. Amounts are as stored, so a liability's is negative.
-        "logged": {
-            account: {"date": b.date.isoformat(), "amount": float(b.amount), "locator": b.locator}
-            for account, b in nw.logged_in_month(as_of).items()
-        },
-        # account -> its latest snapshot as of a reading at the end of ``date``, for accounts
-        # logged in that month, so the pane can ghost what a past reading stood at.
-        "standing": {
-            account: {"date": s.date.isoformat(), "amount": float(s.amount)}
-            for account, s in nw.standing_at(as_of).items()
-        },
+        # account -> its latest snapshot as of a reading at the end of ``date``, for accounts logged
+        # in that month, and the snapshot before it: what the pane shows for a past reading. A
+        # locator is present only where the snapshot can be rewritten; amounts are as stored, so a
+        # liability's is negative.
+        "standing": _snapshots(nw.standing_at(as_of)),
+        "previous": _snapshots(nw.previous_at(as_of)),
         "cards": {
             account: {
                 "expected": float(c.expected),

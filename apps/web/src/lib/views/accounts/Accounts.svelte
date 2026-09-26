@@ -6,8 +6,6 @@
 	import type { AccountsInfo } from '$lib/data/load';
 	import { snapshotYears } from '$lib/data/networth';
 	import { periodPicks } from '$lib/nav/picks';
-	import { MONTH_PARAM } from '$lib/nav/focus';
-	import { step } from '$lib/nav/step';
 	import { viewOf } from '$lib/nav/views';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import ViewSwitch from '$lib/nav/ViewSwitch.svelte';
@@ -45,7 +43,6 @@
 		monthKey={p.monthKey}
 		scoped={p.scoped}
 		onpick={p.pickMonth}
-		onmonth={(k) => step($page.url, { [MONTH_PARAM]: k })}
 		{account}
 	/>
 {:else if hasData}

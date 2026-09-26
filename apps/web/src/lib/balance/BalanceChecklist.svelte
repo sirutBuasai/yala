@@ -14,7 +14,7 @@
 	} from '$lib/data/load';
 	import { amountExact, formatAccount, money, moneyExact, monthLabel } from '$lib/utils/format';
 	import { accountVar } from '$lib/utils/theme';
-	import { addDays, addMonths, todayIso } from '$lib/utils/period';
+	import { addDays, todayIso } from '$lib/utils/period';
 	import {
 		agrees,
 		asTyped,
@@ -41,16 +41,14 @@
 		data: DashboardData;
 		accounts: AccountsInfo | null;
 		onsaved: () => void;
-		/** Selected month, "YYYY-MM". */
+		/** The page's month, "YYYY-MM": the reading date defaults to it, and moves when it does. */
 		monthKey: string;
 		/** An account to open at, by ledger path: its row is marked, scrolled to and its field focused. */
 		account?: string | null;
-		/** Moves the page to another month, for a reading that lands in one. */
-		onmonth?: (monthKey: string) => void;
 	}
-	let { id, data, accounts, onsaved, monthKey, account, onmonth }: Props = $props();
+	let { id, data, accounts, onsaved, monthKey, account }: Props = $props();
 
-	/** Which accounts the shown month had, once the dated read lands. The props are today's lists, so
+	/** Which accounts the reading's month had, once the dated read lands. The props are today's lists, so
 	    they stand in only until then, and on their own would offer a card opened months later. */
 	let monthRoster = $state<{ assets: string[]; liabilities: string[] } | null>(null);
 	const rows = $derived(
@@ -61,12 +59,8 @@
 		)
 	);
 
-	/** Empty until the parent has resolved a month, so the fetch below can skip that first render. */
-	const firstDayOf = (key: string) => (key ? `${key}-01` : '');
-	const shownDate = $derived(firstDayOf(monthKey));
-	const prevDate = $derived(monthKey ? firstDayOf(addMonths(monthKey, -1)) : '');
-
-	/** The day every balance was read off its app, in one sitting. */
+	/** The day every balance was read off its app, in one sitting. Everything the pane shows is as of
+	    this reading, so picking a date reads that date's snapshot. */
 	let readOn = $state('');
 	$effect(() => {
 		readOn = defaultReadOn(monthKey, todayIso());
@@ -74,48 +68,46 @@
 	// An assertion is checked at the start of its day, so a figure read at the end of `readOn`
 	// asserts on the day after.
 	const snapshotDate = $derived(readOn ? addDays(readOn, 1) : '');
+	/** The month the reading's snapshot lands in, "YYYY-MM". */
+	const readingMonth = $derived(snapshotDate.slice(0, 7));
 
-	// Four dated reads: the shown month, for its roster and what it has logged; the end of the reading
-	// day and of the day before it, whose adjustment difference isolates a snapshot already standing on
-	// the reading; and the previous month, for the Previous column.
+	// Three dated reads: the reading's month, for its roster; the end of the reading day, for where
+	// each account stands and stood before; and the day before it, whose adjustment difference
+	// isolates a snapshot already standing on the reading.
 	let atRead = $state<Map<string, number>>(new Map());
 	let adjRead = $state<Map<string, number>>(new Map());
 	let adjBefore = $state<Map<string, number>>(new Map());
-	let prevVals = $state<Map<string, number>>(new Map());
 	let cardChecks = $state<Map<string, NetWorthAt['cards'][string]>>(new Map());
-	/** What this month already holds per account, and where a correction goes. */
-	let logged = $state<Map<string, NetWorthAt['logged'][string]>>(new Map());
-	/** Where each account stood as of the reading, for its field's ghost. */
+	/** Each account's snapshot as of the reading, and where a correction to it goes. */
 	let standingAt = $state<Map<string, NetWorthAt['standing'][string]>>(new Map());
+	/** Each account's snapshot before that one, for the Previous column. */
+	let previousAt = $state<Map<string, NetWorthAt['previous'][string]>>(new Map());
 	let loading = $state(false);
 
 	const toMap = (list: { account: string; value: number }[]) =>
 		new Map(list.map((a) => [a.account, a.value]));
 
 	async function refresh() {
-		if (!shownDate || !prevDate || !readOn) return;
+		if (!readOn) return;
 		// Without the API nothing can serve the dated reads, so the dated columns read as unavailable
 		// rather than as wrong.
 		if (!$live) {
 			atRead = toMap((data.networth?.accounts ?? []).map((a) => ({ ...a })));
 			adjRead = toMap(data.networth?.adjustments ?? []);
 			adjBefore = new Map();
-			prevVals = new Map();
 			cardChecks = new Map();
-			logged = new Map();
 			standingAt = new Map();
+			previousAt = new Map();
 			monthRoster = null;
 			return;
 		}
 		loading = true;
-		const [month, read, before, prev] = await Promise.all([
-			networthAt(shownDate),
+		const [month, read, before] = await Promise.all([
+			networthAt(`${readingMonth}-01`),
 			networthAt(readOn),
-			networthAt(addDays(readOn, -1)),
-			networthAt(prevDate)
+			networthAt(addDays(readOn, -1))
 		]);
 		if (month) {
-			logged = new Map(Object.entries(month.logged ?? {}));
 			monthRoster = { assets: month.balance_accounts, liabilities: month.liability_accounts };
 		}
 		if (read) {
@@ -123,30 +115,27 @@
 			adjRead = toMap(read.adjustments);
 			cardChecks = new Map(Object.entries(read.cards ?? {}));
 			standingAt = new Map(Object.entries(read.standing ?? {}));
+			previousAt = new Map(Object.entries(read.previous ?? {}));
 		}
 		if (before) adjBefore = toMap(before.adjustments);
-		if (prev) prevVals = toMap(prev.accounts);
 		loading = false;
 	}
 	$effect(() => {
-		shownDate;
 		readOn;
 		$live;
 		void refresh();
 	});
 
-	const loggedOnReading = (account: string) => logged.get(account)?.date === snapshotDate;
+	const loggedOnReading = (account: string) => standingAt.get(account)?.date === snapshotDate;
 	const expected = (row: Row) =>
 		row.card
 			? (cardChecks.get(row.account)?.expected ?? null)
 			: expectedAt(row.account, atRead, adjRead, adjBefore, loggedOnReading(row.account));
 	const mustAgree = (row: Row) => row.card && (cardChecks.get(row.account)?.must_agree ?? false);
-	const previous = (account: string) => prevVals.get(account) ?? null;
-	/** What this month's latest snapshot puts the account at, in the ledger's sign. Zero is a figure,
-	    so this is null only when the month holds nothing for the account. */
-	const onRecord = (account: string) => logged.get(account)?.amount ?? null;
-	/** What the reading's date stood at, to ghost in its field; nothing in a month not yet logged. */
-	const ghost = (account: string) => standingAt.get(account)?.amount ?? null;
+	const previous = (account: string) => previousAt.get(account)?.amount ?? null;
+	/** What the account stands at as of the reading, in the ledger's sign. Zero is a figure, so this is
+	    null only when the reading's month holds nothing for the account. */
+	const onRecord = (account: string) => standingAt.get(account)?.amount ?? null;
 
 	/** Rows by account, for opening at one. Plain, not state: only the effect below reads it. */
 	const rowEls: Record<string, HTMLTableRowElement> = {};
@@ -160,10 +149,10 @@
 		el.querySelector('input')?.focus({ preventScroll: true });
 	});
 
-	// Keyed by month so switching months never carries an entry across. Liabilities are typed as the
-	// amount owed and stored negative.
+	// Keyed by reading so picking another date never carries an entry across. Liabilities are typed as
+	// the amount owed and stored negative.
 	let typed = $state<Record<string, number | null>>({});
-	const cellKey = (account: string) => `${monthKey}|${account}`;
+	const cellKey = (account: string) => `${snapshotDate}|${account}`;
 
 	function parsed(row: Row): number | null {
 		const n = typed[cellKey(row.account)];
@@ -186,7 +175,7 @@
 	 */
 	function target(row: Row): { locator: string } | { date: string } | null {
 		if (!loggedOnReading(row.account)) return { date: snapshotDate };
-		const locator = logged.get(row.account)?.locator;
+		const locator = standingAt.get(row.account)?.locator;
 
 		return locator ? { locator } : null;
 	}
@@ -207,7 +196,7 @@
 	function blockedPredicate(row: Row): string {
 		const why = whyBlocked(row);
 		if (why === 'share-snapshot') {
-			return `was snapshotted in shares in ${monthLabel(monthKey)}. Only backfilling shares is allowed.`;
+			return `was snapshotted in shares in ${monthLabel(readingMonth)}. Only backfilling shares is allowed.`;
 		}
 		if (why === 'unreconciled') {
 			return `is off by ${gapWords(row)}. Please log the missing ${missingEntryKind(check(row) ?? 0)} first.`;
@@ -256,14 +245,6 @@
 			effective
 		);
 
-	/** Reads today, in the month today's reading lands in; moving there resets the day to today. */
-	function readToday() {
-		const today = todayIso();
-		const lands = addDays(today, 1).slice(0, 7);
-		if (lands === monthKey || !onmonth) readOn = today;
-		else onmonth(lands);
-	}
-
 	let busy = $state(false);
 	let err = $state('');
 	let note = $state('');
@@ -299,7 +280,9 @@
 <Pane {id} title={words('Log balances')} caption={words("snapshot of each account's balance on")}>
 	{#snippet captionAfter()}
 		<DatePicker inline ariaLabel="Logging date" bind:value={readOn} />
-		<button type="button" class="btn-ghost today" onclick={readToday}>Default to today</button>
+		<button type="button" class="btn-ghost today" onclick={() => (readOn = todayIso())}
+			>Default to today</button
+		>
 	{/snippet}
 	{#snippet actions()}
 		{#if rows.length}
@@ -352,7 +335,6 @@
 							{#each members as row (row.account)}
 								{@const value = standing(row)}
 								{@const rec = onRecord(row.account)}
-								{@const shown = ghost(row.account)}
 								{@const prev = previous(row.account)}
 								{@const exp = expected(row)}
 								{@const chk = check(row)}
@@ -375,7 +357,7 @@
 										     prefilling a field that would then look edited. -->
 										<AmountInput
 											prefix="$"
-											placeholder={shown == null ? NO_VALUE : amountExact(asTyped(row, shown))}
+											placeholder={rec == null ? NO_VALUE : amountExact(asTyped(row, rec))}
 											signed
 											disabled={busy}
 											ariaLabel={`Balance for ${formatAccount(row.account)}`}

@@ -84,8 +84,8 @@ The header: `Accounts`, the Month and Year switch, then on Month Analytics' year
 | Span picker (Year) | Reach back 3, 5 or 10 years, or all; a picked year outside is dropped | `span` | The previous span |
 | You vs the market, Change by asset type (Month) | Narrow to that month; again widens | `month`, `scope=month` | The previous scope |
 | You vs the market, Change by asset type (Year) | Narrow to that year; again widens | `month`: the same calendar month in that year, else its latest; `scope=year` | The previous scope |
-| Log balances: date, fields, Save | Log the month's snapshot in place, as on Home (D12). Each field ghosts the account's latest snapshot as of the reading date; a month the account has no snapshot in shows it empty | none | |
-| Log balances: Default to today | Read today, moving to the month today's reading lands in | `month` when it moves | The previous month |
+| Log balances: date, fields, Save | Log a snapshot in place, as on Home (D12). The date drives the whole pane: each account's balance, its ghost, Previous, Change, the checks and the Net worth total all read the account's latest snapshot as of that date (Aug 12 reads Aug 1), and Previous the one before it. A month the account has no snapshot in shows it empty. The page's month only sets the date's default | none | |
+| Log balances: Default to today | Read today | none | |
 | Where the money sits, an account's bar (Year) | Open Month at the latest month, at Log balances with that account's row marked and its field focused (D34) | `/accounts`, `month`; the account rides in history state | This view |
 | KPI cards, stat matrices, lines, stacked areas, Where the money sits, tables | Not clickable; hover explains, as today | | |
 | Edit | Arrange the board (D14) | none | |
@@ -127,7 +127,7 @@ Accounts joins `BOARD_PAGES`, so `charts` and `steady` cover its Month board, an
 4. **Savings rate** stays on the Month board for now, despite D3; revisit after dogfooding.
 5. **Where the money sits** opens Log balances at that account. Like a heatmap, it leaves its view, since it reads today's balances rather than a period.
 6. **Snapshot tables are heatmaps**, with the columns' own good and bad shading on their tiles.
-7. **Log balances ghosts the reading date** (see the click map), from `standing` on `/api/networth`. Revised on review: a new month shows empty; a logged month shows the latest snapshot as of the date. A Default to today button snaps the date to today.
+7. **Log balances ghosts the reading date** (see the click map), from `standing` on `/api/networth`. Revised on review: a new month shows empty; a logged month shows the latest snapshot as of the date; and the date drives every column, not only the ghost, from `standing` and `previous` on `/api/networth`. A Default to today button snaps the date to today.
 9. **Each view keeps its own state** (D33, superseding D30), **drill-ins land on their pane** (D34), **axis labels** (D31, D35), **bar lists pick one way** (D32), **spans are 3Y to All** (D36) and **rows run oldest first** (D37).
 8. **Every wash takes the deep hue in light mode** (D29).
 

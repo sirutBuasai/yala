@@ -42,10 +42,8 @@
 		onpick: (monthKey: string) => void;
 		/** An account for Log balances to open at, by ledger path. */
 		account?: string | null;
-		/** Moves the focus month without picking it. */
-		onmonth: (monthKey: string) => void;
 	}
-	let { data, accounts, onsaved, monthKey, scoped, onpick, account, onmonth }: Props = $props();
+	let { data, accounts, onsaved, monthKey, scoped, onpick, account }: Props = $props();
 
 	const year = $derived(yearOf(monthKey));
 
@@ -229,7 +227,7 @@
 		<StatMatrix {data} {columns} rows={growth} />
 	</Pane>
 
-	<BalanceChecklist id="balances" {data} {accounts} {onsaved} {monthKey} {account} {onmonth} />
+	<BalanceChecklist id="balances" {data} {accounts} {onsaved} {monthKey} {account} />
 
 	{#each figurePanes(PANES) as [id, figure] (id)}
 		{@const picks = PICKS.has(id)}
