@@ -1,6 +1,6 @@
 # Accounts spec
 
-Status: built, dogfooding · Branch: `redesign/accounts` · Branch: `redesign/accounts`
+Status: merged, dogfooding
 
 ## Job
 
@@ -59,7 +59,7 @@ Saved is the same income − spending that Transactions and Analytics show. It s
 
 A bar chart selects in place; picking the picked period again widens back.
 
-- **Month:** picking a month on You vs the market or Change by asset type narrows the KPI cards to that month and marks it on every chart with a month axis, the lines and the stacked area included, and outlines its row in Monthly snapshots. Net worth then reads at the month's end with its change that month, and Saved and Market & other read that month's split: this is the bridge. The stat matrix stays on the year. The Log balances pane follows the focus month whether or not it is picked. The lines and the stacked area plot each snapshot, so a month with two marks both.
+- **Month:** picking a month on You vs the market or Change by asset type narrows the KPI cards to that month and marks it on every chart with a month axis, the lines and the stacked area included, and outlines its row in Monthly snapshots. Net worth then reads at the month's end with its change that month, and Saved and Market & other read that month's split: this is the bridge. The stat matrix stays on the year. A pick or year step resets Log balances' date to that month's default; the date then drives the pane on its own. The lines and the stacked area plot each snapshot, so a month with two marks both.
 - **Year:** picking a year on either bar chart narrows the KPI cards to that year's close, marks it on every year axis and outlines its row in Yearly snapshots. The stat matrix stays on the window.
 - A period with no snapshot has no bars and cannot be picked.
 
@@ -71,7 +71,7 @@ The Year view takes Analytics' 3Y, 5Y, 10Y and All (D36), ending at the latest y
 
 ## Layout
 
-Two boards, each arrangeable (D14), stored under `accounts:month` and `accounts:year`. Each starts from your stored `networth:year` and `networth:all` arrangement, which I will ask you to copy from the browser at build time. On Month, Log balances goes full width under the KPI cards, since logging is the page's first job; everything else keeps its place.
+Two boards, each arrangeable (D14), stored under `accounts:month` and `accounts:year`. The defaults are Net Worth's with Log balances added; the user's stored arrangements for every page are adopted together once dogfooding settles (D14). On Month, Log balances goes full width under the KPI cards, since logging is the page's first job; everything else keeps its place.
 
 The header: `Accounts`, the Month and Year switch, then on Month Analytics' year stepper, on Year the span picker. Logging is Log balances alone: there is no `+ Log balance` button. Edit and the theme toggle at the right, as on every page.
 
@@ -79,7 +79,7 @@ The header: `Accounts`, the Month and Year switch, then on Month Analytics' year
 
 | Element | Action | Route and state | Back returns to |
 |---|---|---|---|
-| View switch | Show Month or Year; widens the board | `/accounts` or `/accounts/year`, drops `scope` | The previous view |
+| View switch | Show Month or Year, each as it was left (D33) | `/accounts` or `/accounts/year` | The previous view |
 | Year stepper (Month) | Step or pick a year | `month`: the same calendar month in that year, else its latest tracked month | The previous year |
 | Span picker (Year) | Reach back 3, 5 or 10 years, or all; a picked year outside is dropped | `span` | The previous span |
 | You vs the market, Change by asset type (Month) | Narrow to that month; again widens | `month`, `scope=month` | The previous scope |
@@ -87,7 +87,7 @@ The header: `Accounts`, the Month and Year switch, then on Month Analytics' year
 | Log balances: date, fields, Save | Log a snapshot in place, as on Home (D12). The date drives the whole pane: each account's balance, its ghost, Previous, Change, the checks and the Net worth total all read the account's latest snapshot as of that date (Aug 12 reads Aug 1), and Previous the one before it. A month the account has no snapshot in shows it empty. The page's month only sets the date's default | none | |
 | Log balances: Default to today | Read today | none | |
 | Where the money sits, an account's bar (Year) | Open Month at the latest month, at Log balances with that account's row marked and its field focused (D34) | `/accounts`, `month`; the account rides in history state | This view |
-| KPI cards, stat matrices, lines, stacked areas, Where the money sits, tables | Not clickable; hover explains, as today | | |
+| KPI cards, stat matrices, lines, stacked areas, snapshot heatmaps | Not clickable; hover explains, as today | | |
 | Edit | Arrange the board (D14) | none | |
 
 ## Period and URL state
@@ -104,20 +104,19 @@ The stepper offers every year holding a tracked month or the one after the lates
 ## Build steps
 
 1. **The page (built).** Both boards with every carried pane, the view path and its matcher, `month`, and Log balances on Month. Net Worth's `Pref`s (`networth-range`, `networth-year`) go, and so do `BalanceForm` and the modal's balance kind. The Month and Year switch and the view matcher are shared with Analytics (`lib/nav/ViewSwitch.svelte`, `lib/nav/views.ts`).
-2. **Picks and time frame (built).** Both views pick as Analytics does, through `lib/nav/picks.ts` and `lib/nav/PeriodNav.svelte`. A picked year reads its levels at the year's close, each with its move that year. Bars take `onpick` and `picked`, lines and areas take `mark`, KPI cards narrow, and `span` scopes the Year board. Net worth series take the window (`since`) and keep gap years, as the cash-flow series did for Analytics.
-3. **Account drill-in (built).** Where the money sits opens Log balances at the account.
-
-Each step is dogfooded before the next.
+2. **Picks and time frame (built).** Both views pick as Analytics does, through `lib/nav/picks.ts` and `lib/nav/PeriodNav.svelte`. A picked year reads its levels at the year's close, each with its move that year. Net worth series take the window (`since`) and keep gap years, as the cash-flow series do.
+3. **Account drill-in (built).** Where the money sits opens Log balances at the account (D34).
 
 ## New UI strings
 
 - `Accounts`: the page title, was `Net Worth`.
 - `Month`, `Year`: the view switch; `Accounts time range` is its accessible name, was `Net worth time range`.
 - Titles and captions under a window name its years, as on Analytics.
+- `Default to today`: resets Log balances' date.
 
 ## Tests
 
-Accounts joins `BOARD_PAGES`, so `charts` and `steady` cover its Month board, and `arrange` runs its random gestures on it as it did on Net Worth. A new `accounts.spec.ts` covers narrowing and widening on both views, the view switch, the span, logging a month from the checklist with the ledger checks, and the account drill-in. `planning` and `slider` still wait for Planning.
+Accounts joins `BOARD_PAGES`, so `charts` and `steady` cover its Month board, and `arrange` runs its random gestures on it as it did on Net Worth. A new `accounts.spec.ts` covers narrowing and widening on both views, the view switch, the span, and the account drill-in. Log balances' dated reads need the API, so `apps/api/tests/test_networth.py` covers `standing` and `previous`. `planning` and `slider` still wait for Planning.
 
 ## Decisions (2026-09-25)
 
@@ -127,9 +126,9 @@ Accounts joins `BOARD_PAGES`, so `charts` and `steady` cover its Month board, an
 4. **Savings rate** stays on the Month board for now, despite D3; revisit after dogfooding.
 5. **Where the money sits** opens Log balances at that account. Like a heatmap, it leaves its view, since it reads today's balances rather than a period.
 6. **Snapshot tables are heatmaps**, with the columns' own good and bad shading on their tiles.
-7. **Log balances ghosts the reading date** (see the click map), from `standing` on `/api/networth`. Revised on review: a new month shows empty; a logged month shows the latest snapshot as of the date; and the date drives every column, not only the ghost, from `standing` and `previous` on `/api/networth`. A Default to today button snaps the date to today.
-9. **Each view keeps its own state** (D33, superseding D30), **drill-ins land on their pane** (D34), **axis labels** (D31, D35), **bar lists pick one way** (D32), **spans are 3Y to All** (D36) and **rows run oldest first** (D37).
+7. **Log balances' date drives the pane** (see the click map), from `standing` and `previous` on `/api/networth`.
 8. **Every wash takes the deep hue in light mode** (D29).
+9. **Each view keeps its own state** (D33), **drill-ins land on their pane** (D34), **axis labels** (D31, D35), **bar lists pick one way** (D32), **spans are 3Y to All** (D36) and **rows run oldest first** (D37).
 
 ## Out of scope
 
@@ -143,7 +142,7 @@ A month's rows (Transactions), cash-flow trends (Analytics), projections (Planni
 
 - Log a real month end from the checklist; every check agrees, then the KPI cards, Monthly snapshots and You vs the market show it.
 - Pick a month, read its bridge, pick it again; the year returns.
-- Step to an older month and correct one balance.
+- Pick an older date in Log balances and correct one balance.
 - On Year, pick a year from either bar chart; every year axis marks it. Try each span.
 - Reload any view; the view stays and the picks go.
 

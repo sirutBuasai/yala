@@ -60,7 +60,7 @@ YALA_WEB_DIR=$PWD/.worktrees/redesign-<topic>/apps/web/build \
 
 `YALA_WEB_DIR` is needed because the API otherwise serves the primary checkout's build. Remove the data worktree when the branch merges.
 
-Until `master` has the `scripts/_common.py` fix from `redesign/accounts`, `make serve-api` runs the primary checkout's API code even with `WORKTREE=`. When a branch changes the API, start it from the worktree's source after the build above:
+Until `master` has `redesign/main`'s `scripts/_common.py` fix, `make serve-api` runs the primary checkout's API code even with `WORKTREE=`. When a branch changes the API, start it from the worktree's source after the build above:
 
 ```bash
 PYTHONPATH=$PWD/.worktrees/redesign-<topic>/apps/api/src YALA_API_PORT=8800 \
@@ -73,10 +73,10 @@ PYTHONPATH=$PWD/.worktrees/redesign-<topic>/apps/api/src YALA_API_PORT=8800 \
 
 | Piece | Spec | Build | Dogfood |
 |---|---|---|---|
-| App shell (sidebar, routes, URL state) | [done](specs/app-shell.md) | merged | partial: month history waits for a page with a period |
+| App shell (sidebar, routes, URL state) | [done](specs/app-shell.md) | merged | reviewed through each page |
 | Transactions | [done](specs/transactions.md) | merged | reviewed on 8800; keep logging real months |
 | Analytics (was Cash flow) | [done](specs/analytics.md) | merged | started on 8800; keep reading real months |
-| Accounts | [done](specs/accounts.md) | built | started on 8800 |
+| Accounts | [done](specs/accounts.md) | merged | started on 8800; keep logging real month ends |
 | Dashboard | not started | not started | not started |
 | Planning (moved) | not started | not started | not started |
 | Manage (moved) | not needed | moved in with the shell | not started |

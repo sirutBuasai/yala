@@ -1,6 +1,6 @@
 # Analytics spec
 
-Status: built, dogfooding · Branch: `redesign/analytics`
+Status: merged, dogfooding
 
 ## Job
 
@@ -58,7 +58,7 @@ A bar chart selects; it never leaves the page. Picking a period narrows the boar
 - The picked period's bars stay full strength and the rest recede, with its column shaded and its label raised.
 - A group of bars with nothing in it, such as a month still to come, cannot be picked.
 
-Only the heatmap leaves the page: on Month, a Category by month label opens that month on Transactions, and a cell opens it filtered to its category. Category by year is not clickable: Transactions has no year to open.
+Only the heatmap leaves the page: on Month, a Category by month label opens that month at Transaction history, and a cell opens it filtered to its category (D34). Category by year is not clickable: Transactions has no year to open.
 
 ## Time frame (D25)
 
@@ -68,7 +68,7 @@ The Year view's header picks how far back the board reaches: 3Y, 5Y, 10Y or All 
 
 | Element | Action | Route and state | Back returns to |
 |---|---|---|---|
-| Range switch | Show Month or Year; widens the board | `view`, drops `scope` | The previous range |
+| Range switch | Show Month or Year, each as it was left (D33) | `/analytics` or `/analytics/year` | The previous range |
 | Year stepper (Month) | Step or pick a year | `month`: the same calendar month in that year, else its latest tracked month | The previous year |
 | Month bars | Narrow to that month; again widens | `month`, `scope=month` | The previous scope |
 | Year bars, Savings rate bars | Narrow to that year; again widens | `month` as for the stepper, `scope=year` | The previous scope |
@@ -97,7 +97,8 @@ Two boards, one per range, each arrangeable (D14) and stored under `analytics:mo
 ## Build notes
 
 - `BarChart` takes `onpick` and `picked`: a band over each period is a button, and the bars pick through to it.
-- `LineChart` takes `mark`, the period shaded behind its lines. Bars and lines share `.focusband` and `text.focused` in `app.css`.
+- A figure's `mark` shades the picked period behind lines and areas (`FocusBand`). Bars and lines share `.focusband` and `text.focused` in `app.css`.
+- The year stepper, bar picks and span live in `lib/nav/picks.ts` and `PeriodNav`, shared with Accounts.
 - `money.flow` reads any scope. Spending past take-home is paid from a `From savings` node, which a month without a paycheck always needs.
 - `vsavg.*` and `trend.*` cover the whole income chain.
 - `lib/nav/step.ts` is the one way a page steps its URL state; Transactions uses it too.
@@ -119,7 +120,6 @@ Month rows (Transactions), net worth (Accounts), projections (Planning).
 
 ## Open questions
 
-
 - **Stat matrices.** They repeat figures the KPI cards show. Rework them once dogfooding shows which comparisons are used.
 - **Header while narrowed.** Only the panes' captions and the marks say a period is picked. A chip in the header, with a clear, may read better.
 - **A year against its average.** A year's KPI cards carry no badge; a run-rate comparison could stand in if one is missed.
@@ -128,9 +128,8 @@ Month rows (Transactions), net worth (Accounts), projections (Planning).
 ## Dogfood checklist
 
 - Pick a month, read its KPIs and Sankey, pick it again; the year returns.
-- Step through years; Transactions then opens on the matching month.
 - Spot an outlier cell, open it, fix a row, and go back to the same year and scope.
 - On Year, pick a year from either bar chart; every year axis marks it.
-- Reload any view; it is identical.
+- Reload any view; the view stays and its picks go.
 
 ## Dogfood notes

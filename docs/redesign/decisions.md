@@ -22,7 +22,7 @@ Each figure has one owning page. Elsewhere it appears at most as a headline that
 - Net worth bridge: Dashboard and Accounts.
 - Recent transactions: Dashboard and Transactions.
 
-### D4 · The focus period carries across pages (2026-09-24)
+### D4 · The focus period carries across pages (2026-09-24) · superseded by D33
 
 The focus month carries over when moving between pages. When a page works at year granularity, the focus year carries over instead.
 
@@ -34,7 +34,7 @@ The focus month carries over when moving between pages. When a page works at yea
 
 The existing charts, figures, titles, subtitles, captions and UI strings carry over as they are. Mocks and specs show the current chart by default. A proposed improvement is shown as its own mock next to the current one, for the user to choose. The prototype restyled charts freely; some of its versions were better and some worse, so it is not a reference for chart design.
 
-### D7 · The editing surface depends on context (2026-09-24)
+### D7 · The editing surface depends on context (2026-09-24) · superseded by D16
 
 There is no single editing surface. Where a row is edited depends on the container it sits in and the space around it, compared in [mocks/editing-surfaces.html](mocks/editing-surfaces.html):
 
@@ -50,11 +50,11 @@ A transaction shown on another page (Accounts, Dashboard, a drill-down) opens it
 
 The focus period, filters and the open row live in the URL, so browser back and forward undo and redo each step, including a drill-down.
 
-### D10 · An inline editor grows a More section (2026-09-24)
+### D10 · An inline editor grows a More section (2026-09-24) · superseded by D16
 
 When a row is edited inline and the form has more than the row can hold (reimbursements, for example), the extra fields sit in a More section that expands under the row. The editor does not hand off to another surface for them.
 
-### D11 · No side panel (2026-09-24)
+### D11 · No side panel (2026-09-24) · superseded by D16
 
 Supersedes D7's side panel. No place in Yala suits one: the calendar already has its day pane beside it, and on Transactions a panel would cover the context used to verify an entry. Rows are edited inline, growing a More section (D10), or in a modal when the inline row does not fit.
 
@@ -94,11 +94,11 @@ The range switch reads Month (a year, month by month; was Activity · Year) and 
 
 Clicking a period in a bar chart narrows the page's other panes to that period in place: KPI cards (a month against its average), the Sankey, and a mark on every chart sharing that axis. Clicking it again widens the page back. A heatmap is the one chart whose click leaves the page, for the rows behind a cell on Transactions. This is the rule for clickable charts on every page.
 
-### D21 · A page reopens as you left it (2026-09-25)
+### D21 · A page reopens as you left it (2026-09-25) · superseded by D33
 
 Supersedes the app shell's rule that a sidebar link carries only the focus month. What you pick on a chart persists across pages: a sidebar link reopens its page with the URL state it was last left with in this tab (picks, filters, range), moved to the current focus month. It is kept in session storage, so it survives a reload but not a new tab. State that belongs to another month, such as a chosen calendar day, is dropped by the page that reads it.
 
-### D22 · A page also reopens at its scroll (2026-09-25)
+### D22 · A page also reopens at its scroll (2026-09-25) · amended by D33, D34
 
 Extends D21. A sidebar link returns to where the page was scrolled when you left it, once its board is tall enough to hold that position. Back and forward keep the router's own restore; a drill-in opens its page at the top.
 
@@ -110,11 +110,11 @@ A year with nothing logged keeps its place on every year axis, so the record rea
 
 The text caret and the I-beam pointer appear only in fields that take typing. A click on a chart or control never places a caret or starts a text selection.
 
-### D25 · Year view time frame: preset spans (2026-09-25)
+### D25 · Year view time frame: preset spans (2026-09-25) · amended by D36
 
 Style A of [mocks/analytics-year-ranges.html](mocks/analytics-year-ranges.html). The Year view's header offers 5Y, 10Y, 20Y, 50Y and All, each ending at the latest year, default 10Y, in the URL as `span`. The window scopes the whole board: KPI cards, stat matrix, Sankey and every year axis. A picked year the window moves past is dropped. A window reaching back past the first tracked year is the lifetime, and reads as one.
 
-### D26 · A reload starts the view over (2026-09-25)
+### D26 · A reload starts the view over (2026-09-25) · amended by D27
 
 Amends D21 and D22. Reloading returns the page to its defaults (latest month, no picks, no filters, the top of the page) and forgets where every other page was left, so the sidebar opens them fresh too. Preferences in local storage, such as board arrangements and the theme, are kept. A link opened in a new tab still opens exactly what it names.
 
@@ -135,11 +135,11 @@ Chosen from [mocks/kpi-underlay-strength.html](mocks/kpi-underlay-strength.html)
 
 Extends D28 across the app. In light mode every accent wash behind a control, a badge or a row (a selected pill, a chosen option, the current page, a hovered row, a pending day, a modal's tinted header) takes its hue at D28's lightness and carries a smaller share of it, so a selected pill lands on the KPI wash beside it. Hairlines, rings and chart marks are unchanged, and so is dark mode.
 
-### D30 · The URL is for back and forward, not for reopening (2026-09-25)
+### D30 · The URL is for back and forward, not for reopening (2026-09-25) · superseded by D33
 
 Supersedes D21's picks. A sidebar link opens its page at the view it was left on, with the focus month (D4) and no picks; so does the Month and Year switch. Picks stay in the URL, so back and forward still undo each step (D9). What each view keeps is its scroll (D22), now per view: switching back returns to where that view was left. A drill-in's own state, such as the account Where the money sits opened, never follows you to another page.
 
-### D31 · Every axis label is drawn (2026-09-25)
+### D31 · Every axis label is drawn (2026-09-25) · amended by D35
 
 No x-label is dropped to make room. Labels lie flat where they fit and turn 45 degrees, or upright, where they would overlap, and the chart gives up the height they need. Bar, line and stacked area charts share one layout (`xLabelLayout`, `XLabels`).
 
@@ -172,9 +172,10 @@ Every snapshot table and heatmap lists its periods oldest at the top, as the cat
 - **A card filter's figure.** When the history is filtered to one card, show "Charged to card" (full bills) beside Spent, so the gap reads as what was fronted? Or nothing. "Charged − paid" was rejected: it mostly reflects statement timing.
 - **The open entry in the URL (D9).** The modal's open entry is not in the URL yet, so back does not close it.
 - **Phone layout.** Suggested: bottom tab bar with the four main pages.
+- **Stored layouts.** Once dogfooding settles, adopt the user's stored arrangement for every page's boards at once as their defaults (D14).
 
 ## Resolved elsewhere
 
 - **Month from a year:** same calendar month in the new year, clamped to tracked months (specs/app-shell.md).
-- **URL names:** `month` (shared), and on Transactions `day`, `type`, `category`, `account`, `q` (the specs).
+- **URL names:** `month` (each view's own, D33), and on Transactions `day`, `type`, `category`, `account`, `q` (the specs).
 - **Typical month or budgets:** "average" is the mean of up to twelve prior months with data (`vsAverage`, `categoryDeviation`); no budgets.

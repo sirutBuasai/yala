@@ -24,12 +24,12 @@ The two were kept apart. Combining them is new ground, and the best workflow for
 |---|---|---|---|
 | Dashboard | Where do I stand, and what needs attention | Home's figure strip | none |
 | Transactions | Log and verify a month | Home calendar, Activity · Month lists | Month sheet |
-| Cash flow | Read spending and income trends | Activity · Year, Activity · All time | SUMMARY and OVERVIEW sheets |
+| Analytics (D15) | Read spending and income trends | Activity · Year, Activity · All time | SUMMARY and OVERVIEW sheets |
 | Accounts | Log balances and read net worth | Net Worth · Year and All time, Home balance checklist | Net Worth tracker |
 | Planning | Project forward | Planning inside Net Worth · All time | none |
 | Manage | Accounts, categories, employers, options | Manage | none |
 
-Navigation is a left sidebar with a quick add that works from every page.
+Navigation is a left sidebar; each page offers the entries its context logs (D12).
 
 ## Principles
 
