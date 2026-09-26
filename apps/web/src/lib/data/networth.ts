@@ -273,9 +273,8 @@ function windowYears(data: DashboardData, since?: number): number[] {
 	return spanYears(snapshotYears(data), since);
 }
 
-function yearlyRun(data: DashboardData, newestFirst = false, since?: number): Run {
+function yearlyRun(data: DashboardData, since?: number): Run {
 	const years = windowYears(data, since);
-	if (newestFirst) years.reverse();
 
 	return {
 		labels: years.map(String),
@@ -375,12 +374,12 @@ export function netWorthAssetsChange(data: DashboardData, year: number): MultiSe
 /** The same two levels a year at a time: whether growth is speeding up or slowing as the base grows,
     which the dollar decomposition beside it cannot say. */
 export function netWorthAssetsChangeByYear(data: DashboardData, since?: number): MultiSeries {
-	return moveSeries(data, yearlyRun(data, false, since), PAIRED, 'percent');
+	return moveSeries(data, yearlyRun(data, since), PAIRED, 'percent');
 }
 
 // Liabilities take an axis of their own, for the reason `PAIRED` gives.
 export function liabilitiesChangeByYear(data: DashboardData, since?: number): MultiSeries {
-	return moveSeries(data, yearlyRun(data, false, since), [READING.liabilities], 'percent');
+	return moveSeries(data, yearlyRun(data, since), [READING.liabilities], 'percent');
 }
 
 export function liabilitiesChange(data: DashboardData, year: number): MultiSeries {
@@ -394,7 +393,7 @@ export function bucketChangeByMonth(data: DashboardData, year: number): MultiSer
 }
 
 export function bucketChangeByYear(data: DashboardData, since?: number): MultiSeries {
-	return moveSeries(data, yearlyRun(data, false, since), HOLDINGS, 'value');
+	return moveSeries(data, yearlyRun(data, since), HOLDINGS, 'value');
 }
 
 export function bucketMonthlyTable(data: DashboardData, year: number): Table {
@@ -402,13 +401,13 @@ export function bucketMonthlyTable(data: DashboardData, year: number): Table {
 }
 
 export function bucketYearTable(data: DashboardData, since?: number): Table {
-	return deltaTable(data, 'Year', yearlyRun(data, true, since), HOLDINGS);
+	return deltaTable(data, 'Year', yearlyRun(data, since), HOLDINGS);
 }
 
 /** Net worth's percent move per logged year. Named for the rate rather than the balance, so the registry
     gives it its own hue instead of net worth's. */
 export function growthRateByYear(data: DashboardData, since?: number): Series {
-	const run = yearlyRun(data, false, since);
+	const run = yearlyRun(data, since);
 	return series(
 		'Balance growth',
 		run.labels,
@@ -756,7 +755,7 @@ export function netWorthGrowthPerMonth(
 /** The monthly table's shape plus the decomposition only a whole year can carry. */
 export function netWorthYearTable(data: DashboardData, since?: number): Table {
 	const unit = MONEY(data.currency);
-	const run = yearlyRun(data, true, since);
+	const run = yearlyRun(data, since);
 	const table = deltaTable(data, 'Year', run, LEVELS);
 
 	return {

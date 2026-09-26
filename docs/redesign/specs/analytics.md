@@ -62,7 +62,7 @@ Only the heatmap leaves the page: on Month, a Category by month label opens that
 
 ## Time frame (D25)
 
-The Year view's header picks how far back the board reaches: 5Y, 10Y, 20Y, 50Y or All, each ending at the latest year, 10Y by default. The window scopes the whole board, so the KPI cards, stat matrix, Sankey and every year axis read those years; titles drop "Lifetime" and name the years instead, and Savings rate's reference line reads `average` rather than `lifetime`. A year with nothing logged keeps its place (D23). A picked year outside the window is dropped.
+The Year view's header picks how far back the board reaches: 3Y, 5Y, 10Y or All (D36), each ending at the latest year, 10Y by default. The window scopes the whole board, so the KPI cards, stat matrix, Sankey and every year axis read those years; titles drop "Lifetime" and name the years instead, and Savings rate's reference line reads `average` rather than `lifetime`. A year with nothing logged keeps its place (D23). A picked year outside the window is dropped.
 
 ## Click map
 
@@ -72,8 +72,8 @@ The Year view's header picks how far back the board reaches: 5Y, 10Y, 20Y, 50Y o
 | Year stepper (Month) | Step or pick a year | `month`: the same calendar month in that year, else its latest tracked month | The previous year |
 | Month bars | Narrow to that month; again widens | `month`, `scope=month` | The previous scope |
 | Year bars, Savings rate bars | Narrow to that year; again widens | `month` as for the stepper, `scope=year` | The previous scope |
-| Category by month, month label | Open that month | `/transactions`, `month` | This page |
-| Category by month, cell | Open that month, filtered to the category | `/transactions`, `month`, `category` | This page |
+| Category by month, month label | Open that month at Transaction history (D34) | `/transactions`, `month` | This page |
+| Category by month, cell | Open that month at Transaction history, filtered to the category (D34) | `/transactions`, `month`, `category` | This page |
 | KPI cards, stat matrices, Sankey, lines, Category by year | Not clickable | | |
 | Edit | Arrange the board (D14) | none | |
 
@@ -81,12 +81,12 @@ The Year view's header picks how far back the board reaches: 5Y, 10Y, 20Y, 50Y o
 
 | Param | Values | Absent or invalid |
 |---|---|---|
-| `month` | `YYYY-MM`, shared (D4) | The latest tracked month |
+| `month` | `YYYY-MM`, this view's own (D33) | The latest tracked month |
 | Path `/analytics/year` | The Year view; kept on reload (D27) | `/analytics` is Month |
 | `scope` | `month` on Month, `year` on Year | The board's whole span: the focus year on Month, the window on Year |
-| `span` | `5`, `20`, `50`, `all` (Year) | `10`: the last ten years (D25) |
+| `span` | `3`, `5`, `all` (Year) | `10`: the last ten years (D25, D36) |
 
-Leaving the page keeps its picks (D21): the sidebar reopens it with its `view` and `scope`, at whatever month the focus moved to meanwhile.
+Each view keeps its own state (D33): the sidebar and the range switch reopen Month and Year each as it was left.
 
 The Month board reads its year from `month`. The stepper offers only years holding a pickable month, since `month` cannot name a month in any other.
 
@@ -119,7 +119,6 @@ Month rows (Transactions), net worth (Accounts), projections (Planning).
 
 ## Open questions
 
-- **Bar labels.** The bar chart does not yet thin its year labels as the line chart does; a 20Y or 50Y span will crowd them.
 
 - **Stat matrices.** They repeat figures the KPI cards show. Rework them once dogfooding shows which comparisons are used.
 - **Header while narrowed.** Only the panes' captions and the marks say a period is picked. A chip in the header, with a clear, may read better.

@@ -55,7 +55,8 @@ test('an account in Where the money sits opens it in Log balances', async ({ pag
 	await settle(page);
 	await pane(page, 'Where the money sits').getByRole('button').first().click();
 	await settle(page);
-	await expect(page).toHaveURL(/\/accounts\?month=\d{4}-\d{2}&account=/);
+	await expect(page).toHaveURL(/\/accounts\?month=\d{4}-\d{2}$/);
+	await expect(page.locator('[data-pane="balances"]')).toBeInViewport();
 	await expect(pane(page, 'Log balances')).toBeVisible();
 
 	await expect(page.locator('.tooltip')).toHaveCSS('opacity', '0');
@@ -97,7 +98,7 @@ test('Year is a path a reload keeps, and it logs nothing', async ({ page }) => {
 	await page.goto('/accounts?month=2025-09');
 	await page.getByRole('tab', { name: 'Year' }).click();
 	await settle(page);
-	await expect(page).toHaveURL(/\/accounts\/year\?month=2025-09/);
+	await expect(page).toHaveURL(/\/accounts\/year$/);
 	await expect(pane(page, 'Yearly snapshots')).toBeVisible();
 	await expect(pane(page, 'Log balances')).toHaveCount(0);
 

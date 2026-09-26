@@ -13,7 +13,6 @@
 	import ViewSwitch from '$lib/nav/ViewSwitch.svelte';
 	import PeriodNav from '$lib/nav/PeriodNav.svelte';
 	import MonthBoard from './MonthBoard.svelte';
-	import { ACCOUNT_PARAM } from './drill';
 	import YearBoard from './YearBoard.svelte';
 
 	interface Props {
@@ -26,7 +25,7 @@
 	const view = $derived(viewOf($page.params.view));
 	const p = $derived(periodPicks($page.url, data, view, snapshotYears(data)));
 	/** The account Log balances opens at, from Where the money sits. */
-	const account = $derived($page.url.searchParams.get(ACCOUNT_PARAM));
+	const account = $derived($page.state.drill?.focus ?? null);
 	const hasData = $derived(!!data.meta.domains.networth);
 </script>
 

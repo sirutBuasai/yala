@@ -278,7 +278,8 @@ export const CHARTS: ChartDef[] = [
 				log: opts.log,
 				endLabels: opts.endLabels,
 				ceiling: opts.ceiling,
-				marked: markedIndices(labels, periods, opts.mark)
+				marked: markedIndices(labels, periods, opts.mark),
+				periods
 			};
 		}
 	}),
@@ -310,7 +311,8 @@ export const CHARTS: ChartDef[] = [
 				series: toPlainSeries(m.series, opts),
 				unit: m.unit,
 				altUnit: altUnitOf(m.series),
-				marked: markedIndices(m.labels, m.periods, opts.mark)
+				marked: markedIndices(m.labels, m.periods, opts.mark),
+				periods: m.periods
 			};
 		}
 	}),

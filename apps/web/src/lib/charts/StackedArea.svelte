@@ -6,7 +6,7 @@
 	import { type Unit } from '$lib/data/primitives';
 	import { chartFormat } from '$lib/charts/format';
 	import { showTip, hideTip, withAlt } from '$lib/utils/tooltip';
-	import { focusPad, plotSize, xLabelLayout } from '$lib/charts/axis';
+	import { focusPad, plotSize, xAxisLabels } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import Legend from '$lib/charts/Legend.svelte';
 	import { chartLabel } from '$lib/charts/aria';
@@ -29,8 +29,10 @@
 		altUnit?: Unit;
 		/** The points of the period in focus, shaded behind the bands. */
 		marked?: number[];
+		/** Each point's period key, which lets a crowded axis spanning years name each year once. */
+		periods?: string[];
 	}
-	let { labels, series, unit, altUnit, marked = [] }: Props = $props();
+	let { labels, series, unit, altUnit, marked = [], periods }: Props = $props();
 
 	const box = new ChartBox();
 	const W = $derived(box.w);
@@ -40,8 +42,8 @@
 	const iw = $derived(Math.max(0, W - side.l - side.r));
 	const n = $derived(labels.length);
 	const xs = $derived(labels.map((_, i) => xPos(i)));
-	const xLayout = $derived(xLabelLayout(xs, labels, true));
-	const m = $derived({ ...side, b: xLayout.bottom });
+	const xAxis = $derived(xAxisLabels(xs, labels, periods, true));
+	const m = $derived({ ...side, b: xAxis.bottom });
 	const ih = $derived(plotSize(W, H, m).ih);
 
 	const xPos = (i: number) => (n > 1 ? (iw * i) / (n - 1) : iw / 2);
@@ -124,14 +126,7 @@
 				<path d={p.edge} fill="none" stroke={p.band.color} stroke-width="1.5" />
 			{/each}
 
-			<XLabels
-				{labels}
-				{xs}
-				top={ih}
-				layout={xLayout}
-				anchored
-				focused={(i) => marked.includes(i)}
-			/>
+			<XLabels axis={xAxis} top={ih} {marked} />
 
 			<!-- Marked on each band's upper boundary: a band's value is its thickness, so it has no single
 			     point of its own to mark. -->

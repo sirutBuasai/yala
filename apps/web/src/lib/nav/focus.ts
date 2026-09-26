@@ -1,4 +1,4 @@
-// Page state in the URL (docs/redesign D4, D9). The focus month is shared by every page; year-level views
+// Page state in the URL (docs/redesign D9, D33). Each view keeps its own focus month; year-level views
 // read their year from it, so one parameter carries both grains.
 
 export const MONTH_PARAM = 'month';
@@ -13,12 +13,6 @@ const validMonth = (url: URL) => {
 /** The focus month in `url`, or `fallback` when it has none or names no real month. */
 export function focusMonth(url: URL, fallback: string): string {
 	return validMonth(url) ?? fallback;
-}
-
-/** `href` carrying the current URL's focus month and nothing else: a page or view opens fresh (D4, D30). */
-export function withFocus(href: string, url: URL): string {
-	const month = validMonth(url);
-	return month ? `${href}?${new URLSearchParams({ [MONTH_PARAM]: month })}` : href;
 }
 
 /** `url`'s path and query with `patch` applied: a string sets a parameter, null removes it. */

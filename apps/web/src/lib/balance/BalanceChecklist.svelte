@@ -299,7 +299,7 @@
 <Pane {id} title={words('Log balances')} caption={words("snapshot of each account's balance on")}>
 	{#snippet captionAfter()}
 		<DatePicker inline ariaLabel="Logging date" bind:value={readOn} />
-		<button type="button" class="btn-ghost today" onclick={readToday}>Today</button>
+		<button type="button" class="btn-ghost today" onclick={readToday}>Default to today</button>
 	{/snippet}
 	{#snippet actions()}
 		{#if rows.length}

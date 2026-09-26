@@ -38,7 +38,7 @@
 		// A click that navigates never gets the mouseleave that would have hidden its tooltip.
 		hideTip();
 		if (!to) return;
-		remember(to.url.pathname);
+		remember(to.url);
 		if (type === 'link') restoreScroll(scrollAt(to.url.pathname));
 	});
 </script>

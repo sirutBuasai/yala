@@ -33,7 +33,7 @@ Navigation is a left sidebar with a quick add that works from every page.
 
 ## Principles
 
-1. **Select a period, don't switch to it.** One focus period is shared by every page. Charts show the context around it; clicking a bar, cell or point moves it.
+1. **Select a period, don't switch to it.** Charts show the context around a focus period; clicking a bar, cell or point moves it. (Each view now keeps its own period: D33.)
 2. **Every figure opens its transactions.** A drill-down lands on the rows that make up the number, and back returns to where you were.
 3. **Check your work where you log it.** The logging surface shows enough context to catch a mistake at save time.
 4. **Net worth explains itself.** A month's net worth change splits into what was saved (from cash flow) and markets and other movement. This is the bridge between the two spreadsheets.

@@ -11,13 +11,12 @@ import { focusMonth, MONTH_PARAM } from '$lib/nav/focus';
 import { step } from '$lib/nav/step';
 import type { View } from '$lib/nav/views';
 
-export type Span = '5' | '10' | '20' | '50' | 'all';
+export type Span = '3' | '5' | '10' | 'all';
 
 export const SPANS: { id: Span; label: string }[] = [
+	{ id: '3', label: '3Y' },
 	{ id: '5', label: '5Y' },
 	{ id: '10', label: '10Y' },
-	{ id: '20', label: '20Y' },
-	{ id: '50', label: '50Y' },
 	{ id: 'all', label: 'All' }
 ];
 const DEFAULT_SPAN: Span = '10';

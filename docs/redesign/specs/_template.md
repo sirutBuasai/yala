@@ -26,7 +26,7 @@ Every clickable element. "Route" is the destination page and the URL state it se
 
 ## Period and URL state
 
-How the focus period (D4) and any filters are read and written.
+How the view's period and any filters are read and written; each view keeps its own (D33).
 
 ## Out of scope
 

@@ -1,6 +1,6 @@
 # Redesign
 
-Yala is being reorganized from tabbed Month / Year / All time boards into Monarch-style pages that share one focus period. This folder is the handoff point: any agent or session picking up the work starts here.
+Yala is being reorganized from tabbed Month / Year / All time boards into Monarch-style pages, each view keeping its own period (D33). This folder is the handoff point: any agent or session picking up the work starts here.
 
 ## Read first
 
@@ -28,8 +28,9 @@ A figure has one owning page. Anywhere else it appears only as a headline that l
 - Never read and write the same state in an `$effect`: it loops until Svelte's guard stops it, costing CPU with nothing on screen. The browser tests fail on any uncaught page error, which is what catches it.
 - Chart marks are SVG (`lib/charts/marks`).
 - A bar chart selects and narrows its page; only a heatmap navigates (D20). `BarChart` takes `onpick` and `picked`, a figure's `mark` names the period in focus (a period key where the axis carries `periods`, else a label), and a `Scope` at `all` takes `since` for a trailing window. `lib/nav/picks.ts` is a board's year stepper, bar picks and span.
-- Every pick lives in the URL for back and forward; a page or view switch opens with the focus month only, at that view's last scroll (D30, `lib/nav/left.ts`). `lib/nav/step.ts` is the one way to change a pick.
-- Every x-label is drawn, turned where crowded (D31, `XLabels`); a pickable bar list uses `PickRow` (D32).
+- Every pick lives in the URL, and every view remembers its own URL and scroll, so a page or view switch returns it as it was left (D33, `lib/nav/left.ts`). `lib/nav/step.ts` is the one way to change a pick.
+- A click that opens another page goes through `drillTo` (`lib/nav/drill.ts`) with the pane it lands on (D34); give the pane's board id.
+- Axis labels come from `xAxisLabels` and `XLabels` (D31, D35): pass a chart's `periods` so a crowded axis over years names each year once. A pickable bar list uses `PickRow` (D32).
 - A page's view is a path and a pick is a query parameter (D27): a reload keeps the first and drops the second. Decide which a new setting is by where it lives.
 - Each worktree needs its own `npm install` in `apps/web`; the primary checkout has none.
 

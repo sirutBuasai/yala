@@ -94,7 +94,7 @@ Each step is dogfooded before the next.
 
 ## Period and URL state
 
-`month` (D4), plus `category`, `day`, `view` and `entry`. Sort stays a browser preference.
+`month` (this view's own, D33), plus `category`, `day`, `view` and `entry`. Sort stays a browser preference.
 
 ## Out of scope
 

@@ -234,6 +234,7 @@
 
 <div
 	class="cell"
+	data-pane={id}
 	class:folded={env.folded}
 	class:arranging
 	class:hug

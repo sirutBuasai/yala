@@ -68,7 +68,7 @@ test('switching the range widens the board again', async ({ page }) => {
 	await expect(page).not.toHaveURL(/scope=/);
 });
 
-test('a Category by month cell opens its rows on Transactions, and back returns', async ({
+test('a Category by month cell opens its rows in Transaction history, and back returns', async ({
 	page
 }) => {
 	await page.goto('/analytics?month=2025-09');
@@ -79,6 +79,7 @@ test('a Category by month cell opens its rows on Transactions, and back returns'
 	await cell.click();
 	await expect(page).toHaveURL(/\/transactions\?/);
 	await expect(page).toHaveURL(new RegExp(`category=${encodeURIComponent(category!)}`));
+	await expect(page.locator('[data-pane="history"]')).toBeInViewport();
 
 	await page.goBack();
 	await expect(page).toHaveURL(/\/analytics/);

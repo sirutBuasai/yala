@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { line, area } from 'd3-shape';
-	import { focusPad, moneyYScale, logYScale, plotSize, xLabelLayout } from '$lib/charts/axis';
+	import { focusPad, moneyYScale, logYScale, plotSize, xAxisLabels } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import { esc } from '$lib/utils/format';
 	import { chartFormat } from '$lib/charts/format';
@@ -36,6 +36,8 @@
 		ceiling?: number;
 		/** The points of the period in focus, shaded behind the lines. */
 		marked?: number[];
+		/** Each point's period key, which lets a crowded axis spanning years name each year once. */
+		periods?: string[];
 	}
 	let {
 		labels,
@@ -44,7 +46,8 @@
 		log = false,
 		endLabels = false,
 		ceiling,
-		marked = []
+		marked = [],
+		periods
 	}: Props = $props();
 
 	/** What is drawn: the readings, held to the ceiling. Everything the reader is TOLD comes off `series`,
@@ -69,8 +72,8 @@
 	const iw = $derived(Math.max(0, W - side.l - side.r));
 	const n = $derived(labels.length);
 	const xs = $derived(labels.map((_, i) => xPos(i)));
-	const xLayout = $derived(xLabelLayout(xs, labels, true));
-	const m = $derived({ ...side, b: xLayout.bottom });
+	const xAxis = $derived(xAxisLabels(xs, labels, periods, true));
+	const m = $derived({ ...side, b: xAxis.bottom });
 	const ih = $derived(plotSize(W, H, m).ih);
 	// Unique per instance, so two area charts on one page can't share a gradient.
 	const gid = 'lg-' + Math.random().toString(36).slice(2, 9);
@@ -201,14 +204,7 @@
 				/>
 			{/each}
 
-			<XLabels
-				{labels}
-				{xs}
-				top={ih}
-				layout={xLayout}
-				anchored
-				focused={(i) => marked.includes(i)}
-			/>
+			<XLabels axis={xAxis} top={ih} {marked} />
 
 			{#each ends as e (e.name)}
 				<circle cx={xPos(e.i)} cy={e.y0} r="3" fill={e.color} />

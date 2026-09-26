@@ -1,6 +1,6 @@
-// Where each page was left in this tab: which view it showed, and how far down each view was scrolled
-// (D22, D30). Its picks are not kept: the URL carries them for back and forward only. Session storage
-// rather than local: it is about this visit, not a preference.
+// Where each page and view was left in this tab (D33). Every view (every path) keeps its own URL state and
+// its own scroll, so switching between views or pages returns each to how it was left, and a pick on one
+// never moves another. Session storage rather than local: it is about this visit, not a preference.
 
 import { pageOf } from './pages';
 
@@ -9,6 +9,8 @@ const KEY = 'yala-page-state';
 interface Left {
 	/** Each page's path as left, which names its view (D27). */
 	views: Record<string, string>;
+	/** Each path's query as left, its picks and filters. */
+	searches: Record<string, string>;
 	/** How far down each path was left, in CSS pixels. */
 	scrolls: Record<string, number>;
 }
@@ -16,9 +18,13 @@ interface Left {
 function read(): Left {
 	try {
 		const stored = JSON.parse(sessionStorage.getItem(KEY) ?? '{}');
-		return { views: stored.views ?? {}, scrolls: stored.scrolls ?? {} };
+		return {
+			views: stored.views ?? {},
+			searches: stored.searches ?? {},
+			scrolls: stored.scrolls ?? {}
+		};
 	} catch {
-		return { views: {}, scrolls: {} };
+		return { views: {}, searches: {}, scrolls: {} };
 	}
 }
 
@@ -30,9 +36,10 @@ function save(left: Left): void {
 	}
 }
 
-export function remember(pathname: string): void {
+export function remember(url: URL): void {
 	const left = read();
-	left.views[pageOf(pathname)] = pathname;
+	left.views[pageOf(url.pathname)] = url.pathname;
+	left.searches[url.pathname] = url.search;
 	save(left);
 }
 
@@ -42,13 +49,16 @@ export function rememberScroll(pathname: string, scroll: number): void {
 	save(left);
 }
 
-/** Keep each page's view but drop its scroll: what a reload means (D26, D27). */
-export function forgetScroll(): void {
-	save({ ...read(), scrolls: {} });
+/** Keep each page's view but drop every view's picks and scroll: what a reload means (D26, D27). */
+export function forgetPicks(): void {
+	save({ ...read(), searches: {}, scrolls: {} });
 }
 
 /** The path `page` was last left at, naming its view; its own path when it was never visited. */
 export const viewAt = (page: string): string => read().views[page] ?? page;
+
+/** `pathname` with the query it was last left with. */
+export const leftAt = (pathname: string): string => pathname + (read().searches[pathname] ?? '');
 
 /** How far down, in CSS pixels, `pathname` was last left. */
 export const scrollAt = (pathname: string): number => read().scrolls[pathname] ?? 0;

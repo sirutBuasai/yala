@@ -125,35 +125,85 @@ const AXIS_LINE_H = 11;
 /** Room a label leaves below the plot when it lies flat. */
 const FLAT_BOTTOM = 28;
 
-export interface XLabelLayout {
+const labelWidth = (text: string) => text.length * AXIS_GLYPH_W + 8;
+
+/** One label under a plot: where it sits, how it anchors there, and which points it names. */
+export interface AxisTick {
+	x: number;
+	text: string;
+	anchor: 'start' | 'middle' | 'end';
+	points: number[];
+}
+
+export interface XAxis {
+	ticks: AxisTick[];
 	/** Degrees the labels turn upward from flat: 0, 45 or 90. */
 	angle: 0 | 45 | 90;
 	/** Room the labels take below the plot, in px: a chart's bottom margin. */
 	bottom: number;
 }
 
-/**
- * How to draw every x-label at `xs` without any two overlapping: flat where they fit, else turned 45
- * degrees, else upright, with the room below the plot grown to hold them. `anchored` is for a continuous
- * axis, whose end labels anchor inward (`labelAnchor`) and so reach a whole width into the plot.
- */
-export function xLabelLayout(xs: number[], labels: string[], anchored: boolean): XLabelLayout {
-	const width = Math.max(1, ...labels.map((l) => l.length)) * AXIS_GLYPH_W + 8;
-	const count = xs.length;
-	const reach = (i: number): [number, number] => {
-		const x = xs[i]!;
-		const anchor = anchored ? labelAnchor(i, count) : 'middle';
-		if (anchor === 'start') return [x, x + width];
-		if (anchor === 'end') return [x - width, x];
-		return [x - width / 2, x + width / 2];
-	};
-	const gaps = xs.slice(1).map((x, i) => x - xs[i]!);
-	const flat = xs.slice(1).every((_, i) => reach(i)[1] <= reach(i + 1)[0]);
-	if (flat) return { angle: 0, bottom: FLAT_BOTTOM };
+function reach(t: AxisTick): [number, number] {
+	const w = labelWidth(t.text);
+	if (t.anchor === 'start') return [t.x, t.x + w];
+	if (t.anchor === 'end') return [t.x - w, t.x];
+	return [t.x - w / 2, t.x + w / 2];
+}
 
+const clear = (ticks: AxisTick[]) =>
+	ticks.slice(1).every((t, i) => reach(ticks[i]!)[1] <= reach(t)[0]);
+
+/** One tick per year of `periods`, centred on the span of that year's points. A year whose label would
+    reach past either end of the plot, or into the year before, is left unlabelled. */
+function yearTicks(xs: number[], periods: string[]): AxisTick[] {
+	const groups = new Map<string, number[]>();
+	periods.forEach((p, i) => groups.set(p.slice(0, 4), [...(groups.get(p.slice(0, 4)) ?? []), i]));
+	const [lo, hi] = [xs[0] ?? 0, xs.at(-1) ?? 0];
+	const out: AxisTick[] = [];
+	for (const [year, points] of groups) {
+		const x = (xs[points[0]!]! + xs[points.at(-1)!]!) / 2;
+		const tick: AxisTick = { x, text: year, anchor: 'middle', points };
+		const [from, to] = reach(tick);
+		const prev = out.at(-1);
+		if (from >= lo && to <= hi && (!prev || reach(prev)[1] <= from)) out.push(tick);
+	}
+	return out;
+}
+
+/**
+ * Every x-label at `xs`, placed so none overlaps another. Flat where each point's label fits. Where they
+ * would crowd an axis spanning several years of `periods`, each year is named once, centred on its points,
+ * which keep their own names on hover. Otherwise every label turns 45 degrees, or upright, with the room
+ * below the plot grown to hold it. `anchored` is for a continuous axis, whose end labels anchor inward
+ * (`labelAnchor`) and so reach a whole width into the plot.
+ */
+export function xAxisLabels(
+	xs: number[],
+	labels: string[],
+	periods: string[] | undefined,
+	anchored: boolean
+): XAxis {
+	const perPoint = labels.map((text, i): AxisTick => ({
+		x: xs[i] ?? 0,
+		text,
+		anchor: anchored ? labelAnchor(i, labels.length) : 'middle',
+		points: [i]
+	}));
+	if (clear(perPoint)) return { ticks: perPoint, angle: 0, bottom: FLAT_BOTTOM };
+
+	if (periods?.length === labels.length && new Set(periods.map((p) => p.slice(0, 4))).size > 1) {
+		return { ticks: yearTicks(xs, periods), angle: 0, bottom: FLAT_BOTTOM };
+	}
+
+	const gaps = xs.slice(1).map((x, i) => x - xs[i]!);
 	const angle = Math.min(...gaps) >= AXIS_LINE_H * Math.SQRT2 ? 45 : 90;
+	const width = Math.max(...labels.map(labelWidth));
 	const rise = angle === 45 ? width * Math.SQRT1_2 : width;
-	return { angle, bottom: Math.ceil(rise) + 12 };
+	return {
+		ticks: perPoint.map((t) => ({ ...t, anchor: 'end' })),
+		angle,
+		bottom: Math.ceil(rise) + 12
+	};
 }
 
 /** How wide a focus band reaches around a lone point on a continuous axis of `count` points. */

@@ -4,7 +4,7 @@ Status: built, in review · Branch: `redesign/app-shell`
 
 ## Job
 
-Move between pages without losing your place. The shell carries the focus period from page to page (D4) and makes browser back and forward undo each step (D9). Adding entries is each page's job (D12). It starts every page from a clean slate: the old tabbed views are removed rather than mounted under the new routes, and each page is rebuilt on its own branch.
+Move between pages without losing your place. The shell returns each view as it was left (D33) and makes browser back and forward undo each step (D9). Adding entries is each page's job (D12). It starts every page from a clean slate: the old tabbed views are removed rather than mounted under the new routes, and each page is rebuilt on its own branch.
 
 ## Owns
 
@@ -57,9 +57,9 @@ The Home, Activity and Net Worth views were deleted, with the e2e suites that dr
 
 Page filters (category, account, type, pending, search) are named by each page's spec but follow the same rules.
 
-**One focus, two grains (D4).** There is no `year` parameter: a year-level view reads its year from `month`. Stepping a year view from 2026 to 2024 moves the focus to the same calendar month in 2024, clamped to the tracked range. Going back to a month-level page then lands on that month.
+**One focus, two grains.** There is no `year` parameter: a year-level view reads its year from `month`. Stepping a year view from 2026 to 2024 moves the focus to the same calendar month in 2024, clamped to the tracked range. Going back to a month-level page then lands on that month.
 
-**Carrying it over.** Sidebar links and every drill-down are built from the current focus, so `/transactions` opened from Cash flow keeps the month or year you were on. Since D21, a sidebar link also restores the page's own state as it was last left in this tab (`lib/nav/left.ts`), moved to the current focus month. Since D22, it also restores the page's scroll.
+**Each view keeps its own (D33).** Superseding D4 and D21: a sidebar link or view switch reopens each view with its own URL state and scroll as last left in this tab (`lib/nav/left.ts`); nothing carries from one view to another. A drill-down names its own month and filters, and lands on its pane (D34).
 
 **History.** Every deliberate step adds a history entry: changing page, stepping the period, choosing a range, applying a filter, opening or closing an entry. Typing in a search box replaces the current entry instead, so back does not replay each keystroke.
 
@@ -100,7 +100,7 @@ Page content, charts and copy (D6), the Dashboard itself, the phone layout, and 
 
 ## Dogfood checklist
 
-- Switch pages repeatedly; the focus month never resets.
+- Switch pages and views repeatedly; each returns as it was left.
 - Step a year view, then open a month page; it lands on the matching month.
 - Drill in, then press back; you return to the same place and scroll.
 - Reload any page; the view is identical.

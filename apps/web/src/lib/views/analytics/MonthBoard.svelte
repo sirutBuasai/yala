@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Analytics · Month: one year read month by month. Picking a month's bars scopes the KPIs and the
 	// Sankey to it; only the heatmap leaves the page, for the rows behind a cell.
-	import { goto } from '$app/navigation';
+	import { drillTo } from '$lib/nav/drill';
 	import type { DashboardData } from '$lib/data/types';
 	import type { Scope } from '$lib/data/scope';
 	import Board from '$lib/layout/grid/Board.svelte';
@@ -117,11 +117,11 @@
 
 	const keyOf = (month: string) => monthKeyOf(year, MONTHS.indexOf(month) + 1);
 
-	/** A month label opens that month's rows; a cell opens them filtered to its category. */
+	/** A month label opens that month's rows in the history; a cell opens them filtered to its category. */
 	function openRows(month: string, category: string | null) {
 		const query = new URLSearchParams({ [MONTH_PARAM]: keyOf(month) });
 		if (category) query.set('category', category);
-		void goto(`/transactions?${query}`);
+		void drillTo(`/transactions?${query}`, { pane: 'history' });
 	}
 </script>
 

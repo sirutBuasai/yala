@@ -3,7 +3,7 @@ import {
 	halfLabelWidth,
 	labelAnchor,
 	markedIndices,
-	xLabelLayout,
+	xAxisLabels,
 	moneyAxisFormat,
 	moneyYScale,
 	signedYScale
@@ -131,37 +131,57 @@ describe('moneyYScale', () => {
 	});
 });
 
-describe('xLabelLayout', () => {
+describe('xAxisLabels', () => {
 	const evenly = (n: number, width: number) =>
 		Array.from({ length: n }, (_, i) => (n > 1 ? (i * width) / (n - 1) : width / 2));
 	const names = (n: number) => Array.from({ length: n }, (_, i) => `Mon ${2020 + i}`);
 
-	it('lays labels flat where every one fits', () => {
-		expect(xLabelLayout(evenly(4, 900), names(4), true).angle).toBe(0);
+	it('lays every label flat where each fits', () => {
+		const axis = xAxisLabels(evenly(4, 900), names(4), undefined, true);
+		expect(axis.angle).toBe(0);
+		expect(axis.ticks.map((t) => t.text)).toEqual(names(4));
 	});
 
 	it('turns labels that would overlap, and grows the room below the plot to hold them', () => {
-		const flat = xLabelLayout(evenly(4, 900), names(4), true);
-		const turned = xLabelLayout(evenly(24, 600), names(24), true);
+		const flat = xAxisLabels(evenly(4, 900), names(4), undefined, true);
+		const turned = xAxisLabels(evenly(24, 600), names(24), undefined, true);
 		expect(turned.angle).toBe(45);
+		expect(turned.ticks).toHaveLength(24);
 		expect(turned.bottom).toBeGreaterThan(flat.bottom);
 	});
 
 	it('stands labels upright once even a slant would collide', () => {
-		expect(xLabelLayout(evenly(80, 600), names(80), true).angle).toBe(90);
+		expect(xAxisLabels(evenly(80, 600), names(80), undefined, true).angle).toBe(90);
 	});
 
 	// Bug: the first label is anchored at its start, so it reaches a whole width right, where the next,
 	// centred, reaches half a width back: a gap that fits two centred labels still overlaps these two.
 	it('measures the inward-anchored end labels as they are drawn', () => {
 		const xs = [0, 70, 140, 210];
-		const labels = names(4);
-		expect(xLabelLayout(xs, labels, false).angle).toBe(0);
-		expect(xLabelLayout(xs, labels, true).angle).not.toBe(0);
+		expect(xAxisLabels(xs, names(4), undefined, false).angle).toBe(0);
+		expect(xAxisLabels(xs, names(4), undefined, true).angle).not.toBe(0);
 	});
 
-	it('lays a lone label flat', () => {
-		expect(xLabelLayout([0], ['2026'], true).angle).toBe(0);
+	describe('a crowded axis spanning years', () => {
+		// Monthly points from Feb of the first year to Jan of the last.
+		const periods = Array.from({ length: 36 }, (_, i) => {
+			const m = i + 1;
+			return `${2023 + Math.floor(m / 12)}-${String((m % 12) + 1).padStart(2, '0')}-01`;
+		});
+		const labels = periods.map((p) => `Mon ${p.slice(0, 4)}`);
+		const axis = xAxisLabels(evenly(36, 500), labels, periods, true);
+
+		it('names each year once, flat, centred on its points', () => {
+			expect(axis.angle).toBe(0);
+			const y2024 = axis.ticks.find((t) => t.text === '2024')!;
+			const xs = evenly(36, 500);
+			expect(y2024.x).toBe((xs[y2024.points[0]!]! + xs[y2024.points.at(-1)!]!) / 2);
+			expect(y2024.points).toHaveLength(12);
+		});
+
+		it('leaves a year unlabelled where its label would run past the end of the plot', () => {
+			expect(axis.ticks.map((t) => t.text)).not.toContain('2026');
+		});
 	});
 });
 

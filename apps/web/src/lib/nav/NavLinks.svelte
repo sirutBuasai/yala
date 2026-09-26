@@ -1,9 +1,8 @@
 <script lang="ts">
 	// The page links, shared by the sidebar, its icon rail and the hamburger sheet. Each link reopens its
-	// page at the view it was left on, at the current focus month and with no picks (D30).
+	// page at the view it was left on, as that view was left (D33).
 	import { page } from '$app/stores';
-	import { withFocus } from '$lib/nav/focus';
-	import { viewAt } from '$lib/nav/left';
+	import { leftAt, viewAt } from '$lib/nav/left';
 	import { pageOf } from '$lib/nav/pages';
 	import type { NavLink } from '$lib/nav/pages';
 	import type { Component } from 'svelte';
@@ -36,14 +35,9 @@
 <nav class="links" aria-label={ariaLabel}>
 	{#each links as link (link.href)}
 		{@const current = pageOf($page.url.pathname) === link.href}
-		{@const path = current ? $page.url.pathname : viewAt(link.href)}
+		{@const href = current ? $page.url.pathname + $page.url.search : leftAt(viewAt(link.href))}
 		{@const Icon = ICONS[link.href]}
-		<a
-			href={withFocus(path, $page.url)}
-			class:active={current}
-			aria-current={current ? 'page' : undefined}
-			{onclick}
-		>
+		<a {href} class:active={current} aria-current={current ? 'page' : undefined} {onclick}>
 			{#if Icon}<Icon />{/if}
 			<span class="label">{link.label}</span>
 		</a>

@@ -1,27 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { focusMonth, withFocus, withParams } from './focus';
+import { focusMonth, withParams } from './focus';
 import { pageOf } from './pages';
 import { RAIL_W, SIDEBAR_W, sidebarMode } from './sidebar';
 import { CONTENT, ONE_COLUMN, WRAP_PAD } from '$lib/layout/grid/units';
-
-describe('withFocus', () => {
-	const at = (search: string) => new URL(`http://yala.local/analytics${search}`);
-
-	it('carries the focus month to the next page', () => {
-		expect(withFocus('/transactions', at('?month=2026-03&view=year'))).toBe(
-			'/transactions?month=2026-03'
-		);
-	});
-
-	it('drops everything else the current page put in its URL', () => {
-		expect(withFocus('/accounts', at('?view=year&category=Takeouts'))).toBe('/accounts');
-	});
-
-	it('ignores a month that is not a real calendar month', () => {
-		expect(withFocus('/', at('?month=2026-13'))).toBe('/');
-		expect(withFocus('/', at('?month=march'))).toBe('/');
-	});
-});
 
 describe('focusMonth', () => {
 	it('reads the month from the URL, falling back when it is missing or not a month', () => {

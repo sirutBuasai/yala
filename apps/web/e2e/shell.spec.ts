@@ -30,33 +30,44 @@ test('back and forward move between pages', async ({ page }) => {
 	).toBeVisible();
 });
 
-test('the focus month carries over to the next page', async ({ page }) => {
-	await page.goto('/analytics/year?month=2025-09');
-	await pages(page).getByRole('link', { name: 'Transactions', exact: true }).click();
-	await expect(page).toHaveURL(/\/transactions\?month=2025-09$/);
-});
-
-test('a page reopens at the view it was left on, with the focus month and no picks', async ({
+test('each view keeps its own picks: one view moving leaves the other as it was', async ({
 	page
 }) => {
-	await page.goto('/transactions?month=2025-08&category=Grocery');
-	await page.goto('/analytics/year?month=2025-08&scope=year');
-	await pages(page).getByRole('link', { name: 'Transactions', exact: true }).click();
-	await expect(page).toHaveURL(/\/transactions\?month=2025-08$/);
+	await page.goto('/analytics?month=2026-02&scope=month');
+	await settle(page);
+	await page.getByRole('tab', { name: 'Year', exact: true }).click();
+	await expect(page).toHaveURL(/\/analytics\/year$/);
 
-	await pages(page).getByRole('link', { name: 'Analytics', exact: true }).click();
-	await expect(page).toHaveURL(/\/analytics\/year\?month=2025-08$/);
+	await page.goto('/analytics/year?month=2024-09&scope=year');
+	await settle(page);
+	await page.getByRole('tab', { name: 'Month', exact: true }).click();
+	await expect(page).toHaveURL(/\/analytics\?month=2026-02&scope=month$/);
+	await page.getByRole('tab', { name: 'Year', exact: true }).click();
+	await expect(page).toHaveURL(/\/analytics\/year\?month=2024-09&scope=year$/);
 });
 
-test('a view opens without the picks of the one it left, at its own scroll', async ({ page }) => {
-	await page.goto('/analytics?month=2025-09&scope=month');
+test('a page reopens at the view it was left on, as that view was left', async ({ page }) => {
+	// Each settles first: a page remembers where it was left only once it is running.
+	await page.goto('/transactions?month=2025-08&category=Grocery');
+	await settle(page);
+	await page.goto('/analytics/year?month=2025-09&scope=year');
+	await settle(page);
+	await pages(page).getByRole('link', { name: 'Transactions', exact: true }).click();
+	await expect(page).toHaveURL(/\/transactions\?month=2025-08&category=Grocery$/);
+
+	await pages(page).getByRole('link', { name: 'Analytics', exact: true }).click();
+	await expect(page).toHaveURL(/\/analytics\/year\?month=2025-09&scope=year$/);
+});
+
+test('a view reopens at its own scroll', async ({ page }) => {
+	await page.goto('/analytics?month=2025-09');
 	await settle(page);
 	await page.evaluate(() => window.scrollTo(0, 500));
 	// Clicked where it is: a pointer click would first scroll the switch into view.
 	await page
 		.getByRole('tab', { name: 'Year', exact: true })
 		.evaluate((el: HTMLElement) => el.click());
-	await expect(page).toHaveURL(/\/analytics\/year\?month=2025-09$/);
+	await expect(page).toHaveURL(/\/analytics\/year$/);
 	await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 
 	await page.getByRole('tab', { name: 'Month', exact: true }).click();

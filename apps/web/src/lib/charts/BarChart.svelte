@@ -7,7 +7,7 @@
 		moneyYScale,
 		signedYScale,
 		plotSize,
-		xLabelLayout
+		xAxisLabels
 	} from '$lib/charts/axis';
 	import XLabels from '$lib/charts/marks/XLabels.svelte';
 	import { clamp } from '$lib/utils/num';
@@ -75,8 +75,8 @@
 			.padding(0.12)
 	);
 	const xs = $derived(labels.map((lb) => (outer(lb) ?? 0) + outer.bandwidth() / 2));
-	const xLayout = $derived(xLabelLayout(xs, labels, false));
-	const m = $derived({ ...side, b: xLayout.bottom + 2 });
+	const xAxis = $derived(xAxisLabels(xs, labels, undefined, false));
+	const m = $derived({ ...side, b: xAxis.bottom + 2 });
 	const ih = $derived(plotSize(W, H, m).ih);
 	// Straddling zero makes the axis's position a reading, so those bounds are left unrounded; one-signed
 	// data keeps the rounder `nice` axis.
@@ -185,7 +185,7 @@
 					{/each}
 				</g>
 			{/each}
-			<XLabels {labels} {xs} top={ih} layout={xLayout} focused={(i) => labels[i] === picked} />
+			<XLabels axis={xAxis} top={ih} marked={picked == null ? [] : [labels.indexOf(picked)]} />
 			{#if reference}
 				<line class="reference" x1={0} x2={iw} y1={y(reference.value)} y2={y(reference.value)} />
 				<text class="rlabel" x={0} y={y(reference.value) - 5} text-anchor="start">

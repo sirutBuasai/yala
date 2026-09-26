@@ -147,6 +147,26 @@ No x-label is dropped to make room. Labels lie flat where they fit and turn 45 d
 
 A bar list whose rows choose something (Spending by category, Where the money sits) uses one row, `PickRow`: a wash behind the row on hover and while chosen, never a layer over its bars, so their colour holds.
 
+### D33 · Each view keeps its own state (2026-09-25)
+
+Supersedes D4, D21's carrying of the focus month and D30. Every view (every path, such as `/analytics` and `/analytics/year`) keeps its own URL state in this tab: its month, picks, filters and span, and its scroll. Moving between views or pages, by the sidebar or the Month and Year switch, returns each to how it was left; a view never visited opens at its defaults. Nothing carries from one view to another, so picking 2025 on Year leaves Month on whatever month it was showing. The URL still makes back and forward undo each step (D9). A reload keeps the view and drops every view's remembered state (D26, D27). Built in `lib/nav/left.ts`.
+
+### D34 · A drill-in lands on its pane (2026-09-25)
+
+Amends D22. Every click that opens another page opens it at the pane it acts on, not at the page's top: a Category by month cell opens Transaction history, and Where the money sits opens Log balances at the account. The pane, and anything to focus in it, ride in history state rather than the URL (`lib/nav/drill.ts`), so no view remembers them (D33).
+
+### D35 · A crowded date axis names its years (2026-09-25)
+
+Amends D31. Axis labels are placed by one module (`xAxisLabels` in `lib/charts/axis.ts`, drawn by `XLabels`): flat where every label fits; on a crowded axis whose points span several years, each year named once, flat and centred on its points, whose own names stay in the hover; otherwise every label turned 45 degrees, or upright. A year whose label would run past either end of the plot is left unlabelled. A picked year's label then sits in the middle of its marked range.
+
+### D36 · Year spans are 3Y, 5Y, 10Y and All (2026-09-25)
+
+Amends D25: the industry-standard set replaces 5Y, 10Y, 20Y, 50Y and All. 10Y stays the default.
+
+### D37 · Rows run oldest first (2026-09-25)
+
+Every snapshot table and heatmap lists its periods oldest at the top, as the category heatmaps do; Yearly snapshots no longer opens on the latest year.
+
 ## Open
 
 - **A card filter's figure.** When the history is filtered to one card, show "Charged to card" (full bills) beside Spent, so the gap reads as what was fronted? Or nothing. "Charged − paid" was rejected: it mostly reflects statement timing.
