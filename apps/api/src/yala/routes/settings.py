@@ -17,7 +17,9 @@ router = APIRouter()
 
 class SettingIn(BaseModel):
     key: str
-    value: Annotated[float, Field(allow_inf_nan=False)]
+    #: ``None`` puts the setting back on its default, which for a derived figure means following the
+    #: ledger again.
+    value: Annotated[float, Field(allow_inf_nan=False)] | None
 
 
 @router.get("/api/settings")
@@ -45,4 +47,6 @@ def post_setting(body: SettingIn) -> dict:
     with api_errors():
         stored = sink().set_setting(body.key, body.value)
 
+    if stored is None:
+        return ok(f"{spec.label} reset to default", key=body.key, value=None)
     return ok(f"{spec.label} set", key=body.key, value=float(stored))

@@ -16,6 +16,9 @@ if TYPE_CHECKING:
 
 #: ``custom`` directive type that marks one of our settings.
 SETTING_TYPE = "yala-setting"
+#: The value a directive states to put a setting back on its default. A directive, not a deletion,
+#: so the history of what was stated survives and the latest line still wins.
+DEFAULT_TOKEN = "default"
 
 
 @dataclass(frozen=True)
@@ -176,8 +179,11 @@ def _plain(number: Decimal) -> str:
     return str(int(number)) if number == number.to_integral_value() else str(number)
 
 
-def format_value(spec: SettingSpec, value: Decimal) -> str:
-    """The value as it should appear in the ledger — whole for ages/years, decimal for rates."""
+def format_value(spec: SettingSpec, value: Decimal | None) -> str:
+    """The value as it should appear in the ledger: whole for ages and years, decimal for rates, and
+    the default token for ``None``."""
+    if value is None:
+        return f'"{DEFAULT_TOKEN}"'
     return str(int(value)) if spec.is_integer else str(value)
 
 
@@ -193,13 +199,16 @@ class Settings:
         ]
 
     def stored(self) -> dict[str, Decimal]:
-        """The latest directive wins. Bad entries are skipped, so one hand-edited line can't blank
-        the dashboard."""
+        """The latest directive wins, and a default token drops what came before it. Bad entries are
+        skipped, so one hand-edited line can't blank the dashboard."""
         out: dict[str, Decimal] = {}
 
         for entry in self._directives():
             key, value = _pair(entry)
             if key is None:
+                continue
+            if value == DEFAULT_TOKEN:
+                out.pop(key, None)
                 continue
             try:
                 out[key] = coerce(key, value)

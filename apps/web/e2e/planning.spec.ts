@@ -83,22 +83,23 @@ test('a slider moves its figure and the projection as it is dragged', async ({ p
 	expect(await drawn()).not.toBe(before);
 });
 
-test('Save and Discard wait for a change, and Discard returns the ledger values', async ({
-	page
-}) => {
-	const save = page.getByRole('button', { name: 'Save changes' });
+test('Save reads Saved until a change, and Discard returns the ledger values', async ({ page }) => {
+	const save = page.locator('[data-pane="changes"] .btn-primary');
 	const discard = page.getByRole('button', { name: 'Discard' });
+	await expect(save).toHaveText('Saved');
 	await expect(save).toBeDisabled();
 	await expect(discard).toBeDisabled();
 
 	const stated = await rate(page).getAttribute('aria-valuenow');
 	await stepUp(page, 'Withdrawal rate');
+	await expect(save).toHaveText('Save changes');
 	await expect(save).toBeEnabled();
 	await expect(discard).toBeEnabled();
 
 	await discard.click();
 	await settle(page);
 	expect(await rate(page).getAttribute('aria-valuenow')).toBe(stated);
+	await expect(save).toHaveText('Saved');
 	await expect(save).toBeDisabled();
 });
 

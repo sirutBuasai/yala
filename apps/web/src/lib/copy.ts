@@ -6,7 +6,8 @@ export const NOT_SET = 'Not set';
 /** A picker's empty option: no sweep account, no employer. */
 export const NONE = 'None';
 
-export const SAVED = 'Saved.';
+/** A save button with nothing left to write; a status message adds the full stop. */
+export const SAVED = 'Saved';
 export const SAVE_CHANGES = 'Save changes';
 export const DISCARD = 'Discard';
 

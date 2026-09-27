@@ -75,7 +75,15 @@ describe('assumptions', () => {
 
 	it('hands back the same data when nothing is stated', () => {
 		const data = makeNetWorthData();
-		expect(withSettings(data, { swr: null })).toBe(data);
+		expect(withSettings(data, {})).toBe(data);
+	});
+
+	it('previews a null as the setting on its default', () => {
+		const data = makeNetWorthData();
+		const stated = withSettings(data, { 'planned-spending': 50_000 });
+		expect(
+			assumptionsOf(withSettings(stated, { 'planned-spending': null })).plannedSpending
+		).toBeNull();
 	});
 });
 

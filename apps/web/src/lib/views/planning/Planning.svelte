@@ -13,7 +13,7 @@
 		secondaryLines
 	} from '$lib/data/projection';
 	import { formatUnit } from '$lib/data/primitives';
-	import { DISCARD, NO_VALUE, PROGRESS, PROGRESS_CAPTION, SAVE_CHANGES } from '$lib/copy';
+	import { DISCARD, NO_VALUE, PROGRESS, PROGRESS_CAPTION, SAVE_CHANGES, SAVED } from '$lib/copy';
 	import { labelText, words } from '$lib/ui/label';
 	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
@@ -74,6 +74,8 @@
 		changes: { x: 38, y: 35, w: 10, h: 4, content: 'flow', mode: 'fit' }
 	};
 
+	const dirty = $derived(draft.changed.length > 0);
+
 	async function commit() {
 		if (await draft.commit()) onsaved();
 	}
@@ -89,14 +91,15 @@
 			<button
 				type="button"
 				class="btn-cancel"
-				disabled={!draft.info || draft.save.busy || !draft.changed.length}
+				disabled={!draft.info || draft.save.busy || !dirty}
 				onclick={() => draft.discard()}>{DISCARD}</button
 			>
+			<!-- The button says the state: nothing to write reads as saved, anything moved as a change to save. -->
 			<button
 				type="button"
 				class="btn-primary"
-				disabled={!draft.info || draft.save.busy || !draft.changed.length}
-				onclick={commit}>{SAVE_CHANGES}</button
+				disabled={!draft.info || draft.save.busy || !dirty}
+				onclick={commit}>{dirty ? SAVE_CHANGES : SAVED}</button
 			>
 		</div>
 	</Pane>

@@ -466,7 +466,8 @@ export async function fetchEntry(
 }
 
 /** Set one setting; returns an error message, or null on success. */
-export async function setSetting(key: string, value: number): Promise<string | null> {
+/** `null` puts the setting back on its default. */
+export async function setSetting(key: string, value: number | null): Promise<string | null> {
 	const { ok, error } = await postJson('/api/settings', { key, value });
 	return ok ? null : (error ?? 'could not save setting');
 }

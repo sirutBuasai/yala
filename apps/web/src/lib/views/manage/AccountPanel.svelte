@@ -231,7 +231,7 @@
 				return result.error;
 			}
 			return null;
-		}, SAVED);
+		}, `${SAVED}.`);
 
 		if (ok) {
 			// Ordered: the selection follows the rename BEFORE the dashboard reloads, or the panel is
