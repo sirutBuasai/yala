@@ -1,6 +1,4 @@
-// One pane's gesture as a state object: what the press captured, what the pointer has done since, and
-// the least size the content stands for. No DOM — spilling and settling arrive as functions, so a test
-// can drive a gesture with a scripted content instead of a browser.
+// No DOM: spilling and settling arrive as functions, so a test can script the content.
 
 import { EDGES, holdFloor, lowest, moveRect, resizeRect, type Edge, type Floor } from './resize';
 import { clampRect } from './resolve';
@@ -38,11 +36,7 @@ export class PaneGesture {
 	/** True while the pointer is pushing past the pane's floor. */
 	invalid = $state(false);
 
-	/**
-	 * The grid rectangle the pointer is over during a move, for the board to draw a target on. Not where
-	 * the pane will land: a raise the push rule refuses leaves the card behind while this goes on, which
-	 * is the whole reason to show it — the swap only fires once it has covered the pane above.
-	 */
+	/** Where the pointer is, not where the pane lands: a raise the push rule refuses leaves the card behind. */
 	aim = $state<Rect | null>(null);
 
 	/** The whole board as it was at the press, so Escape puts it back — including the promotion. */
@@ -51,9 +45,7 @@ export class PaneGesture {
 	#base: Rect | null = null;
 	/** The board a move re-derives from, so a swap made mid-drag can be undone by dragging back. */
 	#origin: DragOrigin | null = null;
-	/** The pane's floor, measured once at the press. Once, not per candidate: measured at each candidate,
-	    how short a pane could go depended on how wide it happened to be, so a pane made wide and short
-	    could not be narrowed back, and the limit moved with the path the pointer took. */
+	/** Measured once at the press: per candidate, the floor moved with the path the pointer took. */
 	#floor: Promise<Floor> | null = null;
 	/** Serial, so a candidate from a pointer move the floor was still being measured for cannot undo a newer
 	    one. */
@@ -128,13 +120,8 @@ export class PaneGesture {
 		this.#attempt++;
 	}
 
-	/**
-	 * The height the content takes laid out across the whole board, where nothing wraps, then the least
-	 * width it still fits in at that height. Both come from the content unwrapped, so the floor is never
-	 * taller than the pane was designed at; the narrowest width at any height instead made the floor the
-	 * height of the content wrapped at its tightest. Searched at candidate sizes laid out and put back
-	 * before anything is painted. A fitted pane's height is its content's, so only its width has a floor.
-	 */
+	/** The content's height laid out unwrapped across the board, then the least width it fits at that height, so
+	    the floor is never taller than designed. A fitted pane only has a width floor. */
 	async #measureFloor(base: Rect): Promise<Floor> {
 		const fits = async (rect: Rect) => {
 			this.#arrangement.resizeTo(this.#id, rect);

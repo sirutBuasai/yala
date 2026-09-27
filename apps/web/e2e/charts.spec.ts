@@ -1,6 +1,5 @@
-// Every chart the boards actually draw, one at a time: the box it was given, the frame it drew into, and
-// the name it answers to. A chart that collapses to nothing still passes a bleed probe — there is no ink
-// to escape — so its geometry has to be asserted on its own.
+// A collapsed chart passes a bleed probe with no ink to escape, so each chart's geometry is asserted
+// directly.
 
 import { expect, type Page } from '@playwright/test';
 import { BOARD_PAGES, openApp, setContentWidth, settle, showPage, test } from './app';

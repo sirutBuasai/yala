@@ -1,8 +1,5 @@
-// A board looks the same whatever date it is showing, and only Edit mode may change that.
-//
-// The defect this guards against: a pane that measured its own content and grew to fit it wrote the bigger
-// rectangle to storage, so whichever period happened to carry the longest figures re-arranged the board for
-// every other period — and for every later visit.
+// A board looks the same whatever date it shows; only Edit mode may change it. Guards a pane that grew to fit
+// its content and stored that for every period.
 
 import { expect, type Page } from '@playwright/test';
 import { audit, BOARD_PAGES, expectClean, openApp, settle, showPage, test } from './app';
@@ -43,10 +40,7 @@ const cells = (page: Page): Promise<Cell[]> =>
 const stored = (page: Page): Promise<string[]> =>
 	page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('yala-board-')));
 
-/**
- * Same panes, same widths, same places. Height is compared too, except on a pane whose height mode is the
- * user's request to follow its content — the one thing a date is allowed to change.
- */
+/** Height too, except where the height mode follows content, the one thing a date may change. */
 function expectSameLayout(where: string, base: Cell[], now: Cell[]): void {
 	expect(now.length, `${where}: pane count`).toBe(base.length);
 	for (const [i, cell] of now.entries()) {

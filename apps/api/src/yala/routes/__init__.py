@@ -1,8 +1,4 @@
-"""HTTP routers, one module per family of endpoints.
-
-Shared validation lives in :mod:`yala.routes.common`; :mod:`yala.api` registers every router in
-:data:`ROUTERS`.
-"""
+"""HTTP routers; :mod:`yala.api` registers every one in :data:`ROUTERS`."""
 
 from yala.routes import accounts, balances, entries, settings
 

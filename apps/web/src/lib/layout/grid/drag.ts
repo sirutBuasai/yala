@@ -1,10 +1,5 @@
-// One pointer-drag action, shared by moving and resizing. It knows the DOM and nothing about the board.
-// Deltas are cumulative from the press, so clamping re-derives from a fixed origin: dragging a pane into a
-// wall and back out again is exact.
-//
-// A press is not yet a drag — the gesture stays pending until the pointer has travelled `THRESHOLD`, which is
-// what keeps a control on a drag surface clickable, since `preventDefault` on the press would swallow the
-// click with it. `[data-no-drag]` opts a control out of starting a gesture at all.
+// Deltas are cumulative from the press, so clamping is exact. A press stays pending until it travels
+// `THRESHOLD`, or its `preventDefault` would swallow a control's click; `[data-no-drag]` opts out entirely.
 
 const OPT_OUT = '[data-no-drag]';
 
@@ -54,11 +49,8 @@ export function drag(node: HTMLElement, params: DragParams) {
 		dy: at.y - (origin?.y ?? at.y) + (window.scrollY - scrolled.y)
 	});
 
-	/**
-	 * Held at its height for the whole gesture: a resize measures its floor by laying the pane out smaller,
-	 * and a shrinking pane at the foot of the page shortens it, and either way the browser clamped the scroll
-	 * and jumped the page up, taking the edge being dragged out from under the pointer.
-	 */
+	/** Held for the whole gesture: a resize lays the pane out smaller, the page shortened, and the browser
+	    jumped the scroll out from under the pointer. */
 	function holdPage(hold: boolean): void {
 		held = document.documentElement.scrollHeight;
 		document.body.style.minHeight = hold ? `${held}px` : '';

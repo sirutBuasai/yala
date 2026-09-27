@@ -92,9 +92,7 @@
 		})
 	);
 
-	// Totals and their monthly run-rate over the same measures, so a glance down a column relates the
-	// two. Both rows compare against last year — the run-rate against last year's own run-rate, so a
-	// part-finished year is not read as a collapse.
+	// Run-rates compare against last year's run-rate, so a part-finished year doesn't read as a collapse.
 	const CHAIN = cashFlowChain(['income', 'spending', 'saved']);
 	const columns = CHAIN.map(columnHeading);
 

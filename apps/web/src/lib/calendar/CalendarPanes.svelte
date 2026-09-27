@@ -1,7 +1,6 @@
 <script lang="ts">
-	// The calendar and the selected day as two panes on the board. The chosen day is the caller's, since
-	// it lives in the URL; with none chosen in this month, the month's latest activity shows. Two cells at its root and no wrapper: a grid item must be a direct child of its grid, so
-	// wrapping them would pin the pair together.
+	// Two cells at the root and no wrapper: a grid item must be a direct child of its grid. With no day
+	// chosen in the month, its latest activity shows.
 	import type { DashboardData } from '$lib/data/types';
 	import {
 		dayCells,

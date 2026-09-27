@@ -96,7 +96,6 @@ interface DataDef {
 	id: string;
 	label: string;
 	kind: PrimitiveKind;
-	/** Scope levels this data supports. */
 	scopes: ScopeLevel[];
 	build(data: DashboardData, scope: Scope): Primitive;
 }
@@ -409,8 +408,7 @@ const CHART_DEFS: DataDef[] = [
 ];
 
 // --- one measure over time ---
-//
-// Generated over the same measures the scalars use, so a KPI's chart and its number agree.
+// Generated over the scalars' measures, so a KPI's chart and number agree.
 
 /** Measures with a period-by-period trend, and a month's reading against its average. Month scope
     reads as the trailing twelve. */
@@ -500,9 +498,7 @@ const NETWORTH_STATS: DataDef[] = [
 ];
 
 // --- the decomposition behind a change in net worth ---
-//
-// The same three figures the KPI cards carry, re-read as a matrix. At year scope each level is badged
-// against last year's; over a lifetime there is no prior lifetime, so the rows are rates instead.
+// At year scope each level is badged against last year's; a lifetime has no prior, so its rows are rates.
 
 const GROWTH_PARTS: { slug: GrowthPart; label: string }[] = [
 	{ slug: 'change', label: 'Change' },

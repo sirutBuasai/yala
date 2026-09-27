@@ -1,7 +1,5 @@
 <script lang="ts">
-	// One total drawn as a single bar split into its parts, with each part's share keyed under it. With
-	// `fit`, the smallest parts roll into `Other` until the key fits on one line, so widening the pane names
-	// more of them.
+	// With `fit`, the smallest parts roll into `Other` until the key fits on one line.
 	import {
 		formatUnit,
 		readingsOf,

@@ -1,8 +1,5 @@
-"""Spending domain: discretionary ``Expenses:*`` transactions, meaning everything outside the
-``Expenses:Deductions:*`` subtree, payroll deductions belonging to income rather than spending.
-
-**Invariant:** a discretionary spending transaction has exactly one ``Expenses:*`` posting.
-"""
+"""Discretionary ``Expenses:*`` spending, outside ``Expenses:Deductions:*``. Invariant: exactly one
+``Expenses:*`` posting per transaction."""
 
 from __future__ import annotations
 

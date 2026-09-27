@@ -1,7 +1,4 @@
-// What a drag adds to the push rule: it shoves whatever it is touching in the direction it is going,
-// nothing else moves at all, and only travel that could not be absorbed — which is only ever upward —
-// changes places with the pane above. Pure, so every case is an authored board in and an authored board
-// out, plus what `resolve` then puts on screen.
+// A drag shoves only what it touches, and only unabsorbed upward travel swaps places with the pane above.
 
 import { describe, expect, it } from 'vitest';
 import { lift, type DragOrigin } from '$lib/layout/grid/lift';
@@ -98,9 +95,7 @@ describe('pushing the stack up', () => {
 	});
 
 	it('lets a pane that was only ever PUSHED here rise on its own', () => {
-		// `b` is authored above where it rests, pushed down by `a`. When `a` rises, `b` comes back up to
-		// the top it was authored at all along — `resolve` alone, with no authored top changing — and `c`
-		// stays put, because nothing pushed it.
+		// `b` returns to its authored top via `resolve` alone, and `c` stays put since nothing pushed it.
 		const board = [p('a', 0, 12, 48, 9), p('b', 0, 15, 28, 14), p('c', 0, 35, 24, 10)];
 		const { authored, placed } = drag(board, 'a', 0, 6);
 
@@ -155,9 +150,7 @@ describe('pushing the panes below down', () => {
 	});
 
 	it('stores a pushed pane where it came to rest, displacement and all', () => {
-		// `b` is authored above where it rests, pushed down by `a`. Store its own top plus the travel and
-		// the push stays latent in the gap between the two, so `b` springs back up the moment `a` moves
-		// away — following a drag it was never part of.
+		// Storing `b`'s own top plus the travel left the push latent, so `b` sprang back when `a` moved away.
 		const board = [p('a', 0, 2, 48, 10), p('b', 0, 6, 48, 4)];
 		const { authored, placed } = drag(board, 'a', 0, 5);
 

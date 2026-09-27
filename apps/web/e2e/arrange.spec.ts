@@ -180,9 +180,7 @@ test.describe("a merged card's sections", () => {
 		expectClean('after a refused resize', await audit(page));
 	});
 
-	// Growth is bounded by the grid, not by a pass count. Budgeted, only the leftmost section reached the
-	// edge — its overrun propagates across the whole card and so reports the full shortfall at once, while
-	// its neighbours, which receive a share of each pass, ran out of passes part way.
+	// Bounded by the grid, not a pass count: budgeted, only the leftmost section reached the edge.
 	test('reach the same limit whichever section is being typed into', async ({ page }) => {
 		const reached: number[] = [];
 		for (const nth of [0, 1, 2, 3]) {

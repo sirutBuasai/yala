@@ -104,11 +104,7 @@ export function sortHistory(
 	});
 }
 
-/**
- * What the summary shows for a filtered list. It reads the rows left, never the filters that left them,
- * so every combination of filters follows the same rules: a figure per kind of row present, and the
- * category the transactions share when they all share one, so its average can be set beside them.
- */
+/** Reads the rows left, never the filters, so every filter combination follows the same rules. */
 export interface HistorySummary {
 	count: number;
 	spent: number | null;

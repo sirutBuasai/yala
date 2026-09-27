@@ -1,6 +1,5 @@
-// What a heatmap draws, whichever primitive it came from: labelled rows and columns of tiles, each with its
-// text, its hue and how deep that hue runs. A Matrix and a Table shade differently, so each has its own
-// builder, and the heatmap renders either without knowing which it was given.
+// Tiles a heatmap draws, whichever primitive they came from. A Matrix and a Table shade differently, so
+// each has its own builder.
 
 import type { Matrix, Table, Unit } from '$lib/data/primitives';
 import { formatUnit, formatUnitExact } from '$lib/data/primitives';
@@ -39,12 +38,8 @@ function cellOf(value: number, unit: Unit, tile: string | null, a: number): Heat
 	return { readings: tileReadings(value, unit), tip: formatUnitExact(value, unit), tile, a };
 }
 
-/**
- * Each band scales to its own max, since categories span orders of magnitude and one grid-wide scale leaves
- * the median cell near-blank; intensity is comparable down a band, not between them. `normalize` names the
- * axis a band runs along, so the scale follows the categories whichever way the grid is turned. A credit
- * carries no heat: it is not small spending.
- */
+/** Each band scales to its own max: categories span orders of magnitude, so one grid-wide scale leaves the
+    median cell blank. `normalize` names the band's axis; a credit carries no heat. */
 export function matrixGrid(
 	m: Matrix,
 	normalize: 'row' | 'col' | 'global',
@@ -82,11 +77,8 @@ export function matrixGrid(
 	};
 }
 
-/**
- * A tinted column's cells shaded by which way the news runs and how strongly, each against its own column's
- * largest move: per column, never across the table, or a column of hundreds would never tint beside one of
- * tens of thousands. Null where nothing is shaded.
- */
+/** Shaded per column against its own largest move, or a column of hundreds never tints beside one of tens of
+    thousands. Null where nothing is shaded. */
 export function tableShades(table: Table): ({ good: boolean; a: number } | null)[][] {
 	const peaks = table.columns.map((c, j) =>
 		c.tint

@@ -1,7 +1,5 @@
 <script lang="ts">
-	// The docked sidebar: brand, the pages, and the development gallery at the foot. As a rail it keeps a
-	// slot of the rail's width in the page and expands over the content on hover or keyboard focus, so
-	// opening it never reflows the board.
+	// As a rail it keeps a rail-wide slot and expands over the content, so opening it never reflows the board.
 	import Brand from '$lib/nav/Brand.svelte';
 	import YalaMark from '$lib/icons/YalaMark.svelte';
 	import NavLinks from '$lib/nav/NavLinks.svelte';

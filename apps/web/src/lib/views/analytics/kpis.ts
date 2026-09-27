@@ -4,14 +4,8 @@ import type { Scope } from '$lib/data/scope';
 import type { KpiBoardDefs, KpiMerge, KpiSpec } from '$lib/kpi/spec';
 import { words } from '$lib/ui/label';
 
-/**
- * The income chain and the rates it is the base of. Every amount draws an area, so narrowing to a month does
- * not swap the chart's shape: a month reads against its own average over its trailing twelve, and a year or
- * the lifetime carries its running total and no badge, since a partial year would read as a collapse.
- *
- * Laid out as the user arranged each board: on `columns`, two columns read top to bottom, the chain
- * then net income and the rates; on `strip`, the amounts along one row with the rates stacked beside them.
- */
+/** Every amount draws an area, so narrowing to a month keeps the chart's shape. Laid out as the user arranged
+    each board. */
 export function incomeChain(scope: Scope, layout: 'columns' | 'strip'): KpiBoardDefs {
 	const month = scope.level === 'month';
 	const amount = (field: string): KpiSpec =>

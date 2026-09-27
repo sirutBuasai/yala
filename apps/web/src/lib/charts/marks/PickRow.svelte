@@ -1,7 +1,5 @@
 <script lang="ts">
-	// One row of a bar list, spanning its parent grid's columns. A row that chooses its label is a button
-	// reading as one control: no button chrome, and a wash BEHIND it on hover and while chosen, so the bars
-	// over it keep their colour.
+	// A picking row is one control with no button chrome, its wash drawn behind so the bars keep their colour.
 	import type { Snippet } from 'svelte';
 
 	interface Props {

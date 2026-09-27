@@ -1,7 +1,5 @@
 <script lang="ts">
-	// Every account the ledger declares, as one console: an index on the left, one detail panel on the
-	// right. Every panel is driven by the kind capabilities the API sends, so a kind gains a control
-	// server-side rather than here.
+	// Every panel is driven by the API's kind capabilities, so a kind gains a control server-side.
 	import type { AccountsInfo } from '$lib/data/load';
 	import type { DashboardData } from '$lib/data/types';
 	import { accountInfo } from '$lib/data/directory.svelte';
@@ -30,9 +28,7 @@
 	const employers = $derived(accounts?.employers ?? []);
 	const deductions = $derived(accounts?.deduction_accounts ?? []);
 
-	/** The active accounts of each kind, so a rule stated per kind can be turned into a list.
-	    Two of the lists arrive leaf-keyed, because that is how an entry names them; each kind ships
-	    its own `prefix`, so resolving those to paths never restates the ledger's taxonomy here. */
+	/** Two lists arrive leaf-keyed; each kind's `prefix` resolves them without restating the taxonomy. */
 	const byKind = $derived<Record<string, string[]>>({
 		category: categories.map((c) => `${kinds.category?.prefix ?? ''}${c}`),
 		bank: accounts?.cash_accounts ?? [],

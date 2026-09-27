@@ -488,8 +488,7 @@ export function netWorthAccounts(data: DashboardData): Categorical {
 //
 //     ΔNetWorth = saved + everything-else,  saved = logged income − logged spending
 //
-// The remainder stays one term: an investment snapshot's pad absorbs both market growth and unlogged
-// flow, so splitting them would be a guess.
+// One remainder term: a snapshot's pad absorbs market growth and unlogged flow alike.
 
 /** The half-open span of dates a scope covers: `[start, next)`. */
 function span(data: DashboardData, scope: Scope): { start: string; next: string } {
@@ -504,12 +503,8 @@ function span(data: DashboardData, scope: Scope): { start: string; next: string 
 	return { start: `${year}-01-01`, next: `${year + 1}-01-01` };
 }
 
-/**
- * The snapshots bounding a scope. A balance is logged BEFORE the period's money has moved, so one dated the
- * period's first day is its OPENING balance and the period closes on the snapshot dated the start of the next.
- * Reading the last snapshot dated *inside* the period as its close put every period's movement against the
- * following period's logged saving.
- */
+/** A snapshot dated a period's first day is its opening balance, so the period closes on the next one's.
+    Closing on the last snapshot inside it set each move against the next period's saving. */
 function bounds(data: DashboardData, scope: Scope): Window {
 	const all = snapshots(data);
 	if (scope.level === 'all' && scope.since == null) {
@@ -525,12 +520,8 @@ function bounds(data: DashboardData, scope: Scope): Window {
 	return { open: upTo(start) ?? inside[0] ?? null, close: upTo(next) };
 }
 
-/**
- * The snapshots a month-over-month bar spans: the freshest reading in the month before to the freshest in the
- * month itself. Deliberately not `bounds` — the newest balance rather than the one at the period's edge is
- * what makes a mid-month reading count, at the cost of a drifting window, so these bars do not sum to the
- * year figures.
- */
+/** Freshest reading in the prior month to the freshest in this one, so a mid-month reading counts. Unlike
+    `bounds`, these bars don't sum to the year figures. */
 function monthOverMonth(data: DashboardData, monthKey: string): Window {
 	const all = snapshots(data);
 	const latestIn = (key: string) => all.filter((p) => p.date.startsWith(key)).at(-1) ?? null;
@@ -541,9 +532,7 @@ function monthOverMonth(data: DashboardData, monthKey: string): Window {
 	return { open: latestIn(addMonths(monthKey, -1)) ?? before, close: latestIn(monthKey) };
 }
 
-/** Logged saving across a snapshot window: every tracked month whose 1st falls in `[open, close)`. A
-    snapshot dated the 1st predates that month's money moving, so the opening month counts and the
-    closing one does not. */
+/** Months whose 1st falls in `[open, close)`, since a snapshot on the 1st predates that month's money. */
 function savedBetween(data: DashboardData, open: string, close: string): number {
 	return sumBy(
 		data.meta.month_keys.filter((key) => `${key}-01` >= open && `${key}-01` < close),
@@ -807,12 +796,8 @@ export function trailingAnnual(
 
 const trailingAnnualSpend = (data: DashboardData) => trailingAnnual(data, 'spending');
 
-/**
- * The rates a plan runs on, each the figure stated or else the one the ledger logged.
- *
- * `saved` is a RESIDUAL — income less spending — not a measured flow into investments; payroll
- * contributions are. Hence the split: `residual` seeds the control, `investing` is what a projection adds.
- */
+/** The rates a plan runs on, each stated or else logged. `saved` is a residual, not a flow into investments,
+    so `residual` seeds the control and `investing` is what a projection adds. */
 export function plannedRates(
 	data: DashboardData,
 	a: Assumptions
@@ -918,12 +903,11 @@ export function coastFi(data: DashboardData, a: Assumptions = assumptionsOf(data
 	});
 }
 
-/**
- * The year today's invested balance, left to grow with no further contributions, reaches the FI number:
- * before the retirement year exactly when Coast FI is past 100%. Null where it never does, at a real return
- * of zero or less.
- */
-export function coastYear(data: DashboardData, a: Assumptions = assumptionsOf(data)): number | null {
+/** When today's invested balance, left alone, reaches the FI number. Null where it never does. */
+export function coastYear(
+	data: DashboardData,
+	a: Assumptions = assumptionsOf(data)
+): number | null {
 	const target = fiNumber(data, a).value;
 	const current = investedBalance(data);
 	if (!target || current === null) return null;

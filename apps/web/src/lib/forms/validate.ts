@@ -32,11 +32,7 @@ function nameProblem(text: string, label: string, max: number): string | null {
 	return null;
 }
 
-/**
- * A contribution label. Shown as typed rather than composed into an account path, so it takes a
- * space — but not whitespace at large: an account's labels are written as one comma-joined metadata
- * value on a single ledger line, which a newline or a tab would break.
- */
+/** Spaces allowed, but no other whitespace: labels are one comma-joined metadata value on one ledger line. */
 export function validateLabel(value: string, noun = 'contribution option'): string | null {
 	const text = value.trim();
 	if (!text) return `${sentenceCase(noun)} is required.`;
@@ -46,10 +42,7 @@ export function validateLabel(value: string, noun = 'contribution option'): stri
 	return nameProblem(text, noun, LEAF_MAX);
 }
 
-/**
- * Validate a name typed as words. The backend composes the stored leaf from the letters and digits
- * alone, so anything else would be dropped and the account stored under a name nobody typed.
- */
+/** The backend keeps only letters and digits, so anything else would store a name nobody typed. */
 export function validateName(value: string, label: string): string | null {
 	const text = value.trim();
 	if (!text) return `${label} is required.`;
@@ -75,10 +68,7 @@ export function validateRange(
 	return null;
 }
 
-/**
- * A row is only submitted with both a type and an amount, so a wholly empty row is a no-op and
- * passes; only an amount with no type, or a non-positive amount, are flagged.
- */
+/** A wholly empty row is a no-op and passes; only a typeless amount or a non-positive one is flagged. */
 export function validateRows(
 	rows: { value: string; amount: number | null }[],
 	noun: string
@@ -110,10 +100,7 @@ interface Problems {
 	message(): string;
 }
 
-/**
- * Collect every problem so they surface together: missing required fields merge into one clause,
- * other problems follow on their own lines. Newline-separated so the footer shows one per line.
- */
+/** Every problem at once, newline-separated: missing required fields merge into one clause. */
 export function problems(): Problems {
 	const missing: string[] = [];
 	const other: string[] = [];

@@ -18,14 +18,8 @@ export const MONTHS = [
 	'Dec'
 ];
 
-/**
- * A rendered magnitude with its sign put back on, ahead of any currency symbol rather than between
- * the symbol and the digits.
- *
- * `value` is what decides the sign, and is the caller's already-rounded figure where it rounds: a
- * magnitude under half a unit reads as zero, and signing the raw input would print a minus in front
- * of it.
- */
+/** The sign goes ahead of any currency symbol. `value` must be the caller's rounded figure, or a magnitude
+    that rounds to zero prints a minus. */
 function withSign(value: number, magnitude: string, prefix = ''): string {
 	return (value < 0 ? '-' : '') + prefix + magnitude;
 }
@@ -68,11 +62,7 @@ const TIERS: [number, string][] = [
 	[1e3, 'k']
 ];
 
-/**
- * An unsigned magnitude abbreviated to its tier: thousands as `k`, millions as `M`, billions as `B`, one
- * decimal until the tier's tens so a label is never more than four digits wide. A projection compounds past
- * a million, and at long horizons past a billion, and one tier alone left the axis unreadable.
- */
+/** Abbreviated to `k`, `M` or `B`, at most four digits wide; projections compound past a million. */
 function tiered(magnitude: number): string {
 	const read = (tier: number) => {
 		const [size, suffix] = TIERS[tier]!;

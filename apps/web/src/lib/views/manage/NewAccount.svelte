@@ -1,9 +1,6 @@
 <script lang="ts">
-	// Opening an account, asked as questions. Which questions there are comes from the kind's
-	// capabilities, so nobody is shown a control that cannot apply to them.
-	//
-	// It never previews the name the account will get: the words go as typed and the API reports back
-	// what it called the account, so the naming rule stays in one language.
+	// Questions come from the kind's capabilities. The name is never previewed: the API reports what it called
+	// the account, so the naming rule stays in one language.
 	import {
 		openAccount,
 		type AccountExtras,

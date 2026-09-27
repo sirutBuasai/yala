@@ -1,7 +1,5 @@
 <script lang="ts">
-	// The universal dashboard card: title + subtitle + a body slot for any figure, list or form.
-	// Deliberately grid-agnostic — it knows nothing about placement or units, so `grid/Pane`,
-	// overlays and rails can all compose it.
+	// Grid-agnostic, so panes, overlays and rails can all compose it.
 	import type { Snippet } from 'svelte';
 	import LabelLine from './LabelLine.svelte';
 	import { DOT, labelText, type Label, type Slot } from './label';
@@ -18,9 +16,8 @@
 		/** Hook from whoever stores renames; absent leaves these labels the app's to name. Given only while
 		    the board is being edited. */
 		rename?: (slot: Slot, text: string) => void;
-		/** This card's labels are the user's to name, whether or not one is being edited right now. It holds
-		    both lines open in either mode, so a label emptied on purpose leaves the same slot behind and the
-		    board does not move when the modes are switched. */
+		/** Holds both label lines open in either mode, so an emptied label keeps its slot and the board doesn't
+		    move when modes switch. */
 		nameable?: boolean;
 		/** These labels as the app declares them, for the editor to stand in where a rename emptied one. */
 		shipped?: Partial<Record<Slot, Label>>;
@@ -65,9 +62,8 @@
 	// A nameable card offers both lines whatever they currently say: an empty one is where a caption gets
 	// added, and a line the user emptied is how they get it back.
 	const naming = $derived(!!rename);
-	// A card with no heading of its OWN keeps its labels in its body — a KPI card is sections, each titled.
-	// Freezing that body took the pencils with it and the press fell through to the drag surface beneath,
-	// so the click moved the pane. Such a body holds figures, never controls, so there is nothing to freeze.
+	// A card without its own heading keeps labels in its body, and freezing it made the pencil's press fall
+	// through and drag the pane. Such a body holds no controls.
 	const freezeBody = $derived(frozen && !!heading);
 	// Not while the labels are being named: a click on the title is then a rename.
 	const titleLink = $derived(open && !naming ? pageLink(open) : {});
@@ -184,10 +180,8 @@
 		display: flex;
 		flex-direction: column;
 	}
-	/* Bug: a `.bleed-x` child inside a padded scroll body overflows horizontally — the scroller
-	   clipped the bleed and the resize probe read the overflow as a spill, refusing every attempt to
-	   narrow the pane. Trading the inset for padding keeps the bled child flush and nothing
-	   overflows; overflow-x stays hidden against sub-pixel scrollbars. */
+	/* Bug: a `.bleed-x` child in a padded scroll body overflowed, and the resize probe refused every narrowing.
+	   Padding instead of inset keeps it flush. */
 	.body.scroller {
 		margin-inline: calc(-1 * var(--pad-card-x));
 		padding-inline: var(--pad-card-x);

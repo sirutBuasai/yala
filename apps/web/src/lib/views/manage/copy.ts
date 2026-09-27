@@ -1,6 +1,5 @@
-// The Manage page's wording, in one file so the add flow and the edit pane cannot say the same thing
-// two ways. Per-kind wording — what a kind is called, what its fields are labelled — lives in
-// `kinds.ts`; wording shared with other pages lives in `$lib/copy`.
+// In one file so the add flow and edit pane can't word the same thing two ways. Per-kind wording lives in
+// `kinds.ts`, shared wording in `$lib/copy`.
 
 /** Field labels the add flow and the edit pane both use. */
 export const INSTITUTION = 'Institution';

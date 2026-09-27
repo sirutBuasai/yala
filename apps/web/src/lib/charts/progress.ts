@@ -1,8 +1,5 @@
-// A figure read against the level it is judged by, shared by every track that draws one.
-//
-// The track's end IS the target, so two tracks measured in different units still compare. Never scaled to
-// the value: a track stretched to whatever was furthest out drew a wildly overshooting figure and a
-// nearly-met one as the same nearly-full bar.
+// The track's end IS the target, so tracks in different units still compare. Never scaled to the value,
+// which drew an overshoot and a near-miss as the same bar.
 
 import { formatUnit, formatUnitCompact, type BulletRow, type Unit } from '$lib/data/primitives';
 

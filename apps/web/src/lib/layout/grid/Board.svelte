@@ -1,8 +1,6 @@
 <script lang="ts">
-	// A view's board. All this adds over `BoardGrid` is the rebuild: merging two KPI cards changes
-	// which panes the board HAS, and the arrangement derives its ids from the layout at construction,
-	// so it is rebuilt when that set changes rather than being left reserving rows for a pane nobody
-	// renders any more. Keyed on the ids alone — a caption changing must not throw the board away.
+	// Rebuilds `BoardGrid` when the pane set changes, since the arrangement derives its ids at construction.
+	// Keyed on the ids alone, so a caption change doesn't throw the board away.
 	import { onMount, type Snippet } from 'svelte';
 	import BoardGrid from './BoardGrid.svelte';
 	import { getGridEnv } from './context';

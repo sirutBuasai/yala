@@ -74,9 +74,7 @@
 </div>
 
 <style>
-	/* A day cell lays its number, dots and amounts out absolutely, so it has no size of its own for the
-	   board to measure; these are that content's size, and a pane's floor. Both drop where the grid
-	   narrows and the amounts go (below). */
+	/* A day cell's content is absolute, so it has no size to measure; these are its size and the floor. */
 	.cal-head,
 	.cal {
 		--wk-gutter: 3.25rem;

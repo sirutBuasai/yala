@@ -115,9 +115,7 @@
 		columns: 13rem;
 		column-gap: var(--space-11);
 	}
-	/* Once the pane is tall, stack: the keys drop below the ring and the ring grows into the height.
-	   This reflow is why the donut has no single minimum size — stacking needs more height, and how
-	   much more depends on how many keys there are, so it can only be measured. */
+	/* Stacking needs more height the more keys there are, so the donut's floor can only be measured. */
 	@container (min-height: 300px) {
 		.donut {
 			flex-direction: column;

@@ -1,9 +1,4 @@
-"""Where each write lands in its file.
-
-A ledger file is organised, not a log: opens sit with opens, closes with closes, a balance under its
-month's heading, an entry in date order. These check that every write finds its place rather than
-appending to the end of whatever file it belongs to.
-"""
+"""Every write finds its place in an organised file rather than appending to the end."""
 
 from __future__ import annotations
 

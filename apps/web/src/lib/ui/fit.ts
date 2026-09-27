@@ -1,19 +1,9 @@
-// Fitting content to the box it was given. A pane never resizes itself around its content (see
-// `grid/Pane.svelte`), so content too big for its box gives something up instead — a shorter reading, smaller
-// type — and states the size it cannot go under, which is what makes an over-narrow resize refuse.
-//
-// Every decision here is measured rather than predicted: a breakpoint written in this file would be wrong for
-// the next font, theme, or pane width somebody arranges.
+// A pane never resizes around its content, so content gives something up and states the size it can't go
+// under. Everything is measured, never a breakpoint.
 
 import { SLACK } from '$lib/layout/grid/spill';
 
-/**
- * Index of the richest level that fits. `widths` are each level's measured width in order, `chrome` whatever
- * else shares the room (a ring, a meter, the gaps).
- *
- * When none fit the last is the answer: a figure still has to say something, and the overrun it then leaves is
- * a genuine one.
- */
+/** `chrome` is whatever else shares the room. When none fit, the last: a figure must still say something. */
 export function levelThatFits(widths: number[], available: number, chrome = 0): number {
 	if (!widths.length) return 0;
 	const room = available - chrome + SLACK;
@@ -34,12 +24,8 @@ export interface SizeWatch {
 	stop(): void;
 }
 
-/**
- * Watch `el`'s inline size, calling `measure` with it and once immediately.
- *
- * `settled` skips a notification that carries no change of width: a measurement whose answer changes the
- * content inside the box would otherwise be re-run by the layout it caused, and answer itself for ever.
- */
+/** Calls `measure` once now and on each width change. `settled` skips no-change notifications, or a
+    measurement that changes the content re-runs forever. */
 export function watchWidth(
 	el: HTMLElement,
 	measure: (width: number) => void,
@@ -61,12 +47,8 @@ export function watchWidth(
 	return { force: () => run(true), stop: () => observer.disconnect() };
 }
 
-/**
- * Scale one line of text down into the width it has rather than wrapping it, as a chart scales into its
- * pane: `--fit` on `node` is the multiplier its font size reads. Under `least` the line would be too small to
- * read, so it holds that size, states the width it cannot go under (`--content-floor`), and wraps where even
- * that is not given, as on a phone. `node` must be styled not to wrap.
- */
+/** Scales one line down via `--fit` instead of wrapping. Below `least` it holds, states `--content-floor`,
+    and wraps only where even that isn't given. `node` must not wrap. */
 export function scaleToFit(node: HTMLElement, least: number) {
 	const refit = () => {
 		node.style.setProperty('--fit', '1');

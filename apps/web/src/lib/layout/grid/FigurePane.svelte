@@ -1,7 +1,5 @@
 <script lang="ts">
-	// A pane whose contents are a catalog figure. The data→visual coupling stays in the registry and the
-	// placement stays in the board's pane table; this only joins the two, so a view adds a chart by
-	// adding one entry to that table.
+	// Joins a catalog figure to a pane, so a view adds a chart with one pane-table entry.
 	import type { Snippet } from 'svelte';
 	import type { DashboardData } from '$lib/data/types';
 	import type { FigureSpec } from './figure';

@@ -67,10 +67,8 @@
 		return rectOf(arrangement.authored(pane));
 	}
 
-	/** Each section's own floor, then its share of the rest: a merged card's floor is its sections' floors
-	    added up, the same as the cards it was merged from. With `minmax(0, …)` a section could be given less
-	    than its floor, and the card refused to narrow as soon as the section with the smallest share ran
-	    out. */
+	/** Each section's floor, then its share of the rest. With `minmax(0, …)` a section got less than its floor
+	    and the card refused to narrow. */
 	const tracks = $derived(group.weights.map((w) => `minmax(min-content, ${w}fr)`).join(' '));
 	const stacked = $derived(group.axis === 'column' || env.folded);
 
@@ -116,12 +114,8 @@
 		return sections.some((s) => overflows(s, flowOf(axis)));
 	}
 
-	/**
-	 * Grow the card until no section is squeezed. A merge shares its inherited space out by weight, so a
-	 * section can be handed less than the content in it: the merged card carries one card's padding where
-	 * the two carried two, and a section's share of that saving need not be the slack it had. Measured once
-	 * the card is real rather than predicted, as every minimum here is (see `spill.ts`).
-	 */
+	/** A merge shares space by weight, so a section can get less than its content; measured once the card is
+	    real (see `spill.ts`). */
 	async function grow(axis: MergeAxis): Promise<void> {
 		for (let room = COLS; room > 0 && squeezed(axis); room--) {
 			const rect = authored(id);
@@ -133,19 +127,13 @@
 
 	const groupingOf = (g: typeof group) => `${g.axis}:${g.ids.join('|')}`;
 
-	/**
-	 * The grouping already fitted, seeded with the one this card MOUNTED with rather than empty: a stored merge
-	 * was fitted when the user made it, and re-fitting on every load let whichever period had the longest
-	 * figures grow the card for all the others. Only a merge or split made here may resize a pane.
-	 *
-	 * Plain, not state: it must not re-run the check that sets it.
-	 */
+	/** Seeded with the mounted grouping: re-fitting a stored merge on load let one period's long figures grow
+	    the card for all. Plain, not state, so it can't re-run the check that sets it. */
 	// svelte-ignore state_referenced_locally
 	let fitted = groupingOf(group);
 
-	// An effect rather than the tail of `join`: a merge rebuilds the board around the new pane set, so the
-	// element the gesture had bound is gone and the card to measure is the one this render just made. Keyed
-	// on the GROUPING alone — a resize is the gesture's business, and it holds its own last fitting size.
+	// An effect, not the tail of `join`: a merge rebuilds the board, so the card to measure is this render's.
+	// Keyed on the grouping alone; resizes are the gesture's business.
 	$effect(() => {
 		const el = sectionsEl;
 		const grouping = groupingOf(group);
@@ -168,9 +156,8 @@
 </script>
 
 <Pane {id}>
-	<!-- Folded, there are no coordinates and no room to sit side by side: sections stack whatever the merge
-	     said. `data-measure` per SECTION, as a section's own content can overrun it, and on the box around
-	     them, which the tracks overrun once the sections' floors add up to more than the card holds. -->
+	<!-- `data-measure` on each section, which can overrun, and on the box around them, which the tracks
+	     overrun once the floors add up past the card. -->
 	<div class="sections" class:stacked style:--tracks={tracks} data-measure bind:this={sectionsEl}>
 		{#each group.ids as member (member)}
 			<div class="section" data-measure>
@@ -255,9 +242,7 @@
 		padding-block-end: var(--pad-card-y);
 	}
 
-	/* --- arrange-mode controls ------------------------------------------------
-	   Both live in the pane's affordance layer over the CELL (see grid/Pane): the card is `inert` while
-	   arranging, so a button inside it could not be clicked. */
+	/* Arrange-mode controls sit in the pane's affordance layer, since the card is `inert` while arranging. */
 
 	.cuts {
 		position: absolute;

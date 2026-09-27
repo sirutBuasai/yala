@@ -1,18 +1,11 @@
 #!/usr/bin/env python3
-"""End-product serve: clean -> generate data.json -> build site -> serve.
+"""Clean, generate data.json, build the site, and serve it.
 
 serve.py web  [--port N] [--worktree DIR] [--ledger DIR]   the built snapshot alone (default 4173)
 serve.py api  [--port N] [--worktree DIR] [--ledger DIR]   snapshot + the write API (default 8000)
 
-The frontend has no view/edit modes to pick between: it tries the API and falls back to the
-snapshot, reporting which it got. So the only difference here is whether an API is running —
-`web` is how you see what a hosted copy looks like.
-
---worktree points the whole pipeline (data.json, built site, and the yala python package) at a
-git worktree, so you can serve a feature branch without a full per-worktree install.
-
---ledger points data.json and the API at another ledger directory, such as a throwaway worktree of
-the private data repo, so development edits never land in the real ledger.
+--worktree builds and serves a git worktree's code; --ledger points data.json and the API at another
+ledger directory, such as a throwaway worktree.
 """
 
 from __future__ import annotations
@@ -84,9 +77,8 @@ def _link_if_missing(target: Path, source: Path) -> None:
 
 
 def _prepare_worktree(worktree: Path) -> Path:
-    """Point the build at a git worktree: link its node_modules from the primary checkout and
-    prepend its yala source to PYTHONPATH so the built site, data.json, and API all come from
-    the worktree's code (the primary venv still supplies dependencies). Returns the worktree."""
+    """Links node_modules from the primary checkout and puts the worktree's source on PYTHONPATH;
+    the primary venv still supplies dependencies."""
     worktree = worktree.resolve()
     if not (worktree / "apps" / "web").is_dir():
         sys.exit(f"not a yala worktree (no apps/web under {worktree})")

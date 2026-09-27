@@ -1,9 +1,5 @@
-"""Whether an account is in play: closing it, and reopening it.
-
-Closing dispatches on the account's kind, since what has to happen to the money differs: a category
-holds none, a bank account drains to one destination, an investment splits across several, a card is
-refused until nothing is owed, and an employer takes its own deductions with it.
-"""
+"""Closing dispatches on kind, since the money's fate differs: none, drained, split, refused while
+owed, or cascaded to an employer's deductions."""
 
 from __future__ import annotations
 
@@ -58,9 +54,7 @@ class DrainLeg(BaseModel):
 
 
 class AccountCloseIn(BaseModel):
-    """Close an account of any kind. Which of the optional fields apply is decided by the account's
-    kind, not by the caller: a category takes none, a bank account a single ``destination``, an
-    investment a list of ``legs``."""
+    """The kind decides which optional fields apply."""
 
     account: str
     destination: str | None = None
@@ -82,11 +76,7 @@ class _Closed(NamedTuple):
 
 
 def _reject_unusable(body: AccountCloseIn, kind: Kind) -> None:
-    """Report a close field the kind has no use for, or two that contradict each other.
-
-    Which apply is the kind's business, not the caller's. A bank account can take either a
-    ``destination`` or ``legs``, but not both, since one would silently win.
-    """
+    """A bank account takes ``destination`` or ``legs``, not both, since one would silently win."""
     for field, usable in (("destination", kind.drains), ("legs", kind.splits)):
         if getattr(body, field):
             require_applies(kind, field, usable)
@@ -98,11 +88,7 @@ def _reject_unusable(body: AccountCloseIn, kind: Kind) -> None:
 def _close_with_plug(
     s: FileLedgerSink, led: Ledger, account: str, date: dt.date, meta: dict[str, str] | None = None
 ) -> None:
-    """Close ``account`` and the plug paired with it, so reopening can bring both back.
-
-    The plug carries the same ``meta``: without it a reopen would bring the account back with
-    nowhere for its snapshots to pad.
-    """
+    """The plug carries the same ``meta``, or a reopen leaves snapshots nowhere to pad."""
     s.close_account(account, date, meta=meta)
     plug = plug_account(account)
     if plug is not None and led.is_open(plug):
@@ -116,11 +102,8 @@ def _close_plain(body: AccountCloseIn, account: str) -> _Closed:
 
 
 def _reject_holdings(led: Ledger, account: str, date: dt.date) -> None:
-    """Refuse to close an account that still holds value as a side effect of closing an employer.
-
-    A bare ``close`` is not a write-off: beancount accepts it whatever the account holds, and the
-    value then drops off the balance sheet with no entry saying where it went.
-    """
+    """A bare ``close`` isn't a write-off: the value would drop off the balance sheet
+    unexplained."""
     kind = kind_of(account)
     if kind is None or not (kind.drains or kind.splits):
         return
@@ -134,12 +117,8 @@ def _reject_holdings(led: Ledger, account: str, date: dt.date) -> None:
 
 
 def _close_employer(body: AccountCloseIn, account: str) -> _Closed:
-    """Close an employer, closing the accounts the request names with it and unlinking the rest.
-
-    Nothing follows an employer out on its own: which of its deductions and plans close with it is
-    the caller's decision. One left open is *unlinked* but keeps its name, a name being no link.
-    Each close that does follow records what triggered it, so reopening undoes exactly those.
-    """
+    """Closes only the accounts the request names and unlinks the rest. Each follower records its
+    trigger, so reopening undoes exactly those."""
     date = parse_date(body.date)
     led = ledger()
     linked = employer_links(led, account)
@@ -175,11 +154,7 @@ def _close_employer(body: AccountCloseIn, account: str) -> _Closed:
 def _split_legs(
     led: Ledger, account: str, body: AccountCloseIn, value: Decimal
 ) -> list[tuple[str, Decimal]]:
-    """The legs a close splits ``value`` across, checked against it.
-
-    Shared by the two kinds that can be split: they differ in how the value is arrived at, not in
-    how it is divided up.
-    """
+    """Shared by both splittable kinds, which differ only in how the value is arrived at."""
     for leg in body.legs:
         open_destination(led, leg.destination, account)
 
@@ -197,20 +172,14 @@ def _liquidate(
     date: dt.date,
     legs: list[tuple[str, Decimal]],
 ) -> None:
-    """Convert the account to USD, split it across ``legs``, and close it with its plug, which is
-    what absorbs the sub-cent rounding gap.
-    """
+    """The plug absorbs the sub-cent rounding gap."""
     plug = plug_account(account)
     s.liquidate_into(account, date, legs, plug if plug and led.is_open(plug) else None)
 
 
 def _close_bank(body: AccountCloseIn, account: str) -> _Closed:
-    """Close a bank account, moving any balance out first: to one ``destination``, or split across
-    ``legs``.
-
-    The passthrough is retired before the balance is read, whichever way the close goes: its sweep
-    is dated month-end, so an earlier close would leave a transfer against a closed account.
-    """
+    """The passthrough is retired before the balance is read: its sweep is dated month-end, and
+    would land on a closed account."""
     s = sink()
     date = parse_date(body.date)
 
@@ -254,11 +223,8 @@ def _close_bank(body: AccountCloseIn, account: str) -> _Closed:
 
 
 def _close_liability(body: AccountCloseIn, account: str) -> _Closed:
-    """Close a card, which is refused while anything is still owed on it.
-
-    A liability is discharged by paying it, and that payment is a real bill-pay entry with a date
-    and a funding account; writing one as a side effect of closing would invent both.
-    """
+    """Refused while anything is owed: writing the payment here would invent its date and funding
+    account."""
     date = parse_date(body.date)
 
     owed = ledger().balance(account, date)
@@ -297,9 +263,8 @@ _CLOSERS: dict[str, Callable[[AccountCloseIn, str], _Closed]] = {
 
 @router.post("/api/account/close")
 def post_account_close(body: AccountCloseIn) -> dict:
-    """Close an account, dispatching on its kind. ``moved`` is what left it: zero for a plain close,
-    the drained balance for a bank account, the USD value for an investment. ``also`` names what the
-    close carried with it or left behind for attention."""
+    """``moved`` is what left it: zero, the drained balance, or the USD value. ``also`` names what
+    it carried or left for attention."""
     account, kind = resolve(body.account)
     _reject_unusable(body, kind)
     led = ledger()
@@ -327,13 +292,8 @@ class AccountReopenIn(BaseModel):
 
 @router.post("/api/account/reopen")
 def post_account_reopen(body: AccountReopenIn) -> dict:
-    """Undo a close — a mis-click, or a rehire.
-
-    The only operation the ledger cannot express as a further entry: beancount rejects a second
-    ``open``, so the ``close`` directive is deleted instead. An employer brings back exactly the
-    accounts its own close closed with it; one that was unlinked stays unlinked, since whether a
-    past job's plan belongs to the next is not something a reopen can know.
-    """
+    """Deletes the ``close``, since beancount rejects a second ``open``. An employer brings back
+    only what its close took; unlinked accounts stay unlinked."""
     account, _ = resolve(body.account)
     led = ledger()
 

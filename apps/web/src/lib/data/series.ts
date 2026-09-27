@@ -45,8 +45,7 @@ export function multiseries(
 }
 
 // --- one measure over time ---
-//
-// All read through `measureValue`, so a chart cannot disagree with the figure beside it.
+// All read through `measureValue`, so a chart can't disagree with its figure.
 
 /** The month keys a monthly series spans, with the labels to plot them under. */
 function monthAxis(data: DashboardData, year?: number): { keys: string[]; labels: string[] } {
@@ -126,11 +125,8 @@ export function accumulate(s: Series): Series {
 
 // --- composite ---
 
-/**
- * The cash-flow measures as one MultiSeries. Without a `year` it plots per year from `since`; a
- * specific `year` plots its twelve months. `net` rather than `income` so it reads from the same
- * paycheck rows take-home does.
- */
+/** Per year from `since`, or a `year`'s months. `net`, not `income`, so it reads the paycheck rows take-home
+    does. */
 export function cashFlowBars(data: DashboardData, year?: number, since?: number): MultiSeries {
 	const parts: Field[] = ['net', 'takehome', 'spending', 'saved'];
 	const list = parts.map((f) =>
@@ -145,10 +141,7 @@ export function cashFlowBars(data: DashboardData, year?: number, since?: number)
 	);
 }
 
-/**
- * One series per spending category across the years from `since`, ordered by their total over them.
- * Categories span orders of magnitude, so this wants a log axis — see `logYScale`.
- */
+/** Ordered by total. Categories span orders of magnitude, so this wants a log axis (see `logYScale`). */
 export function categorySpendByYear(data: DashboardData, since?: number): MultiSeries {
 	const unit = MONEY(data.currency);
 	const years = yearAxis(data, since);
@@ -215,12 +208,8 @@ function running(data: DashboardData, key: string, entries: Entries): (day: numb
 	return (day) => cum[Math.min(day, days)]!;
 }
 
-/**
- * A month's `entries` run up day by day (`name`), against the month before it (`Last month`) and the mean
- * of up to twelve prior months with data (`Average`), each summed to the same day. `through`, a date in
- * the month, ends the month's own line there, as today does in a month still running. Each point's period
- * is its date.
- */
+/** A month's `entries` run up day by day, against the month before and the mean of its prior months, each
+    summed to the same day. `through` ends the month's own line there, as today does in a running month. */
 function pace(
 	data: DashboardData,
 	key: string,

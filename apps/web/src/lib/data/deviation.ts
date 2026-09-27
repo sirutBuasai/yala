@@ -6,12 +6,8 @@ import { MONEY } from './primitives';
 import { priorMonths } from './scope';
 import { sum } from '$lib/utils/num';
 
-/**
- * Per-category spend for one month against the trailing months before it: the average as `base`, the
- * lowest and highest of those months as the range it is judged against. The baseline uses up to
- * `window` prior months that have data; with none, the result is empty and the caller shows an empty
- * state.
- */
+/** Per-category spend for one month against up to `window` prior months with data: their average as `base`,
+    their low and high as the range. Empty when no prior month has data. */
 export function categoryDeviation(data: DashboardData, monthKey: string, window = 12): Deviation {
 	const unit = MONEY(data.currency);
 	const prior = priorMonths(data, monthKey, window);

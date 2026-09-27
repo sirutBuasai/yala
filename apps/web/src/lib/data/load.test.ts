@@ -23,11 +23,7 @@ import {
 } from '$lib/data/load';
 import { makeAccounts, makeData } from '$lib/data/__fixtures__/dashboard';
 
-/**
- * A fetch stub that answers per URL. The loader tries the API first and the snapshot second, so
- * which of the two answered is the thing under test in most of these — a single canned response
- * can't express that.
- */
+/** Answers per URL, since which source answered is what most of these test. */
 function routed(routes: Record<string, unknown>, missing: string[] = []) {
 	return vi.fn((url: string) => {
 		if (missing.some((m) => url.includes(m))) return Promise.reject(new Error('unreachable'));
@@ -172,10 +168,7 @@ describe('deleteTransaction', () => {
 describe('opening and closing accounts', () => {
 	beforeEach(() => live.set(true));
 
-	/**
-	 * A write is followed by an account-list refresh, so the stub has to answer the refresh too —
-	 * feeding it a bogus document would throw inside the directory subscriber.
-	 */
+	/** A write triggers an account-list refresh, which the stub must answer too. */
 	function stubWrite(reply: unknown) {
 		const spy = vi.fn((url: string) => {
 			const path = String(url);

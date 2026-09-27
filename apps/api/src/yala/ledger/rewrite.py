@@ -1,12 +1,5 @@
-"""Text rewriting across the whole ledger, for renames.
-
-An account's name *is* the path written into every posting, assertion, pad, close and quoted meta
-value, so a rename means rewriting text in every file that mentions it. These helpers plan the
-rewrite; :meth:`yala.sink.FileLedgerSink.rewrite_files` performs it atomically.
-
-Matching is boundary-aware in both directions: a rename must not touch a sibling whose name merely
-starts with the same characters, but it must carry the renamed account's descendants with it.
-"""
+"""Plans whole-ledger text rewrites for renames. Matching is boundary-aware: a sibling sharing a
+prefix is untouched, while descendants move with the account."""
 
 from __future__ import annotations
 
@@ -26,19 +19,13 @@ _TAIL_CHARS = "A-Za-z0-9_-"
 #: lines can't be mistaken for one: beancount requires a meta key to start lowercase.
 _POSTING_RE = re.compile(r"^\s+(?P<account>[A-Z][A-Za-z0-9:-]*)(?:\s|$)")
 
-#: A dated directive naming an account (``open``, ``close``, ``balance``, ``pad``), which is what
-#: scopes the metadata indented beneath it. A transaction header names a payee instead, and its
-#: leading quote is what keeps it from matching.
+#: A dated directive naming an account, which scopes the metadata beneath it. A transaction header's
+#: leading quote keeps it from matching.
 _DIRECTIVE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\s+\S+\s+(?P<account>[A-Z][A-Za-z0-9:-]*)")
 
 
 def ledger_files(ledger_dir: Path) -> dict[Path, str]:
-    """Every ledger file's text, keyed by path.
-
-    The whole directory rather than the files beancount reported loading: a file detached from
-    ``main`` still names accounts, and skipping it would strand a stale name to surface the next
-    time it is included.
-    """
+    """The whole directory, not just loaded files: a detached file still names accounts."""
     return {path: path.read_text() for path in sorted(Path(ledger_dir).glob("**/*.beancount"))}
 
 
@@ -50,11 +37,7 @@ def _account_pattern(accounts: Iterable[str]) -> re.Pattern[str]:
 
 
 def rename_accounts(text: str, renames: Mapping[str, str]) -> str:
-    """Rewrite every reference to each account in ``renames``, descendants included.
-
-    All renames are applied in one pass, so renaming an account and its paired plug together cannot
-    chain — a new name is never re-matched as an old one.
-    """
+    """One pass, so a new name is never re-matched as an old one when renames chain."""
     if not renames:
         return text
 
@@ -68,11 +51,8 @@ def _quoted_value_pattern(key: str) -> re.Pattern[str]:
 
 
 def rename_meta_value(text: str, key: str, old: str, new: str) -> str:
-    """Rewrite ``key: "old"`` metadata to ``key: "new"``.
-
-    The counterpart to :func:`rename_accounts` for a name duplicated as a bare string rather than a
-    path, where renaming only one of the two silently unlinks them.
-    """
+    """For a name duplicated as a bare string, where renaming only the path silently unlinks
+    them."""
 
     def swap(m: re.Match[str]) -> str:
         return m["head"] + new + m["tail"] if m["value"] == old else m.group(0)
@@ -81,11 +61,8 @@ def rename_meta_value(text: str, key: str, old: str, new: str) -> str:
 
 
 def rename_custom_value(text: str, custom_type: str, old: str, new: str) -> str:
-    """Rewrite the first quoted value of a ``custom "<type>"`` directive from ``old`` to ``new``.
-
-    A ``custom`` keys its subject positionally rather than by a metadata key, so a rename that
-    skipped it would strand the directive on a name nothing carries any more.
-    """
+    """A ``custom`` keys its subject positionally, so skipping it strands the directive on a dead
+    name."""
     pattern = re.compile(
         rf'^(?P<head>\d{{4}}-\d{{2}}-\d{{2}}\s+custom\s+"{re.escape(custom_type)}"\s+")'
         r'(?P<value>[^"]*)(?P<tail>".*)$',
@@ -101,12 +78,8 @@ def rename_custom_value(text: str, custom_type: str, old: str, new: str) -> str:
 def rename_meta_in_scope(
     text: str, account: str, key: str, old: str, new: str, *, listed: bool = False
 ) -> str:
-    """Rewrite ``key: "old"`` only where it hangs under ``account``.
-
-    The same word may label a line item at another account, so the rewrite is scoped by the
-    directive or posting the metadata belongs to. ``listed`` treats the value as a comma-joined list
-    and rewrites one item of it.
-    """
+    """Scoped by owner, since one word may label a line item at another account. ``listed`` rewrites
+    one item of a comma-joined value."""
     value_re = _quoted_value_pattern(key)
     out: list[str] = []
     scope: str | None = None
@@ -168,11 +141,8 @@ def block_end(lines: list[str], begin: int) -> int:
 
 
 def set_meta_block(text: str, lineno: int, values: Mapping[str, str | None]) -> str:
-    """``text`` with the directive at 1-based ``lineno`` carrying ``values`` as its metadata.
-
-    Only the keys named are touched, and a ``None`` value removes one. The directive's own line is
-    never rewritten, so this cannot move an account.
-    """
+    """Only the named keys change, ``None`` removing one. The directive's own line is never
+    rewritten."""
     if not values:
         return text
 
@@ -192,11 +162,7 @@ def set_meta_block(text: str, lineno: int, values: Mapping[str, str | None]) -> 
 
 
 def remove_blocks(text: str, linenos: Iterable[int]) -> str:
-    """Drop the directives starting at each 1-based line number.
-
-    Removed bottom-up, so an earlier directive's line number is still valid after a later one has
-    gone.
-    """
+    """Removed bottom-up, so earlier line numbers stay valid."""
     lines = text.splitlines(keepends=True)
 
     for lineno in sorted(linenos, reverse=True):

@@ -1,6 +1,4 @@
-// A planning figure is a text field, so anything can be typed into it. Every entry has to land on a
-// value inside the bounds — the figures it feeds are projections, and one out-of-range reading makes every
-// chart beside it wrong rather than merely ugly.
+// Every typed entry must land inside the bounds, since one out-of-range figure makes every projection wrong.
 
 import { expect, type Locator, type Page } from '@playwright/test';
 import { openApp, settle, showPage, test } from './app';

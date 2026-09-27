@@ -1066,10 +1066,8 @@ def test_post_paycheck_negative_deduction_is_422(client: TestClient):
 
 
 def test_post_transaction_payee_newline_is_sanitized(client: TestClient):
-    """A payee is a single line: newlines/control chars are stripped before it reaches the ledger.
-
-    beancount escapes quotes but preserves raw newlines, which would corrupt the line-based file.
-    """
+    """Beancount keeps raw newlines, which would corrupt the line-based file, so they are
+    stripped."""
     r = client.post(
         "/api/transaction",
         json=_txn_body(
@@ -1179,9 +1177,7 @@ def test_post_account_investment_label_with_a_comma_is_422(client: TestClient):
 def test_post_account_investment_label_takes_only_letters_digits_and_spaces(
     client: TestClient, label: str
 ):
-    """A label takes a space but no other whitespace and no punctuation: the labels an account
-    offers are written as one comma-joined value on a single ledger line, so a newline inside one
-    would end that line early."""
+    """Labels are one comma-joined value on one ledger line, so only spaces are allowed."""
     r = client.post(
         "/api/account",
         json={

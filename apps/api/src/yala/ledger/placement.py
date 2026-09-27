@@ -1,10 +1,5 @@
-"""Where a new directive belongs in a file.
-
-A ledger file is organised, not a log, so appending to the end breaks whichever grouping the write
-lands in and every write asks here for its line first. The anchors are the directives already in the
-file, found through their parsed source lines — the file's own contents decide where the next one
-goes, so nothing here restates how a ledger is laid out.
-"""
+"""Where a new directive goes in a file, anchored on the directives already there, so nothing
+restates how a ledger is laid out."""
 
 from __future__ import annotations
 
@@ -46,11 +41,8 @@ def spans(
     lines: list[str],
     keep: Callable[[data.Directive], bool] = lambda _: True,
 ) -> list[Span]:
-    """Line spans of the directives ``path`` declares and ``keep`` accepts, in file order.
-
-    A directive with no source, and one whose recorded line is no longer in the file, are both
-    skipped: a stale parse may then place a write imprecisely, but never over an existing entry.
-    """
+    """Directives with no source or a stale line are skipped, so a write may land imprecisely but
+    never over an entry."""
     target = os.path.realpath(path)
     found: list[Span] = []
 
@@ -69,12 +61,8 @@ def spans(
 
 
 def insert_at(lines: list[str], anchors: list[Span], date: dt.date, *, spaced: bool) -> int:
-    """The line index a directive dated ``date`` goes at, keeping its group in date order.
-
-    After the last anchor it does not predate, above the first when it predates them all, and at the
-    end of the file when there is no anchor to sit beside. ``spaced`` steps past the blank line
-    separating one entry from the next, so the directive lands after the gap, not inside it.
-    """
+    """After the last anchor it doesn't predate, else above the first, else at the end. ``spaced``
+    lands it after the blank separator, not inside it."""
     if not anchors:
         return len(lines)
 
@@ -96,12 +84,8 @@ def insert_at(lines: list[str], anchors: list[Span], date: dt.date, *, spaced: b
 
 
 def section_slot(lines: list[str], anchors: list[Span], date: dt.date) -> tuple[int, str | None]:
-    """Where a dated directive goes in a month-sectioned file, and the heading to write above it
-    when its month has none yet.
-
-    Ordered against the month's own entries: anchoring on the whole file would file an entry dated
-    earlier than everything in its month *above* that month's heading.
-    """
+    """Ordered against its month's entries, plus the heading to write when the month has none:
+    anchoring on the whole file could file it above its heading."""
     header = month_header(date)
     at = next((i for i, line in enumerate(lines) if line.rstrip() == header), None)
 
@@ -121,11 +105,8 @@ def section_slot(lines: list[str], anchors: list[Span], date: dt.date) -> tuple[
 
 
 def splice(lines: list[str], at: int, block: str, *, spaced: bool) -> str:
-    """``lines`` with ``block`` inserted at line index ``at``, blank-line separated when ``spaced``.
-
-    At the end of the file the separator goes *before* the block instead, since there is nothing
-    after it to separate from.
-    """
+    """At the end of the file the separator goes before the block, having nothing after it to
+    separate."""
     body = block.rstrip("\n") + "\n"
 
     if at >= len(lines):
@@ -143,12 +124,8 @@ def splice(lines: list[str], at: int, block: str, *, spaced: bool) -> str:
 
 
 def cut(lines: list[str], begin: int, end: int) -> tuple[list[str], int]:
-    """``lines`` without the block at ``[begin, end)`` and the blank line that spaced it, and how
-    many lines went.
-
-    Taking the blank with the block keeps a file from growing a gap every time an entry is deleted
-    or re-dated out of it.
-    """
+    """Takes the spacing blank with the block, so deletes never leave gaps. Returns the lines
+    removed too."""
     stop = end
 
     if stop < len(lines) and not lines[stop].strip():
@@ -158,11 +135,7 @@ def cut(lines: list[str], begin: int, end: int) -> tuple[list[str], int]:
 
 
 def without(anchors: list[Span], begin: int, removed: int) -> list[Span]:
-    """``anchors`` with the one at ``begin`` dropped and every later one shifted up by ``removed``.
-
-    Line numbers come from a parse of the file *before* a cut, so re-placing what was cut has to
-    account for the lines that went.
-    """
+    """Anchors come from a parse before the cut, so later ones shift up by ``removed``."""
     return [
         span._replace(begin=span.begin - removed, end=span.end - removed)
         if span.begin > begin

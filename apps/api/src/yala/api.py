@@ -1,8 +1,5 @@
-"""FastAPI local edit API backend: the app, its routers, and the static frontend it fronts.
-
-Runs on localhost only — financial data never leaves the machine. Endpoints live in
-:mod:`yala.routes`; this module only assembles them.
-"""
+"""The local edit API: its routers and the static frontend it fronts. Localhost only, so financial
+data never leaves the machine."""
 
 from __future__ import annotations
 
@@ -38,9 +35,8 @@ def get_data() -> dict:
 
 @app.get("/api/health")
 def get_health() -> JSONResponse:
-    """Container healthcheck: 503 when a restart or rollback could help, a ledger that fails to
-    load or a missing site build. Ledger errors are only counted, since restarting can't fix them
-    and a 503 would make the host restart the container forever."""
+    """503 when a restart could help: a missing site build or a failed load. Ledger errors are only
+    counted, since a 503 for them would restart the container forever."""
     if not (config.WEB_DIR / "200.html").is_file():
         return JSONResponse(status_code=503, content={"detail": "site build not found"})
     try:
@@ -58,13 +54,8 @@ for router in ROUTERS:
 
 
 class SPAStaticFiles(StaticFiles):
-    """Serve the SvelteKit static build with client-side-routing awareness.
-
-    The static adapter emits prerendered pages as ``<path>.html``, which plain ``StaticFiles``
-    doesn't look for, so a direct URL visit 404s; navigation falls back to that file and then to the
-    SPA shell (``200.html``). The ``/api`` namespace is reserved and stays a hard 404 rather than
-    being answered with an HTML shell.
-    """
+    """Serves prerendered ``<path>.html`` pages, which ``StaticFiles`` misses, then the SPA shell.
+    ``/api`` stays a hard 404 rather than an HTML shell."""
 
     async def get_response(self, path: str, scope: Scope):  # type: ignore[override]
         try:

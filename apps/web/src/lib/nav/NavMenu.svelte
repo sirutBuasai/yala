@@ -1,7 +1,6 @@
 <script lang="ts">
-	// Hamburger that slides in a left sidebar. It must stay INLINE in the page header: as
-	// `position: fixed` in the page's left gutter it forced an asymmetric `padding-left` on the column
-	// at narrower widths, which pulled the pane grid off its own dot lattice.
+	// Must stay inline in the header: as `position: fixed` it forced a left padding that pulled the pane grid
+	// off its dot lattice.
 	import { CLOSE_MENU } from '$lib/copy';
 	import { modal } from '$lib/overlay/modal';
 	import { dur } from '$lib/utils/motion';

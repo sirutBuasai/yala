@@ -1,9 +1,7 @@
 <script module lang="ts">
 	import { ENTRY_KINDS, type EntryKind } from '$lib/utils/editPrefs';
 
-	// Each entry type carries an icon + accent driving the switcher pill and the Overlay's tinted
-	// band. `accentText` is the mode-aware variant that keeps the kicker legible on the pale
-	// light-mode band.
+	// `accentText` is the mode-aware accent that keeps the kicker legible on the pale light-mode band.
 	const LABELS: Record<EntryKind, string> = {
 		transaction: 'Transaction',
 		paycheck: 'Paycheck',
@@ -27,10 +25,7 @@
 		(typeof KINDS)[number]
 	>;
 
-	/**
-	 * Requested kinds intersected with what the page permits, falling back to the page's whole set
-	 * when the request is absent or entirely disallowed.
-	 */
+	/** Requested kinds the page permits, else the page's whole set. */
 	export function resolveKinds(
 		requested: EntryKind | EntryKind[] | undefined,
 		permitted: EntryKind[]
@@ -43,9 +38,7 @@
 </script>
 
 <script lang="ts">
-	// One Add overlay with a kind switcher plus per-type edit overlays. Pages open it imperatively
-	// (bind:this) and refresh via `onsaved`. Editing is always type-specific, so only adding
-	// needs the switcher.
+	// Only adding needs the kind switcher; editing is always type-specific.
 	import { get } from 'svelte/store';
 	import { data } from '$lib/data/load';
 	import type { AccountsInfo } from '$lib/data/load';
@@ -78,11 +71,7 @@
 		kinds = KINDS.map((k) => k.value)
 	}: Props = $props();
 
-	/**
-	 * The date an add opens on, resolved once so every form agrees. Today is deliberately excluded:
-	 * logging runs in batches, so the last-logged date beats it. An empty result leaves the field
-	 * blank, which is right for an empty ledger.
-	 */
+	/** Resolved once so every form agrees. The last-logged date beats today, since logging runs in batches. */
 	const openDate = $derived(
 		presetDate || $lastEntryDate || ($data ? latestEntryDate($data) : '') || undefined
 	);
@@ -97,11 +86,7 @@
 	let editingPaycheck = $state<string | null>(null);
 	let editingTransfer = $state<string | null>(null);
 
-	/**
-	 * Open the add overlay on one kind, a choice of several, or (omitted) the page's full set.
-	 * Requests are intersected with the `kinds` prop, and the form opens on the last-logged kind
-	 * whenever this invocation offers it.
-	 */
+	/** Opens on the last-logged kind whenever this invocation offers it. */
 	export function add(only?: EntryKind | EntryKind[]) {
 		const offered = resolveKinds(only, kinds);
 		openKinds = offered;

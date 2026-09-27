@@ -1,7 +1,4 @@
-// The Accounts page's wording, in one file so its two views cannot say the same thing two ways.
-// Wording shared with other pages lives in `$lib/copy`.
-//
-// Titles are sentence case with no period; captions are lowercase with no period.
+// In one file so the two views can't word the same thing two ways; shared wording lives in `$lib/copy`.
 
 export const TREND = 'Net worth & assets';
 export const LIABILITIES = 'Liabilities';

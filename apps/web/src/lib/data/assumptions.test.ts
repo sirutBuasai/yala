@@ -122,10 +122,7 @@ describe('the real rate', () => {
 		outOfPocket: null
 	});
 
-	/**
-	 * Fisher, not subtraction. 8.15% against 3% is exactly 5% because 1.05 × 1.03 = 1.0815, which makes
-	 * this the one case where the right answer is a round number and a slip would be obvious.
-	 */
+	/** Fisher, not subtraction: the one case where the right answer is round, so a slip is obvious. */
 	it('discounts the nominal return by inflation exactly', () => {
 		expect(realRate(at(8.15, 3))).toBeCloseTo(5, 10);
 		expect(realRate(at(7, 3))).toBeCloseTo(3.883495, 5);

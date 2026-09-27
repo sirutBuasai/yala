@@ -1,8 +1,6 @@
 <script lang="ts">
-	// The grid itself, and the dot lattice under it. The grid runs at ZERO gap, each pane insetting itself
-	// by half a gap instead (see `units.ts`), so the dots can be one repeating gradient whose spacing IS
-	// the snap distance. Split from `Board` because it OWNS the arrangement: `Board` remounts it when the
-	// pane set changes, and the fresh instance re-reads the stored panes.
+	// Zero grid gap, each pane insetting by half a gap (see `units.ts`), so the dot lattice is one repeating
+	// gradient whose spacing is the snap distance.
 	import type { Snippet } from 'svelte';
 	import { Arrangement } from './arrangement.svelte';
 	import { BoardLabels } from './labels';
@@ -23,15 +21,13 @@
 	let { key, layout, names, onreset, children }: Props = $props();
 
 	const env = getGridEnv();
-	// Constructed once: the key and the layout are IDENTITY, not state. A view may hand this a
-	// `$derived` table, since a figure's caption reads the data; only the geometry half is read, and
-	// that half only changes when the pane SET does, which remounts this component.
+	// Constructed once: only the geometry half is read, and it changes only with the pane set, which remounts
+	// this component.
 	// svelte-ignore state_referenced_locally
 	const arrangement = new Arrangement(key, layout, env);
 	setArrangement(arrangement);
 
-	// Keyed like the arrangement but stored apart, so the names a user gave this board survive a change
-	// to its pane set the way its geometry does.
+	// Stored apart from the arrangement, so a board's renames survive a change to its pane set.
 	// svelte-ignore state_referenced_locally
 	const labels = new BoardLabels(key, [...Object.keys(layout), ...(names ?? [])]);
 	setLabels(labels);

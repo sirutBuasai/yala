@@ -1,7 +1,4 @@
-// One board's KPI grouping: which cards are merged, and the pane table that follows.
-//
-// Persisted separately from the arrangement because it is a different decision: which panes the board
-// has, rather than where they sit.
+// Persisted apart from the arrangement: which panes the board has, not where they sit.
 
 import { listOf, oneOf, Pref, type Revive } from '$lib/utils/persist.svelte';
 import type { BoardLayout, PaneSpec, Rect } from '$lib/layout/grid/types';
@@ -47,11 +44,7 @@ export class KpiBoard {
 	    declared rects, so those stay the only statement of size. */
 	readonly #opening: KpiGroup[];
 
-	/**
-	 * `merged` is where the board STARTS, not what it must be: as the pref's fallback it applies where
-	 * nothing is stored, and a stored value — empty included, which is a board taken apart on purpose —
-	 * wins over it.
-	 */
+	/** Where the board starts: a stored grouping, even an empty one, wins over it. */
 	constructor(key: string, defs: () => KpiBoardDefs, merged: KpiMerge[] = []) {
 		this.#defs = defs;
 		const rects = defs();
@@ -81,13 +74,8 @@ export class KpiBoard {
 		)
 	);
 
-	/**
-	 * The whole pane table: KPI cards first so they lead the priority order, then the view's own. Refuses a
-	 * duplicate id, which would shadow one entry and drop that pane silently.
-	 *
-	 * Must be called inside a `$derived`: merging changes which panes this returns, and a table computed
-	 * once leaves the board reserving rows for a pane nothing renders.
-	 */
+	/** KPI cards first, then the view's panes; refuses a duplicate id. Call inside a `$derived`, or a merge
+	    leaves the board reserving rows for a pane nothing renders. */
 	board<T extends BoardLayout>(panes: T): T & BoardLayout {
 		const defs = this.#defs();
 		for (const id of Object.keys(panes)) {
@@ -122,10 +110,7 @@ export class KpiBoard {
 		this.#pref.value = mergeGroups(this.groups, a, b, axis, memberSpan);
 	}
 
-	/**
-	 * Split at the divider before section `index`, and the rectangles the two halves take. `floors` is
-	 * what each half's content needs, which only the pane can measure (see `measure.ts`).
-	 */
+	/** `floors` is what each half's content needs, which only the pane can measure (see `measure.ts`). */
 	split(
 		leader: string,
 		index: number,

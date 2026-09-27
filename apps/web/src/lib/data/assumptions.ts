@@ -59,13 +59,9 @@ export function assumptionsOf(data: DashboardData): Assumptions {
 	};
 }
 
-/**
- * The rate every projection compounds at: the nominal return discounted by inflation, so a balance and the
- * spending it funds are both in today's purchasing power. A percentage.
- *
- * The Fisher relation, `(1+real) = (1+nominal)/(1+inflation)`, NOT `nominal - inflation`: the shortcut
- * overstates the real rate, which compounds to a badly wrong balance over a lifetime horizon.
- */
+/** The real rate every projection compounds at, as a percentage. Fisher's relation, NOT `nominal -
+    inflation`: the shortcut overstates the rate, which compounds to a badly wrong balance over a lifetime
+    horizon. */
 export function realRate(a: Assumptions): number {
 	return ((1 + a.nominalReturn / 100) / (1 + a.inflation / 100) - 1) * 100;
 }

@@ -1,13 +1,5 @@
-"""Income domain: paychecks, meaning any transaction carrying an ``Income:*`` posting.
-
-Legs are classified by account prefix, not by name, so beancount stays the source of truth:
-
-* ``Expenses:Deductions:*`` — direct money out: truly gone.
-* ``Assets:Investments:*``  — indirect money out: still yours, invested.
-* everything else           — take-home cash, the remainder.
-
-Hence **net** = gross − direct out, and **take-home** = net − indirect out.
-"""
+"""Paychecks: any transaction with an ``Income:*`` posting. Legs are classified by prefix, so
+**net** = gross − deductions and **take-home** = net − investments."""
 
 from __future__ import annotations
 

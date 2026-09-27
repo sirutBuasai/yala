@@ -106,9 +106,8 @@
 		white-space: nowrap;
 		margin: 0;
 		font-size: calc(var(--text-title) * var(--fit, 1));
-		/* Held at the full size's height as the type scales: the pane's floor is measured with the line
-		   unscaled, and a line that shrank would hand the difference to the rail, which then never reached
-		   its thinnest at the floor. */
+		/* Held at full height as the type scales: the floor is measured unscaled, and a shrunk line gave its height
+		   to the rail. */
 		line-height: calc(var(--text-title) * 1.25);
 		color: var(--ink);
 	}

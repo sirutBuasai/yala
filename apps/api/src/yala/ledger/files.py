@@ -1,10 +1,5 @@
-"""Writing ledger files safely: one file or a set of them, all-or-nothing.
-
-Every write re-loads the ledger strictly. If the result is broken, *every* file the write touched is
-restored and the error re-raised, so a bad write never leaves a corrupt ledger on disk. The unit of
-rollback is the set, not the file: a rename rewrites several at once, and half of one is worse than
-none.
-"""
+"""All-or-nothing writes: a strict reload after each, and every touched file restored if it fails,
+since a rename rewrites several at once."""
 
 from __future__ import annotations
 
@@ -48,12 +43,9 @@ def snapshot(paths) -> dict[Path, str | None]:
 
 
 def load_checked(main_ledger: Path, *, resync: bool = True) -> None:
-    """Load ``main_ledger`` strictly, raising if it is broken.
-
-    With ``resync``, a card assertion an earlier edit left stale is re-set first (see
-    :func:`yala.ledger.cards.resynced`), and put back if the ledger still fails to load. A write
-    that logs a card reading passes False: its own figure is the one being checked.
-    """
+    """With ``resync``, a stale card assertion is reset first (see
+    :func:`yala.ledger.cards.resynced`). A card reading passes False, since its figure is what's
+    checked."""
     if resync:
         loaded = Ledger(main_ledger, strict=False).load()
         if not loaded.errors:

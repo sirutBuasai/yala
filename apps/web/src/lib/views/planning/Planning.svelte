@@ -1,7 +1,5 @@
 <script lang="ts">
-	// Planning: when the plan reaches FI and how safely, the projection behind it, and the assumptions the
-	// ledger can't derive. It reads now, so it has no period controls;
-	// every pane draws the draft, and leaving the page drops it.
+	// No period controls: it reads now. Every pane draws the draft, and leaving the page drops it.
 	import { onMount } from 'svelte';
 	import type { DashboardData } from '$lib/data/types';
 	import type { BoardLayout } from '$lib/layout/grid/types';
@@ -43,9 +41,8 @@
 	/** Run once here, for the projection's band, the line under it and the summary's success rate. */
 	const risk = $derived(marketRisk(preview, a));
 
-	/** A frame fixed at the largest FI number the withdrawal setting can ask for, so moving the rate moves
-	    the target line WITHIN the chart instead of rescaling the plot. Read off the setting's own bound,
-	    never a literal, so the two cannot drift apart. */
+	/** Fixed at the largest FI number the setting's bound allows, so moving the rate moves the line, not the
+	    scale. */
 	const ceiling = $derived.by(() => {
 		const swr = draft.specs.find((s) => s.key === 'swr');
 		const spending = plannedRates(preview, a).spending;

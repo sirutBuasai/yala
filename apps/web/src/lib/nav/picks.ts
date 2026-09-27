@@ -1,7 +1,5 @@
-// A board's period picks, read from and written to the URL. The view is the path, which a
-// reload keeps; the picks are the query, which it drops. `scope` names the grain the board is narrowed
-// to, and only counts on the view of that grain: `scope=month` on Month, `scope=year` on Year. `span` is how
-// far back Year reaches, always ending at the latest year.
+// The view is the path, which a reload keeps; the picks are the query, which it drops. `scope` only counts on
+// the view of its grain, and `span` always ends at the latest year.
 
 import type { DashboardData } from '$lib/data/types';
 import { latestMonthKey, latestYear } from '$lib/data/scope';

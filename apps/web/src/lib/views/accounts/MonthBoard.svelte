@@ -1,7 +1,5 @@
 <script lang="ts">
-	// Accounts · Month: one year of balances read month by month, and the month's balances logged under the
-	// KPI cards. Logging lives here alone, since a balance belongs to the month it was taken in. Picking a
-	// month's bars narrows the KPI cards to it, which is the net worth bridge, and marks it on every chart.
+	// Logging lives here alone, since a balance belongs to the month it was taken in.
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
 	import type { Scope } from '$lib/data/scope';

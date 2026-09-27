@@ -2,11 +2,8 @@
 
 import { forgetPicks } from '$lib/nav/left';
 
-/**
- * A reload keeps the view but starts its picks over. The path names the view and is kept; the
- * query holds the picks and filters and is dropped, and so is every view's remembered query and scroll. Preferences such as
- * board arrangements and the theme live in local storage, untouched.
- */
+/** A reload keeps the view (the path) but drops the picks (the query) and every view's remembered query and
+    scroll. Local-storage preferences are untouched. */
 export function init(): void {
 	const nav = performance.getEntriesByType('navigation')[0] as
 		PerformanceNavigationTiming | undefined;

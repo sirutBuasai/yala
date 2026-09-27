@@ -1,8 +1,6 @@
 <script lang="ts">
-	// Finding an account, and nothing else: this side carries no controls over one. Grouped by kind and
-	// shut by default, since a full list of every account is longer than the taxonomy is wide; searching
-	// flattens the groups, a name being faster to type than a kind is to find. Closed accounts are a
-	// group of their own so a reopen can still reach them.
+	// Finding only, no controls. Groups start shut, searching flattens them, and Closed is its own group so a
+	// reopen can reach it.
 	import type { Snippet } from 'svelte';
 	import { accountDirectory } from '$lib/data/directory.svelte';
 	import type { AccountInfo } from '$lib/data/types';
@@ -58,9 +56,7 @@
 	const infoOf = (account: string | null) =>
 		account ? all.find(([path]) => path === account)?.[1] : undefined;
 
-	// Follow the selection into its group — and, for a closed account, into its kind within Closed —
-	// so an account picked from a search result, or reached by a rename landing on a new path, is not
-	// hidden behind a shut group.
+	// Open the selection's group, so an account picked from search or moved by a rename isn't hidden.
 	$effect(() => {
 		const info = infoOf(selected);
 		if (!info) return;
@@ -262,9 +258,7 @@
 		flex: 0 0 auto;
 		padding-right: var(--space-2);
 	}
-	/* Overlapped, each ringed in the colour BEHIND it so the ring reads as a gap rather than as an
-	   outline. That means the row's own background, not the card's: on hover they differ, and a ring
-	   left at the card's colour drew a visible circle around every dot. */
+	/* Ringed in the row's own background, not the card's, which drew a circle round every dot on hover. */
 	.swatch i {
 		width: 11px;
 		height: 11px;

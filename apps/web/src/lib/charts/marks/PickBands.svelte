@@ -1,7 +1,6 @@
 <script lang="ts">
-	// The periods a continuous axis picks: one band per run of points sharing a period, drawn under the
-	// marks. The chart's own hit layer takes the pointer, since it sits over the lines and reports each
-	// point; these bands shade the run it is over and are what the keyboard reaches.
+	// The chart's hit layer takes the pointer; these bands shade the run it is over and are what the keyboard
+	// reaches.
 	import type { PickGroup } from '$lib/charts/axis';
 	import { onPress } from '$lib/charts/aria';
 	import { monthLabel } from '$lib/utils/format';

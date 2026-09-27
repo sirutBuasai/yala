@@ -116,10 +116,7 @@ describe('moneyYScale', () => {
 		expect(moneyYScale([0, 3_600_000], 300).y(3_600_000)).toBeGreaterThan(0);
 	});
 
-	/**
-	 * Bug: a chart capped at a chosen level had `.nice()` round the ceiling up, leaving a dead band above
-	 * lines that were already clipped — so the plot stopped short of where the frame said it did.
-	 */
+	/** Bug: `.nice()` rounded a chosen ceiling up, leaving a dead band above the clipped lines. */
 	it('puts a capped top exactly at the top edge', () => {
 		const { y, ticks } = moneyYScale([0, 3_600_000], 300, 3_600_000);
 		expect(y(3_600_000)).toBe(0);

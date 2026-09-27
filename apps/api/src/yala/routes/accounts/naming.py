@@ -1,10 +1,5 @@
-"""What an account is called and what it offers: its metadata, and a real rename.
-
-Two operations one word hides. A rename rewrites the account's path in every posting, assertion and
-quoted value across the ledger, as does renaming a contribution label or an institution; an alias
-only *shortens* what the path renders as. Every part of a name typeable when an account is opened
-can be renamed here on its own, so the path and the parts it was composed from cannot drift apart.
-"""
+"""A rename rewrites the path across the ledger; an alias only shortens how it renders. Each
+typeable name part renames on its own, so path and parts can't drift."""
 
 from __future__ import annotations
 
@@ -59,11 +54,8 @@ router = APIRouter()
 
 
 class AccountMetaIn(BaseModel):
-    """Edit what an account is *called* and what it offers, not what it is named.
-
-    Only the fields the request sends are touched, and an explicit null clears one. The two name
-    halves are refused here: they name the account, so they are renamed.
-    """
+    """Only sent fields change, null clearing one. The name halves are refused: they go through
+    rename."""
 
     account: str
     institution_name: OptionalText = None
@@ -77,12 +69,8 @@ class AccountMetaIn(BaseModel):
 
 @router.post("/api/account/meta")
 def post_account_meta(body: AccountMetaIn) -> dict:
-    """Set an account's descriptive metadata: how its name shortens, which employer it is scoped to,
-    which contribution labels it offers, and whether its bank's balance counts pending charges.
-
-    A short form belonging to the institution is set on every account held there, which is what
-    keeps one institution from reading two ways.
-    """
+    """An institution's short form is set on every account held there, so it never reads two
+    ways."""
     account, kind = resolve(body.account)
     led = ledger()
     require_open(led, account)
@@ -146,9 +134,7 @@ class RelabelIn(BaseModel):
 
 @router.post("/api/account/relabel")
 def post_account_relabel(body: RelabelIn) -> dict:
-    """Rename one contribution label, in the account's ``labels`` meta and in every contribution
-    already logged under it, which otherwise splits one line item's history in two.
-    """
+    """Also rewrites every logged contribution, or the line item's history splits in two."""
     account, kind = resolve(body.account)
     led = ledger()
     require_open(led, account)
@@ -174,13 +160,8 @@ def post_account_relabel(body: RelabelIn) -> dict:
 
 
 class AccountRenameIn(BaseModel):
-    """Rename an account, in whichever of its parts the kind is named by.
-
-    The fields mirror the ones that named it when it was opened, each editable on its own, and all
-    are one operation: every part composes into the path, so changing one rewrites the path.
-    ``institution_name`` differs in scope, not in kind — it is composed into every path built from
-    it, so renaming it renames every account held there.
-    """
+    """Every part composes into the path, so any change rewrites it. ``institution_name`` renames
+    every account held there."""
 
     account: str
     name: OptionalText = None
@@ -209,12 +190,8 @@ def _renamed(led: Ledger, old: str, new: str, *, meta: dict[str, str | None] | N
 
 
 def _rename_institution(led: Ledger, account: str, kind: Kind, typed: str) -> dict:
-    """Rename the institution ``account`` is held at, and with it every account held there.
-
-    An account declaring no institution has nothing to cascade to: naming its institution renames
-    that one account and records the institution on it, which is how a hand-written account joins
-    the scheme.
-    """
+    """An account with no institution just records it, which is how a hand-written account joins the
+    scheme."""
     new = valid_typed_name(typed, "institution_name")
     old = institution_of(led.account_meta().get(account))
 
@@ -249,11 +226,7 @@ def _rename_institution(led: Ledger, account: str, kind: Kind, typed: str) -> di
 def _renamed_stem(
     led: Ledger, old: str, kind: Kind, body: AccountRenameIn
 ) -> tuple[str, dict | None]:
-    """The path segment the rename asks for, and the name part to record beside it.
-
-    Composed from the parts rather than taken as typed, so the path and the parts stored on the
-    ``open`` always describe the same name.
-    """
+    """Composed from the parts, so the path and the parts on the ``open`` always agree."""
     if body.account_name is not None:
         institution, _ = name_parts(led.account_meta().get(old))
         product = valid_typed_name(body.account_name, "account_name")
@@ -285,9 +258,8 @@ def post_account_rename(body: AccountRenameIn) -> dict:
         raise invalid("rename one part of the name at a time")
     if body.tier is not None and not kind.tiered:
         raise invalid(f"a {kind.name} account has no tax tier to move between")
-    # A named account's path is composed from its parts, so setting the whole name at once would
-    # leave the two describing different names. One recording no parts has nothing to desync, which
-    # is what keeps a hand-written account renameable.
+    # Setting the whole name would desync a named account's path from its parts; one with no parts
+    # has nothing to desync, which keeps a hand-written account renameable.
     if body.name is not None and kind.named and any(name_parts(led.account_meta().get(old))):
         raise invalid(f"{old} is named in parts: rename institution_name or account_name")
     for field in RENAME_FIELDS:

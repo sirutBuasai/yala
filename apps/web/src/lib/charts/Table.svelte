@@ -20,9 +20,7 @@
 </script>
 
 {#if table.rows.length}
-	<!-- Scrolls sideways inside its own pane rather than forcing the page to. These columns can't be
-	     dropped or wrapped — every figure is load-bearing — so scrolling is the only way to keep them
-	     all legible once they outgrow the pane. -->
+	<!-- Scrolls sideways in its pane: every column is load-bearing, so none can drop or wrap. -->
 	<div class="tablebox scroller-x">
 		<table>
 			<thead>
@@ -58,9 +56,7 @@
 {/if}
 
 <style>
-	/* Horizontal only. No vertical cap: a table that scrolls vertically becomes a second scroll region
-	   the wheel gets captured by, and these tables are short enough for the pane to be as tall as its
-	   data. */
+	/* Horizontal only: a vertical scroller captures the wheel as a second scroll region. */
 	.tablebox {
 		min-width: 0;
 	}

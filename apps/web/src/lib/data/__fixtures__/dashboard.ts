@@ -207,10 +207,7 @@ export function makeData(): DashboardData {
 	};
 }
 
-/**
- * The base fixture plus a net-worth section and settings. Its figures are chosen so the growth
- * decomposition is checkable by hand against the base fixture's `saved` rows.
- */
+/** Figures chosen so the growth decomposition checks by hand against the base fixture's `saved` rows. */
 export function makeNetWorthData(): DashboardData {
 	const snapshot = (
 		date: string,

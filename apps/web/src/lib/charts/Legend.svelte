@@ -9,9 +9,7 @@
 
 <script lang="ts">
 	import Swatch from '$lib/charts/marks/Swatch.svelte';
-	// The keys above (or below) a chart. Every chart that names its series renders this, so swatch
-	// size, order and the dashed variant can't drift between them. Styles are the shared `.legend`
-	// rules in app.css.
+	// Shared by every chart that names its series, so swatch size, order and the dashed variant can't drift.
 	interface Props {
 		keys: Key[];
 		/** Key underneath the plot instead of above it. */

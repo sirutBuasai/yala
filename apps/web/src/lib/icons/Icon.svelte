@@ -4,9 +4,7 @@
 </script>
 
 <script lang="ts">
-	// The frame every icon shares: a square box at the caller's size, and the stroke presentation as CSS so an
-	// icon is only its path data. `fill` and `stroke` inherit, and a child that states its own still wins — a
-	// filled detail inside a stroked icon needs no exception here.
+	// A square box at the caller's size, with stroke presentation in CSS so an icon is only its path data.
 	import type { Snippet } from 'svelte';
 
 	interface Props {

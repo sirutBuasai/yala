@@ -1,6 +1,4 @@
-// How many rows a pane reserves — the one place the sizings differ. A chart takes the height it was
-// given and scales to fill it; a list's three modes differ only in who owns the height and whether
-// that ownership has a ceiling.
+// The one place the sizings differ: a chart scales to its height, a list's modes differ in who owns it.
 
 import { COLS, rowsForPx } from './units';
 import type { AuthoredPane, HeightMode, PaneContent, PaneSpec, SizedPane } from './types';
@@ -11,10 +9,7 @@ export interface ContentFloor {
 	h: number;
 }
 
-/**
- * The height mode a pane actually runs in. A `scale` pane is always `fixed`: with no content height
- * of its own, fitting it would collapse it to its floor and call that an answer.
- */
+/** A `scale` pane is always `fixed`: with no content height, fitting would collapse it to its floor. */
 export function effectiveMode(content: PaneContent, mode: HeightMode): HeightMode {
 	return content === 'scale' ? 'fixed' : mode;
 }
@@ -27,11 +22,8 @@ export function scrolls(content: PaneContent, mode: HeightMode): boolean {
 	return content === 'flow' && mode !== 'fit';
 }
 
-/**
- * Rows a pane reserves on the board. A capped pane reserves its content up to its ceiling, arranging or
- * not: reserving the whole ceiling only while arranging made the board shift the moment Edit closed, so
- * what was arranged was not what showed. The ceiling is drawn as an outline instead (see `Pane`).
- */
+/** A capped pane reserves its content up to the ceiling, arranging or not, or the board shifts when Edit
+    closes. */
 export function reservedRows(
 	authored: AuthoredPane,
 	content: PaneContent,
@@ -47,10 +39,7 @@ export function reservedRows(
 	return Math.min(rows, authored.cap);
 }
 
-/**
- * Height a content floor may raise. Only `scale`, whose height nothing else owns: a `fit` or `cap` pane
- * already tracks its content both ways, and a `flow` pane on a set height scrolls instead of growing.
- */
+/** Only `scale`: `fit` and `cap` already track content, and `flow` scrolls instead of growing. */
 function growsTaller(content: PaneContent): boolean {
 	return content === 'scale';
 }

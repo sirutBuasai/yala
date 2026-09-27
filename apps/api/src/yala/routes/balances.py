@@ -31,12 +31,8 @@ class BalanceIn(BaseModel):
 
 @router.post("/api/balance")
 def post_balance(body: BalanceIn) -> dict:
-    """Log a USD balance snapshot as a ``pad`` + ``balance`` pair, routing whatever the entries do
-    not explain to the account's plug (see :func:`snapshot_plug`).
-
-    A card past its baseline (see :func:`yala.ledger.cards.baseline`) has nothing to pad into, so a
-    figure that disagrees is refused naming the gap: spending or a bill payment has not been
-    entered."""
+    """Unexplained differences go to the plug (see :func:`snapshot_plug`). A card past its baseline
+    can't pad, so a disagreeing figure is refused, naming the gap."""
     account = valid_name(body.account)
     if not account.startswith((CASH, INVESTMENTS, LIABILITIES)):
         raise invalid(f"not a balance-loggable account: {account!r}")
@@ -64,10 +60,7 @@ class BalanceEditIn(BaseModel):
 
 @router.post("/api/balance/update")
 def post_balance_update(body: BalanceEditIn) -> dict:
-    """Edit an existing ``balance`` assertion in place, keeping one snapshot per logged date.
-
-    Re-logging the same date would stack a second assertion on it, so correcting a past month
-    rewrites its own line, located by the handle ``/api/networth`` reports for that date."""
+    """Rewrites the assertion's own line, since re-logging the date would stack a second one."""
     with api_errors():
         account, date, locator = sink().update_balance(body.locator, dec(body.amount))
         reconcile_sweeps(date)
@@ -90,11 +83,8 @@ def _snapshots(by_account: dict[str, LoggedBalance]) -> dict[str, dict]:
 
 @router.get("/api/networth")
 def get_networth_at(date: str) -> dict:
-    """Per-account USD values and adjustment-plug balances as of ``date``, plus what ``date``'s own
-    month already has logged. This is what lets the balance pane show a past month's own figures,
-    and offer the handle to correct them in place.
-
-    ``cards`` is what each card's bank app should read at the end of ``date``, as stored."""
+    """What the balance pane reads for a date, with handles to correct it in place. ``cards`` is
+    each card's expected bank-app figure at the end of ``date``, as stored."""
     as_of = parse_date(date)
     nw = ledger().net_worth
     month_assets, month_liabilities = nw.loggable_in_month(as_of)
@@ -106,10 +96,8 @@ def get_networth_at(date: str) -> dict:
         "adjustments": [
             {"account": a.account, "value": float(a.value)} for a in nw.adjustments(as_of)
         ],
-        # account -> its latest snapshot as of a reading at the end of ``date``, for accounts logged
-        # in that month, and the snapshot before it: what the pane shows for a past reading. A
-        # locator is present only where the snapshot can be rewritten; amounts are as stored, so a
-        # liability's is negative.
+        # Locators only where the snapshot can be rewritten; amounts as stored, so a liability's is
+        # negative.
         "standing": _snapshots(nw.standing_at(as_of)),
         "previous": _snapshots(nw.previous_at(as_of)),
         "cards": {

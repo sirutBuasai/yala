@@ -123,13 +123,8 @@
 		gap: var(--gap-row);
 		flex: 1 1 auto;
 	}
-	/* An equal share of the pane's height each, the fixed label line leaving the rest to the bar.
-
-	   The floor is load-bearing: `flex-basis: 0` alone has no intrinsic height, so in a container that
-	   states none — an overlay rather than a sized pane — every row collapsed onto the others. */
-	/* A basis of 0 resolves to no height at all where there is none to share out, and a folded card hugs its
-	   content — so rows claiming none measured zero and painted below the card's bottom edge. `min-content`
-	   is what makes the floor provably enough for whatever a row holds. */
+	/* Bug: a basis of 0 has no height where there is none to share, so rows collapsed in an overlay and painted
+	   past a folded card; the `min-content` floor holds whatever a row holds. */
 	.bul {
 		display: flex;
 		flex-direction: column;

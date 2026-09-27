@@ -13,10 +13,8 @@ interface Section {
 	edges: [number, number];
 }
 
-/**
- * Every section measured along the axis. The tracks are held at `min-content` for one synchronous read: a
- * section stretched by its track reports the span it HAS, not the span it would refuse to go below.
- */
+/** Tracks are held at `min-content` for one synchronous read: a stretched section reports the span it has,
+    not its floor. */
 function measure(sections: HTMLElement, axis: MergeAxis): Section[] {
 	// The KPI's own root, which is the only child a section is given.
 	const boxes = [...sections.children].map((s) => [s, s.firstElementChild!] as const);
@@ -52,12 +50,7 @@ function measure(sections: HTMLElement, axis: MergeAxis): Section[] {
 	return measured;
 }
 
-/**
- * The span each half of a split at `index` needs, in units. `span` is the merged card's own span along the
- * axis; the board's floor is `splitRects`' to apply.
- *
- * A section's track never goes below its floor, so a half's floor is its sections' floors added up.
- */
+/** In units; a half's floor is its sections' floors added up. `span` is the merged card's own span. */
 export function splitFloors(
 	sections: HTMLElement,
 	group: KpiGroup,

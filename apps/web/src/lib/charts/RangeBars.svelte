@@ -1,7 +1,5 @@
 <script lang="ts">
-	// Each row's level this period as a bar, with the range it usually falls in and its average drawn over
-	// it, then its total and its distance from that average. Every row shares one scale, so bar lengths
-	// compare across rows; the columns carry the exact figures a short bar cannot.
+	// One scale for every row, so bar lengths compare; the columns carry the exact figures a short bar cannot.
 	import { formatDelta, formatUnitExact, type Unit } from '$lib/data/primitives';
 	import { esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
@@ -116,9 +114,7 @@
 </div>
 
 <style>
-	/* One grid for every row, each row a subgrid of it, so the columns size to their widest figure and
-	   still line up down the chart; the lane takes what is left. Rows spread through the pane's height
-	   rather than stacking at the top. */
+	/* One grid, each row a subgrid of it, so the figure columns line up down the chart. */
 	.bars {
 		--lane-h: 14px;
 

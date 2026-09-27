@@ -1,8 +1,5 @@
-"""Shared test fixtures: a throwaway copy of the fixture ledger, and a client pointed at it.
-
-Every write test needs the same two things — a ledger it may corrupt and a config pointed at it — so
-they are declared once here rather than restated per module.
-"""
+"""A throwaway copy of the fixture ledger and a client pointed at it, which every write test
+needs."""
 
 from __future__ import annotations
 

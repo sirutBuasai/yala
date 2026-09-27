@@ -1,7 +1,4 @@
-// The board's vocabulary: what a view declares, what storage holds, what the resolver reads.
-//
-// Nothing here holds a resolved POSITION. Displacement is derived every render and never stored, so a
-// transient double mount cannot see its own twin as a clash and persist the escape it made from it.
+// No resolved positions: storing displacement let a transient double mount persist its escape from its twin.
 
 import type { FigureSpec } from './figure';
 
@@ -13,17 +10,10 @@ export interface Rect {
 	h: number;
 }
 
-/**
- * Who owns a pane's height: `fixed` the pane (content scrolls past the edge), `fit` the content
- * (unbounded, never scrolls), `cap` the content up to a ceiling the user drags.
- */
+/** Who owns the height: `fixed` the pane, `fit` the content, `cap` the content up to a dragged ceiling. */
 export type HeightMode = 'fixed' | 'fit' | 'cap';
 
-/**
- * What is inside a pane. Declared in code, not user-editable, because either wrong value breaks the
- * pane: a list told to `scale` clips with no scrollbar, and a chart told to `flow` collapses, since a
- * grid pane lifts the figure box's own height clamps.
- */
+/** Declared in code: a list told to `scale` clips with no scrollbar, and a chart told to `flow` collapses. */
 export type PaneContent = 'scale' | 'flow';
 
 /** One pane as a view declares it. */

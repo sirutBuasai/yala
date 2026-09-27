@@ -13,9 +13,8 @@
 
 <svelte:window bind:innerWidth={vw} bind:innerHeight={vh} />
 
-<!-- aria-hidden: a hover tooltip is a pointer affordance, and it stays in the DOM at opacity 0
-     between hovers — so without this a screen reader would read out whatever it last showed. The
-     same figures are reachable as text (legends, tables, list rows). -->
+<!-- aria-hidden: it stays in the DOM between hovers, so a screen reader would read what it last showed. The
+     same figures are reachable as text. -->
 <div
 	class="tooltip"
 	aria-hidden="true"

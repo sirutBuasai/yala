@@ -1,7 +1,4 @@
-// One panel drives every account edit, and which controls it shows comes from the kind table the API
-// sends. Renaming is not a mode here — a name is a field like any other — so the cases worth pinning
-// are the ones where one Save has to split into several writes: a rename confused with a short-form
-// edit, a contribution option renamed rather than replaced, and the order the writes go in.
+// Pins where one Save splits into several writes: rename versus alias, relabel versus replace, and order.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';

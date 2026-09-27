@@ -42,9 +42,8 @@
 		log?: boolean;
 		/** Label each line at its right end instead of using a legend. */
 		endLabels?: boolean;
-		/** Fix the value axis to end here instead of at the tallest reading, for a chart whose point is a
-		    level partway up. Lines running past it flatten against the top; tooltips still state the true
-		    figure. */
+		/** Fix the value axis to end here, for a chart whose point is a level partway up. Lines past it flatten;
+		    tooltips still state the true figure. */
 		ceiling?: number;
 		/** The points of the period in focus, shaded behind the lines. */
 		marked?: number[];
@@ -140,10 +139,8 @@
 		})
 	);
 
-	/**
-	 * Right-edge labels nudged apart: push each down to clear its predecessor, then if the stack overruns
-	 * the plot, pin the last and push back up, so every label lands on canvas.
-	 */
+	/** Right-edge labels nudged apart: each pushed below its predecessor, then back up from the last if the
+	    stack overruns, so every label lands on canvas. */
 	const GAP = 14;
 	const ends = $derived.by(() => {
 		if (!endLabels) return [];

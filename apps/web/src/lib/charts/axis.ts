@@ -19,20 +19,13 @@ export interface Margins {
 	l: number;
 }
 
-/**
- * The plot area inside a measured box, floored at zero on both axes. A pane can be shorter than a chart's
- * margins, and a negative height makes the browser reject the `<rect>` and inverts every d3 scale on it.
- */
+/** Floored at zero: a negative height makes the browser reject the `<rect>` and inverts every d3 scale. */
 export function plotSize(w: number, h: number, m: Margins): { iw: number; ih: number } {
 	return { iw: Math.max(0, w - m.l - m.r), ih: Math.max(0, h - m.t - m.b) };
 }
 
-/**
- * Zero-anchored linear value→pixel Y scale, plus its ticks. `ih` is the inner plot height in px.
- *
- * `cap` fixes the top of the domain exactly, skipping the outward rounding: for a frame chosen on purpose
- * `.nice()` rounded the ceiling up and left a dead band above the clipped lines.
- */
+/** Zero-anchored Y scale over `ih` px, plus its ticks. `cap` fixes the domain's top exactly, since `.nice()`
+    rounded a chosen ceiling up and left a dead band above the clipped lines. */
 export function moneyYScale(
 	values: number[],
 	ih: number,
@@ -88,11 +81,8 @@ export function logYScale(
 	return { y, ticks: ticks.sort((a, b) => a - b) };
 }
 
-/**
- * How a money axis labels itself, chosen from the ticks it is about to draw rather than fixed per chart, so a
- * chart never has to know which scale it is on. Zero is exempt and always exact: it sits on almost every money
- * axis, and requiring it to clear a thousand left every axis unabbreviated.
- */
+/** Chosen from the ticks about to be drawn, so a chart never needs to know its scale. Zero is always exact,
+    or no axis would ever abbreviate. */
 export function moneyAxisFormat(ticks: number[]): (v: number) => string {
 	const scaled = ticks.filter((t) => t !== 0);
 	const abbreviate = scaled.length > 0 && scaled.every((t) => Math.abs(t) >= 1000);
@@ -109,11 +99,8 @@ export function halfLabelWidth(text: string): number {
 	return (text.length * AXIS_GLYPH_W) / 2;
 }
 
-/**
- * How an x-label at `i` aligns to its point: centred, except at the ends, where it anchors inward. The last
- * tick sits ON the plot's edge and a chart's right margin is narrower than half a label; `svg.chart` does not
- * clip, so centred there it paints outside the card.
- */
+/** Centred, except at the ends, where it anchors inward: `svg.chart` does not clip, so a centred end label
+    paints outside the card. */
 export function labelAnchor(i: number, count: number): 'start' | 'middle' | 'end' {
 	if (count <= 1) return 'middle';
 	if (i === 0) return 'start';
@@ -189,14 +176,8 @@ function steppedYears(ticks: AxisTick[]): AxisTick[] | null {
 	return null;
 }
 
-/**
- * Every x-label at `xs`, placed so none overlaps another. Flat where each point's label fits. Where they
- * would crowd an axis spanning several years of `periods`, each year is named once, centred on its points,
- * which keep their own names on hover; on a crowded axis of years, every fifth year (or tenth, and so on)
- * is named, the rest kept on hover. Otherwise every label turns 45 degrees, or upright, with the room
- * below the plot grown to hold it. `anchored` is for a continuous axis, whose end labels anchor inward
- * (`labelAnchor`) and so reach a whole width into the plot.
- */
+/** Every x-label at `xs`, none overlapping: flat where they fit, else one name per year of `periods`, a
+    thinned run of years, or turned labels with the bottom margin grown. `anchored` anchors ends inward. */
 export function xAxisLabels(
 	xs: number[],
 	labels: string[],
@@ -234,10 +215,7 @@ export function focusPad(count: number, innerWidth: number): number {
 	return Math.min(48, count > 1 ? (innerWidth / (count - 1)) * 0.6 : 24);
 }
 
-/**
- * The positions `mark` names along an axis: those whose period falls within it, or, on an axis without
- * periods, the one it labels.
- */
+/** Positions whose period falls within `mark`, or on an axis without periods, the one it labels. */
 export function markedIndices(
 	labels: string[],
 	periods: string[] | undefined,

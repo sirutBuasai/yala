@@ -1,6 +1,5 @@
-// axe over every page, in both themes, over an open modal and over a board being arranged. WCAG A/AA is the bar the palette was
-// pitched against (see the contrast notes in app.css), and its colour rules are the ones a redesign is
-// most likely to break silently.
+// axe over every page in both themes, a modal and a board being arranged: colour rules are what a redesign
+// most likely breaks silently.
 
 import { expect } from '@playwright/test';
 import { openAdd, openApp, PAGE_LABELS, settle, showPage, test, violations } from './app';

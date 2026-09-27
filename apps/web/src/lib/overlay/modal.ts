@@ -1,9 +1,5 @@
-// Svelte action turning a `<dialog>` into the app's modal: open it in the top layer, put focus where it
-// belongs, and dismiss it on Esc or a press outside the panel.
-//
-// `showModal()` makes the rest of the document inert, restores focus to whatever opened the dialog, and gives
-// the scrim a `::backdrop`. Focus PLACEMENT stays ours: the first focusable is usually the dismiss button, and
-// opening a panel should not announce "close".
+// `showModal()` handles inertness, focus restoration and the `::backdrop`. Focus placement stays ours, since
+// the first focusable is usually the dismiss button.
 
 const FOCUSABLE =
 	'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -11,11 +7,8 @@ const FOCUSABLE =
 export interface ModalOptions {
 	/** Ask the host to unmount this dialog. Called once the closing transition has run. */
 	onclose: () => void;
-	/**
-	 * ms the closing transition needs, already through `dur()` so reduced motion collapses it. The dialog
-	 * stays open for this long wearing `.closing`, which is what lets `::backdrop` fade out — a
-	 * `::backdrop` belongs to an OPEN dialog, so closing first would make it vanish instantly.
-	 */
+	/** ms, through `dur()`. The dialog stays open wearing `.closing` this long, since `::backdrop` vanishes with
+	    an open dialog. */
 	closeMs?: number;
 }
 

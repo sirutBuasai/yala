@@ -1,6 +1,4 @@
-// How much room the sidebar takes: all of it while a full board still fits beside
-// it, an icon rail while only the rail does, and the hamburger sheet once even the rail would fold the
-// board to one column.
+// Full while a full board fits beside it, a rail while only the rail does, else the hamburger sheet.
 
 import { CONTENT, ONE_COLUMN, WRAP_PAD } from '$lib/layout/grid/units';
 

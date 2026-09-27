@@ -3,10 +3,7 @@
 
 import { UNMEASURED } from '$lib/charts/axis';
 
-/**
- * Bind `w` and `h` to a `.figurebox`'s client size. Both read as `UNMEASURED` until the box has been
- * measured, so a container reporting zero never produces a degenerate viewBox.
- */
+/** `UNMEASURED` until measured, so a box reporting zero never produces a degenerate viewBox. */
 export class ChartBox {
 	/** Raw measurements; bind these, read `w` / `h`. */
 	clientWidth = $state(0);

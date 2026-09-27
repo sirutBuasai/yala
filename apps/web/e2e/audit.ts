@@ -20,14 +20,8 @@ export interface Audit {
 	overlap: { a: string; b: string }[];
 }
 
-/**
- * Every way a card can fail to contain what it holds: ink outside its box, a label cut off by its line
- * budget (which the bleed probe cannot see, since that budget clips), and two cards drawn over each other,
- * which the grid's push rule forbids.
- *
- * A box only counts as bleeding if NOTHING between it and the card clips; without that, every legitimate
- * `.scroller-x` reads as one.
- */
+/** Ink outside its box, a label cut by its line budget, or overlapping cards. A box bleeds only if nothing
+    between it and the card clips, or every `.scroller-x` would count. */
 export function auditPage(tolerance = 2): Audit {
 	const describe = (el: Element): string => {
 		const cls =

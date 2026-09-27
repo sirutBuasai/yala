@@ -1,6 +1,4 @@
-// One board's state: the authored panes, the measurements a fitted pane needs, and the resolved
-// placement derived from both. Runes only, no DOM. What persists is the authored pane plus the array's
-// order, which is the priority order the resolver breaks ties with; displacement is never written.
+// Runes only, no DOM. Only authored panes persist, in priority order; displacement is never written.
 
 import { Pref, listOf, type Revive } from '$lib/utils/persist.svelte';
 import { assertNoOverlap, clampRect, resolve, boardRows } from './resolve';
@@ -59,10 +57,8 @@ export class Arrangement {
 
 	/** Card heights in px, reported by fitted panes. */
 	#measured = $state<Record<string, number>>({});
-	/** The pane whose label is being typed into, with the size it had when the edit opened. While this
-	    holds, that pane's floor follows the text BOTH ways but never below `base` — so a title typed too
-	    long and then shortened again leaves the pane exactly where it started. Only an open edit is
-	    provisional like this; growth that has settled is written to the pane itself. */
+	/** While a label is typed, that pane's floor follows the text both ways but never below `base`, so an edit
+	    typed long then shortened leaves the pane where it started. */
 	#draft = $state<{ id: string; base: ContentFloor; floor: ContentFloor } | null>(null);
 	/** Authored panes in priority order. Mutated live during a gesture; flushed on release. */
 	#panes = $state<AuthoredPane[]>([]);
@@ -154,12 +150,8 @@ export class Arrangement {
 		this.#measured = { ...this.#measured, [id]: px };
 	}
 
-	/**
-	 * Give `id` the room its content turned out to need. Written to the pane itself rather than held beside
-	 * it: everything else — a resize gesture, a merge, a split — reads the authored rectangle, and a pane
-	 * that rendered bigger than it was authored snapped back to the smaller size the moment one of them
-	 * touched it. Grows only, so the room is given up by hand and never behind the user's back.
-	 */
+	/** Written to the authored pane: held beside it, the next gesture snapped the pane back smaller. Grows only,
+	    so room is given back by hand. */
 	grow(id: string, w: number, h: number): void {
 		const at = this.authored(id);
 		if (w <= at.w && h <= at.h) return;
@@ -223,12 +215,8 @@ export class Arrangement {
 		this.#panes = lift(id, x, y, origin);
 	}
 
-	/**
-	 * At a resize's press: `id` and every pane drawn below it take the top they are drawn at. Panes settle in
-	 * authored order, and a pane pushed down keeps its authored top above where it is drawn, so growing into
-	 * it made the growing pane jump below it instead of pushing it down. Rebased, the order they settle in is
-	 * the order they are seen in. Panes above are left alone, so their pushes stay transient.
-	 */
+	/** Rebases `id` and panes below to their drawn tops at a resize's press: an authored top above the drawn one
+	    made the growing pane jump below instead of pushing. Panes above keep transient pushes. */
 	rebase(id: string): void {
 		const top = this.placed(id).y;
 		this.#panes = this.#panes.map((p) => {
@@ -254,12 +242,8 @@ export class Arrangement {
 		this.#update(id, (p) => ({ ...p, ...clamped }));
 	}
 
-	/**
-	 * Force rectangles onto panes, adding any this board's storage predates. Merging changes which panes a
-	 * board has, so both halves of a split need a rectangle written before the board is rebuilt around the
-	 * new set — otherwise the half that is new to storage falls back to its declared default and lands on
-	 * top of the other.
-	 */
+	/** Adds panes storage predates: without it, the new half of a split falls back to its default and lands on
+	    the other. */
 	seed(rects: Record<string, Rect>): void {
 		const pending = new Map(Object.entries(rects));
 		const kept = this.#panes.map((p) => {

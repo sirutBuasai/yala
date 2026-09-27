@@ -1,9 +1,4 @@
-"""Account-path syntax: reading a path apart, with no opinion on what the account means.
-
-Kept separate from :mod:`yala.ledger.constants` (which names the subtrees) and from
-:mod:`yala.ledger.accounts` (which decides what each subtree *is*), so the syntax has one home and
-nothing has to import a policy module to split a name.
-"""
+"""Path syntax only, so splitting a name needs no policy module."""
 
 from __future__ import annotations
 

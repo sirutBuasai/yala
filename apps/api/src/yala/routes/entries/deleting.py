@@ -1,8 +1,4 @@
-"""Deleting a located entry, whichever of the three kinds it is.
-
-One endpoint rather than three: a locator names an entry without saying what shape it has, and the
-removal is the same either way.
-"""
+"""One endpoint for every kind: a locator doesn't say its entry's shape, and removal is the same."""
 
 from __future__ import annotations
 

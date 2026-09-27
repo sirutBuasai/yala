@@ -26,10 +26,7 @@ function rows(data: DashboardData, keep: (t: Txn) => boolean, monthKey?: string)
 		.sort((a, b) => b.date.localeCompare(a.date));
 }
 
-/**
- * Pending (unreconciled) transactions as `TxnRow`s, newest first. Scope to one month with `monthKey`
- * ("YYYY-MM"), or omit for all months.
- */
+/** Newest first; `monthKey` scopes to one month, else all. */
 export function pendingRows(data: DashboardData, monthKey?: string): TxnRow[] {
 	return rows(data, (t) => t.pending, monthKey);
 }

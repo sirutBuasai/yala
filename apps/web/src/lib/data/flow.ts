@@ -1,7 +1,5 @@
-// Money-flow primitive: gross → deductions / contributions + take-home → spending categories + savings.
-// Totals come from the scope's rollup, but the split into named buckets exists only per-paycheck, so
-// paycheck proportions are scaled onto the rollup totals — keeping the diagram reconciled with the KPIs
-// even when paychecks are sparse.
+// Named buckets exist only per paycheck, so paycheck proportions are scaled onto the scope's totals to keep
+// the diagram reconciled with the KPIs.
 
 import type { DashboardData } from '$lib/data/types';
 import type { Flow, FlowLink, FlowNode } from './primitives';

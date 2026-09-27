@@ -1,7 +1,6 @@
 <script lang="ts">
-	// Heatmap over a grid of tiles (see `heat.ts`): a real table, so the axes are headers a screen reader can
-	// announce. It scales rather than scrolls: columns divide the pane's width and type is sized off the row
-	// height.
+	// A real table, so a screen reader announces the axes. It scales rather than scrolls: columns divide the
+	// pane's width and type is sized off the row height.
 	import { esc } from '$lib/utils/format';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import { chartLabel } from '$lib/charts/aria';
@@ -161,9 +160,7 @@
 		text-align: center;
 		white-space: nowrap;
 	}
-	/* A figure is clipped rather than laid over its neighbour, and its compact reading's clip is what the
-	   pane reads as its floor (see `Reading`): the columns divide the pane, so they would otherwise narrow
-	   past their values. */
+	/* Clipped, not laid over its neighbour; the compact reading's clip is the pane's floor (see `Reading`). */
 	.cell,
 	td.sum {
 		white-space: nowrap;

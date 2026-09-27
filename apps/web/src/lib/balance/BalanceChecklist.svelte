@@ -1,7 +1,6 @@
 <script lang="ts">
-	// Every loggable account on one screen, so a month's snapshot is one pass down the Balance column.
-	// A row that can't be saved blocks (see `blockReason`); "Save" commits the rest and says what it
-	// skipped.
+	// Every loggable account on one screen. A row that can't be saved blocks (see `blockReason`); Save
+	// commits the rest and says what it skipped.
 	import type { DashboardData } from '$lib/data/types';
 	import { NO_VALUE } from '$lib/copy';
 	import {
@@ -71,9 +70,8 @@
 	/** The month the reading's snapshot lands in, "YYYY-MM". */
 	const readingMonth = $derived(snapshotDate.slice(0, 7));
 
-	// Three dated reads: the reading's month, for its roster; the end of the reading day, for where
-	// each account stands and stood before; and the day before it, whose adjustment difference
-	// isolates a snapshot already standing on the reading.
+	// The reading's month gives the roster, the reading day's end gives standing and previous, and the day
+	// before isolates a snapshot already standing on the reading.
 	let atRead = $state<Map<string, number>>(new Map());
 	let adjRead = $state<Map<string, number>>(new Map());
 	let adjBefore = $state<Map<string, number>>(new Map());
@@ -160,19 +158,10 @@
 		return signedForLedger(row, n);
 	}
 
-	/**
-	 * The figure a row stands at: what was typed, else what the month already asserts. This is what
-	 * makes a logged month read as done — the field is empty, but the balance is not unknown.
-	 */
+	/** What was typed, else what the month already asserts, so a logged month reads as done. */
 	const standing = (row: Row) => parsed(row) ?? onRecord(row.account);
 
-	// The figure COLUMNS stay in the ledger's sign; only the entry field and its ghost invert (see
-	// `asTyped`). The two conventions differ on purpose: a row is read across, but typed into once.
-
-	/**
-	 * Where a typed figure goes: over the snapshot already standing on the reading, else a new one.
-	 * Null when that snapshot is share-based, which is refused rather than rewritten.
-	 */
+	/** Over the snapshot standing on the reading, else a new one. Null when that snapshot is share-based. */
 	function target(row: Row): { locator: string } | { date: string } | null {
 		if (!loggedOnReading(row.account)) return { date: snapshotDate };
 		const locator = standingAt.get(row.account)?.locator;
@@ -188,11 +177,7 @@
 		blockReason(row, parsed(row), expected(row), target(row) != null, mustAgree(row));
 	const blockedRow = (row: Row) => whyBlocked(row) !== null;
 
-	/**
-	 * Why a row can't be saved, phrased to FOLLOW the account name: the footer note puts the name in
-	 * bold ahead of it, the row's own badge repeats the name inline. One source for the wording, so the
-	 * two can't drift apart.
-	 */
+	/** Phrased to follow the account name, since both the footer note and the row badge lead with it. */
 	function blockedPredicate(row: Row): string {
 		const why = whyBlocked(row);
 		if (why === 'share-snapshot') {
@@ -481,9 +466,7 @@
 		color: var(--ink-3);
 		font-weight: var(--fw-semibold);
 	}
-	/* A column title sits over its own figures, so only the text columns are left-aligned and `.num`
-	   governs the rest. Stated as `:not(.num)` because a bare `th` rule outranks `.num` and silently
-	   left-aligned every numeric header. */
+	/* `:not(.num)`: a bare `th` rule outranks `.num` and left-aligned every numeric header. */
 	.bal thead th:not(.num) {
 		text-align: left;
 	}
@@ -521,15 +504,12 @@
 	.pos {
 		color: var(--good-text);
 	}
-	/* Bug: `display: flex` on the CELL takes it out of the table's row-height alignment, so its
-	   background hugged the name while the taller entry cell beside it filled the row and the hover
-	   highlight stepped mid-row. The cell stays a table-cell; the wrapper does the laying out. */
+	/* Bug: `display: flex` on the cell broke row-height alignment and the hover stepped mid-row, so the
+	   wrapper lays out instead. */
 	.nm {
 		font-size: var(--text-control);
 	}
-	/* `min-width: 0` is what lets the label ellipsis: it drops the wrapper's min-content width to
-	   zero, which is the cell's contribution to the column and so the only thing the table would
-	   otherwise refuse to shrink past. */
+	/* Lets the label ellipsis: the wrapper's min-content width is what the table refuses to shrink past. */
 	.who {
 		display: flex;
 		align-items: center;
@@ -561,13 +541,8 @@
 		flex-direction: column;
 		gap: var(--gap-row);
 	}
-	/* The sheet's own header, not a box above it: the figures sit on one bled row that ends on the
-	   same hairline the group rows use, so the tally joins the table's rhythm instead of starting a
-	   second one. Boxed cells read as a spreadsheet header, which is the one thing this pane must not
-	   look like. Flex, not a track grid — a `1fr` track can't go below its content's min-width, so the
-	   figures overflowed the card when narrow, and wrapping reflows them instead.
-	   `margin-block`, not the `margin` shorthand: the inline halves belong to `.bleed-x`, and the
-	   shorthand outranks it from inside a component and would undo the bleed. */
+	/* Flex, not a track grid: a `1fr` track can't go below its content, so the figures overflowed when narrow.
+	   `margin-block`, since the shorthand would outrank `.bleed-x` and undo the bleed. */
 	.agg {
 		display: flex;
 		flex-wrap: wrap;
@@ -602,9 +577,7 @@
 		line-height: normal;
 		color: var(--ink-2);
 	}
-	/* The figure the other two exist to produce: pushed to the far edge and the only one at full
-	   weight. `margin-inline-start: auto` rather than `space-between`, which floated Liabilities out
-	   into the empty middle of the account column. */
+	/* `margin-inline-start: auto`, not `space-between`, which floated Liabilities into the middle. */
 	.agg .sum {
 		margin-inline-start: auto;
 	}

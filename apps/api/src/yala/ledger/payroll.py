@@ -1,14 +1,5 @@
-"""Payroll option resolution, shared by read (income), write (sink), and the accounts API.
-
-Options are derived from account metadata so beancount stays the source of truth:
-
-* employers     — the leaf of an ``Income:Salary:*`` account.
-* deductions    — every ``Expenses:Deductions:*`` account, labelled by its leaf. Its ``employer``
-  meta scopes it to one employer; without one it is offered by every employer.
-* contributions — an ``Assets:Investments:*`` account carrying an ``employer`` meta, whose presence
-  *is* the payroll-contributable marker. Its comma-separated ``labels`` meta lists the line items it
-  offers.
-"""
+"""Payroll options from account metadata. A contribution is an ``Assets:Investments:*`` account with
+an ``employer`` meta, whose ``labels`` list its line items."""
 
 from __future__ import annotations
 
@@ -60,11 +51,8 @@ def contribution_label(meta: dict, account: str, label: str | None = None) -> st
 
 
 def options(ledger: "Ledger") -> list[PayrollOption]:
-    """Every payroll deduction/contribution option on offer, across all employers (filter by one).
-
-    An option scoped to an employer who has been closed is dropped: no paycheck can be written
-    against that employer, so offering its line items would be offering something unusable.
-    """
+    """Options scoped to a closed employer are dropped, since no paycheck can be written against
+    it."""
     meta = ledger.account_meta()
     active_employers = set(employers(ledger))
     out: list[PayrollOption] = []
@@ -97,10 +85,8 @@ def resolve(ledger: "Ledger", kind: str, label: str, employer: str) -> PayrollOp
 
 @dataclass
 class PaycheckSummary:
-    """A paycheck's postings classified for display/editing.
-
-    ``other`` holds the postings outside Income/Deductions/Investments — the deposit candidates.
-    """
+    """``other`` holds postings outside Income, Deductions and Investments: the deposit
+    candidates."""
 
     gross: Decimal
     employer: str | None
@@ -110,11 +96,8 @@ class PaycheckSummary:
 
 
 def summarize_paycheck(legs: Iterable[Leg], account_meta: dict[str, dict]) -> PaycheckSummary:
-    """Classify paycheck ``legs`` into gross, employer, and deduction/contribution maps.
-
-    Contributions are keyed by display label and same-label legs sum, so a split reads back as one
-    total per line item.
-    """
+    """Contributions are keyed by display label with same-label legs summed, so a split reads back
+    as one line item."""
     gross = Decimal(0)
     employer: str | None = None
     deductions: dict[str, Decimal] = defaultdict(lambda: Decimal(0))

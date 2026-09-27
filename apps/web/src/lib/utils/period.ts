@@ -51,10 +51,7 @@ export function addMonths(key: string, delta: number): string {
 	return monthKey(d.getFullYear(), d.getMonth() + 1);
 }
 
-/**
- * Every month with data, one empty month past the latest so you can step into an unpopulated month,
- * and `current` so a navigated-to month is always representable. Ascending and de-duped.
- */
+/** Ascending and de-duped, with one empty month past the latest to step into and `current` always present. */
 export function pickableMonths(monthKeys: string[], current: string): string[] {
 	const sorted = [...monthKeys].sort();
 	const latest = sorted[sorted.length - 1] ?? '';

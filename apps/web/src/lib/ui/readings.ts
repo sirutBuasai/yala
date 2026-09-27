@@ -9,10 +9,7 @@ export function fittest(items: { widths: number[]; room: number }[]): number {
 	}, 0);
 }
 
-/**
- * Every `Reading` inside `node`, measured whenever `node` resizes; `onlevel` gets the level each group of them
- * shares, by the group they name ('' for none).
- */
+/** `onlevel` gets the level each named group shares ('' for none), remeasured on resize. */
 export function fitReadings(node: HTMLElement, onlevel: (levels: Record<string, number>) => void) {
 	const measure = () => {
 		const groups: Record<string, { widths: number[]; room: number }[]> = {};

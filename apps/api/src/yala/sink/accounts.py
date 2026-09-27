@@ -1,8 +1,5 @@
-"""Writing the account directives: declaring an account, closing it, and editing its metadata.
-
-Plus the user settings, which are ``custom`` directives rather than accounts but are written the
-same way: appended, dated, superseding rather than replacing.
-"""
+"""Account directives, plus settings, which are written the same way: appended, dated,
+superseding."""
 
 from __future__ import annotations
 
@@ -49,9 +46,7 @@ class AccountWrites(LedgerWriter):
         currency: str = DEFAULT_CURRENCY,
         date: dt.date | None = None,
     ) -> None:
-        """Write a bare ``balance`` assertion into the dated balance file for the account's side of
-        the sheet. An assertion is a snapshot, so it belongs with the others rather than beside the
-        ``open`` that prompted it."""
+        """Filed with the other snapshots, not beside the ``open`` that prompted it."""
         date = date or dt.date.today()
         self._insert(
             directives.balance_subdir(account),
@@ -80,13 +75,8 @@ class AccountWrites(LedgerWriter):
         self.set_metas({account: values})
 
     def set_metas(self, edits: Mapping[str, Mapping[str, str | None]]) -> None:
-        """Set or remove meta keys on several accounts' ``open`` directives as one commit; a
-        ``None`` value removes its key. Raises ``KeyError`` for an unknown account.
-
-        One write for the whole set: a value belonging to the institution rather than to one account
-        is set on every account held there, and committing one at a time would leave a half-applied
-        cascade behind on a rejected value.
-        """
+        """One commit for the set, ``None`` removing a key, so a rejected institution cascade never
+        half-applies. Raises ``KeyError`` for an unknown account."""
         wanted = {account: values for account, values in edits.items() if values}
         if not wanted:
             return
@@ -114,12 +104,8 @@ class AccountWrites(LedgerWriter):
         self.rewrite_files(changes)
 
     def set_setting(self, key: str, value: object, date: dt.date | None = None) -> Decimal:
-        """Set a user setting as a dated ``custom`` directive and return the stored value. Raises
-        ``KeyError`` for an unknown key, ``ValueError`` for an out-of-range value.
-
-        A directive already dated ``date`` for this key is rewritten in place; otherwise a new one
-        is appended, so a later change supersedes rather than erases.
-        """
+        """Rewrites a directive already dated ``date``, else appends, so changes supersede. Raises
+        ``KeyError`` or ``ValueError``."""
         spec = SETTINGS_BY_KEY.get(key)
         if spec is None:
             raise KeyError(key)

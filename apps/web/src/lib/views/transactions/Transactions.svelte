@@ -1,7 +1,5 @@
 <script lang="ts">
-	// Transactions: log a month and check it as you go. The layout
-	// here is the user's own arrangement adopted as the default; a later rearrangement is stored under
-	// this board's key.
+	// The default layout is the user's own arrangement; a rearrangement is stored under this board's key.
 	import { page } from '$app/stores';
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
@@ -184,10 +182,7 @@
 	}
 	const addTitle = $derived(addDate ? `Add entry · ${dateShort(addDate)}` : 'Add entry');
 
-	/**
-	 * A Category by month row is a month of the focus year: picking it opens that month with the history
-	 * unfiltered. A cell also names a category, which becomes the history's only filter.
-	 */
+	/** A row opens its month unfiltered; a cell also filters the history to its category. */
 	function pickMonth(row: string, category: string | null) {
 		const m = MONTHS.indexOf(row);
 		if (m < 0) return;

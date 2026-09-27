@@ -33,10 +33,7 @@ export interface Unlogged {
 const at = (path: string, params: Record<string, string>) =>
 	`${path}?${new URLSearchParams(params)}`;
 
-/**
- * Pending rows from any month, then the month's unlogged balances, then every category spending past the
- * highest of its prior months, furthest past first. `label` names an account for display.
- */
+/** Pending rows, then unlogged balances, then categories past their prior monthly high, furthest first. */
 export function attentionItems(
 	data: DashboardData,
 	monthKey: string,

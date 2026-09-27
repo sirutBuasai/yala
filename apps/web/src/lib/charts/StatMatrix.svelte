@@ -1,7 +1,5 @@
 <script lang="ts">
-	// A grid of figures where rows and columns both carry meaning: as loose tiles that structure is invisible
-	// and costs a row of height. A cell's number is a plain level and never coloured; a period-over-period
-	// change rides along as a badge, which is where the colour goes.
+	// A cell's number is a plain level and never coloured; a period-over-period change rides along as a badge.
 	import type { DashboardData } from '$lib/data/types';
 	import { NO_VALUE } from '$lib/copy';
 	import type { StatRow } from '$lib/charts/statMatrix';
@@ -125,9 +123,7 @@
 		color: var(--ink-3);
 		font-size: var(--text-caption);
 	}
-	/* Never wrapped: overflowing is what makes the grid refuse the resize, where reflowing would let the
-	   pane go on narrowing while the table quietly degraded. */
-	/* The whole cell's width, so the figure's reading has the room the column gives it (see `Reading`). */
+	/* Never wrapped: overflowing makes the grid refuse a resize, where reflowing would degrade quietly. */
 	.figure {
 		display: flex;
 		align-items: baseline;

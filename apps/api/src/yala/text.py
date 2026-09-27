@@ -1,9 +1,6 @@
-"""Free-text hygiene for anything that reaches a ledger file.
-
-The ledger is line-based and beancount accepts a raw newline inside a quoted string, so a control
-character in a payee or a metadata value parses clean and corrupts the file's shape. Requests are
-collapsed on the way in; the sink refuses anything that got past that.
-"""
+"""Beancount accepts raw newlines in quoted strings, so control characters would corrupt the
+line-based file. Requests are collapsed on the way in, and the sink refuses anything that slips
+past."""
 
 from __future__ import annotations
 

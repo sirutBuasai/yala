@@ -96,9 +96,7 @@
 		<button class="btn-ghost" onclick={onadd}>+ Add</button>
 	{/snippet}
 
-	<!-- Filters, summary, search and sort, pinned while the list scrolls under them. Bled to the card's edges
-	     so the background covers the rows sliding beneath, and padded back so the controls line up with the
-	     content. -->
+	<!-- Pinned while the list scrolls, bled to the card's edges so rows don't show through, then padded back. -->
 	<div class="pinned bleed-x">
 		<div class="filters">
 			<Segmented

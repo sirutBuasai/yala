@@ -1,8 +1,5 @@
-"""What every account route needs: the kind an account belongs to, and the checks they all repeat.
-
-Kept apart from :mod:`yala.routes.common`, which every route family shares, so an account-specific
-rule has one home without leaking into the transaction or settings routes.
-"""
+"""Account-route rules, apart from :mod:`yala.routes.common` so they don't leak into other
+routes."""
 
 from __future__ import annotations
 
@@ -43,22 +40,14 @@ ALIAS_FIELDS = tuple(part.field for part in NAME_PARTS if not part.names)
 
 
 def carries(kind: Kind, field: str) -> bool:
-    """Whether ``kind`` has the naming field ``field`` to give.
-
-    A cash account is named by its institution alone, there being one per bank, so it has no product
-    half to name or to shorten.
-    """
+    """A cash account is named by its institution alone, so it has no product half."""
     part = PART_BY_FIELD[field]
 
     return kind.named and (kind.product or not part.product)
 
 
 def require_applies(kind: Kind, field: str, applies: bool) -> None:
-    """Refuse a field ``kind`` has no room for.
-
-    Sent anyway it is worth naming rather than dropping. One wording for every such field, so a form
-    can match on it.
-    """
+    """Named rather than dropped, in one wording a form can match on."""
     if not applies:
         raise invalid(f"{field} does not apply to a {kind.name} account")
 
@@ -96,9 +85,8 @@ def require_closed(led: Ledger, account: str) -> None:
 
 
 def open_destination(led: Ledger, dest: str, account: str) -> str:
-    """``dest`` as a distinct, currently-open asset/liability target for ``account``: the shared
-    check for every operation that moves a balance elsewhere.
-    """
+    """The shared check for every operation moving a balance: distinct, open, and on the balance
+    sheet."""
     valid_money_account(dest)
     if dest == account:
         raise invalid("destination must differ from the account")
@@ -108,11 +96,7 @@ def open_destination(led: Ledger, dest: str, account: str) -> str:
 
 
 def reject_referrers(led: Ledger, account: str) -> None:
-    """Refuse to close an account others sweep into, naming them so they can be repointed.
-
-    Left alone each referrer would sweep into a closed account, which reconcile can only skip,
-    leaving the passthrough quietly holding a balance that belongs elsewhere.
-    """
+    """Named so they can be repointed; reconcile would skip them, leaving balances stranded."""
     referrers = sweep_referrers(led, account)
     if referrers:
         raise invalid(

@@ -10,11 +10,8 @@
 </script>
 
 <script lang="ts">
-	// A plan's milestones on one rail from this year to the horizon, coloured by the phases between them.
-	// Three rows, laid out by CSS alone: the labels, the rail, the phase names. The rail's row is the one that
-	// gives and takes height, between a thinnest and a thickest rail, so the pane's height moves the rail and
-	// nothing else. Labels that would collide merge into one (`groupLabels`), so there is always one row of
-	// them, measured from their text rather than from a render.
+	// Labels, rail and phase names in three CSS rows; only the rail's row takes the pane's height. Colliding
+	// labels merge (`groupLabels`), measured from their text rather than a render.
 	import type { Milestone, Phase } from '$lib/data/projection';
 	import {
 		barRange,
@@ -152,11 +149,8 @@
 </div>
 
 <style>
-	/* Explicit row heights, from the text's own sizes: a flexible row in a grid of unknown height is sized
-	   at its most, which made the pane's floor always hold the thickest rail. With the text rows fixed, the
-	   rail's row alone takes what the pane gives, from its least up to its most (`barRange`). The limits and
-	   the rail come in as plain lengths: dividing a length by a length is CSS Firefox rejects, and it threw
-	   away the whole row definition, rail and all. */
+	/* Bug: a flexible row in a grid of unknown height sizes at its most, pinning the floor at the thickest rail.
+	   Lengths come in precomputed: Firefox rejects length-by-length division and drops the whole definition. */
 	.timeline {
 		--line: 1.3;
 		--labels-h: calc((2 * var(--text-caption) + var(--text-control)) * var(--line));
@@ -176,9 +170,7 @@
 		position: relative;
 		min-width: 0;
 	}
-	/* Clipped across: labels regroup a frame after the width changes, so while a resize tries a narrower
-	   width they still sit where the last width put them, and left visible they read as a spill that held
-	   the resize to one grid step at a time. The row's floor (`least`) is what stops it narrowing too far. */
+	/* Labels regroup a frame after a resize, so visible they read as a spill and stalled the resize. */
 	.labels {
 		overflow: hidden;
 	}

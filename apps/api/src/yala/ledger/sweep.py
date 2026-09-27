@@ -1,10 +1,5 @@
-"""Auto-maintained passthrough sweeps.
-
-A passthrough declares a ``sweep_to`` destination on its ``open`` and holds no money of its own: a
-monthly transfer keeps it at zero. Sweeps chain transitively, so the transfer routes to the terminal
-(the first account with no ``sweep_to``) and bypasses intermediates. Reconciling runs on every write
-and is safe to repeat, since a sweep's own legs are excluded from the net it is computed from.
-"""
+"""A passthrough's ``sweep_to`` keeps it at zero via a monthly transfer to the chain's terminal.
+Reconciling is idempotent, since a sweep's own legs are excluded from its net."""
 
 from __future__ import annotations
 
@@ -33,11 +28,7 @@ def sweep_payee(source: str) -> str:
 
 
 def sweep_edges(ledger: Ledger) -> dict[str, str]:
-    """Each passthrough's immediate destination, read from its ``sweep_to`` open-meta.
-
-    The one reader of that meta across the app: reconciliation follows these edges, the cycle check
-    validates a candidate against them, and the contract ships them as-is.
-    """
+    """The one reader of ``sweep_to``, for reconciliation, the cycle check and the contract."""
     meta = ledger.account_meta()
     edges = {a: sweep_destination(m) for a, m in meta.items()}
     return {a: dest for a, dest in edges.items() if dest is not None}
@@ -74,11 +65,8 @@ def is_sweep(accounts: list[str], ledger: Ledger) -> bool:
 def _sweeps_in(
     ledger: Ledger, source: str, terminal: str, year: int, month: int
 ) -> list["Transfer"]:
-    """The month's sweeps for one passthrough: the entries reconcile owns, and may rewrite or drop.
-
-    Matched on the payee as well as the pair of accounts. On the pair alone, a hand-entered transfer
-    between a passthrough and its destination reads as the sweep and is silently deleted.
-    """
+    """Matched on payee too: on the account pair alone, a hand-entered transfer was deleted as a
+    sweep."""
     pair = {source, terminal}
     payee = sweep_payee(source)
     return [

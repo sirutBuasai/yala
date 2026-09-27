@@ -1,8 +1,4 @@
-"""Read-side projections: a raw beancount entry → the editable-state dict a GET endpoint returns.
-
-Each function shapes one located entry (spending transaction, paycheck, or transfer) for the edit
-forms, and refuses one that doesn't match the expected shape.
-"""
+"""A located entry shaped into the edit form's state, refusing one of the wrong shape."""
 
 from __future__ import annotations
 
@@ -68,11 +64,8 @@ def txn_state(entry: data.Transaction) -> dict:
 
 
 def paycheck_state(entry: data.Transaction, account_meta: dict[str, dict]) -> dict:
-    """Editable state of one paycheck: employer, gross, deposit, deduction/contribution maps.
-
-    Contributions are keyed by display label, matching the options the form offers, so an edit
-    round-trips.
-    """
+    """Contributions are keyed by display label, matching the form's options, so an edit
+    round-trips."""
     if not any(p.account.startswith(INCOME) for p in entry.postings):
         raise invalid("not a paycheck")
 

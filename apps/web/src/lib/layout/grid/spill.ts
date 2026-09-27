@@ -1,13 +1,7 @@
-// Has this pane's content outgrown the box it was given, and by how much? Measured at the candidate size
-// rather than predicted, because a minimum is a frontier `h >= f(w)`: a chart may need more height when
-// narrow. Only an axis whose overflow is `visible` counts; anything else already decided what happens past
-// the edge.
+// Measured at the candidate size, not predicted: a minimum is a frontier where a chart may need more height
+// when narrow. Only a `visible` overflow axis counts.
 
-/**
- * Tolerance, so a layout artefact never reads as a spill: scroll and client sizes round independently
- * from fractional boxes. A real spill is an order of magnitude larger, and content whose ink can exceed
- * its own box must not lean on this (see `Kpi.svelte`).
- */
+/** Scroll and client sizes round independently. Content whose ink exceeds its box must not lean on this. */
 export const SLACK = 2;
 
 /** px the content overruns `el` on one axis; 0 when it fits, or when the box handles the overrun itself. */
@@ -33,14 +27,8 @@ export interface Overrun {
 	y: number;
 }
 
-/**
- * The worst overrun across every box worth probing. Children and body are probed for height too: a
- * size-container wrapper computes its own box regardless of contents, so a spill inside one never reaches the
- * card's scroll height.
- *
- * Width is limited to the card and `MEASURED` boxes: a list row bleeds at every width, so counting that left
- * the pane impossible to narrow — a row measures its own grid tracks instead.
- */
+/** Children are probed for height, since a size container's spill never reaches the card. Width only on the
+    card and `MEASURED` boxes, since a list row bleeds at every width. */
 export function overrun(card: HTMLElement, body?: HTMLElement): Overrun {
 	let x = overflowPx(card, 'x');
 	let y = overflowPx(card, 'y');

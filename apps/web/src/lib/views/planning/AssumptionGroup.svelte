@@ -69,9 +69,8 @@
 
 	const depletion = $derived(depletionYear(data, preview));
 
-	/** The depletion clause is driven by the projection, not by the withdrawal rate against the return:
-	    comparing those two only describes a portfolio sitting exactly AT the FI number, so on its own it
-	    claimed a balance could not last while the chart correctly drew it rising for ever. */
+	/** Driven by the projection: rate against return only describes a portfolio exactly at the FI number, and
+	    claimed a rising balance couldn't last. */
 	const standing = $derived.by(() => {
 		const at = balanceAtRetirement(data, preview);
 		const target = fiNumber(data, preview).value;

@@ -1,6 +1,4 @@
-// The gesture, driven with a fake arrangement and a scripted content. This is where the awkward cases
-// live — a floor, a path that used to move it, a capped pane's bottom edge — and none of them need a
-// browser, because the gesture is handed its answers rather than reading them off the DOM.
+// The gesture is handed its answers rather than reading the DOM, so these awkward cases need no browser.
 
 import { describe, expect, it } from 'vitest';
 import { PaneGesture, type GestureTarget } from '$lib/layout/grid/gesture.svelte';
@@ -23,11 +21,7 @@ interface Fake extends GestureTarget {
 	drags: { x: number; y: number }[];
 }
 
-/**
- * A board with two panes, the one under test SECOND so its promotion is visible. `dragTo` and
- * `resizeTo` reuse the same pure rules as `Arrangement`, so what the test pins down is the gesture.
- * Every pane carries the same `offset`, which is enough to exercise the displacement round-trip.
- */
+/** The pane under test comes second, so its promotion is visible. */
 function fake(over: Partial<AuthoredPane> = {}, offset = 0): Fake {
 	const patch = (id: string, next: (i: AuthoredPane) => AuthoredPane) => {
 		self.panes = self.panes.map((i) => (i.id === id ? next(i) : i));
@@ -83,11 +77,7 @@ function fake(over: Partial<AuthoredPane> = {}, offset = 0): Fake {
 	return self;
 }
 
-/**
- * A content that wraps as it narrows: it needs 6 columns, and `20 - w` rows but never fewer than 4, so the
- * height it needs depends on the width it is given. Unwrapped it takes 4 rows, which it fits in from 16
- * columns: its floor is 16 wide by 4 tall.
- */
+/** Content that needs more height as it narrows, so its floor depends on the width it is given. */
 const wraps = (rect: { w: number; h: number }) => rect.w < 6 || rect.h < Math.max(4, 20 - rect.w);
 
 /** A gesture over `content`, which says whether the pane's current rectangle spills. */

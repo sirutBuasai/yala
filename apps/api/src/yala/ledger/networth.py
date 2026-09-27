@@ -1,10 +1,5 @@
-"""Net-worth domain: assets − liabilities over time, derived from ``balance`` snapshots.
-
-Net worth is never stored — it is recomputed at each logged assertion. Snapshots are written as
-``pad`` + ``balance`` pairs (see :meth:`FileLedgerSink.log_balance`), so each account's untracked
-delta lands in its own ``Equity:Adjustments:*`` plug, which this domain surfaces as a per-account
-sanity check on flows never entered as transactions.
-"""
+"""Net worth recomputed at each ``balance`` snapshot, never stored. Each account's untracked delta
+lands in its own ``Equity:Adjustments:*`` plug."""
 
 from __future__ import annotations
 
@@ -65,9 +60,8 @@ class AccountValue:
 
 @dataclass(frozen=True)
 class LoggedBalance:
-    """What a month already holds for one account, and whether it can be corrected.
-
-    ``amount`` is as stored, so a liability's is negative."""
+    """A snapshot figure and its rewrite handle. ``amount`` is as stored, so a liability's is
+    negative."""
 
     #: The snapshot the figure came from — not necessarily the month's first day.
     date: dt.date
@@ -142,11 +136,8 @@ class NetWorth:
         )
 
     def accounts(self, as_of: dt.date | None = None) -> list[AccountValue]:
-        """Every currently-active balance-sheet account with its USD value.
-
-        Labels come from :func:`yala.ledger.naming.account_name`, the same resolver the account
-        directory uses, so a name cannot read one way here and another way elsewhere.
-        """
+        """Labelled by :func:`yala.ledger.naming.account_name`, so a name reads the same
+        everywhere."""
         meta = self._led.account_meta()
         out: list[AccountValue] = []
 
@@ -163,27 +154,20 @@ class NetWorth:
         return out
 
     def snapshot_dates(self) -> list[dt.date]:
-        """Every distinct ``balance``-assertion date — the trusted snapshot points.
-
-        One point per logged *day*, not per month: a month may carry several snapshots, and
-        collapsing them would silently drop the earlier ones."""
+        """One per logged day, since a month may carry several snapshots."""
         return sorted({e.date for e in self._led.entries if isinstance(e, data.Balance)})
 
     def series(self) -> list[NetWorthSnapshot]:
-        """Net-worth trend over every logged snapshot date, oldest first.
-
-        Each point is valued at the end of the preceding day, because beancount checks a ``balance``
-        before that day's postings; reading it at end-of-date would fold in transactions posted on
-        the snapshot day and drift the trend away from the asserted figures."""
+        """Each point is valued at the end of the preceding day, since beancount checks a
+        ``balance`` before that day's postings."""
         return [
             replace(self.totals(d - dt.timedelta(days=1)), date=d.isoformat())
             for d in self.snapshot_dates()
         ]
 
     def standing_at(self, as_of: dt.date) -> dict[str, LoggedBalance]:
-        """Each account's latest snapshot as of a reading taken at the end of ``as_of``, which is
-        asserted the day after. Only accounts snapshotted in that month are present: a month not yet
-        logged has nothing to stand at, even where an earlier month does."""
+        """As of a reading at the end of ``as_of``, asserted the day after. Only accounts
+        snapshotted in that month are present."""
         asserted = as_of + dt.timedelta(days=1)
         out: dict[str, LoggedBalance] = {}
         for account, entries in self._assertions().items():
@@ -216,11 +200,7 @@ class NetWorth:
         return out
 
     def _latest_of(self, entries: list[data.Balance]) -> LoggedBalance:
-        """The latest snapshot among one account's ``entries``. Share legs are summed at that date's
-        prices, the figure the account was snapshotted to.
-
-        Only a lone USD assertion is offered for correction: rewriting one leg of a share-based
-        snapshot is not a balance edit."""
+        """Share legs summed at that date's prices. Only a lone USD assertion gets a locator."""
         latest = max(e.date for e in entries)
         at_latest = [e for e in entries if e.date == latest]
         held: dict[str, Decimal] = {}
@@ -254,12 +234,7 @@ class NetWorth:
         ]
 
     def _snapshotable(self, pick: Callable[[str], list[str]]) -> list[str]:
-        """The snapshot-able accounts ``pick`` finds under each asset subtree, passthroughs removed.
-
-        Every loggable account is opened with a plug to pad into, so the rule is stated rather than
-        inferred from a plug's presence: what is excluded is a passthrough, whose balance is swept
-        to its destination and so belongs there.
-        """
+        """Passthroughs are excluded by rule, since their balance is swept to its destination."""
         meta = self._led.account_meta()
         found = [a for prefix in SNAPSHOT_ASSETS for a in pick(prefix)]
 
@@ -270,11 +245,8 @@ class NetWorth:
         return self._snapshotable(self._led.active_accounts)
 
     def loggable_in_month(self, any_day: dt.date) -> tuple[list[str], list[str]]:
-        """``(assets, liabilities)`` snapshot-able in ``any_day``'s month.
-
-        Membership is the month's, not today's: an account opened part-way through it belongs to
-        it, one closed part-way through does not belong to the month after, and one opened later
-        does not appear at all."""
+        """Membership is the month's, not today's: accounts opened or closed part-way count for
+        it."""
         start, end = month_bounds(any_day)
 
         def during(prefix: str) -> list[str]:

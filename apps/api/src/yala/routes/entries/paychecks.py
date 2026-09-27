@@ -1,8 +1,4 @@
-"""Paychecks: gross in, deductions and contributions out, the rest deposited.
-
-The line items a paycheck may carry come from the employer it names — see
-:mod:`yala.ledger.payroll`.
-"""
+"""Line items come from the named employer; see :mod:`yala.ledger.payroll`."""
 
 from __future__ import annotations
 
@@ -53,11 +49,8 @@ class PaycheckUpdateIn(PaycheckIn):
 def _resolve_paycheck(
     body: PaycheckIn, led: Ledger
 ) -> tuple[str, list[tuple[str, Decimal]], list[tuple[str, str | None, Decimal]]]:
-    """Resolve an employer + option-labeled maps into concrete ledger legs.
-
-    Returns ``(income_account, deduction_legs, contribution_legs)``; raises 422 on an unknown
-    employer or a line item the selected employer doesn't offer.
-    """
+    """Returns ``(income_account, deduction_legs, contribution_legs)``; 422 on an unknown employer
+    or an unoffered line item."""
     valid_money_account(body.deposit_account)
 
     if body.employer not in payroll.employers(led):

@@ -1,8 +1,4 @@
-"""Lightweight entity wrappers that keep beancount internals out of the rest of the backend.
-
-These types are **domain-agnostic** — they carry only what is true of any transaction; domain
-derivations belong in the domain modules.
-"""
+"""Domain-agnostic wrappers that keep beancount internals out of the rest of the backend."""
 
 from __future__ import annotations
 

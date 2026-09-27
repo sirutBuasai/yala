@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { NOT_SET } from '$lib/copy';
-	// A labelled figure typed into a field held to its bounds and stepped by the arrow keys, or, with `track`,
-	// dragged along a range under it, which moves the figure (and whatever draws it) as it goes. Bounds and
-	// step come from the caller, so whatever describes the figure is what the control is drawn from.
+	// Typed and stepped within the caller's bounds, or with `track`, dragged along a range that moves the figure
+	// live.
 	interface Props {
 		label: string;
 		/** Null only where `optional`: a figure left unset. */
@@ -40,12 +39,8 @@
 		disabled = false
 	}: Props = $props();
 
-	/**
-	 * What the number field currently holds, as text. A buffer rather than the bound number: binding a
-	 * number straight to the input re-rendered it from the clamped value on every keystroke, so the field
-	 * could not be emptied and a digit could not be deleted in place. Cleared on commit to fall back
-	 * through to `value`.
-	 */
+	/** A text buffer, not the bound number: binding the number re-rendered the clamped value per keystroke, so
+	    the field could not be emptied. Cleared on commit. */
 	let typed = $state<string | null>(null);
 
 	/** Grouped at rest so long figures are readable, plain while being typed into — separators in a field
@@ -54,11 +49,7 @@
 		typed ?? (value === null ? '' : grouped ? value.toLocaleString() : String(value))
 	);
 
-	/**
-	 * How wide the field has to be: the longest text it can hold, not the text it holds now, or a box sized
-	 * to the opening figure clips as digits arrive. `ch` is a digit's width; the extra covers the padding,
-	 * the border and a decimal point, all narrower than a digit.
-	 */
+	/** Sized to the longest text it can hold, or a box fitted to the opening figure clips as digits arrive. */
 	const widest = $derived(
 		Math.max(
 			(grouped ? Math.round(max).toLocaleString() : String(max)).length,
@@ -208,13 +199,8 @@
 		font-weight: var(--fw-semibold);
 		color: var(--ink-2);
 	}
-	/**
-	 * Drawn rather than left to `accent-color`, which colours only the filled half and the thumb: the
-	 * browser picked a near-black unfilled half, which on the light page read as a heavy rule.
-	 *
-	 * Both vendor sets are needed — WebKit has no `::-moz-range-progress`, so its fill comes from a
-	 * gradient stopped at `--filled` instead.
-	 */
+	/* Drawn, not `accent-color`, whose unfilled half came out near-black on the light page. WebKit has no
+	   `::-moz-range-progress`, so its fill is a gradient stopped at `--filled`. */
 	input[type='range'] {
 		appearance: none;
 		width: 100%;

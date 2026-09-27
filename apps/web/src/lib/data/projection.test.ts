@@ -21,9 +21,7 @@ const THIS_YEAR = new Date().getFullYear();
 /** The invested part of the fixture's position: everything but the Liquid bucket. */
 const INVESTED = 2600 + 2600;
 
-/** Assumptions naming the REAL rate directly. Inflation is zeroed, so the nominal and real figures are
-    the same number and an expectation need not restate the Fisher step — `assumptions.test.ts` covers
-    that on its own. */
+/** Inflation zeroed, so nominal and real match and expectations skip the Fisher step. */
 const assume = ({
 	realReturn = 5,
 	...over
@@ -177,9 +175,8 @@ describe('projection', () => {
 });
 
 describe('planned rates', () => {
-	// "Saved" is income less spending — a residual, not a measured flow into the market. Payroll
-	// contributions ARE measured and always land there; how much of the leftover is invested is a choice,
-	// and assuming all of it overstated the rate.
+	// Saved is a residual; only payroll contributions are a measured flow, and investing all of it overstated
+	// the rate.
 	it('splits saved into contributions, which always invest, and a leftover that need not', () => {
 		const data = makeNetWorthData();
 		const contributions = trailingAnnual(data, 'contributions');
@@ -231,9 +228,8 @@ describe('planned rates', () => {
 });
 
 describe('break-even', () => {
-	// The level that actually decides whether a balance lasts. Comparing the withdrawal RATE against the
-	// return only describes a portfolio sitting exactly at the FI number, which is how a warning came to
-	// claim a balance could not last while the chart correctly drew it rising forever.
+	// Rate against return only describes a portfolio exactly at the FI number, and once claimed a rising balance
+	// couldn't last.
 	it('is the balance whose return alone covers planned spending', () => {
 		const data = makeNetWorthData();
 		const a = assume({ realReturn: 5, plannedSpending: 50000 });

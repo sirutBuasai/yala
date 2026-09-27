@@ -1,8 +1,5 @@
-"""Turning a failure into something a form can show.
-
-An exception raised inside a write becomes a status code; a pydantic validation failure becomes one
-readable sentence in the form's own vocabulary rather than a list of raw JSON paths.
-"""
+"""A write's exception becomes a status code, and a pydantic failure one readable sentence in the
+form's vocabulary."""
 
 from __future__ import annotations
 
@@ -44,10 +41,8 @@ def not_found(detail: str) -> HTTPException:
 
 @contextmanager
 def api_errors() -> Iterator[None]:
-    """Map exceptions raised in a write endpoint's body to HTTP errors: ``KeyError`` → 404 for an
-    unknown locator, any other client-input problem → 422. An explicit ``HTTPException`` passes
-    through unchanged.
-    """
+    """``KeyError`` is 404 for an unknown locator, other input problems 422; ``HTTPException``
+    passes through."""
     try:
         yield
 

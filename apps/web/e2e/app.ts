@@ -8,24 +8,18 @@ import { auditPage, type Audit } from './audit';
 import { PAGES } from '../src/lib/nav/pages';
 
 /**
- * Built from the ledger fixture, so the suite runs anywhere and never reads the private ledger.
- * Regenerate with:
+ * Built from the ledger fixture, so the suite never reads the private ledger. Regenerate with:
  *
  *     YALA_LEDGER_DIR=apps/api/tests/fixtures/ledger-networth \
  *       PYTHONPATH=apps/api/src python -m yala.builder apps/web/e2e/fixtures/data.json
- *
- * `ledger-networth` is the shared fixture plus logged balances; see its own main.beancount for why the
- * balances cannot live in `ledger/`.
  */
 const SNAPSHOT = readFileSync(
 	fileURLToPath(new URL('./fixtures/data.json', import.meta.url)),
 	'utf8'
 );
 
-/**
- * The suite's `test`: every test also fails on an uncaught page error. An effect that retriggers itself is
- * stopped by Svelte's loop guard with only a page error to show for it, while the page renders fine.
- */
+/** Also fails on an uncaught page error: Svelte's loop guard stops a self-retriggering effect with only a
+    page error while the page renders fine. */
 export const test = base.extend<{ noPageErrors: void }>({
 	noPageErrors: [
 		async ({ page }, use) => {
@@ -52,11 +46,8 @@ export const BOARD_PAGES = [
 /** Content widths worth checking: either side of both fold thresholds, and the phone floor. */
 export const WIDTHS = [320, 390, 480, 700, 960, 1000, 1200, 1392] as const;
 
-/**
- * Open the app on the fixture snapshot with no stored preferences. Routes are intercepted rather than a
- * file written, so a run cannot disturb the snapshot being served; `/api/data` fails on purpose, which is
- * what puts the app in read-only mode.
- */
+/** Routes are intercepted, not a file written, so a run can't disturb the served snapshot; `/api/data` fails
+    on purpose to put the app in read-only mode. */
 export async function openApp(page: Page): Promise<void> {
 	await page.route('**/api/data', (route) => route.fulfill({ status: 500, body: 'no api' }));
 	await page.route('**/data.json', (route) =>
@@ -114,10 +105,7 @@ export async function violations(page: Page) {
 	}));
 }
 
-/**
- * Force the content column to `px`, which is what every fold and container query reads — the same thing a
- * narrower window does, without the cost of a real viewport resize per step. Pass null to release it.
- */
+/** What every fold and container query reads, without a real viewport resize per step. Null releases it. */
 export async function setContentWidth(page: Page, px: number | null): Promise<void> {
 	await page.evaluate((w) => {
 		const wrap = document.querySelector<HTMLElement>('.wrap')!;
@@ -135,11 +123,7 @@ export async function startArranging(page: Page): Promise<void> {
 	await expect(page.locator('.grab').first()).toBeVisible();
 }
 
-/**
- * Drag `handle` by `dx`/`dy` as a stream of pointer events. Synthetic ones reach `grid/drag` directly: its
- * listeners are on the node, and it already tolerates `setPointerCapture` refusing an id it never saw.
- * Stepped, because the gesture only begins once the travel passes its own threshold.
- */
+/** Stepped, since the gesture begins only past its threshold. */
 export async function dragBy(handle: Locator, dx: number, dy: number, steps = 6): Promise<void> {
 	await handle.evaluate(
 		async (node: Element, { dx, dy, steps }) => {
@@ -182,10 +166,7 @@ const TARGET: Record<Gesture, string> = {
 	height: '.modebtn'
 };
 
-/**
- * Perform `gesture` on one of the elements offering it, chosen by `pick`. Returns false when the board
- * offers none — a board with nothing merged has no dividers to cut, and that is not a failure.
- */
+/** False when the board offers none, which is not a failure. */
 export async function doGesture(
 	page: Page,
 	gesture: Gesture,

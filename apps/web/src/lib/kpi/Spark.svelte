@@ -1,8 +1,5 @@
 <script lang="ts">
-	// The faint chart behind a KPI's number. One component for all three shapes, which differ only in
-	// the mark drawn over one shared scale.
-	//
-	// Axis-less and tooltip-less by intent: this says shape, the number in front says the value.
+	// Axis-less and tooltip-less on purpose: this says shape, the number in front says the value.
 	import type { Series } from '$lib/data/primitives';
 
 	interface Props {

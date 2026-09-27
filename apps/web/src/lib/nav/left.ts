@@ -1,6 +1,5 @@
-// Where each page and view was left in this tab. Every view (every path) keeps its own URL state and
-// its own scroll, so switching between views or pages returns each to how it was left, and a pick on one
-// never moves another. Session storage rather than local: it is about this visit, not a preference.
+// Where each view (path) was left in this tab: its URL state and scroll. Session storage, since it is about
+// this visit, not a preference.
 
 import { goto } from '$app/navigation';
 import { onPress } from '$lib/charts/aria';
@@ -65,10 +64,8 @@ export const leftAt = (pathname: string): string => pathname + (read().searches[
 /** How far down, in CSS pixels, `pathname` was last left. */
 export const scrollAt = (pathname: string): number => read().scrolls[pathname] ?? 0;
 
-/**
- * Scroll back to `y` once the page is tall enough to hold it. A board's panes are measured over the frames
- * after navigation, so scrolling at once would clamp short of `y`. Stops early if the reader scrolls first.
- */
+/** Waits until the page is tall enough, since panes are measured over the frames after navigation. Stops if
+    the reader scrolls first. */
 export function restoreScroll(y: number, frames = 60): void {
 	const started = window.scrollY;
 	const attempt = (left: number) => {
@@ -83,9 +80,8 @@ export function restoreScroll(y: number, frames = 60): void {
 	attempt(frames);
 }
 
-/** Attributes that make a card's title a link to `page`, opened as the sidebar opens it: at the view it
-    was left on, as that view was left. A heading rather than an anchor, since the title is also what
-    a rename edits. Spread, so a title with no page gets none of them. */
+/** Opens `page` as the sidebar does, at the view it was left on. A heading rather than an anchor, since a
+    rename edits the title; spread, so a title with no page gets none. */
 export function pageLink(page: string) {
 	const open = () => void goto(leftAt(viewAt(page)));
 	return {

@@ -1,7 +1,5 @@
 <script lang="ts">
-	// The pending queue as a board pane: fronted money, waiting to be paid back. One component for
-	// every place it appears; the caller supplies already-scoped rows, so scoping stays where the
-	// scope is known.
+	// The caller supplies already-scoped rows, so scoping stays where the scope is known.
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import type { Label } from '$lib/ui/label';
 	import TransactionList, { type TxnRow } from '$lib/lists/TransactionList.svelte';

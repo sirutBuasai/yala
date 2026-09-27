@@ -1,9 +1,5 @@
-"""Writing net-worth snapshots: a padded assertion, an edit of one, a liquidation.
-
-A snapshot is a ``pad`` + ``balance`` pair: the figure asserted, and whatever the entries do not
-explain routed to the account's plug (see :func:`yala.ledger.accounts.snapshot_plug`). A card pads
-only up to its baseline; after it the figure must agree (see :mod:`yala.ledger.cards`).
-"""
+"""A snapshot is a ``pad`` and ``balance`` pair, the unexplained part going to the plug. A card pads
+only up to its baseline (see :mod:`yala.ledger.cards`)."""
 
 from __future__ import annotations
 
@@ -26,19 +22,13 @@ from yala.sink.accounts import AccountWrites
 
 
 class BalanceWrites(AccountWrites):
-    """Snapshot writes, mixed into :class:`~yala.sink.FileLedgerSink`.
-
-    Over ``AccountWrites`` because retiring an account closes it, and over the file machinery
-    through it: the bases state which writes this one is built on rather than relying on the
-    composition in :class:`~yala.sink.FileLedgerSink` to supply them.
-    """
+    """Built over ``AccountWrites``, since retiring an account closes it."""
 
     def _liquidate_postings(
         self, ledger: Ledger, account: str, date: dt.date
     ) -> tuple[list[data.Posting], Decimal]:
-        """Postings that drain every holding of ``account`` to USD at ``date`` prices, plus the
-        total USD weight drained. Non-USD legs carry an ``@ price``; the USD leg is a plain amount.
-        Raises if a held ticker has no price on or before ``date``."""
+        """Drains every holding to USD at ``date`` prices, returning the postings and the total.
+        Raises if a ticker has no price by then."""
         holdings = ledger.holdings(account, date)
         price_map = prices.build_price_map(ledger.entries)
         usd = ledger.currency
@@ -65,9 +55,7 @@ class BalanceWrites(AccountWrites):
     def liquidate_into(
         self, account: str, date: dt.date, legs: list[tuple[str, Decimal]], plug: str | None
     ) -> None:
-        """Convert every holding to USD at ``date`` prices, split the total across ``legs``, then
-        close the account. ``plug``, when given, absorbs the sub-cent rounding gap so the entry
-        balances exactly, and is closed too."""
+        """``plug``, when given, absorbs the sub-cent rounding gap and is closed too."""
         ledger = Ledger(self.main_ledger, strict=True).load()
         usd = ledger.currency
 
@@ -98,12 +86,8 @@ class BalanceWrites(AccountWrites):
             self.close_account(plug, date)
 
     def _ensure_plug(self, account: str, plug: str) -> None:
-        """Open ``plug`` if the ledger has none, dated with the account it serves.
-
-        An asset is opened together with its plug, but a card was opened before it had one, so the
-        plug arrives the first time that card is snapshotted. Dated from the account so a back-dated
-        snapshot still finds it active.
-        """
+        """A card gets its plug at its first snapshot, dated from the account so a back-dated
+        snapshot finds it open."""
         ledger = Ledger(self.main_ledger, strict=True).load()
         if open_entry(ledger, plug) is not None:
             return
@@ -117,19 +101,9 @@ class BalanceWrites(AccountWrites):
     def log_balance(
         self, account: str, amount: Decimal, date: dt.date, counter_account: str
     ) -> str:
-        """Snapshot ``account`` to ``amount`` USD as of ``date``, preceded by a ``pad`` into
-        ``counter_account`` when one is needed.
-
-        The ``balance`` is always written, so logging the same figure month after month builds the
-        history even when nothing moved. The ``pad`` is dated the day before (assertions are checked
-        at start of day) and only written when the projected balance differs: beancount rejects a
-        pad it does not need, so emitting one unconditionally would make an unchanged balance
-        impossible to log. Share lots are reclassified to USD first, net-worth-neutrally, so the
-        single USD assertion is authoritative.
-
-        A card's ``amount`` is its bank app's figure, so pending charges the app leaves out are
-        added back. Past its baseline the snapshot is refused unless the entries already explain
-        it."""
+        """The ``balance`` is always written; the ``pad``, dated the day before, only when needed,
+        since beancount rejects an unused pad. A card's pending charges are added back, and past its
+        baseline it must agree."""
         # Through the shared sign rule: a liability is inverted, and a negative asset refused.
         amount = directives.stored_amount(account, round_cents(amount))
         pad_date = date - dt.timedelta(days=1)
@@ -185,13 +159,8 @@ class BalanceWrites(AccountWrites):
         return entry_id
 
     def update_balance(self, locator: str, amount: Decimal) -> tuple[str, dt.date, str]:
-        """Rewrite the amount on the existing ``balance`` assertion at ``locator``, reconciling its
-        ``pad`` so the edited figure still loads. Returns ``(account, date, locator)``.
-
-        Editing an assertion can flip whether a pad is required in either direction, and beancount
-        rejects both an unexplained delta and an unused pad. An assertion with no ``id`` is stamped
-        with one, so the returned locator is the stable handle from then on. A card is held to the
-        same baseline rule as :meth:`log_balance`."""
+        """Returns ``(account, date, locator)``; the pad is reconciled either way and an id stamped
+        if missing. Cards follow :meth:`log_balance`'s baseline rule."""
         ledger = Ledger(self.main_ledger, strict=True).load()
         entry = find_balance(ledger.entries, locator)
         account, date = entry.account, entry.date

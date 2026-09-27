@@ -95,11 +95,8 @@ export function latestActivityDay(cells: DayCell[]): number {
 	return last;
 }
 
-/**
- * Where a grid keypress moves to, or null when the key isn't one the grid owns. Home and End go to
- * the ends of the WEEK, as a spreadsheet grid does; crossing months belongs to the header's stepper,
- * so movement clamps at the month's edges rather than wrapping.
- */
+/** Null for a key the grid doesn't own. Home and End go to the week's ends; movement clamps at the month's
+    edges, since crossing months belongs to the stepper. */
 export function dayForKey(
 	key: string,
 	day: number,

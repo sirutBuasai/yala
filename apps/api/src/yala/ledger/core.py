@@ -1,8 +1,4 @@
-"""Core ledger access: load the beancount file once and expose domain-agnostic primitives.
-
-Domain-specific queries live in their own modules and hang off :class:`Ledger` as uniform
-namespaces.
-"""
+"""Loads the ledger once; domain queries hang off :class:`Ledger` as namespaces."""
 
 from __future__ import annotations
 
@@ -91,10 +87,8 @@ class Ledger:
         return "USD"
 
     def _all_transactions(self) -> list[Transaction]:
-        """Convert every directive to a :class:`Transaction` once and cache it.
-
-        Domain queries call :meth:`transactions` dozens of times per build, so the conversion and
-        sort are done once to keep that off the O(entries × queries) path."""
+        """Converted and sorted once, since domain queries call :meth:`transactions` many times per
+        build."""
         if self._txn_cache is not None:
             return self._txn_cache
 
@@ -169,11 +163,8 @@ class Ledger:
         return self._price_cache
 
     def value_of(self, held: dict[str, Decimal], as_of: dt.date | None = None) -> Decimal:
-        """USD value of a commodity -> quantity map at ``as_of`` (latest price on/before).
-
-        Takes the quantities rather than an account, so a figure a ``balance`` directive asserts is
-        valued as written instead of re-derived from postings. Raises :class:`LedgerError` if a
-        commodity has no price."""
+        """USD value at ``as_of``, so an asserted figure is valued as written. Raises
+        :class:`LedgerError` if a commodity has no price."""
         usd = self.currency
         total = Decimal(0)
         for cur, qty in held.items():
@@ -203,12 +194,8 @@ class Ledger:
         )
 
     def open_close_dates(self) -> tuple[dict[str, dt.date], dict[str, dt.date]]:
-        """``(opened, closed)`` — the earliest declared date of each kind, per account.
-
-        The dates rather than the names, so a caller that has to explain *why* an account was
-        unavailable on a given day can name the day it opened or closed. Cached: the account lists
-        ask for them once per prefix, and :meth:`is_open` once per account.
-        """
+        """``(opened, closed)`` dates per account, so a caller can name why an account was
+        unavailable. Cached."""
         if self._open_close_cache is not None:
             return self._open_close_cache
 
@@ -242,12 +229,8 @@ class Ledger:
     def accounts_open_during(
         self, start: dt.date, end: dt.date, prefix: str | None = None
     ) -> list[str]:
-        """Accounts whose life overlaps ``start``..``end``, inclusive at both ends.
-
-        A window rather than a single day, so an account that opened or closed part-way through a
-        period still belongs to it. Closing on ``start`` counts, the account having been held going
-        into it.
-        """
+        """Accounts whose life overlaps ``start``..``end`` inclusive, so one opened or closed
+        mid-period still belongs to it."""
         opened, closed = self.open_close_dates()
 
         return sorted(

@@ -1,10 +1,5 @@
-"""Account display names, derived from the ledger and nothing else.
-
-A named account's ``open`` records the name in the parts it was typed in, beside an alias for each.
-The name is those parts joined, and shortening happens at read time by swapping the aliases in.
-Storing the parts rather than splitting the leaf back apart is what lets a name be edited a part at
-a time and shown back as written.
-"""
+"""A named account's ``open`` records its parts and an alias for each; the name is the parts joined,
+shortened at read time with aliases."""
 
 from __future__ import annotations
 
@@ -27,9 +22,7 @@ ACCOUNT_ALIAS_META = "account_alias"
 
 @dataclass(frozen=True)
 class NamePart:
-    """One part of a named account's name. Which parts an account has is the kind's business; what
-    each part *is* is decided here, so opening, editing and renaming read one set of answers.
-    """
+    """What each part is is decided here, so opening, editing and renaming agree."""
 
     #: Request field, contract field and meta key all share this name.
     field: str
@@ -62,9 +55,8 @@ _LETTER_DIGIT = re.compile(r"([A-Za-z])(\d)")
 
 
 def render(leaf: str) -> str:
-    """A CamelCase account leaf as display words: split on case changes and letter→digit, an acronym
-    kept whole, interior particles lowercased.
-    """
+    """Split on case changes and letter-to-digit, acronyms kept whole, interior particles
+    lowercased."""
     spaced = _LOWER_UPPER.sub(r"\1 \2", leaf)
     spaced = _ACRONYM_WORD.sub(r"\1 \2", spaced)
     spaced = _LETTER_DIGIT.sub(r"\1 \2", spaced).strip()
@@ -78,31 +70,22 @@ def render(leaf: str) -> str:
 
 
 def compose(typed: str) -> str:
-    """Typed words as the account segment they name, the inverse of :func:`render`.
-
-    Only each word's first letter is capitalized, the rest left as typed, so an acronym entered in
-    caps survives the round trip.
-    """
+    """Inverse of :func:`render`. Only first letters are capitalized, so an acronym typed in caps
+    survives."""
     words = re.sub(r"[^A-Za-z0-9 ]", " ", typed).split()
 
     return "".join(word[:1].upper() + word[1:] for word in words)
 
 
 def compose_stem(institution: str | None, product: str | None = None) -> str:
-    """The single path segment a name's parts compose to.
-
-    Every account path is built from this, so a leaf and the parts recorded beside it cannot
-    describe different names.
-    """
+    """Every path is built from this, so a leaf and its recorded parts can't describe different
+    names."""
     return compose(institution or "") + compose(product or "")
 
 
 def institution_of(meta: Mapping[str, object] | None) -> str | None:
-    """The institution an account is held at, as declared. ``None`` when it has none.
-
-    Declared rather than inferred: a plan named for an employer but held at a custodian, or a
-    co-brand card naming two institutions, both defeat reading it off the name.
-    """
+    """Declared, not inferred: an employer plan at a custodian or a co-brand card defeats reading
+    the name."""
     return meta_str(meta, INSTITUTION_NAME_META)
 
 
@@ -112,10 +95,8 @@ def name_parts(meta: Mapping[str, object] | None) -> tuple[str | None, str | Non
 
 
 def shared_parts(meta: Mapping[str, object] | None) -> dict[str, str]:
-    """The recorded parts that belong to the institution rather than to one account held there.
-
-    What a new account at a known institution inherits, so one institution never reads two ways.
-    """
+    """What a new account at a known institution inherits, so an institution never reads two
+    ways."""
     return {
         part.field: value
         for part in NAME_PARTS
@@ -124,11 +105,8 @@ def shared_parts(meta: Mapping[str, object] | None) -> dict[str, str]:
 
 
 def account_name(account: str, meta: Mapping[str, object] | None = None) -> str:
-    """The display name for ``account``: its parts joined, shortened only while the result exceeds
-    :data:`NAME_CAP` — the institution's short form first, then the product's as well.
-
-    Falls back to the leaf read as words for an account that declares no parts.
-    """
+    """Parts joined, shortened only past :data:`NAME_CAP`, institution alias first. Falls back to
+    the leaf as words."""
     institution, product = name_parts(meta)
 
     if institution is None and product is None:

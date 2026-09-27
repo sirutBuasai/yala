@@ -162,12 +162,8 @@ function totals(data: DashboardData, scope: Scope): Totals {
 /** A month is active once ANYTHING is logged in it. */
 const isActive = (md: MonthPage): boolean => md.total_income > 0 || md.total_spent > 0;
 
-/**
- * The ONE divisor every run-rate uses, whatever the measure: counting only the months a measure itself moved
- * in gives each column of a run-rate row its own denominator, and the row has to reconcile.
- *
- * 0 when nothing is logged in the scope, so callers floor it themselves.
- */
+/** The ONE divisor every run-rate uses, so a run-rate row's columns reconcile. 0 when nothing is logged in
+    the scope, so callers floor it themselves. */
 export function activeMonthsIn(data: DashboardData, scope: Scope): number {
 	return monthsInScope(data, scope).filter(([, md]) => isActive(md)).length;
 }

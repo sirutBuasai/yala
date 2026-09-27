@@ -7,21 +7,15 @@ import type { HeightMode, Rect } from './types';
 /** Which edges of a pane a gesture is dragging: any of `n s e w`. */
 export type Edge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
-/**
- * Which edges may be dragged, per height mode. A fitted pane's height is not the user's to set
- * directly, so those handles are absent rather than present and inert.
- */
+/** A fitted pane's height isn't the user's to set, so those handles are absent rather than inert. */
 export const EDGES: Record<HeightMode, Edge[]> = {
 	fixed: ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'],
 	cap: ['s', 'e', 'w', 'se', 'sw'],
 	fit: ['e', 'w']
 };
 
-/**
- * Pointer travel in px, snapped to the nearest whole unit. NOT `rowsForPx`, which asks how many
- * units a measured card OCCUPIES and so rounds up and counts the gap in: travel is a signed
- * distance along the lattice, changing size at the halfway point in either direction.
- */
+/** Travel in px, snapped at the halfway point either way. Not `rowsForPx`, which rounds a card's size up and
+    counts the gap. */
 export function snapUnits(px: number): number {
 	return Math.round(px / UNIT);
 }
@@ -54,10 +48,7 @@ export interface Floor {
 	h: number;
 }
 
-/**
- * `rect` held at `floor` on each axis. The dragged edge stops where the floor is met, so the opposite edge
- * stays where the press left it.
- */
+/** The dragged edge stops at the floor, so the opposite edge stays where the press left it. */
 export function holdFloor(base: Rect, edge: Edge, rect: Rect, floor: Floor): Rect {
 	const out = { ...rect };
 	if (out.w < floor.w) {

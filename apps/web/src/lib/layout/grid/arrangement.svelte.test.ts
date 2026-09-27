@@ -1,6 +1,4 @@
-// The state layer, driven the way a gesture drives it. The pure math has its own tests; this covers
-// the wiring — what gets persisted, what gets re-derived, and the round-trip a drag makes through
-// storage.
+// The state layer's wiring: what persists, what is re-derived, and a drag's round trip through storage.
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Arrangement } from '$lib/layout/grid/arrangement.svelte';

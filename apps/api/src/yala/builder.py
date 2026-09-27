@@ -1,9 +1,5 @@
-"""Build the versioned ``data.json`` from the ledger as a validated
-:class:`~yala.schema.DashboardData`.
-
-Run ``python -m yala.builder [OUT]`` to write the snapshot; ``$YALA_DATA_OUT`` overrides the
-default destination.
-"""
+"""Build the validated ``data.json`` snapshot: ``python -m yala.builder [OUT]``, or
+``$YALA_DATA_OUT``."""
 
 from __future__ import annotations
 
@@ -270,9 +266,8 @@ def build(ledger: Ledger) -> DashboardData:
     all_transfers = transfers.transactions()
     income_months = {month_of(p.date) for p in income.paychecks()}
     transfer_months = {month_of(t.date) for t in all_transfers}
-    # A logged snapshot makes a month real on its own: a month can carry no entries at all and still
-    # be the one a balance was logged in, and leaving it out filed that balance under the month
-    # before it.
+    # A snapshot makes a month real on its own; leaving it out filed the balance under the month
+    # before.
     snapshot_dates = networth.snapshot_dates()
     snapshot_months = {month_of(d) for d in snapshot_dates}
     all_months = sorted(set(spending.months()) | income_months | transfer_months | snapshot_months)

@@ -12,9 +12,8 @@ from _common import ROOT, VENV_PY, WEB, run
 
 TYPES = "src/lib/data/types.ts"
 
-# json2ts footnotes every definition with which schema referenced it, which says nothing
-# the declaration around it doesn't. Dropped, so the docstrings written in schema.py are all
-# the generated file carries.
+# Drops json2ts's "referenced by" footnotes, so only schema.py's docstrings reach the generated
+# file.
 _SCHEMA_REF = re.compile(
     r"[ \t]*\*[ \t]*This interface was referenced by.*?\n"
     r"[ \t]*\*[ \t]*via the `definition`[^\n]*\n",

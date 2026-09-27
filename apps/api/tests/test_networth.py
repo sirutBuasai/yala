@@ -402,10 +402,8 @@ def test_update_balance_edits_the_located_assertion_in_place(ledger_dir: Path):
 
 
 def test_update_balance_adds_then_drops_pads_as_the_figure_requires(ledger_dir: Path):
-    """A pad appears where a delta needs absorbing and goes away once it doesn't.
-
-    Raising a figure needs a pad at its own date *and* at the next assertion that re-pins the
-    account; setting it back leaves both unused, which beancount rejects."""
+    """Raising a figure needs a pad at its date and at the next assertion; setting it back leaves
+    both unused, which beancount rejects."""
     account = "Assets:Cash:BankA"
     plug = plug_account(account)
     _log_months(
@@ -435,9 +433,7 @@ def test_update_balance_adds_then_drops_pads_as_the_figure_requires(ledger_dir: 
 
 
 def test_update_balance_stamps_an_id_on_a_migrated_assertion(ledger_dir: Path):
-    """An assertion with no id has only a source line to go by, and that line shifts whenever
-    anything above it moves — including the pads an edit inserts. Editing one stamps an id, which is
-    what makes a second edit of the same snapshot safe."""
+    """A source line shifts when an edit inserts pads, so editing stamps an id for the next edit."""
     account = "Assets:Cash:BankA"
     sink = FileLedgerSink(ledger_dir)
     entry_id = sink.log_balance(account, Decimal("1000.00"), SEP, plug_account(account))

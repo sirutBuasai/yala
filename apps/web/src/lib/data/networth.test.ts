@@ -471,9 +471,7 @@ describe('year-end levels behind a KPI', () => {
 
 // --- how a snapshot's date reads on an axis ---
 
-/** The fixture with balances logged on the 1st of two consecutive months, which is what lets a month's
-    move be measured: a balance dated the 1st is taken before that month's money has moved, so the month
-    opens on its own snapshot and closes on the next month's. */
+/** Balances on the 1st of consecutive months: a month opens on its own snapshot, closes on the next's. */
 function loggedOnTheFirst() {
 	const data = makeNetWorthData();
 	data.networth!.series = [
@@ -631,9 +629,7 @@ describe('change by month', () => {
 		return p;
 	};
 
-	// Month over month, so a bar is measured from the freshest reading in the month before — a bar is
-	// therefore labelled one month after the movement it describes. That is the cost of using the newest
-	// balance rather than the one dated at the month's edge.
+	// Month over month from the freshest prior reading, so a bar is labelled a month after its movement.
 	it('plots the two levels that can share one chart, as percentages', () => {
 		const p = changeOf('networth.change_by_month');
 
@@ -761,18 +757,13 @@ describe('monthly attribution', () => {
 		});
 		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
 
-		// February's bar spans January's snapshot to February's, so it carries January's move (6000 − 3000)
-		// AND January's logged saving. `saved` follows the window, not the calendar month, so the two always
-		// describe the same stretch of time and `other` is a real remainder.
+		// `saved` follows the window, not the calendar month, so `other` is a real remainder.
 		const [saved, other] = p.series;
 		expect(saved!.points[1]!.value).toBe(2254.5);
 		expect(other!.points[1]!.value).toBe(745.5);
 	});
 
-	// The bug this pairing fixes: measuring a month against the last snapshot dated INSIDE it put the
-	// balance move of one month against the logged saving of the next.
-	// The window and the saving it is judged against must cover the same days, or `other` is the difference
-	// between two unrelated stretches of time.
+	// Bug: measuring against the last snapshot inside the month set one month's move against the next's saving.
 	it('measures saving over the window, not over the calendar month', () => {
 		const p = build(loggedOnTheFirst(), 'networth.saved_vs_other_by_month', {
 			level: 'year',

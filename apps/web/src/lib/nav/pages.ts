@@ -1,6 +1,5 @@
-// The app's pages in sidebar order. The sidebar, its icon rail and the hamburger sheet all read this list,
-// so they cannot disagree about what exists. Plain data, with no components, so the browser tests can
-// import it too; each page's icon is paired with it in `NavLinks`.
+// Every navigator reads this list, so none disagree about what exists. Plain data, so browser tests can
+// import it; icons pair with it in `NavLinks`.
 
 export interface NavLink {
 	href: string;

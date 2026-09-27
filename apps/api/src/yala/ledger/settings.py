@@ -1,12 +1,6 @@
-"""User settings: the handful of figures the ledger can't derive, stored in the ledger itself.
+"""Figures the ledger can't derive, as dated, superseding directives that version with the data::
 
-Held as ``custom`` directives rather than in a config file, so they version with the data they
-describe::
-
-    <date> custom "yala-setting" "<key>" <value>
-
-Directives are **dated and superseding**: the latest one for a key wins, so a change leaves the old
-value behind as history. :data:`SETTINGS` is the single source of truth for every key.
+<date> custom "yala-setting" "<key>" <value>
 """
 
 from __future__ import annotations
@@ -54,9 +48,7 @@ SETTINGS: tuple[SettingSpec, ...] = (
         default=Decimal(4),
         help="Annual withdrawal rate from investment after retirement.",
     ),
-    # Nominal, not real: the return people actually know is the market's headline
-    # figure. The real rate every projection compounds at is derived from this and
-    # ``inflation`` — see ``realRate`` up front.
+    # Nominal, the figure people know; the real rate is derived with ``inflation``.
     SettingSpec(
         key="nominal-return",
         label="Expected nominal return",
@@ -154,12 +146,8 @@ SETTINGS_BY_KEY: dict[str, SettingSpec] = {s.key: s for s in SETTINGS}
 
 
 def coerce(key: str, value: object) -> Decimal:
-    """Validate ``value`` for ``key`` and return it as a :class:`Decimal`.
-
-    Shared by the ledger reader, the write sink and the API, so a figure rejected in a form is
-    equally rejected when hand-written into the ledger. Raises ``KeyError`` for an unknown key and
-    ``ValueError`` with a user-facing message otherwise.
-    """
+    """Shared by reader, sink and API, so a figure a form rejects is rejected in the ledger too.
+    Raises ``KeyError`` for an unknown key, else ``ValueError`` with a user-facing message."""
     spec = SETTINGS_BY_KEY.get(key)
     if spec is None:
         raise KeyError(key)
@@ -205,11 +193,8 @@ class Settings:
         ]
 
     def stored(self) -> dict[str, Decimal]:
-        """Every explicitly-set value, keyed by setting, the latest directive winning.
-
-        An unparseable or unknown entry is skipped rather than raising: the ledger is hand-editable,
-        and one bad line shouldn't blank the dashboard.
-        """
+        """The latest directive wins. Bad entries are skipped, so one hand-edited line can't blank
+        the dashboard."""
         out: dict[str, Decimal] = {}
 
         for entry in self._directives():

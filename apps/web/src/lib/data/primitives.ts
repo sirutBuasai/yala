@@ -57,10 +57,8 @@ export function formatDelta(value: number, unit: Unit): string {
 	return (value > 0 ? '+' : '') + formatUnit(value, unit);
 }
 
-/**
- * A magnitude held to `digits` digits, sign kept. A percentage against a near-zero base has no bound and a
- * card does; the figure it stands in for belongs in the tooltip beside it.
- */
+/** A percentage against a near-zero base is unbounded and a card is not; the full figure goes in the
+    tooltip. */
 export function capped(value: number, digits: number): number {
 	const ceiling = 10 ** digits - 1;
 
@@ -232,10 +230,7 @@ export interface TableColumn {
 	label: string;
 	/** When set, the column is numeric and formatted in this unit. */
 	unit?: Unit;
-	/**
-	 * Shade this column's cells by magnitude, greenest and reddest at its own largest value. Scaled per
-	 * column, so a column of hundreds tints as strongly as one of tens of thousands.
-	 */
+	/** Shaded per column against its own largest value, so small-valued columns tint as strongly as large. */
 	tint?: TintDirection;
 }
 
@@ -266,10 +261,7 @@ export interface Bullet {
 	rows: BulletRow[];
 }
 
-/**
- * One row's latest figure against the range it usually falls in: `base` is the typical level, `lo`/`hi`
- * the extremes of the window that typical came from.
- */
+/** `base` is the typical level; `lo` and `hi` bound the window it came from. */
 export interface DeviationRow {
 	label: string;
 	value: number;
@@ -288,11 +280,7 @@ export interface Deviation {
 export type Primitive =
 	Scalar | Categorical | Series | MultiSeries | Flow | Matrix | Table | Bullet | Deviation;
 
-/**
- * A figure's readings, fullest first, for a box that shows the fullest it has room for: to the cent, then
- * whole, then abbreviated. `signed` prints a plus on a gain, for a figure whose sign is its meaning. Units
- * with nothing to give up have one reading.
- */
+/** Fullest first: cents, whole, abbreviated. `signed` prints a plus on a gain. */
 export function readingsOf(value: number, unit: Unit, signed = false): string[] {
 	const plus = signed && value > 0 ? '+' : '';
 	const all =

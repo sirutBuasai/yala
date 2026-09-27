@@ -1,9 +1,5 @@
-"""Where the ledger lives: ``$YALA_LEDGER_DIR``, so no private data location is hardcoded here.
-Where the built site lives: ``$YALA_WEB_DIR``, defaulting to this checkout's ``apps/web/build``.
-
-The ledger itself is the source of truth for currency, accounts, and categories — read those from
-the loaded ledger rather than adding them to this module.
-"""
+"""Paths from ``$YALA_LEDGER_DIR`` and ``$YALA_WEB_DIR``. Currency, accounts and categories come
+from the ledger, never from here."""
 
 from __future__ import annotations
 

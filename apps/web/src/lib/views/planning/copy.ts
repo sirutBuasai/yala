@@ -1,6 +1,4 @@
-// The Planning page's wording. `PROGRESS` lives in `$lib/copy`, since Dashboard headlines it.
-//
-// Titles are sentence case with no period; captions are lowercase with no period.
+// `PROGRESS` lives in `$lib/copy`, since Dashboard headlines it.
 
 export const PROJECTION = 'Projected investments';
 export const PROJECTION_CAPTION = 'invested balance growth and financial independence projection';

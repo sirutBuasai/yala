@@ -1,7 +1,5 @@
 <script lang="ts">
-	// A percentage as a ring. Unlike the other KPI marks this one is NOT behind the number: a ring
-	// drawn behind a figure reads as a badge around it. It sits inline, immediately before the stat, at
-	// the stat's own size — so it scales with the number rather than needing a size of its own.
+	// Inline before the stat, not behind it: a ring behind a figure reads as a badge.
 	interface Props {
 		/** 0–100. Over 100 fills the ring; `null` draws the track alone. */
 		percent: number | null;
@@ -25,11 +23,8 @@
 </svg>
 
 <style>
-	/* Sized off the stat rather than in `em`: the ring is a sibling of the number, so `em` would resolve
-	   against the row's font size and draw it half the height of the figure.
-	   Kept to the digits' height, not the whole line box: at the full size it overhung a baseline-aligned
-	   row by a pixel or two, which put the card's content permanently over its own height and had the
-	   pane's resize probe refusing every attempt to narrow it. */
+	/* Sized off the stat, not `em`, which resolves against the row. Held to the digits' height: a full line
+	   box overhung the row and the resize probe refused every narrowing. */
 	.ring {
 		flex: none;
 		width: calc(var(--text-display) * 0.8);

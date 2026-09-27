@@ -9,11 +9,8 @@ export interface LabelGroup {
 	width: number;
 }
 
-/**
- * Group labels centred on their points (`at`, in px, in order along the timeline) so that each clears the
- * next by `gap`: the closest colliding neighbours merge first, until none collide. `widthOf` measures the
- * label a set of members would print as one. Every label is held inside `room`.
- */
+/** Labels centred on `at` (px, in order), the closest colliding neighbours merging first until each clears
+    the next by `gap`. Every label is held inside `room`. */
 export function groupLabels(
 	at: number[],
 	widthOf: (members: number[]) => number,
@@ -48,11 +45,8 @@ export function barRange(row: number): { least: number; most: number } {
 	return { least, most: least + ((RAIL.most - RAIL.least) / RAIL.step) * row };
 }
 
-/**
- * The rail's thickness in a row `height` px tall: thickened by whole grid rows (`row` px) past its least,
- * not by every pixel. A pane's height moves in rows, so up to a row is left over at its floor, and taken
- * pixel by pixel that left the rail thick at the floor on one plan and thin on another.
- */
+/** Thickened by whole grid rows past its least: taken per pixel, the rail's thickness at the floor varied
+    from plan to plan. */
 export function railThickness(height: number, row: number): number {
 	const rows = Math.floor(Math.max(0, height - barRange(row).least) / row);
 	return Math.min(RAIL.most, RAIL.least + rows * RAIL.step);

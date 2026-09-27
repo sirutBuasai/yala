@@ -1,6 +1,4 @@
-// The form choices that carry over to the next add; everything else on a form resets when it reopens.
-// Storage is not trusted: every consumer resolves a remembered value against the live option list
-// via `seed`, so an account that has since been closed falls back to the first available one.
+// Choices carried to the next add. Storage isn't trusted: `seed` resolves each against the live options.
 
 import { listOf, matching, oneOf, persisted, type Revive } from '$lib/utils/persist.svelte';
 

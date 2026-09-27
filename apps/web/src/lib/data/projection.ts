@@ -1,6 +1,4 @@
-// Where the invested balance goes from here: one line that keeps investing at the rate you have been, one
-// that stops, against two reference levels. Rates come from `plannedRates`, so a projection cannot disagree
-// with the FI number drawn beside it.
+// Rates come from `plannedRates`, so a projection can't disagree with the FI number beside it.
 
 import type { DashboardData } from '$lib/data/types';
 import type { MultiSeries, Scalar, Series } from './primitives';
@@ -29,9 +27,7 @@ export function secondaryLines(a: Assumptions): string[] {
 	return [COASTING, TARGET, lastsToName(a)];
 }
 
-/** The level a projection turns around at, `spending / r`. This, not the withdrawal rate against the
-    return, decides whether a balance lasts: the withdrawal is a fixed sum, so anything above this earns
-    more than it pays out. */
+/** `spending / r`: the withdrawal is a fixed sum, so a balance above this earns more than it pays out. */
 export function breakEven(
 	data: DashboardData,
 	a: Assumptions = assumptionsOf(data)
@@ -56,11 +52,8 @@ export function balanceAtRetirement(
 	return at === -1 ? (path.coasting[0] ?? null) : (path.coasting[at] ?? null);
 }
 
-/**
- * The balance that funds `spend` a year from retirement to the horizon age and reaches zero exactly there:
- * the present value of an annuity, `spend × (1 − (1+r)^−n) / r`. Far smaller than `spend × n`, since the
- * balance keeps earning while it is drawn on. Null when the horizon is not past retirement.
- */
+/** The present value of an annuity from retirement to the horizon age. Null when the horizon isn't past
+    retirement. */
 export function lastsToHorizon(
 	data: DashboardData,
 	a: Assumptions = assumptionsOf(data)
@@ -80,16 +73,9 @@ interface Path {
 	coasting: number[];
 }
 
-/**
- * Compound `start` forward a year at a time. Before the retirement year a line adds its contribution; from
- * then on it withdraws trailing annual spending — real dollars, not a share of the balance, since a
- * percentage can never exhaust a portfolio and would make depletion unanswerable.
- *
- * Floored at zero: past that the balance is spent, and a line diving negative reads as a debt.
- *
- * `returnIn` is the real return of the nth year out, in percent: the expected one unless a market is
- * being simulated.
- */
+/** Compound `start` yearly, contributing until retirement, then withdrawing spending in real dollars: a share
+    of the balance never exhausts it, making depletion unanswerable. `returnIn` is a year's real return, in
+    percent. Floored at zero, since a negative line reads as a debt. */
 function walk(
 	start: number,
 	a: Assumptions,
@@ -153,19 +139,16 @@ function gaussian(next: () => number): number {
 }
 
 export interface MarketRisk {
-	/** The investing line's balance each year, at the bottom and top of the middle 80% of markets. */
+	/** The investing line's balance each year, at the band's edges. */
 	lo: number[];
 	hi: number[];
 	/** Share of markets still funded at the horizon age, in percent. */
 	lasting: number;
-	/** The year the worst tenth of markets runs out, or null where even they last. */
+	/** The year the markets below the band run out, or null where even they last. */
 	worstRunsOut: number | null;
 }
 
-/**
- * The investing line re-run in `RUNS` markets, each year's real return drawn around the expected one at
- * the stated volatility. Null without a path to run, or with no volatility to spread it.
- */
+/** The investing line re-run in `RUNS` markets. Null without a path or without volatility. */
 export function marketRisk(
 	data: DashboardData,
 	a: Assumptions = assumptionsOf(data)
@@ -282,13 +265,9 @@ export interface Lever {
 const LEVER_STEP = 50;
 const LEVER_STEPS = 100;
 
-/**
- * The plan's timeline from this year to the horizon: today; Coast FI, the first year the investing line,
- * left alone from then, compounds into the FI number by retirement; FI; retirement; the horizon. Milestones
- * in one year share an entry. The phases between them: building to Coast FI, optional coast to FI,
- * optional work to retirement, drawing down after; a milestone already passed, or never reached before
- * retiring, drops the phase it would start. Null without a path.
- */
+/** The plan's timeline to the horizon: today, Coast FI, FI, retirement and the horizon, one entry per year,
+    with the phases between them. A milestone already passed, or not reached before retiring, drops the phase
+    it would start. Null without a path. */
 export function plan(data: DashboardData, a: Assumptions = assumptionsOf(data)): Plan | null {
 	const path = pathFor(data, a);
 	const target = fiNumber(data, a).value;
@@ -357,11 +336,8 @@ export function plan(data: DashboardData, a: Assumptions = assumptionsOf(data)):
 	};
 }
 
-/**
- * The smallest monthly change, in `LEVER_STEP`s, whose plan (`changed`, handed the change a year; null
- * where it no longer makes sense) reaches FI before `fi`, or at all where `fi` is null. Each lever moves one
- * figure alone: spending less lowers the FI number, investing more grows the balance.
- */
+/** The smallest monthly change in `LEVER_STEP`s whose plan reaches FI sooner than `fi`, or at all. Each lever
+    moves one figure alone. */
 function lever(
 	data: DashboardData,
 	fi: number | null,
