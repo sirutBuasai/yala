@@ -76,8 +76,7 @@
 		min-width: 0;
 		min-height: 0;
 	}
-	/* The change on its own line under the figure, as the Accounts mock drew it, so the figure has the row to
-	   read as fully as it can. */
+	/* The change on its own line under the figure, so the figure has the row to read as fully as it can. */
 	.figure {
 		display: grid;
 		justify-items: start;

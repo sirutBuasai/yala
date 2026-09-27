@@ -1,5 +1,5 @@
 <script lang="ts">
-	// The default layout is the user's own arrangement; a rearrangement is stored under this board's key.
+	// A rearrangement is stored under this board's key.
 	import { page } from '$app/stores';
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';
@@ -142,8 +142,8 @@
 					caption: { context: label, text: 'income and spending split' }
 				}
 			},
-			// The spreadsheet's month-by-category summary: the focus month's row is its Total row, how much
-			// each category has taken so far.
+			// Month by category: the focus month's row is its Total row, how much each category has taken
+			// so far.
 			heatmap: {
 				x: 0,
 				y: 60,

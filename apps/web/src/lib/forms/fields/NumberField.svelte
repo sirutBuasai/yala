@@ -10,7 +10,7 @@
 		min: number;
 		max: number;
 		step?: number;
-		/** Printed before the figure — a currency sign. */
+		/** Printed before the figure, such as a currency sign. */
 		prefix?: string;
 		/** Group the resting figure with thousands separators. For an amount, not a rate or an age. */
 		grouped?: boolean;
@@ -43,7 +43,7 @@
 	    the field could not be emptied. Cleared on commit. */
 	let typed = $state<string | null>(null);
 
-	/** Grouped at rest so long figures are readable, plain while being typed into — separators in a field
+	/** Grouped at rest so long figures are readable, plain while being typed into: separators in a field
 	    you are editing fight the caret. */
 	const shown = $derived(
 		typed ?? (value === null ? '' : grouped ? value.toLocaleString() : String(value))

@@ -629,7 +629,7 @@
 					"category": "Takeouts",
 					"source": "Liabilities:CC:CardA",
 					"pending": false,
-					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2025.beancount:3",
+					"locator": "line:../ledger/spending/2025.beancount:3",
 					"bill": null
 				},
 				{
@@ -639,7 +639,7 @@
 					"category": "Grocery",
 					"source": "Liabilities:CC:CardA",
 					"pending": false,
-					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2025.beancount:8",
+					"locator": "line:../ledger/spending/2025.beancount:8",
 					"bill": null
 				}
 			],
@@ -659,7 +659,7 @@
 					},
 					"net": 2300.0,
 					"take_home": 1550.0,
-					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/income/2025.beancount:3"
+					"locator": "line:../ledger/income/2025.beancount:3"
 				}
 			],
 			"transfers": []
@@ -681,7 +681,7 @@
 					"category": "Takeouts",
 					"source": "Liabilities:CC:CardA",
 					"pending": true,
-					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2025.beancount:12",
+					"locator": "line:../ledger/spending/2025.beancount:12",
 					"bill": null
 				}
 			],
@@ -709,7 +709,7 @@
 					"category": "Subscription",
 					"source": "Liabilities:CC:CardB",
 					"pending": false,
-					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2026.beancount:3",
+					"locator": "line:../ledger/spending/2026.beancount:3",
 					"bill": null
 				},
 				{
@@ -719,7 +719,7 @@
 					"category": "Takeouts",
 					"source": "Liabilities:CC:CardA",
 					"pending": false,
-					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2026.beancount:8",
+					"locator": "line:../ledger/spending/2026.beancount:8",
 					"bill": null
 				}
 			],
@@ -739,7 +739,7 @@
 					},
 					"net": 4750.0,
 					"take_home": 3000.0,
-					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/income/2026.beancount:3"
+					"locator": "line:../ledger/income/2026.beancount:3"
 				}
 			],
 			"transfers": []
@@ -784,7 +784,7 @@
 				},
 				"net": 4750.0,
 				"take_home": 3000.0,
-				"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/income/2026.beancount:3"
+				"locator": "line:../ledger/income/2026.beancount:3"
 			},
 			{
 				"date": "2025-08-15",
@@ -801,7 +801,7 @@
 				},
 				"net": 2300.0,
 				"take_home": 1550.0,
-				"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/income/2025.beancount:3"
+				"locator": "line:../ledger/income/2025.beancount:3"
 			}
 		]
 	},

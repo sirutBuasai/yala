@@ -209,7 +209,7 @@ test('the timeline labels every milestone, whatever the plan, and never overlaps
 	};
 	await setBirthYear(page);
 	const plans: [string, [string, number][]][] = [
-		// Reported: every label vanished once two milestones merged into one year.
+		// Bug: every label vanished once two milestones merged into one year.
 		[
 			'spend 108k, retire 57',
 			[
@@ -260,7 +260,7 @@ test('the timeline narrows to its floor in one drag, and to the same floor every
 	const east = pane.locator(':scope > .handle.e');
 	const columns = () => pane.evaluate((el) => (el as HTMLElement).style.gridColumn);
 
-	// Reported: a resize stopped a grid step narrower each time, because the labels, still where the last
+	// Bug: a resize stopped a grid step narrower each time, because the labels, still where the last
 	// width put them, read as a spill.
 	await dragBy(east, -1400, 0, 20);
 	const floor = await columns();

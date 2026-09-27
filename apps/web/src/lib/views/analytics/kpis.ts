@@ -4,8 +4,7 @@ import type { Scope } from '$lib/data/scope';
 import type { KpiBoardDefs, KpiMerge, KpiSpec } from '$lib/kpi/spec';
 import { words } from '$lib/ui/label';
 
-/** Every amount draws an area, so narrowing to a month keeps the chart's shape. Laid out as the user arranged
-    each board. */
+/** Every amount draws an area, so narrowing to a month keeps the chart's shape. */
 export function incomeChain(scope: Scope, layout: 'columns' | 'strip'): KpiBoardDefs {
 	const month = scope.level === 'month';
 	const amount = (field: string): KpiSpec =>
@@ -33,8 +32,7 @@ export function incomeChain(scope: Scope, layout: 'columns' | 'strip'): KpiBoard
 	);
 }
 
-// Heights of 5, 5, 5, 4 so each column spans the 19 rows it was arranged at; the merges below still share
-// the card out evenly.
+// Heights sum to the column's span; the merges below still share the card out evenly.
 const COLUMNS = {
 	gross: { x: 0, y: 0, w: 8, h: 5 },
 	deductions: { x: 0, y: 5, w: 8, h: 5 },

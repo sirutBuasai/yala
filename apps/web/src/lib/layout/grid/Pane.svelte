@@ -15,6 +15,7 @@
 	import { tick, type Snippet } from 'svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import { labelText, type Label } from '$lib/ui/label';
+	import { DEV_TOOLS } from '$lib/nav/devtools';
 	import SizeMode from '$lib/icons/SizeMode.svelte';
 	import { getArrangement, getGridEnv, getLabels } from './context';
 	import { drag, type DragParams } from './drag';
@@ -99,7 +100,7 @@
 		spills: () => {
 			if (!cardEl) return false;
 			const fits = everythingFits(cardEl);
-			if (!fits && import.meta.env.DEV) {
+			if (!fits && DEV_TOOLS) {
 				console.debug(`[grid] ${id} refused:`, [
 					...spillReport(cardEl, bodyEl),
 					...clippedLabels(cardEl)

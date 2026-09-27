@@ -49,8 +49,8 @@
 		return swr && swr.min > 0 && spending ? spending / (swr.min / 100) : undefined;
 	});
 
-	// The user's own arrangement. The rings and the timeline sit at their floors, found by resizing
-	// in Edit; the assumption panes fit their fields.
+	// The rings and the timeline sit at their floors, found by resizing in Edit; the assumption panes fit
+	// their fields.
 	const LAYOUT: BoardLayout = {
 		progress: {
 			x: 0,

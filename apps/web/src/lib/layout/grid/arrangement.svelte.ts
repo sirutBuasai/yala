@@ -1,5 +1,6 @@
 // Runes only, no DOM. Only authored panes persist, in priority order; displacement is never written.
 
+import { DEV_TOOLS } from '$lib/nav/devtools';
 import { Pref, listOf, number, type Revive } from '$lib/utils/persist.svelte';
 import { assertNoOverlap, clampRect, resolve, boardRows } from './resolve';
 import { lift, type DragOrigin } from './lift';
@@ -92,7 +93,7 @@ export class Arrangement {
 		const placed = resolve(
 			sizePanes(this.#panes, this.#specs, this.#measured, this.#effectiveFloors)
 		);
-		if (import.meta.env.DEV) assertNoOverlap(placed);
+		if (DEV_TOOLS) assertNoOverlap(placed);
 		return placed;
 	});
 
