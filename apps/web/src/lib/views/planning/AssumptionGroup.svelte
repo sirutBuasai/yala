@@ -192,7 +192,7 @@
 		<b>trailing spending based on your activity: {money(worked.loggedSpend)}/yr</b>
 		Average saved and spent metrics from your logged activity or custom spending rate.
 	{:else if spec.key === 'out-of-pocket'}
-		<b>trailing savings based on your activity: {money(rates.residual)}/yr</b>
+		<b>trailing take-home after spending: {money(rates.residual)}/yr</b>
 		<b>{investing}</b>
 	{/if}
 {/snippet}

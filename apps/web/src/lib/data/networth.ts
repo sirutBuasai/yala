@@ -784,7 +784,7 @@ export function netWorthYearTable(data: DashboardData, since?: number): Table {
     reads the same rates the targets are built from. */
 export function trailingAnnual(
 	data: DashboardData,
-	measure: 'spending' | 'saved' | 'contributions'
+	measure: 'spending' | 'saved' | 'contributions' | 'takehome'
 ): number {
 	const keys = data.meta.month_keys.filter((k) => data.months[k]).slice(-12);
 	if (!keys.length) return 0;
@@ -796,19 +796,20 @@ export function trailingAnnual(
 
 const trailingAnnualSpend = (data: DashboardData) => trailingAnnual(data, 'spending');
 
-/** The rates a plan runs on, each stated or else logged. `saved` is a residual, not a flow into investments,
-    so `residual` seeds the control and `investing` is what a projection adds. */
+/** The rates a plan runs on, each stated or else logged. Payroll contributions are always invested; `residual`
+    is the take-home left after spending, which seeds the out-of-pocket control, and `investing` is what a
+    projection adds. */
 export function plannedRates(
 	data: DashboardData,
 	a: Assumptions
 ): { spending: number; investing: number; contributions: number; residual: number } {
 	const contributions = trailingAnnual(data, 'contributions');
-	// Floored: a month funded out of savings contributes more than it took in, which is not a negative
-	// leftover to seed the control from.
-	const residual = Math.max(0, trailingAnnual(data, 'saved') - contributions);
+	const spent = trailingAnnualSpend(data);
+	// Floored: a year spent out of savings is not a negative leftover to seed the control from.
+	const residual = Math.max(0, trailingAnnual(data, 'takehome') - spent);
 
 	return {
-		spending: a.plannedSpending ?? trailingAnnualSpend(data),
+		spending: a.plannedSpending ?? spent,
 		// NOT capped at `residual`: money can be moved into the market from anywhere, so planning to invest
 		// more than last year's leftover is a legitimate plan rather than an error to clamp away.
 		investing: contributions + (a.outOfPocket ?? residual),
