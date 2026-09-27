@@ -125,15 +125,13 @@ test('a deep link opens its page directly', async ({ page }) => {
 	await expect(page.getByRole('heading', { level: 2, name: 'Manage', exact: true })).toBeVisible();
 });
 
-test('the development gallery opens inside the shell, like every other page', async ({ page }) => {
-	await page
-		.getByRole('navigation', { name: 'Tools' })
-		.getByRole('link', { name: 'Development' })
-		.click();
+test('a normal build hides the development gallery', async ({ page }) => {
+	await expect(page.getByRole('link', { name: 'Development' })).toHaveCount(0);
+	await page.goto('/dev');
+	await expect(page.getByText('Not found')).toBeVisible();
 	await expect(
 		page.getByRole('heading', { level: 2, name: 'Development', exact: true })
-	).toBeVisible();
-	await expect(pages(page)).toBeVisible();
+	).toHaveCount(0);
 });
 
 test('the theme toggle sits on the page title line', async ({ page }) => {

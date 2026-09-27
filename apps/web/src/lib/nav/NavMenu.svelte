@@ -6,12 +6,13 @@
 	import { dur } from '$lib/utils/motion';
 	import Close from '$lib/icons/Close.svelte';
 	import NavLinks from '$lib/nav/NavLinks.svelte';
-	import { DEV_PAGE, PAGES } from '$lib/nav/pages';
+	import { PAGES } from '$lib/nav/pages';
+	import { TOOL_PAGES } from '$lib/nav/devtools';
 	import { SIDEBAR_W } from '$lib/nav/sidebar';
 
 	let open = $state(false);
 
-	const links = [...PAGES, DEV_PAGE];
+	const links = [...PAGES, ...TOOL_PAGES];
 
 	function close() {
 		open = false;

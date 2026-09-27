@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Clean, generate data.json, build the site, and serve it.
 
-serve.py web  [--port N] [--worktree DIR] [--ledger DIR]   the built snapshot alone (default 4173)
-serve.py api  [--port N] [--worktree DIR] [--ledger DIR]   snapshot + the write API (default 8000)
+serve.py web  [--port N] [--worktree DIR] [--ledger DIR] [--dev]   the snapshot alone (port 4173)
+serve.py api  [--port N] [--worktree DIR] [--ledger DIR] [--dev]   snapshot + write API (port 8000)
 
 --worktree builds and serves a git worktree's code; --ledger points data.json and the API at another
-ledger directory, such as a throwaway worktree.
+ledger directory, such as a throwaway worktree; --dev builds in the development pages.
 """
 
 from __future__ import annotations
@@ -64,6 +64,11 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         default=None,
         help="Ledger directory to read and write instead of $YALA_LEDGER_DIR or the default.",
     )
+    parser.add_argument(
+        "--dev",
+        action="store_true",
+        help="Build in the development pages (the token gallery at /dev).",
+    )
     return parser.parse_args(argv)
 
 
@@ -114,7 +119,9 @@ def main(argv: list[str]) -> None:
     print("==> Sync SvelteKit (regenerate .svelte-kit/ removed by clean)")
     run("npx", "svelte-kit", "sync", cwd=web)
 
-    print("==> Build site")
+    if args.dev:
+        os.environ["VITE_YALA_DEV"] = "1"  # read by $lib/nav/devtools at build time
+    print(f"==> Build site{' with development pages' if args.dev else ''}")
     run("npm", "run", "build", cwd=web)
 
     if mode == "web":

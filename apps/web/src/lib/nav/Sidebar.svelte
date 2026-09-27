@@ -3,7 +3,8 @@
 	import Brand from '$lib/nav/Brand.svelte';
 	import YalaMark from '$lib/icons/YalaMark.svelte';
 	import NavLinks from '$lib/nav/NavLinks.svelte';
-	import { DEV_PAGE, PAGES } from '$lib/nav/pages';
+	import { PAGES } from '$lib/nav/pages';
+	import { TOOL_PAGES } from '$lib/nav/devtools';
 	import { RAIL_W, SIDEBAR_W } from '$lib/nav/sidebar';
 
 	let { rail }: { rail: boolean } = $props();
@@ -17,9 +18,11 @@
 			<span class="brand"><Brand /></span>
 		</div>
 		<NavLinks links={PAGES} ariaLabel="Pages" />
-		<div class="foot">
-			<NavLinks links={[DEV_PAGE]} ariaLabel="Tools" />
-		</div>
+		{#if TOOL_PAGES.length}
+			<div class="foot">
+				<NavLinks links={TOOL_PAGES} ariaLabel="Tools" />
+			</div>
+		{/if}
 	</aside>
 </div>
 

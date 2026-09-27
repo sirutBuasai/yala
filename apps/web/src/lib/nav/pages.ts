@@ -15,6 +15,7 @@ export const PAGES: readonly NavLink[] = [
 	{ href: '/manage', label: 'Manage' }
 ];
 
+/** Listed only where `DEV_TOOLS` is on (see `devtools.ts`). */
 export const DEV_PAGE: NavLink = { href: '/dev', label: 'Development' };
 
 /** The page a path belongs to, by its first segment: a page's views are paths under it. */
