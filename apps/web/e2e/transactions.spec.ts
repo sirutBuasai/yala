@@ -47,3 +47,16 @@ test('a Category by month label opens its month with the history unfiltered', as
 	await expect(page).not.toHaveURL(/type=|category=|q=/);
 	await expect(page.getByRole('combobox', { name: 'Month' })).toContainText(month);
 });
+
+test('N opens Add entry, but not while a field has the keyboard', async ({ page }) => {
+	await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+	await page.keyboard.press('n');
+	const dialog = page.getByRole('dialog');
+	await expect(dialog).toBeVisible();
+
+	await page.keyboard.press('Escape');
+	await expect(dialog).toHaveCount(0);
+	await page.getByRole('searchbox').or(page.getByRole('textbox')).first().focus();
+	await page.keyboard.press('n');
+	await expect(dialog).toHaveCount(0);
+});

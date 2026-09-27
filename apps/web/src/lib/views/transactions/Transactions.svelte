@@ -29,6 +29,8 @@
 	import HistoryPane from '$lib/lists/HistoryPane.svelte';
 	import EditModals from '$lib/entries/EditModals.svelte';
 	import { words } from '$lib/ui/label';
+	import { onKey } from '$lib/utils/keys';
+	import { isShortcut } from '$lib/utils/shortcut';
 
 	interface Props {
 		data: DashboardData;
@@ -202,6 +204,8 @@
 		else modals.editTransfer(e.locator);
 	}
 </script>
+
+<svelte:window onkeydown={(e) => isShortcut(e) && onKey(e, { n: () => add() })} />
 
 <ViewHeader title="Transactions">
 	<MonthNav
