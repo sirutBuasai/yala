@@ -3,6 +3,7 @@
 	// has no arrangement to edit.
 	import Panes from '$lib/icons/Panes.svelte';
 	import { getGridEnv } from './context';
+	import { ARRANGE_HINT_ID } from './env.svelte';
 
 	const env = getGridEnv();
 </script>
@@ -17,6 +18,9 @@
 		<Panes />
 		Edit
 	</button>
+	<span id={ARRANGE_HINT_ID} class="vh">
+		Arrow keys move a pane by one step, Shift and arrow keys resize it, and Escape cancels a drag.
+	</span>
 {/if}
 
 <style>

@@ -23,16 +23,27 @@ export const MIN_H = 3;
 /** Below this content width the board folds to a single column. */
 export const ONE_COLUMN = 960;
 
-export type FoldMode = 'full' | 'two' | 'one';
+/** The most a full board is shrunk to keep its layout; any smaller and its type stops reading comfortably,
+    so the board folds instead. */
+export const MIN_SCALE = 0.8;
 
-/** Arranging is offered only at `'full'`, the board the stored coordinates describe. */
+/** `scaled` is the full board drawn smaller: the layout the user arranged, just not editable. */
+export type FoldMode = 'full' | 'scaled' | 'two' | 'one';
+
+/** Arranging is offered only at `'full'`, the board the stored coordinates describe at their own size. */
 export function foldMode(content: number): FoldMode {
 	if (content >= CONTENT) return 'full';
+	if (content >= CONTENT * MIN_SCALE) return 'scaled';
 	return content <= ONE_COLUMN ? 'one' : 'two';
 }
 
+/** Whether panes drop their coordinates and flow in columns. */
+export function folds(fold: FoldMode): boolean {
+	return fold === 'two' || fold === 'one';
+}
+
 export function foldColumns(fold: FoldMode): number {
-	return fold === 'full' ? COLS : fold === 'two' ? 2 : 1;
+	return fold === 'two' ? 2 : fold === 'one' ? 1 : COLS;
 }
 
 /** Whole rows a measured pixel height occupies, floored at one row. */

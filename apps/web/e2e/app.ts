@@ -118,7 +118,7 @@ export async function setContentWidth(page: Page, px: number | null): Promise<vo
 /** Turn the board's arrange affordances on, if this width offers them. */
 export async function startArranging(page: Page): Promise<void> {
 	if (await page.locator('.grab').first().isVisible()) return;
-	await page.getByRole('button', { name: 'Edit' }).click();
+	await page.getByRole('button', { name: 'Edit', exact: true }).click();
 	await settle(page);
 	await expect(page.locator('.grab').first()).toBeVisible();
 }

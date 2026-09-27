@@ -160,24 +160,35 @@ function yearTicks(xs: number[], periods: string[]): AxisTick[] {
 /** Round steps a crowded axis of years may name every so many of, smallest first. */
 const YEAR_STEPS = [5, 10, 20, 25, 50];
 
-/** Every `step`th year of an axis whose labels are all years, at the first step whose labels clear each
-    other and both ends of the plot; null where none does. */
+/** The first candidate run whose labels clear each other; null where none does. */
+function firstClear(runs: AxisTick[][]): AxisTick[] | null {
+	return runs.find((run) => run.length > 1 && clear(run)) ?? null;
+}
+
+/** Every `step`th year of an axis whose labels are all years, centred and clear of both ends of the plot. */
 function steppedYears(ticks: AxisTick[]): AxisTick[] | null {
 	if (!ticks.length || !ticks.every((t) => /^\d{4}$/.test(t.text))) return null;
 
 	const [lo, hi] = [ticks[0]!.x, ticks.at(-1)!.x];
-	for (const step of YEAR_STEPS) {
-		const kept = ticks
-			.filter((t) => Number(t.text) % step === 0)
-			.map((t): AxisTick => ({ ...t, anchor: 'middle' }))
-			.filter((t) => reach(t)[0] >= lo && reach(t)[1] <= hi);
-		if (kept.length > 1 && clear(kept)) return kept;
-	}
-	return null;
+	return firstClear(
+		YEAR_STEPS.map((step) =>
+			ticks
+				.filter((t) => Number(t.text) % step === 0)
+				.map((t): AxisTick => ({ ...t, anchor: 'middle' }))
+				.filter((t) => reach(t)[0] >= lo && reach(t)[1] <= hi)
+		)
+	);
+}
+
+/** Every `step`th label from the first, at the smallest step that lies flat. */
+function thinned(ticks: AxisTick[]): AxisTick[] | null {
+	const steps = Array.from({ length: Math.max(0, ticks.length - 2) }, (_, i) => i + 2);
+	return firstClear(steps.map((step) => ticks.filter((_, i) => i % step === 0)));
 }
 
 /** Every x-label at `xs`, none overlapping: flat where they fit, else one name per year of `periods`, a
-    thinned run of years, or turned labels with the bottom margin grown. `anchored` anchors ends inward. */
+    thinned run of years, slanted labels with the bottom margin grown, or every so many labels flat.
+    `anchored` anchors ends inward. */
 export function xAxisLabels(
 	xs: number[],
 	labels: string[],
@@ -200,7 +211,11 @@ export function xAxisLabels(
 	if (stepped) return { ticks: stepped, angle: 0, bottom: FLAT_BOTTOM };
 
 	const gaps = xs.slice(1).map((x, i) => x - xs[i]!);
-	const angle = Math.min(...gaps) >= AXIS_LINE_H * Math.SQRT2 ? 45 : 90;
+	const slants = Math.min(...gaps) >= AXIS_LINE_H * Math.SQRT2;
+	const thin = slants ? null : thinned(perPoint);
+	if (thin) return { ticks: thin, angle: 0, bottom: FLAT_BOTTOM };
+
+	const angle = slants ? 45 : 90;
 	const width = Math.max(...labels.map(labelWidth));
 	const rise = angle === 45 ? width * Math.SQRT1_2 : width;
 	return {

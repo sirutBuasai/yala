@@ -3,6 +3,7 @@
 	// readers reach the arithmetic.
 	import type { Snippet } from 'svelte';
 	import Help from '$lib/icons/Help.svelte';
+	import { portal } from '$lib/utils/portal';
 
 	interface Props {
 		/** What the hint is about, so the button has a spoken name of its own. */
@@ -21,8 +22,8 @@
 	/** Viewport coordinates, because the bubble is positioned `fixed`. Null until measured. */
 	let at = $state<{ left: number; top: number } | null>(null);
 
-	/** Placed against the viewport, since a scrolling pane clips an absolute bubble. Alignment is measured,
-	    since the column count moves with width. */
+	/** Placed against the viewport from `<body>`, since a scrolling pane clips an absolute bubble and a
+	    scaled board moves a fixed one. Alignment is measured, since the column count moves with width. */
 	function place() {
 		if (!root || !bubble) return;
 
@@ -100,6 +101,7 @@
 	<span
 		{id}
 		bind:this={bubble}
+		use:portal
 		class="bubble"
 		class:open
 		class:pinned
@@ -131,7 +133,7 @@
 	.hint-button.pinned {
 		color: var(--control-line);
 	}
-	/* `fixed`, so no scrolling ancestor can clip it; `place()` supplies the coordinates. */
+	/* `fixed` from `<body>`, so no ancestor can clip or move it; `place()` supplies the coordinates. */
 	.bubble {
 		position: fixed;
 		z-index: 60;

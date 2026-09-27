@@ -3,13 +3,24 @@
 
 import { SLACK } from '$lib/layout/grid/spill';
 
-/** `chrome` is whatever else shares the room. When none fit, the last: a figure must still say something. */
-export function levelThatFits(widths: number[], available: number, chrome = 0): number {
-	if (!widths.length) return 0;
-	const room = available - chrome + SLACK;
+/** The first of `widths`, fullest first, that fits `room`; the last when none does, since a figure must
+    still say something. */
+export function firstFitting(widths: number[], room: number): number {
 	const i = widths.findIndex((w) => w <= room);
+	return i === -1 ? Math.max(0, widths.length - 1) : i;
+}
 
-	return i === -1 ? widths.length - 1 : i;
+/** `chrome` is whatever else shares the room. Forgives `SLACK`, as the spill probe does. */
+export function levelThatFits(widths: number[], available: number, chrome = 0): number {
+	return firstFitting(widths, available - chrome + SLACK);
+}
+
+/** How much smaller than laid out `el` is drawn, as a scaled board draws it. A transform shrinks what
+    `getBoundingClientRect` reports but never `clientWidth`, so a drawn width is divided by this before the
+    two are compared. 1 for a box with no width to judge by. */
+export function drawnScale(el: HTMLElement): number {
+	const drawn = el.getBoundingClientRect().width;
+	return el.offsetWidth && drawn ? drawn / el.offsetWidth : 1;
 }
 
 /** The floor to publish for `px` of content, as a CSS length. `SLACK` because that is the tolerance the spill
@@ -57,7 +68,7 @@ export function scaleToFit(node: HTMLElement, least: number) {
 		// scroll width, which made the floor follow whatever width the pane had last been given.
 		const text = document.createRange();
 		text.selectNodeContents(node);
-		const need = text.getBoundingClientRect().width;
+		const need = text.getBoundingClientRect().width / drawnScale(node);
 		const room = node.clientWidth;
 		let fit = need && room ? Math.min(1, (room - SLACK) / need) : 1;
 		node.style.setProperty('--fit', String(Math.max(least, fit)));

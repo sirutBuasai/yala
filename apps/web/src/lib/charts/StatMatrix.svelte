@@ -104,15 +104,6 @@
 		text-align: left;
 		padding-left: 0;
 	}
-	/* The corner cell needs no visible text, but the column still needs a name for screen readers. */
-	.vh {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		overflow: hidden;
-		clip-path: inset(50%);
-		white-space: nowrap;
-	}
 	td {
 		text-align: right;
 		padding: var(--space-5) 0 var(--space-5) var(--gap-grid);

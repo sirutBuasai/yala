@@ -1,13 +1,12 @@
 // What a pane draws when its content is a catalog figure. Its own module because `types.ts` names this
 // shape, so declaring it there would be a cycle.
 
-import type { ColorBy } from '$lib/charts/registry';
-import type { PickGrain } from '$lib/charts/axis';
+import type { ChartOptions } from '$lib/charts/registry';
 import type { Scope } from '$lib/data/scope';
 import type { Label } from '$lib/ui/label';
 
 /** One figure on the board: which catalog id to build, at which scope, and how to draw it. */
-export interface FigureSpec {
+export interface FigureSpec extends ChartOptions {
 	figure: string;
 	scope: Scope;
 	/** Chart id; defaults to the first chart for the primitive's kind (stat for scalars). */
@@ -16,26 +15,6 @@ export interface FigureSpec {
 	title?: Label;
 	/** Subtitle override; a scalar otherwise uses its note. */
 	caption?: Label;
-	area?: boolean;
-	color?: string;
-	/** What a categorical's keys name (categories, accounts, roles) — drives their colours. */
-	colorBy?: ColorBy;
-	total?: number;
-	/** Log-scale a line chart's value axis. */
-	log?: boolean;
-	/** Label lines at their right edge instead of drawing a legend. */
-	endLabels?: boolean;
-	/** Series names to draw dotted. */
-	dashed?: string[];
-	/** Print each bar's own figure above it (a lone series only). */
-	valueLabels?: boolean;
-	/** The period in focus: its period key where the axis carries them (`YYYY-MM` names a month's
-	    snapshots), else its label. */
-	mark?: string;
-	/** The grain a line or area chart's click picks at, for an axis whose points are finer than it. */
-	pickBy?: PickGrain;
-	/** Heatmap scaling: per row (default) or one scale for the whole grid. */
-	normalize?: 'row' | 'col' | 'global';
 }
 
 /** Figure non-optional, so the call site needs no assertion. `content` keeps the constraint from being

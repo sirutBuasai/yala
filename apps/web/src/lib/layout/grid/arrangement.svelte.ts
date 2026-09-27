@@ -5,10 +5,18 @@ import { Pref, listOf, number, type Revive } from '$lib/utils/persist.svelte';
 import { assertNoOverlap, clampRect, resolve, boardRows } from './resolve';
 import { lift, type DragOrigin } from './lift';
 import { readingOrder } from './fold';
-import { effectiveMode, hugs, scrolls, sizePanes, type ContentFloor } from './sizing';
+import { effectiveMode, hugs, scrolls, sizePanes } from './sizing';
 import { COLS, MIN_H, MIN_W, pxForRows, rowsForPx } from './units';
 import type { GridEnv } from './env.svelte';
-import type { AuthoredPane, BoardLayout, HeightMode, PaneSpec, PlacedPane, Rect } from './types';
+import type {
+	AuthoredPane,
+	BoardLayout,
+	Floor,
+	HeightMode,
+	PaneSpec,
+	PlacedPane,
+	Rect
+} from './types';
 
 const MODES: HeightMode[] = ['fixed', 'fit', 'cap'];
 
@@ -61,7 +69,7 @@ export class Arrangement {
 	#measured = $state<Record<string, number>>({});
 	/** While a label is typed, that pane's floor follows the text both ways but never below `base`, so an edit
 	    typed long then shortened leaves the pane where it started. */
-	#draft = $state<{ id: string; base: ContentFloor; floor: ContentFloor } | null>(null);
+	#draft = $state<{ id: string; base: Floor; floor: Floor } | null>(null);
 	/** Authored panes in priority order. Mutated live during a gesture; flushed on release. */
 	#panes = $state<AuthoredPane[]>([]);
 
@@ -84,7 +92,7 @@ export class Arrangement {
 	}
 
 	/** The only floor the resolver is given: the size an open label edit is holding its pane at. */
-	readonly #effectiveFloors = $derived.by<Record<string, ContentFloor>>(() => {
+	readonly #effectiveFloors = $derived.by<Record<string, Floor>>(() => {
 		const d = this.#draft;
 		return d ? { [d.id]: d.floor } : {};
 	});

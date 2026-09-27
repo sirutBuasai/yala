@@ -174,8 +174,12 @@ describe('xAxisLabels', () => {
 		expect(texts.every((t) => Number(t) % 10 === 0)).toBe(true);
 	});
 
-	it('stands labels upright once even a slant would collide', () => {
-		expect(xAxisLabels(evenly(80, 600), names(80), undefined, true).angle).toBe(90);
+	it('names every so many labels flat once even a slant would collide', () => {
+		const axis = xAxisLabels(evenly(30, 200), names(30), undefined, true);
+		expect(axis.angle).toBe(0);
+		expect(axis.ticks[0]!.text).toBe(names(30)[0]);
+		expect(axis.ticks.length).toBeGreaterThan(1);
+		expect(axis.ticks.length).toBeLessThan(30);
 	});
 
 	// Bug: the first label is anchored at its start, so it reaches a whole width right, where the next,

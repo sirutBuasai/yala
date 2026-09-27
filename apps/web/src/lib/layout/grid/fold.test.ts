@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { foldSpan, readingOrder } from '$lib/layout/grid/fold';
-import { foldMode, foldColumns, COLS, CONTENT, ONE_COLUMN } from '$lib/layout/grid/units';
+import {
+	foldMode,
+	foldColumns,
+	COLS,
+	CONTENT,
+	MIN_SCALE,
+	ONE_COLUMN
+} from '$lib/layout/grid/units';
 import type { PlacedPane } from '$lib/layout/grid/types';
 
 const q = (id: string, x: number, y: number, w = 24, h = 6): PlacedPane => ({
@@ -47,12 +54,13 @@ describe('foldSpan', () => {
 });
 
 describe('foldMode', () => {
-	it('is full only when the whole content column fits', () => {
+	it('is full only when the whole content column fits, then scaled down to its least scale', () => {
 		expect(foldMode(CONTENT)).toBe('full');
-		expect(foldMode(CONTENT - 1)).toBe('two');
+		expect(foldMode(CONTENT - 1)).toBe('scaled');
+		expect(foldMode(Math.floor(CONTENT * MIN_SCALE) - 1)).toBe('two');
 	});
 
-	it('folds to one column at 60rem and below', () => {
+	it('folds to one column at the one-column width and below', () => {
 		expect(foldMode(ONE_COLUMN)).toBe('one');
 		expect(foldMode(ONE_COLUMN + 1)).toBe('two');
 	});

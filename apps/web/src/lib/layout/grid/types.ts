@@ -28,6 +28,13 @@ export interface PaneSpec extends Rect {
 	figure?: FigureSpec;
 }
 
+/** The least spans a pane's content fits in, in units: any rectangle at least this on both axes fits. 0 on
+    an axis never measured. */
+export interface Floor {
+	w: number;
+	h: number;
+}
+
 /** A view's default arrangement. Key order is the resolver's default priority order. */
 export type BoardLayout<K extends string = string> = Record<K, PaneSpec>;
 

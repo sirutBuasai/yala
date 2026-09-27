@@ -16,7 +16,7 @@
 		readingsOf,
 		type DeltaDetail
 	} from '$lib/data/primitives';
-	import { contentFloor, levelThatFits, watchWidth } from '$lib/ui/fit';
+	import { contentFloor, drawnScale, levelThatFits, watchWidth } from '$lib/ui/fit';
 	import { seriesColor } from '$lib/charts/registry';
 	import Badge, { badgeTone } from '$lib/ui/Badge.svelte';
 	import DeltaBadge from '$lib/ui/DeltaBadge.svelte';
@@ -139,11 +139,12 @@
 		const watch = watchWidth(el, (width) => {
 			room = width;
 			const gap = parseFloat(getComputedStyle(el).columnGap) || 0;
+			const scale = drawnScale(el);
 			const others = [...el.children].filter(
 				(c) => !c.classList.contains('num') && !c.classList.contains('badge')
 			);
 			chrome =
-				others.reduce((total, c) => total + c.getBoundingClientRect().width, 0) +
+				others.reduce((total, c) => total + c.getBoundingClientRect().width / scale, 0) +
 				Math.max(0, el.children.length - 1) * gap;
 		});
 		return watch.stop;
@@ -151,9 +152,10 @@
 
 	$effect(() => {
 		const el = probeEl;
-		if (!el) return;
+		if (!el || !frontEl) return;
 		void LEVELS;
-		widths = [...el.children].map((line) => line.getBoundingClientRect().width);
+		const scale = drawnScale(frontEl);
+		widths = [...el.children].map((line) => line.getBoundingClientRect().width / scale);
 	});
 
 	const shown = $derived(LEVELS[levelThatFits(widths, room, chrome)] ?? LEVELS[0]!);
@@ -176,7 +178,7 @@
 	<!-- Held open by `nameable`, not by `naming`: a line that appeared only while editing made the card
 	     measure taller in one mode than the other, and the pane banked the difference. -->
 	{#if title || nameable}
-		<h2 class="serif" class:link={!!spec.open && !naming} data-label-line {...link}>
+		<h2 class="serif" class:title-link={!!spec.open && !naming} data-label-line {...link}>
 			<LabelLine
 				label={named.title}
 				what="title"
@@ -199,7 +201,7 @@
 		/>
 	</p>
 
-	<div class="stat">
+	<div class="stat" class:charted={!!behind}>
 		{#if behind}
 			<div class="behind">
 				<Spark series={behind.series} shape={behind.shape} color={markColor} level={spec.level} />
@@ -254,14 +256,6 @@
 		flex: 1 1 auto;
 		min-width: max(var(--content-floor, 0px), min-content);
 	}
-	.link {
-		cursor: pointer;
-	}
-	.link:hover,
-	.link:focus-visible {
-		text-decoration: underline;
-		text-underline-offset: 0.2em;
-	}
 	/* Neither may shrink, or an unset `--label-lines` lets the column squeeze a line and clip its glyphs. */
 	.kpi h2,
 	.cap {
@@ -284,6 +278,10 @@
 		margin-top: auto;
 		padding-top: var(--space-2);
 		min-width: 0;
+	}
+	/* Folded, a card hugs its figure, which left the chart behind it no room to rise above the number. */
+	:global(.cell.folded) .stat.charted {
+		min-height: calc(var(--text-display) * 3);
 	}
 	.behind {
 		position: absolute;
@@ -325,18 +323,6 @@
 	}
 	.num.bad {
 		color: var(--crit-text);
-	}
-	/* Zero-sized and clipped: an absolute descendant still counts toward scrollable overflow, and a sized probe
-	   made every KPI pane refuse resizes. */
-	.probe {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 0;
-		height: 0;
-		overflow: hidden;
-		visibility: hidden;
-		pointer-events: none;
 	}
 	/* The same axis, gap and nowrap as `.front`, since that is the line being measured for. `max-content`
 	   because the box above gives it no width to lay out in. */

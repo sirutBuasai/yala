@@ -3,6 +3,7 @@
 	// check. No pencil beside it, or the pane's minimum would depend on whether the board is being edited.
 	import type { Snippet } from 'svelte';
 	import { LABEL_MAX, labelGhost, labelText, type Label } from './label';
+	import { selectContents } from '$lib/utils/selection';
 
 	interface Props {
 		label: Label;
@@ -42,7 +43,7 @@
 	const clean = (text: string) => text.replace(/\s+/g, ' ').trim();
 
 	/** A backstop against pathological input, not the limit a user meets: how long a label may be is the
-	    card's business, and the pane puts back words its card cannot hold (see `grid/Pane`). */
+	    card's business, and the pane puts back words its card cannot hold (see `grid/labelDraft`). */
 	function onBeforeInput(e: InputEvent): void {
 		if (e.inputType.startsWith('insert') && draft.length >= LABEL_MAX) e.preventDefault();
 	}
@@ -59,11 +60,7 @@
 	$effect(() => {
 		if (!editing || !field) return;
 		field.focus();
-		const range = document.createRange();
-		range.selectNodeContents(field);
-		const selection = getSelection();
-		selection?.removeAllRanges();
-		selection?.addRange(range);
+		selectContents(field);
 	});
 </script>
 
