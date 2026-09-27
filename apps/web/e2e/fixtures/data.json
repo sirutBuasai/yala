@@ -966,6 +966,7 @@
 		"swr": 4.0,
 		"nominal_return": 8.0,
 		"inflation": 3.0,
+		"volatility": 15.0,
 		"retire_age": 60.0,
 		"runway_target": 6.0,
 		"horizon_age": 95.0,
@@ -1000,6 +1001,15 @@
 			"max": 15.0,
 			"default": 3.0,
 			"help": "Long-run annual inflation rate."
+		},
+		{
+			"key": "volatility",
+			"label": "Return volatility",
+			"kind": "percent",
+			"min": 0.0,
+			"max": 30.0,
+			"default": 15.0,
+			"help": "How far a year's return strays from the expected one: around 15% for a mostly stock portfolio, 10% for 60/40."
 		},
 		{
 			"key": "retire-age",

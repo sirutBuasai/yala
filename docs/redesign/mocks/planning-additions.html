@@ -1,0 +1,377 @@
+<title>Planning Additions</title>
+<style>
+:root {
+	--bg: #f0ebdd; --surface: #faf6ec; --surface-2: #f1ead9; --inset: #ece4d2; --border: #ddd2bb; --grid: #e6ddca;
+	--ink: #2e2a22; --ink-2: #5c5443; --ink-3: #6e6652;
+	--lav: #bb9af7; --teal: #7dcfff; --green: #9ece6a; --gold: #e0af68; --salmon: #f7768e; --blue: #6f8fe8; --aqua: #73daca;
+	--lav-text: #6a49bd; --good-text: #457124; --crit-text: #bb324a; --gold-text: #806211;
+	--shadow: 0 1px 2px rgba(120, 90, 40, 0.06), 0 14px 34px -18px rgba(120, 90, 40, 0.28);
+	--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+	--sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		color-scheme: dark;
+		--bg: #16161f; --surface: #1f1f2b; --surface-2: #26263a; --inset: #2a2a3c; --border: #33334a; --grid: #2a2a3c;
+		--ink: #e6e0c8; --ink-2: #a8a28c; --ink-3: #969380;
+		--lav-text: #bb9af7; --good-text: #9ece6a; --crit-text: #f7768e; --gold-text: #e0af68;
+		--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+	}
+}
+:root[data-theme='dark'] {
+	color-scheme: dark;
+	--bg: #16161f; --surface: #1f1f2b; --surface-2: #26263a; --inset: #2a2a3c; --border: #33334a; --grid: #2a2a3c;
+	--ink: #e6e0c8; --ink-2: #a8a28c; --ink-3: #969380;
+	--lav-text: #bb9af7; --good-text: #9ece6a; --crit-text: #f7768e; --gold-text: #e0af68;
+	--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; padding-inline: 20px; }
+.page { max-width: 1160px; margin: 0 auto; padding-block: 52px 110px; display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 { font-size: clamp(30px, 5vw, 42px); line-height: 1.12; }
+h2 { font-size: 25px; }
+p { margin: 0; }
+.eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.lede, .head p { color: var(--ink-2); max-width: 76ch; }
+section { display: grid; gap: 18px; }
+.head { display: grid; gap: 8px; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; align-items: start; }
+.tag { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+.tag.new { color: var(--lav-text); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; box-shadow: var(--shadow); }
+.ct { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ct b { font-family: var(--serif); font-size: 15px; font-weight: 600; }
+.ct span { color: var(--ink-3); font-size: 12px; }
+.kpi { display: grid; gap: 4px; }
+.kpi .l { font-family: var(--serif); font-size: 14px; font-weight: 600; }
+.kpi .v { font-family: var(--serif); font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.kpi .c { font-size: 12px; color: var(--ink-3); }
+.meter { height: 8px; border-radius: 4px; background: var(--inset); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--lav); }
+.good { color: var(--good-text); }
+.bad { color: var(--crit-text); }
+.plot { position: relative; height: 260px; }
+.plot svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.plot text { fill: var(--ink-3); font-size: 11px; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.plot .gl { stroke: var(--grid); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 16px; height: 0; border-top: 2.4px solid var(--c); }
+.legend i.dash { border-top-style: dashed; border-top-width: 1.8px; }
+.legend i.band { height: 10px; border: 0; border-radius: 3px; background: color-mix(in srgb, var(--lav) 30%, transparent); }
+.figureline { font-size: 13px; color: var(--ink-2); }
+.figureline strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.knob { display: grid; gap: 3px; }
+.knob .line { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-3); }
+.knob .line b { font-size: 14px; letter-spacing: 0; text-transform: none; color: var(--ink); font-variant-numeric: tabular-nums; }
+.knob input[type='range'] { appearance: none; width: 100%; height: 1.1rem; margin: 0; background: none; cursor: pointer; }
+.knob input[type='range']::-webkit-slider-runnable-track { height: 6px; border: 1px solid var(--border); border-radius: 999px; background: linear-gradient(to right, var(--lav) var(--filled, 0%), var(--inset) var(--filled, 0%)); }
+.knob input[type='range']::-moz-range-track { height: 6px; border: 1px solid var(--border); border-radius: 999px; background: var(--inset); }
+.knob input[type='range']::-moz-range-progress { height: 6px; border-radius: 999px; background: var(--lav); }
+.knob input[type='range']::-webkit-slider-thumb { appearance: none; width: 15px; height: 15px; margin-top: -5px; border: 2px solid var(--surface); border-radius: 999px; background: var(--lav); box-shadow: 0 0 0 1px var(--border); }
+.knob input[type='range']::-moz-range-thumb { width: 15px; height: 15px; border: 2px solid var(--surface); border-radius: 999px; background: var(--lav); box-shadow: 0 0 0 1px var(--border); }
+.knob input[type='range']:focus-visible { outline: 2px solid var(--lav); outline-offset: 2px; }
+.knob .foot { font-size: 11.5px; color: var(--ink-3); }
+.knobs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 20px; }
+.newset { border: 1px dashed var(--lav); border-radius: 10px; padding: 10px 12px; display: grid; gap: 10px; }
+.newset > .tag { margin: 0; }
+.bul { display: grid; gap: 5px; }
+.bul .h { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+.bul .h small { color: var(--ink-3); font-size: 11.5px; }
+.bul .h .amt { margin-left: auto; color: var(--ink-3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.bul .h .fig { font-weight: 600; font-variant-numeric: tabular-nums; }
+.bul .h .fig .of { color: var(--ink-3); font-weight: 400; }
+.track { height: 12px; border-radius: 6px; background: var(--inset); overflow: hidden; }
+.track i { display: block; height: 100%; background: var(--lav); border-radius: 6px; }
+.track i.reached { background: var(--green); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-3); padding: 4px 8px 6px 0; border-bottom: 1px solid var(--border); }
+td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--grid); }
+td.num, th.num { text-align: right; }
+select { font: inherit; font-size: 12.5px; color: var(--ink); background: var(--inset); border: 1px solid var(--border); border-radius: 6px; padding: 1px 4px; }
+.chip { display: inline-block; font-size: 11px; font-weight: 600; padding: 0 8px; border-radius: 999px; background: color-mix(in srgb, var(--c) 28%, transparent); color: var(--ink); }
+.stack { display: flex; height: 26px; border-radius: 6px; overflow: hidden; background: var(--inset); }
+.stack i { display: block; height: 100%; }
+.gapbar { display: grid; gap: 6px; }
+.gapbar .row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 90px; gap: 10px; align-items: center; font-size: 12.5px; }
+.gapbar .row .n { text-align: right; font-variant-numeric: tabular-nums; }
+.verdict { font-size: 13.5px; }
+.rules { display: grid; gap: 4px; font-size: 12.5px; color: var(--ink-2); padding: 0; margin: 0; list-style: none; }
+.rules b { color: var(--ink); }
+.notes { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+.notes li { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 14px; font-size: 14px; color: var(--ink-2); border-top: 1px solid var(--border); padding-top: 10px; }
+.notes b { color: var(--ink); font-weight: 600; }
+.strings { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: var(--ink-2); }
+.scroll { overflow-x: auto; }
+@media (max-width: 640px) { .notes li { grid-template-columns: 1fr; gap: 2px; } .gapbar .row { grid-template-columns: 110px minmax(0, 1fr) 70px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="page">
+	<header class="head">
+		<span class="eyebrow">Yala redesign · Planning additions · sample data</span>
+		<h1>Planning additions</h1>
+		<p class="lede">Four candidates for the Planning page, each drawn beside what the page shows today. The figures are made up but shaped like a real ledger: $40k cash, $210k taxable, $180k pre-tax 401k, $45k Roth IRA, $20k HSA, $60k a year spent, $45k a year invested. The sliders in each section move only that section.</p>
+	</header>
+
+	<!-- 1. Years of freedom -->
+	<section>
+		<div class="head">
+			<h2>1 · Years of freedom, or an FI date</h2>
+			<p>Years of freedom is net worth divided by the last twelve months' spending, against the years left until retirement. It assumes your money earns nothing, ignores tax and inflation, counts 401k money as if you could spend it today, and uses logged spending rather than your planned spending. The FI date answers the question people actually ask: when does the plan reach the FI number?</p>
+		</div>
+		<div class="pair">
+			<div>
+				<div class="tag">Today</div>
+				<div class="card"><div class="kpi"><span class="l">Years of freedom</span><span class="v" id="yof"></span><div class="meter"><i id="yof-meter"></i></div><span class="c" id="yof-cap"></span></div></div>
+			</div>
+			<div>
+				<div class="tag new">Proposed · replaces it</div>
+				<div class="card"><div class="kpi"><span class="l">FI date</span><span class="v" id="fi-date">2041</span><div class="meter"><i id="fi-meter" style="width:29%"></i></div><span class="c" id="fi-cap">at 41, when investing reaches the $1.5M FI number</span></div></div>
+			</div>
+		</div>
+		<p class="figureline">Read off the same Investing line the projection draws, so the two cannot disagree. The meter is FI progress: invested against the FI number.</p>
+	</section>
+
+	<!-- 2. Market risk -->
+	<section>
+		<div class="head">
+			<h2>2 · Market risk</h2>
+			<p>Today's projection compounds one fixed return every year. Real markets vary, and a bad run in the first years of retirement can empty a plan whose average return looked fine. The proposal runs 1,000 simulated markets around your expected return and draws where most of them land, with the share that last to your horizon age.</p>
+		</div>
+		<div class="pair">
+			<div>
+				<div class="tag">Today</div>
+				<div class="card">
+					<div class="ct"><b>Projected investments</b><span>invested balance growth and financial independence projection</span></div>
+					<div class="legend" data-legend="now"></div>
+					<div class="plot" id="plot-now"></div>
+					<p class="figureline">Depletion year: <strong>—</strong> never at this rate</p>
+				</div>
+			</div>
+			<div>
+				<div class="tag new">Proposed</div>
+				<div class="card">
+					<div class="ct"><b>Projected investments</b><span>invested balance growth and financial independence projection</span></div>
+					<div class="legend" data-legend="risk"></div>
+					<div class="plot" id="plot-risk"></div>
+					<p class="figureline"><strong id="success">87%</strong> <span id="success-note">of 1,000 simulated markets last to 80. In the worst tenth, the balance runs out by 2071.</span></p>
+				</div>
+			</div>
+		</div>
+		<div class="newset">
+			<p class="tag new">New setting in Financial planning</p>
+			<div class="knobs">
+				<div class="knob"><div class="line">Return volatility <b id="vol-v">15%</b></div><input id="vol" type="range" min="0" max="30" step="1" value="15" aria-label="Return volatility"><span class="foot">How far a year's return strays from the expected one. Around 15% for a mostly stock portfolio, 10% for 60/40.</span></div>
+				<div class="knob"><div class="line">Target retirement age <b id="ret-v">60</b></div><input id="ret" type="range" min="35" max="70" step="1" value="60" aria-label="Target retirement age"><span class="foot">Existing setting, here to show the band move.</span></div>
+			</div>
+		</div>
+	</section>
+
+	<!-- 3. Access before 59½ -->
+	<section>
+		<div class="head">
+			<h2>3 · Access before 59½</h2>
+			<p>Retiring before 59½ means living on money you can reach without the 10% early-withdrawal penalty: cash, taxable accounts and Roth IRA contributions. This pane checks whether those cover the years until the 401k and IRAs open. Today the page has nothing like it.</p>
+		</div>
+		<div class="pair">
+			<div class="card">
+				<div class="tag new" style="margin:0">Proposed pane</div>
+				<div class="ct"><b>Access before 59½</b><span>whether reachable money bridges early retirement</span></div>
+				<p class="verdict" id="bridge-verdict"></p>
+				<div class="gapbar" id="bridge"></div>
+				<ul class="rules">
+					<li><b>Reachable any time:</b> cash, taxable accounts, Roth IRA contributions (not their growth), HSA for medical bills.</li>
+					<li><b>From 55:</b> the 401k at the employer you leave in or after the year you turn 55 (Rule of 55).</li>
+					<li><b>Other ways in:</b> equal yearly withdrawals from an IRA (72(t)), or converting to Roth five years ahead (Roth ladder).</li>
+				</ul>
+			</div>
+			<div class="newset" style="align-self:start">
+				<p class="tag new">Try it</p>
+				<div class="knob"><div class="line">Target retirement age <b id="br-ret-v">45</b></div><input id="br-ret" type="range" min="35" max="62" step="1" value="45" aria-label="Target retirement age"></div>
+				<div class="knob"><div class="line">Roth IRA contributions <b id="basis-v">$30,000</b></div><input id="basis" type="range" min="0" max="45000" step="1000" value="30000" aria-label="Roth IRA contributions"><span class="foot">New setting. What you put in, which you can take out at any age; the ledger knows the balance but not how much of it is growth.</span></div>
+				<p class="figureline">Balances grow to the retirement year at the real return; taxable keeps receiving your out-of-pocket investing, the 401k your payroll contributions.</p>
+			</div>
+		</div>
+	</section>
+
+	<!-- 4. Tax on withdrawals -->
+	<section>
+		<div class="head">
+			<h2>4 · Tax on withdrawals</h2>
+			<p>Today the FI number is spending divided by the withdrawal rate, as if every dollar withdrawn were yours to spend. Each account type is taxed differently when you take money out, so the plan needs to know each account's type, then gross up spending by the tax it will pay.</p>
+		</div>
+		<div class="pair">
+			<div class="card">
+				<div class="tag new" style="margin:0">Proposed · each investment account's tax type</div>
+				<p class="figureline">Set once per account in Manage, guessed from its name. A 401k with both Roth and pre-tax money is split into two accounts.</p>
+				<div class="scroll"><table>
+					<thead><tr><th>Account</th><th>Tax type</th><th class="num">Balance</th></tr></thead>
+					<tbody id="acct-rows"></tbody>
+				</table></div>
+				<ul class="rules">
+					<li><span class="chip" style="--c:var(--blue)">Taxable</span> only the growth is taxed, at capital gains rates.</li>
+					<li><span class="chip" style="--c:var(--gold)">Pre-tax</span> traditional 401k and IRA: every dollar is taxed as income.</li>
+					<li><span class="chip" style="--c:var(--green)">Roth</span> tax-free after 59½.</li>
+					<li><span class="chip" style="--c:var(--aqua)">HSA</span> tax-free for medical bills; after 65, like pre-tax for anything else.</li>
+				</ul>
+			</div>
+			<div class="card">
+				<div class="tag new" style="margin:0">Proposed · the FI number after tax</div>
+				<div class="knobs">
+					<div class="knob"><div class="line">Income tax in retirement <b id="inc-v">12%</b></div><input id="inc" type="range" min="0" max="37" step="1" value="12" aria-label="Income tax in retirement"><span class="foot">Your effective rate on pre-tax withdrawals.</span></div>
+					<div class="knob"><div class="line">Capital gains tax <b id="cg-v">15%</b></div><input id="cg" type="range" min="0" max="24" step="1" value="15" aria-label="Capital gains tax"><span class="foot">On the growth part of taxable withdrawals.</span></div>
+					<div class="knob"><div class="line">Growth share of taxable <b id="gs-v">50%</b></div><input id="gs" type="range" min="0" max="100" step="5" value="50" aria-label="Growth share of taxable"><span class="foot">How much of a taxable withdrawal is gain rather than what you paid in.</span></div>
+				</div>
+				<div>
+					<p class="figureline" style="margin-bottom:6px">Where retirement withdrawals come from, by today's balances</p>
+					<div class="stack" id="mix"></div>
+				</div>
+				<div class="bul" id="fi-before"></div>
+				<div class="bul" id="fi-after"></div>
+				<p class="figureline" id="tax-line"></p>
+			</div>
+		</div>
+	</section>
+
+	<section>
+		<div class="head"><h2>What to decide</h2></div>
+		<ul class="notes">
+			<li><b>1 · FI date</b><span>Remove Years of freedom and put the FI date in its place? No new settings; one new KPI.</span></li>
+			<li><b>2 · Market risk</b><span>One new setting (Return volatility). Monte Carlo around your expected return, as drawn. The other common method replays real market history from 1871 on, which keeps real crash sequences but needs a returns table shipped with the app.</span></li>
+			<li><b>3 · Access before 59½</b><span>A new pane, and one new setting (Roth IRA contributions). It needs each account's tax type from 4 to know what is reachable, so 3 depends on 4. With your retirement age at 60 it would simply say no bridge is needed.</span></li>
+			<li><b>4 · Tax on withdrawals</b><span>A tax type on each investment account (Manage, stored in the ledger's account metadata) and three new settings. It moves the FI number, so Financial progress, Coast FI, the projection and Dashboard's headline all move with it. A flat effective rate, not tax brackets; brackets could come later.</span></li>
+			<li><b>New UI strings</b><span class="strings">FI date · at &lt;age&gt;, when investing reaches the &lt;$X&gt; FI number · Return volatility · &lt;N&gt;% of 1,000 simulated markets last to &lt;age&gt; · In the worst tenth, the balance runs out by &lt;year&gt; · Access before 59½ · Roth IRA contributions · Tax type · Taxable · Pre-tax · Roth · HSA · Income tax in retirement · Capital gains tax · Growth share of taxable · FI number after tax</span></li>
+		</ul>
+	</section>
+</div>
+
+<script>
+const NOW = 2026, BORN = 1990;
+const P = { cash: 40000, taxable: 210000, pretax: 180000, roth: 45000, hsa: 20000, spend: 60000, payroll: 25000, outOfPocket: 20000, swr: 4, real: 4.85, horizon: 80 };
+const INVESTED = P.taxable + P.pretax + P.roth + P.hsa;
+const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
+const k = (n) => n >= 1e6 ? `$${(n / 1e6).toFixed(2).replace(/0$/, '')}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}k` : money(n);
+const $ = (id) => document.getElementById(id);
+
+function walk(retireAge, returns) {
+	const retire = BORN + retireAge, end = BORN + P.horizon, years = [], inv = [];
+	let b = INVESTED;
+	for (let y = NOW, i = 0; y <= end; y++, i++) {
+		if (y > NOW) b = Math.max(0, b * (1 + returns(i) / 100) + (y > retire ? -P.spend : P.payroll + P.outOfPocket));
+		years.push(y); inv.push(b);
+	}
+	return { years, inv };
+}
+const fiNumber = P.spend / (P.swr / 100);
+
+// 1. FI date
+(function () {
+	const { years, inv } = walk(60, () => P.real);
+	const i = inv.findIndex((b) => b >= fiNumber);
+	$('fi-date').textContent = i === -1 ? '—' : years[i];
+	$('fi-cap').textContent = i === -1 ? 'not before retirement at this rate' : `at ${years[i] - BORN}, when investing reaches the ${k(fiNumber)} FI number`;
+	$('fi-meter').style.width = `${Math.min(100, INVESTED / fiNumber * 100)}%`;
+	const yof = (P.cash + INVESTED) / P.spend, left = 60 - (NOW - BORN);
+	$('yof').textContent = `${yof.toFixed(1)} yr`;
+	$('yof-meter').style.width = `${Math.min(100, yof / left * 100)}%`;
+	$('yof-cap').textContent = `at ${money(P.spend)}/yr · of ${left} yr to retirement`;
+})();
+
+// 2. Market risk
+function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 2 ** 32; }; }
+function normal(r) { const u = Math.max(1e-9, r()), v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+function lines(svgEl, series, band) {
+	const W = svgEl.clientWidth || 480, H = svgEl.clientHeight || 260;
+	const m = { l: 50, r: 10, t: 8, b: 22 }, iw = W - m.l - m.r, ih = H - m.t - m.b;
+	const n = series[0].values.length, cap = P.spend / 0.015;
+	const x = (i) => m.l + i / (n - 1) * iw, y = (v) => m.t + ih - Math.min(Math.max(v, 0), cap) / cap * ih;
+	let s = `<svg viewBox="0 0 ${W} ${H}">`;
+	for (let t = 0; t <= 4; t++) { const v = cap * t / 4; s += `<line class="gl" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${k(v)}</text>`; }
+	for (let i = 0; i < n; i++) { const yr = NOW + i; if (yr % 5 === 0 && x(i) - 14 > m.l && x(i) + 14 < W - m.r) s += `<text x="${x(i)}" y="${H - 5}" text-anchor="middle">${yr}</text>`; }
+	if (band) {
+		const top = band.hi.map((v, i) => `${x(i)},${y(v)}`), bottom = band.lo.map((v, i) => `${x(i)},${y(v)}`).reverse();
+		s += `<polygon points="${[...top, ...bottom].join(' ')}" fill="color-mix(in srgb, var(--lav) 22%, transparent)"/>`;
+	}
+	for (const l of series) s += `<path d="${l.values.map((v, i) => `${i ? 'L' : 'M'}${x(i)},${y(v)}`).join('')}" fill="none" stroke="${l.color}" stroke-width="${l.dash ? 1.6 : 2.2}" ${l.dash ? 'stroke-dasharray="5 4"' : ''}/>`;
+	svgEl.innerHTML = s + '</svg>';
+}
+const legend = (el, items) => (el.innerHTML = items.map(([name, c, kind]) => `<span><i class="${kind || ''}" style="--c:${c}"></i>${name}</span>`).join(''));
+function drawRisk() {
+	const vol = Number($('vol').value), retireAge = Number($('ret').value);
+	$('vol-v').textContent = `${vol}%`; $('ret-v').textContent = retireAge;
+	const base = walk(retireAge, () => P.real);
+	const flat = (v) => base.years.map(() => v);
+	legend(document.querySelector('[data-legend="now"]'), [['Investing', 'var(--lav)'], ['FI number', 'var(--green)', 'dash']]);
+	lines($('plot-now'), [{ values: base.inv, color: 'var(--lav)' }, { values: flat(fiNumber), color: 'var(--green)', dash: true }]);
+	const r = rng(7), runs = [];
+	for (let n = 0; n < 1000; n++) runs.push(walk(retireAge, () => P.real + vol * normal(r)).inv);
+	const pct = (q) => base.years.map((_, i) => { const col = runs.map((run) => run[i]).sort((a, b) => a - b); return col[Math.floor(q * (col.length - 1))]; });
+	const lo = pct(0.1), mid = pct(0.5), hi = pct(0.9);
+	legend(document.querySelector('[data-legend="risk"]'), [['Middle 80% of markets', 'var(--lav)', 'band'], ['Median', 'var(--lav)'], ['FI number', 'var(--green)', 'dash']]);
+	lines($('plot-risk'), [{ values: mid, color: 'var(--lav)' }, { values: flat(fiNumber), color: 'var(--green)', dash: true }], { lo, hi });
+	const last = runs.filter((run) => run.at(-1) > 0).length / runs.length * 100;
+	const worst = lo.findIndex((b) => b <= 0);
+	$('success').textContent = `${Math.round(last)}%`;
+	$('success-note').textContent = `of 1,000 simulated markets last to ${P.horizon}.` + (worst === -1 ? ' Even the worst tenth lasts.' : ` In the worst tenth, the balance runs out by ${NOW + worst}.`);
+}
+
+// 3. Access before 59½
+function drawBridge() {
+	const retireAge = Number($('br-ret').value), basis = Number($('basis').value);
+	$('br-ret-v').textContent = retireAge; $('basis-v').textContent = money(basis);
+	const years = Math.max(0, 59.5 - retireAge), n = retireAge - (NOW - BORN), g = (1 + P.real / 100);
+	const grow = (b, add) => { let v = b; for (let i = 0; i < n; i++) v = v * g + add; return v; };
+	const reach = { cash: P.cash, taxable: grow(P.taxable, P.outOfPocket), roth: Math.min(basis, P.roth) };
+	const reachable = reach.cash + reach.taxable + reach.roth;
+	// Drawn down while still earning the real return, so the need is an annuity over the bridge years.
+	const r = P.real / 100, need = years ? P.spend * (1 - (1 + r) ** -years) / r : 0;
+	const verdict = $('bridge-verdict');
+	if (!years) { verdict.innerHTML = `<b class="good">No bridge needed.</b> You retire at ${retireAge}, after 59½.`; $('bridge').innerHTML = ''; return; }
+	const ok = reachable >= need;
+	verdict.innerHTML = ok
+		? `<b class="good">Covered.</b> ${k(reachable)} reachable at ${retireAge} bridges ${years} years at ${k(P.spend)}/yr, with ${k(reachable - need)} to spare.`
+		: `<b class="bad">Short by ${k(need - reachable)}.</b> ${k(reachable)} reachable at ${retireAge} covers ${(Math.log(1 - reachable * r / P.spend) / -Math.log(1 + r) || 0).toFixed(1)} of the ${years} years to 59½.`;
+	const max = Math.max(reachable, need);
+	const bar = (parts) => `<div class="stack">${parts.map(([v, c]) => `<i style="width:${v / max * 100}%;background:${c}"></i>`).join('')}</div>`;
+	$('bridge').innerHTML =
+		`<div class="row"><span>Reachable at ${retireAge}</span>${bar([[reach.cash, 'var(--teal)'], [reach.taxable, 'var(--blue)'], [reach.roth, 'var(--green)']])}<span class="n">${k(reachable)}</span></div>` +
+		`<div class="row"><span>Needed to 59½</span>${bar([[need, 'var(--salmon)']])}<span class="n">${k(need)}</span></div>` +
+		`<div class="legend"><span><i class="band" style="background:var(--teal)"></i>Cash</span><span><i class="band" style="background:var(--blue)"></i>Taxable</span><span><i class="band" style="background:var(--green)"></i>Roth contributions</span><span><i class="band" style="background:var(--salmon)"></i>${years} yr × ${k(P.spend)}</span></div>`;
+}
+
+// 4. Tax on withdrawals
+const ACCOUNTS = [
+	['Brokerage 401k', 'pretax', P.pretax], ['Brokerage Individual', 'taxable', P.taxable], ['Brokerage Roth IRA', 'roth', P.roth], ['Brokerage HSA', 'hsa', P.hsa], ['Brokerage Trad IRA', 'pretax', 0]
+];
+const TYPE = { taxable: ['Taxable', 'var(--blue)'], pretax: ['Pre-tax', 'var(--gold)'], roth: ['Roth', 'var(--green)'], hsa: ['HSA', 'var(--aqua)'] };
+$('acct-rows').innerHTML = ACCOUNTS.map(([name, type, bal], i) => `<tr><td>${name}</td><td><select id="t${i}" aria-label="Tax type for ${name}">${Object.entries(TYPE).map(([key, [label]]) => `<option value="${key}" ${key === type ? 'selected' : ''}>${label}</option>`).join('')}</select></td><td class="num">${money(bal)}</td></tr>`).join('');
+function bullet(el, label, note, value, target) {
+	const share = value / target * 100, reached = share >= 100;
+	el.innerHTML = `<div class="h"><span>${label}</span><small>${note}</small><span class="amt">${k(value)} / ${k(target)}</span><span class="fig ${reached ? 'good' : ''}">${Math.round(share)}% <span class="of">/ 100%</span></span></div><div class="track"><i class="${reached ? 'reached' : ''}" style="width:${Math.min(100, share)}%"></i></div>`;
+}
+function drawTax() {
+	const inc = Number($('inc').value), cg = Number($('cg').value), gs = Number($('gs').value);
+	$('inc-v').textContent = `${inc}%`; $('cg-v').textContent = `${cg}%`; $('gs-v').textContent = `${gs}%`;
+	const byType = { taxable: 0, pretax: 0, roth: 0, hsa: 0 };
+	ACCOUNTS.forEach(([, , bal], i) => (byType[$(`t${i}`).value] += bal));
+	const total = Object.values(byType).reduce((a, b) => a + b, 0);
+	// HSA read as pre-tax: spent on anything but medical bills after 65, it is taxed as income.
+	const rate = total ? (byType.taxable * gs / 100 * cg / 100 + (byType.pretax + byType.hsa) * inc / 100) / total : 0;
+	$('mix').innerHTML = Object.entries(byType).map(([key, v]) => `<i style="width:${v / total * 100}%;background:${TYPE[key][1]}" title="${TYPE[key][0]} ${Math.round(v / total * 100)}%"></i>`).join('');
+	const after = fiNumber / (1 - rate);
+	bullet($('fi-before'), 'FI number', `today, ${k(P.spend)}/yr at 4%`, INVESTED, fiNumber);
+	bullet($('fi-after'), 'FI number after tax', `${k(P.spend / (1 - rate))}/yr withdrawn to spend ${k(P.spend)}`, INVESTED, after);
+	$('tax-line').innerHTML = `Withdrawals pay <strong>${(rate * 100).toFixed(1)}%</strong> tax on average across today's mix, so the FI number grows by <strong>${k(after - fiNumber)}</strong>. Mix: ${Object.entries(byType).filter(([, v]) => v).map(([key, v]) => `${TYPE[key][0]} ${Math.round(v / total * 100)}%`).join(', ')}.`;
+}
+
+['vol', 'ret'].forEach((id) => $(id).addEventListener('input', drawRisk));
+['br-ret', 'basis'].forEach((id) => $(id).addEventListener('input', drawBridge));
+['inc', 'cg', 'gs'].forEach((id) => $(id).addEventListener('input', drawTax));
+ACCOUNTS.forEach((_, i) => $(`t${i}`).addEventListener('change', drawTax));
+const fill = (el) => el.style.setProperty('--filled', `${(el.value - el.min) / (el.max - el.min) * 100}%`);
+document.querySelectorAll('input[type=range]').forEach((el) => { fill(el); el.addEventListener('input', () => fill(el)); });
+new ResizeObserver(drawRisk).observe(document.querySelector('.page'));
+drawRisk(); drawBridge(); drawTax();
+</script>

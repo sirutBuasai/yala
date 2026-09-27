@@ -112,7 +112,6 @@ test('planning figures have left for Planning', async ({ page }) => {
 	await page.goto('/accounts/year');
 	await settle(page);
 	await expect(pane(page, 'Financial progress')).toHaveCount(0);
-	await expect(page.getByText('Years of freedom')).toHaveCount(0);
 });
 
 test("a click on a Year view line picks its point's year, and again widens", async ({ page }) => {

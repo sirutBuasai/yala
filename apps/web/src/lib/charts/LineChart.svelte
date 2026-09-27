@@ -31,7 +31,11 @@
 	}
 	interface Props {
 		labels: string[];
+		/** Each point's hover heading after its label; see `MultiSeries.notes`. */
+		notes?: string[];
 		series: Series[];
+		/** A range shaded behind the lines, in the colour of the series it belongs to; see `MultiSeries.band`. */
+		band?: { name: string; lo: number[]; hi: number[]; color: string };
 		/** The unit every series is read in, which decides how the axis, labels and tooltips word it. */
 		unit: Unit;
 		/** Log-scale the value axis — for series spanning orders of magnitude. */
@@ -53,7 +57,9 @@
 	}
 	let {
 		labels,
+		notes,
 		series,
+		band,
 		unit,
 		log = false,
 		endLabels = false,
@@ -76,7 +82,17 @@
 				}))
 	);
 
-	const showLegend = $derived(!endLabels && series.length > 1);
+	const bandFill = $derived(band && `color-mix(in srgb, ${band.color} 25%, transparent)`);
+	/** Held to the ceiling as the lines are. */
+	const bandPlotted = $derived(
+		band && {
+			lo: band.lo.map((v) => (ceiling == null ? v : Math.min(v, ceiling))),
+			hi: band.hi.map((v) => (ceiling == null ? v : Math.min(v, ceiling)))
+		}
+	);
+	const keys = $derived(band ? [...series, { name: band.name, color: bandFill! }] : series);
+
+	const showLegend = $derived(!endLabels && keys.length > 1);
 
 	const box = new ChartBox();
 	const W = $derived(box.w);
@@ -93,7 +109,11 @@
 	// Unique per instance, so two area charts on one page can't share a gradient.
 	const gid = 'lg-' + Math.random().toString(36).slice(2, 9);
 
-	const flat = $derived(plotted.flatMap((s) => s.values).filter((v): v is number => v != null));
+	const flat = $derived(
+		[...plotted.flatMap((s) => s.values), ...(bandPlotted?.hi ?? [])].filter(
+			(v): v is number => v != null
+		)
+	);
 	const axis = $derived(log ? logYScale(flat, ih) : moneyYScale(flat, ih, ceiling));
 	const y = $derived(axis.y);
 	const ticks = $derived(axis.ticks);
@@ -146,6 +166,15 @@
 		return list;
 	});
 
+	const bandPath = $derived(
+		bandPlotted
+			? (area<number>()
+					.x((_, i) => xPos(i))
+					.y0((_, i) => y(bandPlotted.lo[i]!))
+					.y1((v) => y(v))(bandPlotted.hi) ?? '')
+			: ''
+	);
+
 	const label = $derived(
 		chartLabel(
 			'Line chart',
@@ -174,7 +203,11 @@
 			.sort((a, b) => (b.values[i] as number) - (a.values[i] as number))
 			.map((s) => `${esc(s.name)}: ${f.exact(s.values[i] as number)}`)
 			.join('<br>');
-		showTip(`<b>${esc(labels[i])}</b><br>${lines}`, e);
+		const range = band
+			? `<br>${esc(band.name)}: ${f.exact(band.lo[i]!)} to ${f.exact(band.hi[i]!)}`
+			: '';
+		const note = notes?.[i] ? ` · ${esc(notes[i])}` : '';
+		showTip(`<b>${esc(labels[i])}</b>${note}<br>${lines}${range}`, e);
 	}
 	function onLeave() {
 		hover = null;
@@ -185,7 +218,7 @@
 {#if showLegend}
 	<!-- Dashed series are keyed too: a dashed line is a real second reading, and omitting it left
 	     neither line identifiable. -->
-	<Legend keys={series} />
+	<Legend {keys} />
 {/if}
 
 <div class="figurebox" bind:clientWidth={box.clientWidth} bind:clientHeight={box.clientHeight}>
@@ -216,6 +249,10 @@
 				/>
 			{/if}
 			<FocusBand xs={marked.map(xPos)} pad={markWidth} height={ih + 26} />
+
+			{#if bandPath}
+				<path d={bandPath} fill={bandFill} />
+			{/if}
 
 			{#each plotted as s, si (s.name)}
 				{@const pth = paths[si]!}

@@ -62,15 +62,28 @@ export function moneyExact(n: number | null | undefined): string {
 	return withSign(v, cents(Math.abs(v)), '$');
 }
 
+/** The tiers a magnitude abbreviates to, largest first. */
+const TIERS: [number, string][] = [
+	[1e9, 'B'],
+	[1e6, 'M'],
+	[1e3, 'k']
+];
+
 /**
- * An unsigned magnitude abbreviated to its tier: thousands as `k`, millions as `M`, one decimal until the
- * tier's tens so a label is never more than four digits wide. Both tiers, because a projection compounds
- * past a million and `k` alone left the axis unreadable.
+ * An unsigned magnitude abbreviated to its tier: thousands as `k`, millions as `M`, billions as `B`, one
+ * decimal until the tier's tens so a label is never more than four digits wide. A projection compounds past
+ * a million, and at long horizons past a billion, and one tier alone left the axis unreadable.
  */
 function tiered(magnitude: number): string {
-	return magnitude >= 1e6
-		? (magnitude / 1e6).toFixed(magnitude < 1e7 ? 1 : 0) + 'M'
-		: (magnitude / 1e3).toFixed(magnitude < 1e4 ? 1 : 0) + 'k';
+	const read = (tier: number) => {
+		const [size, suffix] = TIERS[tier]!;
+		const value = magnitude / size;
+		return value.toFixed(value < 10 ? 1 : 0) + suffix;
+	};
+	let tier = TIERS.findIndex(([size]) => magnitude >= size);
+	if (tier === -1) tier = TIERS.length - 1;
+	// A figure that rounds up to a thousand of its tier reads in the next one: $1.0M, never $1000k.
+	return tier > 0 && parseFloat(read(tier)) >= 1000 ? read(tier - 1) : read(tier);
 }
 
 export function moneyK(n: number | null | undefined): string {

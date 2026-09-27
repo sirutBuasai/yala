@@ -1,5 +1,8 @@
 <script lang="ts">
-	import Rebuilding from '$lib/layout/Rebuilding.svelte';
+	import { data, refreshData } from '$lib/data/load';
+	import Planning from '$lib/views/planning/Planning.svelte';
 </script>
 
-<Rebuilding title="Planning" />
+{#if $data}
+	<Planning data={$data} onsaved={refreshData} />
+{/if}

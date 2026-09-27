@@ -993,6 +993,10 @@
           "title": "Inflation",
           "type": "number"
         },
+        "volatility": {
+          "title": "Volatility",
+          "type": "number"
+        },
         "retire_age": {
           "title": "Retire Age",
           "type": "number"
@@ -1046,6 +1050,7 @@
         "swr",
         "nominal_return",
         "inflation",
+        "volatility",
         "retire_age",
         "runway_target",
         "horizon_age"

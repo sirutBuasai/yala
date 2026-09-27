@@ -152,6 +152,31 @@ describe('xAxisLabels', () => {
 		expect(turned.bottom).toBeGreaterThan(flat.bottom);
 	});
 
+	it('names every fifth year of a crowded axis of years, flat', () => {
+		const years = Array.from({ length: 60 }, (_, i) => String(2026 + i));
+		const axis = xAxisLabels(evenly(60, 600), years, undefined, true);
+		expect(axis.angle).toBe(0);
+		expect(axis.ticks.map((t) => t.text)).toEqual([
+			'2030',
+			'2035',
+			'2040',
+			'2045',
+			'2050',
+			'2055',
+			'2060',
+			'2065',
+			'2070',
+			'2075',
+			'2080'
+		]);
+	});
+
+	it('steps further out where every fifth year still crowds', () => {
+		const years = Array.from({ length: 60 }, (_, i) => String(2026 + i));
+		const texts = xAxisLabels(evenly(60, 200), years, undefined, true).ticks.map((t) => t.text);
+		expect(texts.every((t) => Number(t) % 10 === 0)).toBe(true);
+	});
+
 	it('stands labels upright once even a slant would collide', () => {
 		expect(xAxisLabels(evenly(80, 600), names(80), undefined, true).angle).toBe(90);
 	});

@@ -223,6 +223,74 @@ Amends D19's labels: the switch on Analytics and Accounts reads Monthly and Year
 
 Per D14, every board's default is now the arrangement the user stored: panes, height modes, KPI merges and how each merged card divides (`KpiMerge.weights`). Analytics lays its income chain out as two columns on Monthly and as a strip with the rates stacked beside it on Yearly. A board rendered with no storage matches the stored one pane for pane.
 
+### D52 · Planning's assumptions sit in a pane (2026-09-26) · amended by D59
+
+On Planning, the planning panel's controls are the Financial planning pane, beside the figures they move; the Adjust button and its modal are gone. D16 does not apply: it governs rows. The controls move a draft every pane on the page draws; nothing is written until Save changes, which then reads `Saved.` until the next change, and leaving the page drops an unsaved draft, as Log balances does. Each control's Default sits right after its hint.
+
+### D53 · The projection reads ages and does not pick (2026-09-26)
+
+An exception to D39: Projected investments' axis is future years, and no pane reads a period to narrow to, so a click does nothing. Its hover reads every line's balance under the year and the age you are that year (`MultiSeries.notes`).
+
+### D54 · A crowded axis of years names every fifth (2026-09-26)
+
+Amends D31 and D35 at the user's request, first for Planning's projection. Where an axis whose labels are all years would crowd, it names every fifth year flat, or every tenth, twentieth, twenty-fifth or fiftieth where that still crowds, and each year keeps its name on hover (`steppedYears` in `lib/charts/axis.ts`).
+
+### D55 · The FI date replaces Years of freedom (2026-09-26)
+
+Years of freedom divided net worth by logged spending as if money earned nothing, paid no tax and could all be spent today, so it read neither the plan nor the projection. Planning's KPI is now the FI date: the year the Investing line reaches the FI number, with the age then. It reads off the projection, so the two cannot disagree.
+
+### D56 · The projection draws market risk (2026-09-26)
+
+Projected investments draws the middle 80% of 1,000 simulated markets as a band behind Investing, each year's real return drawn around the expected one at a new setting, Return volatility (default 15%). The line under it gives the share that last to the horizon age and when the worst tenth runs out. The runs are seeded, so the band holds still until an assumption moves; at zero volatility there is no band.
+
+### D57 · Planning checks access before 59½ (2026-09-26) · superseded by D58
+
+A pane compares what is reachable without the early-withdrawal penalty at retirement (liquid cash; the taxable bucket, grown with out-of-pocket investing; Roth IRA contributions, a new setting) against what the years to 59½ need at planned spending. It reads the buckets rather than per-account tax types, which the ledger does not record; tax on withdrawals was mocked and not taken.
+
+### D58 · Access before 59½ is removed (2026-09-27)
+
+Supersedes D57 after dogfooding: the pane and its Roth IRA contributions setting are gone.
+
+### D59 · Planning is a summary, a projection and grouped steppers (2026-09-27) · amended by D60
+
+Chosen from [mocks/planning-layouts.html](mocks/planning-layouts.html) after dogfooding the first build. The page leads with `You reach FI in <year>, at <age>, with success rate of <N>%.` over the plan's milestones on one timeline, Financial progress beside it as rings (Dashboard keeps the bars), the projection full width, then the assumptions in three panes (Market, Timeline, Spending and saving) as − and + steppers whose readings also take typing. Save and Discard sit in the page header. Supersedes D52's single Financial planning pane and its per-control Default.
+
+### D60 · Planning's figures are typed, and its summary scales (2026-09-27)
+
+Amends D59 after trying it: the assumptions are typed into fields, stepped by the arrow keys, with Default right after each hint, as before D59; no − and + buttons. The summary sentence keeps to one line, its type scaled to the pane (`scaleToFit` in `lib/ui/fit.ts`), rather than wrapping into a ragged stack; below the smallest readable size, as on a phone, it wraps. The timeline scales with its pane rather than hugging its content: the rail spans the width and thickens with the pane's height. Birth year is a field like the rest.
+
+### D61 · Planning's figures slide again (2026-09-27)
+
+Amends D60: each figure keeps its typed field and Default, and gains back its slider under it, since watching the lines move while dragging is the point of the page. Birth year has none. Coast FI's note reads `reached FI by <year>`: the year today's invested balance alone, with no further contributions, reaches the FI number, so it falls before retirement exactly when Coast FI is past 100%.
+
+### D62 · A drag holds the page and scrolls it (2026-09-27)
+
+On every board, a move or resize holds the page at its height for the whole gesture, so measuring a pane's floor or shrinking the lowest pane no longer clamps the scroll and jumps the edge being dragged away. With the pointer near the window's top or bottom edge, the page scrolls, over the page as it was at the press, and the pane follows the pointer (`lib/layout/grid/drag.ts`).
+
+### D63 · The timeline names its phases and counts (2026-09-27)
+
+Chosen from [mocks/planning-timeline.html](mocks/planning-timeline.html). The rail is coloured by phase: Building (today to Coast FI), Optional coast (to FI), Optional work (to retirement), Drawing down (after); a milestone already passed, or never reached before retiring, drops the phase it would start (`plan` in `lib/data/projection.ts`). Each milestone shows the investing line's balance that year. Under the timeline: years to FI, years to retirement, the balance at retirement, and years to FI spending $5,000 less, each a figure over its words. The success rate's detail moved from the headline into the pane's caption, `<N>% of simulated runs result in lasting balance after the age of <age>.`, with the `?` after it.
+
+### D64 · The timeline's lever, and what a timeline starting today leaves out (2026-09-27) · amended by D65
+
+Amends D63. The last count is a lever rather than a fixed what-if: the smallest cut to yearly spending, in $1,000 steps and invested instead, that brings FI a year sooner, or within reach at all where it is not; `<$X>` over `less a year for FI in <year>`, and absent once at FI or where no cut reaches it. A milestone already behind, a retirement years ago, is left off a timeline that starts today, and the summary then reads `You're retired, ...`. A row of labels is held below the rail as well as above, so labels that crowd there never clip the counts; the pane's default is its floor, 11 rows.
+
+### D65 · Two monthly levers (2026-09-27)
+
+Amends D64's single lever. Two counts, each the smallest monthly change in $50 steps that brings FI a year sooner, or within reach where it is not: spending less (`spend <$X>/mo` over `less for FI in <year>`), which lowers the FI number alone, and investing more (`invest <$X>/mo` over `more for FI in <year>`), which grows the balance alone. Each is absent once at FI or where no change up to $5,000 a month gets there.
+
+### D66 · The timeline, rebuilt (2026-09-27)
+
+Supersedes the timeline's placement in D59 to D64 after a reported bug: every label vanished once two milestones merged. Three rows laid out by CSS alone, labels, rail, phase names, with only the rail's row flexible; labels that would collide merge into one (`groupLabels`), so there is always one row of them, each measured from its text. The rail thickens by whole grid rows of height past the pane's floor, 6px a row from 6px to 24px, so it is at its thinnest at the floor on every plan. The pane's default is that floor, 9 rows. A horizon already past says so: `Your plan runs to <age>, which has passed.` Save changes and Discard moved from the page header into a pane of their own. Checked across 19 plans at five widths and five plans at their floor, default and a tall height, in Chromium and WebKit. The row limits and the rail's thickness are computed in script (`barRange`, `railThickness`) and handed to CSS as plain lengths: Firefox rejected CSS that divided one length by another and dropped the rail's row entirely.
+
+### D67 · The timeline narrows smoothly (2026-09-27)
+
+Amends D66 after a reported bug: narrowing the timeline pane stopped one grid step at a time. Labels regroup a frame after the width changes, so while a resize tried narrower widths they still sat where the last width put them and read as a spill; the label row now clips across, and its floor is the width of every milestone merged into one label, which hangs on the milestones alone. The summary's floor measured its box rather than its text, so it followed whatever width the pane last had; it now measures the text (`scaleToFit`). Checked: one drag reaches the floor, repeats and a drag from wider land on the same floor, on four plans at two widths, with every label shown there.
+
+### D68 · Money abbreviates to billions (2026-09-27)
+
+Extends D47's readings: past a thousand million, a compact figure reads in billions (`$1.2B`), and a figure that rounds up to a thousand of its tier reads in the next one (`$1.0M`, never `$1000k`; `$1.0B`, never `$1000M`). One `tiered` in `lib/utils/format.ts` serves every compact figure and axis.
+
 ## Open
 
 

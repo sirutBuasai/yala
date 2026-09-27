@@ -170,10 +170,30 @@ function yearTicks(xs: number[], periods: string[]): AxisTick[] {
 	return out;
 }
 
+/** Round steps a crowded axis of years may name every so many of, smallest first. */
+const YEAR_STEPS = [5, 10, 20, 25, 50];
+
+/** Every `step`th year of an axis whose labels are all years, at the first step whose labels clear each
+    other and both ends of the plot; null where none does. */
+function steppedYears(ticks: AxisTick[]): AxisTick[] | null {
+	if (!ticks.length || !ticks.every((t) => /^\d{4}$/.test(t.text))) return null;
+
+	const [lo, hi] = [ticks[0]!.x, ticks.at(-1)!.x];
+	for (const step of YEAR_STEPS) {
+		const kept = ticks
+			.filter((t) => Number(t.text) % step === 0)
+			.map((t): AxisTick => ({ ...t, anchor: 'middle' }))
+			.filter((t) => reach(t)[0] >= lo && reach(t)[1] <= hi);
+		if (kept.length > 1 && clear(kept)) return kept;
+	}
+	return null;
+}
+
 /**
  * Every x-label at `xs`, placed so none overlaps another. Flat where each point's label fits. Where they
  * would crowd an axis spanning several years of `periods`, each year is named once, centred on its points,
- * which keep their own names on hover. Otherwise every label turns 45 degrees, or upright, with the room
+ * which keep their own names on hover; on a crowded axis of years, every fifth year (or tenth, and so on)
+ * is named, the rest kept on hover. Otherwise every label turns 45 degrees, or upright, with the room
  * below the plot grown to hold it. `anchored` is for a continuous axis, whose end labels anchor inward
  * (`labelAnchor`) and so reach a whole width into the plot.
  */
@@ -194,6 +214,9 @@ export function xAxisLabels(
 	if (periods?.length === labels.length && new Set(periods.map((p) => p.slice(0, 4))).size > 1) {
 		return { ticks: yearTicks(xs, periods), angle: 0, bottom: FLAT_BOTTOM };
 	}
+
+	const stepped = steppedYears(perPoint);
+	if (stepped) return { ticks: stepped, angle: 0, bottom: FLAT_BOTTOM };
 
 	const gaps = xs.slice(1).map((x, i) => x - xs[i]!);
 	const angle = Math.min(...gaps) >= AXIS_LINE_H * Math.SQRT2 ? 45 : 90;

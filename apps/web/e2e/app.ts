@@ -41,7 +41,13 @@ export const test = base.extend<{ noPageErrors: void }>({
 export const PAGE_LABELS = PAGES.map((p) => p.label);
 
 /** Pages with a board, which the board suites (charts, steady, arrange) run against. */
-export const BOARD_PAGES = ['Dashboard', 'Transactions', 'Analytics', 'Accounts'] as const;
+export const BOARD_PAGES = [
+	'Dashboard',
+	'Transactions',
+	'Analytics',
+	'Accounts',
+	'Planning'
+] as const;
 
 /** Content widths worth checking: either side of both fold thresholds, and the phone floor. */
 export const WIDTHS = [320, 390, 480, 700, 960, 1000, 1200, 1392] as const;

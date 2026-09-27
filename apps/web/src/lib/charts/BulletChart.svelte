@@ -10,21 +10,13 @@
 	import { NO_VALUE } from '$lib/copy';
 	import { SLACK } from '$lib/layout/grid/spill';
 	import { contentFloor, watchWidth } from '$lib/ui/fit';
-	import { fillTo, fillText } from '$lib/charts/progress';
+	import { amountText, fillTo, fillText } from '$lib/charts/progress';
 	import Bands from '$lib/charts/marks/Bands.svelte';
-	import { formatUnit, type Unit } from '$lib/data/primitives';
-	import { labelText, type Label } from '$lib/ui/label';
+	import { formatUnit, type BulletRow } from '$lib/data/primitives';
+	import { labelText } from '$lib/ui/label';
 
-	interface Row {
-		label: string;
-		unit: Unit;
-		value: number | null;
-		target: number;
-		/** Comes straight off the scalar behind the row, so it arrives as a label and is read for text. */
-		note?: Label;
-	}
 	interface Props {
-		rows: Row[];
+		rows: BulletRow[];
 	}
 	let { rows }: Props = $props();
 
@@ -75,6 +67,9 @@
 				<span class="name">
 					{row.label}{#if row.note}<small>{labelText(row.note)}</small>{/if}
 				</span>
+				{#if row.amount}
+					<span class="amount">{amountText(row.amount)}</span>
+				{/if}
 				<span class="figure" class:reached={f?.reached}>
 					{row.value == null ? NO_VALUE : formatUnit(row.value, row.unit)}
 					<span class="of">/ {formatUnit(row.target, row.unit)}</span>
@@ -164,6 +159,13 @@
 		color: var(--ink-3);
 		font-size: calc(var(--text-caption) * var(--fit, 1));
 		margin-left: var(--space-3);
+	}
+	.amount {
+		margin-left: auto;
+		white-space: nowrap;
+		color: var(--ink-3);
+		font-size: calc(var(--text-caption) * var(--fit, 1));
+		font-variant-numeric: tabular-nums;
 	}
 	.figure {
 		font-size: calc(var(--text-row) * var(--fit, 1));

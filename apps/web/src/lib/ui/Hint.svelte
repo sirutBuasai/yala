@@ -90,7 +90,7 @@
 >
 	<button
 		type="button"
-		class="dot"
+		class="hint-button"
 		class:pinned
 		aria-label={`How ${label} is calculated`}
 		aria-describedby={id}
@@ -123,7 +123,7 @@
 		display: inline-flex;
 		vertical-align: text-bottom;
 	}
-	.dot {
+	.hint-button {
 		display: grid;
 		place-items: center;
 		padding: 0;
@@ -132,9 +132,9 @@
 		color: var(--ink-3);
 		cursor: help;
 	}
-	.dot:hover,
-	.dot:focus-visible,
-	.dot.pinned {
+	.hint-button:hover,
+	.hint-button:focus-visible,
+	.hint-button.pinned {
 		color: var(--control-line);
 	}
 	/* `fixed`, so no scrolling ancestor can clip it; `place()` supplies the coordinates. */

@@ -26,6 +26,7 @@ import Sankey from '$lib/charts/Sankey.svelte';
 import RangeBars from '$lib/charts/RangeBars.svelte';
 import StackedArea from '$lib/charts/StackedArea.svelte';
 import BulletChart from '$lib/charts/BulletChart.svelte';
+import RingChart from '$lib/charts/RingChart.svelte';
 import Heatmap from './Heatmap.svelte';
 import DataTable from './Table.svelte';
 
@@ -168,12 +169,15 @@ const FLOW_ROLE_SERIES = {
 function seriesOf(p: Series | MultiSeries): {
 	labels: string[];
 	periods?: string[];
+	notes?: string[];
+	band?: MultiSeries['band'];
 	list: Series[];
 } {
 	const list = p.kind === 'series' ? [p] : [...p.series];
 	const base = list[0];
 	if (!base) return { labels: [], list };
-	return { labels: base.points.map((pt) => pt.label), periods: p.periods, list };
+	const { notes, band } = p.kind === 'multiseries' ? p : {};
+	return { labels: base.points.map((pt) => pt.label), periods: p.periods, notes, band, list };
 }
 
 /** A lone series may be given an explicit fill; an override can't speak for a set of them. */
@@ -210,6 +214,9 @@ function toLineSeries(list: Series[], opts: AdaptOpts) {
 		dashed: opts.dashed?.includes(s.name) || undefined
 	}));
 }
+
+/** A bullet set draws the same rows as bars or as rings. */
+const bulletRows = (p: Primitive) => ({ rows: (p as Bullet).rows });
 
 // --- the registry ---
 
@@ -275,10 +282,16 @@ export const CHARTS: ChartDef[] = [
 		component: LineChart,
 		adapt(p, opts = {}) {
 			const sm = p as Series | MultiSeries;
-			const { labels, periods, list } = seriesOf(sm);
+			const { labels, periods, notes, band, list } = seriesOf(sm);
+			const series = toLineSeries(list, opts);
 			return {
 				labels,
-				series: toLineSeries(list, opts),
+				notes,
+				series,
+				band: band && {
+					...band,
+					color: series.find((s) => s.name === band.of)?.color ?? 'var(--ink-3)'
+				},
 				unit: sm.unit,
 				log: opts.log,
 				endLabels: opts.endLabels,
@@ -328,9 +341,14 @@ export const CHARTS: ChartDef[] = [
 		label: 'Bullet',
 		accepts: ['bullet'],
 		component: BulletChart,
-		adapt(p) {
-			return { rows: (p as Bullet).rows };
-		}
+		adapt: bulletRows
+	}),
+	def({
+		id: 'rings',
+		label: 'Rings',
+		accepts: ['bullet'],
+		component: RingChart,
+		adapt: bulletRows
 	}),
 	def({
 		id: 'sankey',

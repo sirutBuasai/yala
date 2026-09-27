@@ -15,7 +15,7 @@ import type {
 	Tone,
 	Unit
 } from './primitives';
-import { MONEY, MONTHS, PERCENT, YEARS, scalar } from './primitives';
+import { MONEY, MONTHS, PERCENT, scalar } from './primitives';
 import { assumptionsOf, realRate, yearsToRetirement, type Assumptions } from './assumptions';
 import { categorical } from './categorical';
 import { multiseries, series, spanYears } from './series';
@@ -56,10 +56,6 @@ const WINDOW_YEARS = 10;
 
 function snapshots(data: DashboardData): NetWorthSnapshot[] {
 	return data.networth?.series ?? [];
-}
-
-function currentNetWorth(data: DashboardData): number | null {
-	return data.networth?.current?.net_worth ?? null;
 }
 
 /** The month of the latest snapshot, which today's balances were logged in; '' before any. */
@@ -872,24 +868,6 @@ export function fiProgress(data: DashboardData, a: Assumptions = assumptionsOf(d
 	);
 }
 
-/** Years your net worth would cover at current spending, against the years left until retirement. NOT
-    against what a portfolio at the FI number covers: that is `1 / swr`, giving `fiProgress` again. */
-export function yearsOfFreedom(data: DashboardData, a: Assumptions = assumptionsOf(data)): Scalar {
-	const annual = trailingAnnualSpend(data);
-	const current = currentNetWorth(data);
-	const runway = yearsToRetirement(a);
-
-	return scalar(
-		YEARS,
-		words('Years of freedom'),
-		annual && current !== null ? current / annual : null,
-		{
-			target: runway ?? undefined,
-			note: annual ? live(`at ${money(annual)}/yr`) : undefined
-		}
-	);
-}
-
 /** Months your liquid cash would cover if income stopped. */
 export function liquidRunway(data: DashboardData): Scalar {
 	const liquid = data.networth?.current?.breakdown?.['Liquid'] ?? null;
@@ -918,6 +896,9 @@ export function coastTarget(
 	return target / (1 + realRate(a) / 100) ** years;
 }
 
+/** Why a figure counted from an age is missing. */
+export const NEEDS_BIRTH_YEAR = words('set your birth year in Planning');
+
 export function coastFi(data: DashboardData, a: Assumptions = assumptionsOf(data)): Scalar {
 	const unit = PERCENT;
 	const years = yearsToRetirement(a);
@@ -927,13 +908,31 @@ export function coastFi(data: DashboardData, a: Assumptions = assumptionsOf(data
 	const label = words('Coast FI');
 	if (needed === null || current === null) {
 		return scalar(unit, label, null, {
-			note: years === null ? words('set your birth year in Financial planning') : undefined
+			note: years === null ? NEEDS_BIRTH_YEAR : undefined
 		});
 	}
 
+	const year = coastYear(data, a);
 	return scalar(unit, label, (current / needed) * 100, {
-		note: live(`${money(needed)} needed ${years} yr out`)
+		note: year === null ? words("doesn't reach FI at this rate") : live(`reached FI by ${year}`)
 	});
+}
+
+/**
+ * The year today's invested balance, left to grow with no further contributions, reaches the FI number:
+ * before the retirement year exactly when Coast FI is past 100%. Null where it never does, at a real return
+ * of zero or less.
+ */
+export function coastYear(data: DashboardData, a: Assumptions = assumptionsOf(data)): number | null {
+	const target = fiNumber(data, a).value;
+	const current = investedBalance(data);
+	if (!target || current === null) return null;
+
+	const now = new Date().getFullYear();
+	if (current >= target) return now;
+	const growth = 1 + realRate(a) / 100;
+	if (current <= 0 || growth <= 1) return null;
+	return now + Math.ceil(Math.log(target / current) / Math.log(growth));
 }
 
 // --- rates and risk ---
@@ -979,6 +978,11 @@ export function netWorthThresholds(
 	const runway = liquidRunway(data);
 	const fi = fiProgress(data, a);
 	const coast = coastFi(data, a);
+	const invested = investedBalance(data);
+	const of = (target: number | null) =>
+		invested !== null && target
+			? { value: invested, target, unit: MONEY(data.currency) }
+			: undefined;
 
 	const rows: BulletRow[] = [
 		{
@@ -988,8 +992,22 @@ export function netWorthThresholds(
 			target: a.runwayTarget,
 			note: runway.note
 		},
-		{ label: 'FI number', unit: PERCENT, value: fi.value, target: 100, note: fi.note },
-		{ label: 'Coast FI', unit: PERCENT, value: coast.value, target: 100, note: coast.note }
+		{
+			label: 'FI number',
+			unit: PERCENT,
+			value: fi.value,
+			target: 100,
+			note: fi.note,
+			amount: of(fiNumber(data, a).value)
+		},
+		{
+			label: 'Coast FI',
+			unit: PERCENT,
+			value: coast.value,
+			target: 100,
+			note: coast.note,
+			amount: of(coastTarget(data, a))
+		}
 	];
 
 	return { kind: 'bullet', rows: rows.filter((r) => r.value !== null) };

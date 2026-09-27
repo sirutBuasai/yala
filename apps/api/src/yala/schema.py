@@ -263,6 +263,7 @@ class SettingsSection(_Base):
     swr: float  # withdrawal rate, percent
     nominal_return: float  # expected return before inflation, percent
     inflation: float  # long-run inflation the return is discounted by, percent
+    volatility: float  # yearly spread of returns around the expected one, percent
     retire_age: float  # target retirement age
     runway_target: float  # months of spending to hold in cash
     horizon_age: float  # age the projection runs to, and so the age the balance must last until

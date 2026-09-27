@@ -290,6 +290,7 @@
 			aria-label={`Move ${name}. Arrows move it; shift and arrows resize it.`}
 			onkeydown={onArrangeKey}
 			use:drag={{
+				autoscroll: true,
 				onstart: () => gesture.beginMove(),
 				onmove: ({ dx, dy }) => gesture.moveTo(dx, dy),
 				onend: ({ dx, dy }) => gesture.endMove(dx, dy),

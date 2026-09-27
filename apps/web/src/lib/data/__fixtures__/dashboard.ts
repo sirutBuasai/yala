@@ -275,6 +275,7 @@ export function makeNetWorthData(): DashboardData {
 		swr: 4,
 		nominal_return: 8,
 		inflation: 3,
+		volatility: 15,
 		retire_age: 60,
 		runway_target: 6,
 		horizon_age: 95,

@@ -1,0 +1,444 @@
+<title>Planning Page</title>
+<style>
+:root {
+	--bg: #f0ebdd; --surface: #faf6ec; --surface-2: #f1ead9; --inset: #ece4d2; --border: #ddd2bb; --grid: #e6ddca;
+	--ink: #2e2a22; --ink-2: #5c5443; --ink-3: #6e6652;
+	--lav: #bb9af7; --teal: #7dcfff; --green: #9ece6a; --gold: #e0af68;
+	--lav-text: #6a49bd; --good-text: #457124; --crit-text: #bb324a; --gold-text: #806211;
+	--shadow: 0 1px 2px rgba(120, 90, 40, 0.06), 0 14px 34px -18px rgba(120, 90, 40, 0.28);
+	--shadow-modal: 0 24px 60px -20px rgba(120, 90, 40, 0.35);
+	--scrim: rgba(46, 42, 34, 0.28);
+	--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+	--sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		color-scheme: dark;
+		--bg: #16161f; --surface: #1f1f2b; --surface-2: #26263a; --inset: #2a2a3c; --border: #33334a; --grid: #2a2a3c;
+		--ink: #e6e0c8; --ink-2: #a8a28c; --ink-3: #969380;
+		--lav-text: #bb9af7; --good-text: #9ece6a; --crit-text: #f7768e; --gold-text: #e0af68;
+		--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+		--shadow-modal: 0 24px 60px -20px rgba(0, 0, 0, 0.7);
+		--scrim: rgba(0, 0, 0, 0.5);
+	}
+}
+:root[data-theme='dark'] {
+	color-scheme: dark;
+	--bg: #16161f; --surface: #1f1f2b; --surface-2: #26263a; --inset: #2a2a3c; --border: #33334a; --grid: #2a2a3c;
+	--ink: #e6e0c8; --ink-2: #a8a28c; --ink-3: #969380;
+	--lav-text: #bb9af7; --good-text: #9ece6a; --crit-text: #f7768e; --gold-text: #e0af68;
+	--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+	--shadow-modal: 0 24px 60px -20px rgba(0, 0, 0, 0.7);
+	--scrim: rgba(0, 0, 0, 0.5);
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; padding-inline: 20px; }
+.page { max-width: 1160px; margin: 0 auto; padding-block: 52px 110px; display: grid; gap: 44px; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 { font-size: clamp(30px, 5vw, 42px); line-height: 1.12; }
+h2 { font-size: 25px; }
+p { margin: 0; }
+.eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.lede, .head p { color: var(--ink-2); max-width: 74ch; }
+section { display: grid; gap: 18px; }
+.head { display: grid; gap: 8px; }
+.tabs { display: inline-flex; flex-wrap: wrap; padding: 4px; gap: 3px; border-radius: 999px; background: var(--inset); justify-self: start; }
+.tabs button { border: 0; background: none; font: inherit; font-size: 13.5px; color: var(--ink-2); padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.tabs button.on { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--lav); outline-offset: 2px; }
+.scroll { overflow-x: auto; }
+
+.frame { position: relative; min-width: 980px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); padding: 16px 18px 20px; display: grid; gap: 10px; box-shadow: var(--shadow); }
+.bar { display: flex; align-items: center; gap: 10px; }
+.bar h3 { font-size: 21px; }
+.bar .sp { margin-left: auto; display: flex; gap: 8px; }
+.pill { border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 3px 12px; font-size: 12.5px; color: var(--ink-2); }
+.grid { display: grid; grid-template-columns: repeat(48, 1fr); gap: 10px; align-items: stretch; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card.stub { color: var(--ink-3); font-size: 12.5px; border-style: dashed; justify-content: center; }
+.ct { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ct b { font-family: var(--serif); font-size: 15px; font-weight: 600; color: var(--ink); }
+.ct span { color: var(--ink-3); font-size: 12px; }
+.ct .acts { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.btn { border: 1px solid var(--border); background: var(--surface); color: var(--ink); font: inherit; font-size: 12.5px; padding: 4px 12px; border-radius: 8px; cursor: pointer; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.primary { background: var(--lav-text); border-color: var(--lav-text); color: #fff; font-weight: 600; }
+:root[data-theme='dark'] .btn.primary { color: #16161f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .btn.primary { color: #16161f; } }
+.btn.ghost { background: none; border-color: transparent; color: var(--lav-text); font-weight: 600; }
+.btn.ghost:hover { background: var(--inset); }
+.mini { border: 1px solid var(--border); background: none; color: var(--ink-2); font: inherit; font-size: 11px; padding: 0 8px; border-radius: 6px; cursor: pointer; line-height: 1.6; }
+.mini:disabled { opacity: 0.4; cursor: default; }
+
+/* controls */
+.knobs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.knob { display: grid; gap: 4px; min-width: 0; position: relative; }
+.knob .line { display: flex; align-items: end; justify-content: space-between; gap: 8px; }
+.knob label { font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-3); min-width: 0; }
+.hint { border: 1px solid var(--border); background: none; color: var(--ink-3); width: 16px; height: 16px; border-radius: 50%; font-size: 10px; line-height: 1; padding: 0; cursor: pointer; margin-left: 4px; vertical-align: 1px; }
+.reading { display: inline-flex; align-items: baseline; gap: 2px; font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px; }
+.reading .sign { color: var(--ink-2); }
+.reading input { field-sizing: content; min-width: 2ch; width: 7ch; background: none; border: 1px solid transparent; border-radius: 5px; padding: 0 4px; color: var(--ink); font: inherit; text-align: right; }
+.reading input:hover, .reading input:focus { border-color: var(--border); background: var(--inset); }
+.knob input[type='range'] { appearance: none; width: 100%; height: 1.1rem; margin: 0; background: none; border: 0; padding: 0; cursor: pointer; }
+.knob input[type='range']::-webkit-slider-runnable-track { height: 6px; border: 1px solid var(--border); border-radius: 999px; background: linear-gradient(to right, var(--lav) var(--filled, 0%), var(--inset) var(--filled, 0%)); }
+.knob input[type='range']::-moz-range-track { height: 6px; border: 1px solid var(--border); border-radius: 999px; background: var(--inset); }
+.knob input[type='range']::-moz-range-progress { height: 6px; border-radius: 999px; background: var(--lav); }
+.knob input[type='range']::-webkit-slider-thumb { appearance: none; width: 15px; height: 15px; margin-top: -5px; border: 2px solid var(--surface); border-radius: 999px; background: var(--lav); box-shadow: 0 0 0 1px var(--border); }
+.knob input[type='range']::-moz-range-thumb { width: 15px; height: 15px; border: 2px solid var(--surface); border-radius: 999px; background: var(--lav); box-shadow: 0 0 0 1px var(--border); }
+.knob .foot { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--ink-3); min-height: 1.2em; }
+.knob .foot span { min-width: 0; }
+.typed input { background: var(--inset); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; color: var(--ink); font: inherit; font-size: 14px; width: 100%; }
+.bubble { position: absolute; left: 0; right: 0; top: 22px; z-index: 5; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-modal); padding: 10px 12px; font-size: 12px; color: var(--ink-2); display: grid; gap: 4px; }
+.bubble b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.bubble .key { color: var(--ink-3); }
+.feedback { font-size: 11.5px; color: var(--ink-3); }
+
+/* charts */
+/* Absolute, so the drawing never sizes the box it is measured from. */
+.plot { flex: 1 1 auto; min-height: 220px; position: relative; }
+.plot svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; }
+.plot text { fill: var(--ink-3); font-size: 11px; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.plot .gl { stroke: var(--grid); stroke-width: 1; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 16px; height: 0; border-top: 2.4px solid var(--c); }
+.legend i.dash { border-top-style: dashed; border-top-width: 1.8px; }
+.figureline { font-size: 13px; color: var(--ink-2); }
+.figureline strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.bullets { display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto; }
+.bul { display: flex; flex-direction: column; gap: 5px; }
+.bul .h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 13px; }
+.bul .h small { color: var(--ink-3); font-size: 11.5px; margin-left: 8px; }
+.bul .fig { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bul .fig.reached { color: var(--good-text); }
+.bul .fig .of { color: var(--ink-3); font-weight: 400; }
+.track { height: 12px; border-radius: 6px; background: var(--inset); overflow: hidden; }
+.track i { display: block; height: 100%; border-radius: 6px; background: var(--lav); }
+.track i.reached { background: var(--green); }
+.kpi { display: grid; gap: 4px; }
+.kpi .l { font-family: var(--serif); font-size: 14px; font-weight: 600; }
+.kpi .v { font-family: var(--serif); font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kpi .c { font-size: 11.5px; color: var(--ink-3); }
+.meter { height: 8px; border-radius: 4px; background: var(--inset); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--lav); }
+.moved { outline: 2px dashed var(--gold); outline-offset: 3px; }
+
+/* modal (the Was tab) */
+.scrim { position: absolute; inset: 0; background: var(--scrim); border-radius: 14px; display: grid; place-items: start center; padding-top: 34px; z-index: 10; }
+.sheet { width: min(900px, 94%); background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-modal); display: grid; gap: 14px; padding: 16px 20px 20px; }
+.sheet .top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.sheet .top h4 { margin: 0; font-family: var(--serif); font-size: 19px; }
+.sheet .top span { font-size: 12.5px; color: var(--ink-3); }
+.sheet .top .acts { margin-left: auto; display: flex; gap: 6px; }
+.split { display: grid; grid-template-columns: minmax(0, 21rem) minmax(0, 1fr); gap: 28px; }
+.split .figs { display: flex; flex-direction: column; gap: 14px; }
+.split .figs .card { border: 0; padding: 0; background: none; }
+.split .figs .card + .card { border-top: 1px solid var(--border); padding-top: 14px; border-radius: 0; }
+
+.notes { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+.notes li { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 14px; font-size: 14px; color: var(--ink-2); border-top: 1px solid var(--border); padding-top: 10px; }
+.notes b { color: var(--ink); font-weight: 600; }
+@media (max-width: 640px) { .notes li { grid-template-columns: 1fr; gap: 2px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="page">
+	<header class="head">
+		<span class="eyebrow">Yala redesign · Planning mock · sample data</span>
+		<h1>Planning</h1>
+		<p class="lede">The page as the spec proposes it: the planning panel's controls become the Financial planning pane, beside the charts they move. Drag any slider and every pane redraws; nothing is saved until Save changes. The second tab is how it works on master today, for comparison. Charts and strings are the current ones (D6); the figures are made up.</p>
+	</header>
+
+	<section>
+		<div class="tabs" role="tablist" aria-label="Version">
+			<button type="button" role="tab" class="on" data-tab="proposed" aria-selected="true">Proposed · Planning page</button>
+			<button type="button" role="tab" data-tab="was" aria-selected="false">Was · Net Worth · All time</button>
+		</div>
+
+		<div class="scroll" id="tab-proposed">
+			<div class="frame">
+				<div class="bar"><h3>Planning</h3><div class="sp"><span class="pill">Edit</span><span class="pill">◐</span></div></div>
+				<div class="grid" id="proposed-grid">
+					<div class="card" style="grid-column: 1 / span 16; grid-row: 1 / span 2;">
+						<div class="ct"><b>Financial planning</b><span>assumptions behind the independence and runway targets</span></div>
+						<div class="ct" style="margin-top:-4px"><span class="feedback" data-feedback></span><span class="acts"><button type="button" class="btn" data-discard>Discard</button><button type="button" class="btn primary" data-save>Save changes</button></span></div>
+						<div class="knobs" data-knobs="proposed"></div>
+					</div>
+					<div class="card" style="grid-column: 17 / span 32; min-height: 400px;">
+						<div class="ct"><b>Projected investments</b><span>invested balance growth and financial independence projection</span></div>
+						<div class="legend" data-legend></div>
+						<div class="plot" data-plot></div>
+						<p class="figureline" data-depletion></p>
+					</div>
+					<div class="card" style="grid-column: 17 / span 20;">
+						<div class="ct"><b>Financial progress</b><span>key metrics for financial independence</span></div>
+						<div class="bullets" data-bullets></div>
+					</div>
+					<div class="card" style="grid-column: 37 / span 12;">
+						<div class="kpi" data-yof></div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="scroll" id="tab-was" hidden>
+			<div class="frame" id="was-frame">
+				<div class="bar"><h3>Net Worth</h3><span class="pill">Month</span><span class="pill">Year</span><span class="pill" style="color:var(--ink);font-weight:600">All time</span><div class="sp"><span class="pill">Edit</span></div></div>
+				<div class="grid">
+					<div class="card stub" style="grid-column: 1 / span 28; min-height: 200px;">Lifetime growth · stat matrix (stays on Accounts · Yearly)</div>
+					<div class="card moved" style="grid-column: 29 / span 20;">
+						<div class="ct"><b>Financial progress</b><span>key metrics for financial independence</span><span class="acts"><button type="button" class="btn ghost" data-adjust>Adjust</button></span></div>
+						<div class="bullets" data-bullets-saved></div>
+					</div>
+					<div style="grid-column: 1 / span 11; display: grid; gap: 10px;">
+						<div class="card stub">Net worth · Assets · Liabilities · Growth rate KPIs (stay on Accounts)</div>
+						<div class="card moved"><div class="kpi" data-yof-saved></div></div>
+					</div>
+					<div class="card stub" style="grid-column: 12 / span 37; min-height: 200px;">Net worth &amp; assets, Liabilities, and the rest of the board (stay on Accounts · Yearly)</div>
+				</div>
+				<div class="scrim" id="modal" hidden>
+					<div class="sheet" role="dialog" aria-label="Financial planning">
+						<div class="top"><h4>Financial planning</h4><span>assumptions behind the independence and runway targets</span><span class="acts"><button type="button" class="btn" data-discard data-close>Discard</button><button type="button" class="btn primary" data-save data-close>Save changes</button></span></div>
+						<div class="split">
+							<div class="knobs" data-knobs="was"></div>
+							<div class="figs">
+								<div class="card" style="min-height: 300px;">
+									<div class="ct"><b>Projected investments</b><span>invested balance growth and financial independence projection</span></div>
+									<div class="legend" data-legend></div>
+									<div class="plot" data-plot></div>
+									<p class="figureline" data-depletion></p>
+								</div>
+								<div class="card">
+									<div class="ct"><b>Financial progress</b><span>key metrics for financial independence</span></div>
+									<div class="bullets" data-bullets></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section>
+		<div class="head"><h2>What to look at</h2></div>
+		<ul class="notes">
+			<li><b>Controls beside charts</b><span>Decision 1. On the page, the assumptions are the page's main content, so they sit in a pane next to what they move rather than behind Adjust. The dashed outlines on the Was tab mark what moves to Planning.</span></li>
+			<li><b>Save and Discard</b><span>In Financial planning's header, as they were in the modal's. Save changes is enabled only while a control differs from the ledger. In the modal, closing after a save was the confirmation; in a pane, Save just goes grey again. Say if you want a confirmation line there, which would be a new string.</span></li>
+			<li><b>What previews</b><span>Every pane on the page redraws from the draft: the projection, the depletion line, Financial progress, and Years of freedom's target. Years of freedom's own figure stays put when you change Planned spending, since it reads logged spending (decision 4).</span></li>
+			<li><b>Projection frame</b><span>Fixed at the largest FI number the withdrawal slider allows, so dragging the withdrawal rate moves the FI line inside the plot instead of rescaling it. Lines above that level are clipped, as today.</span></li>
+			<li><b>Layout</b><span>A proposed default only. You arrange it in Edit, and your arrangement becomes the default (D51).</span></li>
+			<li><b>New UI strings</b><span>None.</span></li>
+		</ul>
+	</section>
+</div>
+
+<script>
+const NOW = 2026;
+// Sample ledger figures: trailing twelve months and the latest snapshot.
+const LEDGER = { invested: 412000, liquid: 38000, netWorth: 455000, spend: 54000, saved: 41000, contributions: 23000 };
+const RESIDUAL = Math.max(0, LEDGER.saved - LEDGER.contributions);
+
+const SPECS = [
+	{ key: 'swr', label: 'Withdrawal rate', kind: 'percent', min: 1.5, max: 20, def: 4, help: 'Annual withdrawal rate from investment after retirement.' },
+	{ key: 'nominalReturn', label: 'Expected nominal return', kind: 'percent', min: 0, max: 20, def: 8, help: 'Expected annual investment return before inflation is taken out.' },
+	{ key: 'inflation', label: 'Expected inflation', kind: 'percent', min: 0, max: 15, def: 3, help: 'Long-run annual inflation rate.' },
+	{ key: 'retireAge', label: 'Target retirement age', kind: 'age', min: 18, max: 100, def: 60, help: 'The age you stop contributing and start withdrawing money.' },
+	{ key: 'runwayTarget', label: 'Target cash runway', kind: 'months', min: 1, max: 120, def: 6, help: 'Number of months in spending you want held in liquid assets.' },
+	{ key: 'plannedSpending', label: 'Planned spending', kind: 'money', min: 0, max: 500000, def: null, help: 'Projected yearly spending.' },
+	{ key: 'outOfPocket', label: 'Out-of-pocket investments', kind: 'money', min: 0, max: 500000, def: null, help: 'Additional yearly investments out-of-pocket excluding payroll contributions.' },
+	{ key: 'horizonAge', label: 'Plan horizon age', kind: 'age', min: 60, max: 110, def: 95, help: 'The age you plan to stop spending money.' },
+	{ key: 'birthYear', label: 'Birth year', kind: 'year', min: 1900, max: 2100, def: null, help: 'Your birth year, used for balance growth projection with respect to the target retirement age.' }
+];
+const STEP = { percent: 0.1, money: 500 };
+const SUFFIX = { percent: '%', months: ' mo' };
+
+let saved = { swr: 4, nominalReturn: 8, inflation: 3, retireAge: 60, runwayTarget: 6, plannedSpending: null, outOfPocket: null, horizonAge: 95, birthYear: 1990 };
+let draft = { ...saved };
+
+const money = (n) => (n < 0 ? '−$' : '$') + Math.round(Math.abs(n)).toLocaleString('en-US');
+const short = (n) => n >= 1e6 ? `$${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}k` : `$${Math.round(n)}`;
+const plain = (n) => n.toFixed(4).replace(/\.?0+$/, '');
+
+function rates(a) {
+	return { spending: a.plannedSpending ?? LEDGER.spend, investing: LEDGER.contributions + (a.outOfPocket ?? RESIDUAL), contributions: LEDGER.contributions, residual: RESIDUAL };
+}
+const realRate = (a) => ((1 + a.nominalReturn / 100) / (1 + a.inflation / 100) - 1) * 100;
+const yearsToRetirement = (a) => a.birthYear == null ? null : Math.max(0, a.retireAge - (NOW - a.birthYear));
+const fiNumber = (a) => { const s = rates(a).spending; return a.swr && s ? s / (a.swr / 100) : null; };
+function coastTarget(a) { const y = yearsToRetirement(a), t = fiNumber(a); return y == null || !t ? null : t / (1 + realRate(a) / 100) ** y; }
+function lastsToHorizon(a) {
+	const n = a.horizonAge - a.retireAge; if (n <= 0) return null;
+	const s = rates(a).spending, r = realRate(a) / 100;
+	return r === 0 ? s * n : s * ((1 - (1 + r) ** -n) / r);
+}
+function walk(a) {
+	if (a.birthYear == null) return null;
+	const g = 1 + realRate(a) / 100, { spending, investing } = rates(a);
+	const retire = a.birthYear + a.retireAge, end = a.birthYear + a.horizonAge;
+	if (end <= NOW) return null;
+	const years = [NOW], inv = [LEDGER.invested], coast = [LEDGER.invested];
+	for (let y = NOW + 1; y <= end; y++) {
+		const out = y > retire;
+		const step = (b, add) => Math.max(0, b * g + (out ? -spending : add));
+		years.push(y); inv.push(step(inv.at(-1), investing)); coast.push(step(coast.at(-1), 0));
+	}
+	return { years, inv, coast };
+}
+function thresholds(a) {
+	const monthly = LEDGER.spend / 12, fi = fiNumber(a), need = coastTarget(a), years = yearsToRetirement(a);
+	return [
+		{ label: 'Cash runway', value: LEDGER.liquid / monthly, target: a.runwayTarget, unit: 'mo', note: `at ${money(monthly)}/mo` },
+		{ label: 'FI number', value: fi ? LEDGER.invested / fi * 100 : null, target: 100, unit: '%', note: fi ? `of ${money(fi)}` : '' },
+		{ label: 'Coast FI', value: need ? LEDGER.invested / need * 100 : null, target: 100, unit: '%', note: need ? `${money(need)} needed ${years} yr out` : 'set your birth year in Financial planning' }
+	].filter((r) => r.value !== null || r.label === 'Coast FI');
+}
+const fmtUnit = (v, u) => v == null ? '—' : u === '%' ? `${v.toFixed(1)}%` : `${v.toFixed(1)} ${u}`;
+
+function drawBullets(el, a) {
+	el.innerHTML = thresholds(a).map((r) => {
+		const share = r.value == null ? 0 : Math.min(100, Math.max(0, r.value / r.target * 100));
+		const reached = r.value != null && r.value >= r.target;
+		return `<div class="bul"><div class="h"><span>${r.label}<small>${r.note}</small></span><span class="fig${reached ? ' reached' : ''}">${fmtUnit(r.value, r.unit)} <span class="of">/ ${fmtUnit(r.target, r.unit)}</span></span></div><div class="track" role="meter" aria-label="${r.label}"><i class="${reached ? 'reached' : ''}" style="width:${share}%"></i></div></div>`;
+	}).join('');
+}
+function drawYof(el, a) {
+	const v = LEDGER.netWorth / LEDGER.spend, t = yearsToRetirement(a);
+	el.innerHTML = `<span class="l">Years of freedom</span><span class="v">${v.toFixed(1)} yr</span><div class="meter"><i style="width:${t ? Math.min(100, v / t * 100) : 100}%"></i></div><span class="c">at ${money(LEDGER.spend)}/yr${t != null ? ` · of ${t} yr to retirement` : ''}</span>`;
+}
+
+const SERIES = [
+	{ name: 'Investing', color: 'var(--lav)', dash: false },
+	{ name: 'Coasting', color: 'var(--teal)', dash: true },
+	{ name: 'FI number', color: 'var(--green)', dash: true },
+	{ name: 'Lasts to', color: 'var(--gold)', dash: true }
+];
+function drawProjection(card, a) {
+	const plot = card.querySelector('[data-plot]');
+	const path = walk(a), fi = fiNumber(a), lasts = lastsToHorizon(a);
+	card.querySelector('[data-legend]').innerHTML = SERIES.map((s) => `<span><i class="${s.dash ? 'dash' : ''}" style="--c:${s.color}"></i>${s.name === 'Lasts to' ? `Lasts to ${a.horizonAge}` : s.name}</span>`).join('');
+	const dep = path ? path.inv.findIndex((b) => b <= 0) : -1;
+	card.querySelector('[data-depletion]').innerHTML = `Depletion year: <strong>${path && dep !== -1 ? path.years[dep] : '—'}</strong> ${path && dep !== -1 ? `at ${money(rates(a).spending)}/yr` : 'never at this rate'}`;
+	const W = Math.max(200, plot.clientWidth), H = Math.max(140, plot.clientHeight);
+	if (!path) { plot.innerHTML = `<svg viewBox="0 0 ${W} ${H}"><text x="${W / 2}" y="${H / 2}" text-anchor="middle">No data</text></svg>`; return; }
+	const m = { l: 48, r: 10, t: 8, b: 22 }, iw = W - m.l - m.r, ih = H - m.t - m.b;
+	const cap = rates(a).spending / (SPECS[0].min / 100);
+	const n = path.years.length;
+	const x = (i) => m.l + (n === 1 ? 0 : i / (n - 1) * iw), y = (v) => m.t + ih - Math.min(v, cap) / cap * ih;
+	const lines = [path.inv, path.coast, fi ? path.years.map(() => fi) : null, lasts ? path.years.map(() => lasts) : null];
+	let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Projected investments">`;
+	for (let k = 0; k <= 4; k++) { const v = cap * k / 4, yy = y(v); s += `<line class="gl" x1="${m.l}" x2="${W - m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l - 6}" y="${yy + 4}" text-anchor="end">${short(v)}</text>`; }
+	const every = Math.ceil(n / Math.max(2, Math.floor(iw / 46)));
+	path.years.forEach((yr, i) => { if (i % every === 0 || i === n - 1) s += `<text x="${x(i)}" y="${H - 5}" text-anchor="middle">${yr}</text>`; });
+	lines.forEach((vals, k) => {
+		if (!vals) return;
+		const d = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+		s += `<path d="${d}" fill="none" stroke="${SERIES[k].color}" stroke-width="${k ? 1.6 : 2.4}" ${SERIES[k].dash ? 'stroke-dasharray="5 4"' : ''} stroke-linejoin="round"/>`;
+	});
+	plot.innerHTML = s + '</svg>';
+}
+
+function seedOf(spec) {
+	if (spec.key === 'plannedSpending') return Math.round(rates(draft).spending);
+	if (spec.key === 'outOfPocket') return Math.round(RESIDUAL);
+	return spec.def ?? spec.min;
+}
+const valueOf = (spec) => draft[spec.key] ?? seedOf(spec);
+function footnoteOf(spec) {
+	if (spec.key === 'swr') {
+		const at = (() => { const p = walk(draft); if (!p) return null; const i = p.years.indexOf(draft.birthYear + draft.retireAge); return i === -1 ? p.coast[0] : p.coast[i]; })();
+		const fi = fiNumber(draft); if (at == null || !fi) return '';
+		const p = walk(draft), dep = p.inv.findIndex((b) => b <= 0);
+		return `Your balance reaches ${money(at)} by ${draft.retireAge}, ${at >= fi ? 'above' : 'below'} the ${money(fi)} FI number.${dep === -1 ? '' : ` It will deplete in ${p.years[dep]}.`}`;
+	}
+	if (spec.key === 'nominalReturn' || spec.key === 'inflation') return `Compounds at ${realRate(draft).toFixed(2)}% a year after inflation.`;
+	if (spec.key === 'outOfPocket') { const r = rates(draft), extra = draft.outOfPocket ?? RESIDUAL; return `${money(r.contributions)}/yr contributions + ${money(extra)} = ${money(r.contributions + extra)}/yr`; }
+	return '';
+}
+function explains(spec) {
+	const a = draft, r = rates(a), real = realRate(a), fi = fiNumber(a), age = a.birthYear == null ? null : NOW - a.birthYear;
+	const fisher = `<b>(${plain(1 + a.nominalReturn / 100)} / ${plain(1 + a.inflation / 100)}) − 1 = ${real.toFixed(2)}% adjusted</b>`;
+	const tail = {
+		swr: `<b>${money(r.spending)} / ${plain(a.swr / 100)} = ${fi ? money(fi) : '—'}</b>FI number: where your investment won't run out at ${a.swr}% withdrawal rate for your everyday spending.<b>${fi ? money(fi) : '—'} / ${plain(1 + real / 100)} ^ (${a.retireAge}-${age ?? '—'}) = ${coastTarget(a) ? money(coastTarget(a)) : '—'}</b>Coast FI: what you would need today to reach the FI number by ${a.retireAge} with no further contribution.`,
+		nominalReturn: `${fisher}Coasting: balance grows at the real rate of return.<span>Investing: balance grows at ${money(r.investing)}/yr compounded with the real rate of return until retirement at ${a.retireAge}.</span>`,
+		inflation: fisher,
+		runwayTarget: `<b>${money(LEDGER.liquid)} / ${money(LEDGER.spend / 12)} = ${(LEDGER.liquid / (LEDGER.spend / 12)).toFixed(1)} months</b>`,
+		horizonAge: `<span class="key">spending × (1 − (1+r)^−n) / r, where r = ${real.toFixed(2)}% adjusted return and n = ${a.horizonAge - a.retireAge} yr of withdrawals</span><b>${money(r.spending)} over ${a.horizonAge - a.retireAge} yr at ${real.toFixed(2)}% = ${lastsToHorizon(a) ? money(lastsToHorizon(a)) : '—'}</b>The number at which you can stop contributing and you will use up your investment and its gains by ${a.horizonAge} at a ${real.toFixed(2)}% real return.`,
+		plannedSpending: `<b>trailing spending based on your activity: ${money(LEDGER.spend)}/yr</b>Average saved and spent metrics from your logged activity or custom spending rate.`,
+		outOfPocket: `<b>trailing savings based on your activity: ${money(RESIDUAL)}/yr</b><b>${money(r.contributions)}/yr contributions + ${money(a.outOfPocket ?? RESIDUAL)} = ${money(r.investing)}/yr</b>`
+	}[spec.key] ?? '';
+	return `<span>${spec.help}</span>${tail}`;
+}
+
+function buildKnobs(root, id) {
+	root.innerHTML = SPECS.map((spec) => {
+		const fid = `${id}-${spec.key}`;
+		if (spec.kind === 'year') return `<div class="knob typed"><div class="line"><label for="${fid}">${spec.label}</label></div><input id="${fid}" type="number" inputmode="numeric" min="${spec.min}" max="${spec.max}" placeholder="Not set" data-typed="${spec.key}"></div>`;
+		return `<div class="knob" data-knob="${spec.key}">
+			<div class="line"><span><label for="${fid}-r">${spec.label}</label><button type="button" class="hint" aria-label="About ${spec.label}" data-hint>?</button></span>
+			<span class="reading">${spec.kind === 'money' ? '<span class="sign">$</span>' : ''}<input id="${fid}-n" aria-label="${spec.label}" data-num>${SUFFIX[spec.kind] ? `<span class="sign">${SUFFIX[spec.kind]}</span>` : ''}</span></div>
+			<input id="${fid}-r" type="range" min="${spec.min}" max="${spec.max}" step="${STEP[spec.kind] ?? 1}" data-range>
+			<div class="foot"><span data-foot></span><button type="button" class="mini" data-default>Default</button></div>
+			<div class="bubble" data-bubble hidden></div>
+		</div>`;
+	}).join('');
+	root.querySelectorAll('[data-knob]').forEach((el) => {
+		const spec = SPECS.find((s) => s.key === el.dataset.knob);
+		const set = (v) => { draft[spec.key] = Math.min(spec.max, Math.max(spec.min, Number.isFinite(v) ? v : spec.min)); render(); };
+		el.querySelector('[data-range]').addEventListener('input', (e) => set(Number(e.target.value)));
+		const num = el.querySelector('[data-num]');
+		num.addEventListener('change', () => set(Number(num.value.replace(/,/g, ''))));
+		num.addEventListener('keydown', (e) => { if (e.key === 'Enter') num.blur(); });
+		el.querySelector('[data-default]').addEventListener('click', () => { draft[spec.key] = spec.def; render(); });
+		el.querySelector('[data-hint]').addEventListener('click', () => { const b = el.querySelector('[data-bubble]'); b.hidden = !b.hidden; if (!b.hidden) b.innerHTML = explains(spec); });
+	});
+	root.querySelectorAll('[data-typed]').forEach((inp) => inp.addEventListener('change', () => {
+		const v = inp.value === '' ? null : Math.min(2100, Math.max(1900, Math.round(Number(inp.value))));
+		draft.birthYear = v; render();
+	}));
+}
+function syncKnobs(root) {
+	root.querySelectorAll('[data-knob]').forEach((el) => {
+		const spec = SPECS.find((s) => s.key === el.dataset.knob), v = valueOf(spec);
+		const range = el.querySelector('[data-range]'), num = el.querySelector('[data-num]');
+		range.value = v;
+		range.style.setProperty('--filled', `${(v - spec.min) / (spec.max - spec.min) * 100}%`);
+		if (document.activeElement !== num) num.value = spec.kind === 'money' ? Math.round(v).toLocaleString('en-US') : String(spec.kind === 'percent' ? +v.toFixed(1) : v);
+		el.querySelector('[data-foot]').textContent = footnoteOf(spec);
+		el.querySelector('[data-default]').disabled = draft[spec.key] === spec.def;
+		const b = el.querySelector('[data-bubble]'); if (!b.hidden) b.innerHTML = explains(spec);
+	});
+	root.querySelectorAll('[data-typed]').forEach((inp) => { if (document.activeElement !== inp) inp.value = draft.birthYear ?? ''; });
+}
+
+const changed = () => SPECS.some((s) => draft[s.key] !== saved[s.key]);
+function render() {
+	document.querySelectorAll('[data-knobs]').forEach(syncKnobs);
+	document.querySelectorAll('[data-save]').forEach((b) => (b.disabled = !changed()));
+	document.querySelectorAll('[data-discard]:not([data-close])').forEach((b) => (b.disabled = !changed()));
+	document.querySelectorAll('[data-plot]').forEach((p) => drawProjection(p.closest('.card'), draft));
+	document.querySelectorAll('[data-bullets]').forEach((el) => drawBullets(el, draft));
+	document.querySelectorAll('[data-bullets-saved]').forEach((el) => drawBullets(el, saved));
+	document.querySelector('[data-yof]') && drawYof(document.querySelector('[data-yof]'), draft);
+	document.querySelectorAll('[data-yof-saved]').forEach((el) => drawYof(el, saved));
+}
+
+document.querySelectorAll('[data-knobs]').forEach((root) => buildKnobs(root, root.dataset.knobs));
+document.querySelectorAll('[data-save]').forEach((b) => b.addEventListener('click', () => { saved = { ...draft }; if (b.dataset.close != null) closeModal(); render(); }));
+document.querySelectorAll('[data-discard]').forEach((b) => b.addEventListener('click', () => { draft = { ...saved }; if (b.dataset.close != null) closeModal(); render(); }));
+const modal = document.getElementById('modal');
+function closeModal() { modal.hidden = true; }
+document.querySelector('[data-adjust]').addEventListener('click', () => { draft = { ...saved }; modal.hidden = false; render(); });
+modal.addEventListener('click', (e) => { if (e.target === modal) { draft = { ...saved }; closeModal(); render(); } });
+
+document.querySelectorAll('[data-tab]').forEach((t) => t.addEventListener('click', () => {
+	document.querySelectorAll('[data-tab]').forEach((o) => { o.classList.toggle('on', o === t); o.setAttribute('aria-selected', String(o === t)); });
+	document.getElementById('tab-proposed').hidden = t.dataset.tab !== 'proposed';
+	document.getElementById('tab-was').hidden = t.dataset.tab !== 'was';
+	// A draft is page state: switching away drops it, as leaving the page would.
+	draft = { ...saved }; closeModal(); render();
+}));
+new ResizeObserver(() => render()).observe(document.body);
+render();
+</script>

@@ -98,6 +98,7 @@ export type Adjustments = NetWorthAdjustment[];
 export type Swr = number;
 export type NominalReturn = number;
 export type Inflation = number;
+export type Volatility = number;
 export type RetireAge = number;
 export type RunwayTarget = number;
 export type HorizonAge = number;
@@ -333,6 +334,7 @@ export interface SettingsSection {
 	swr: Swr;
 	nominal_return: NominalReturn;
 	inflation: Inflation;
+	volatility: Volatility;
 	retire_age: RetireAge;
 	runway_target: RunwayTarget;
 	horizon_age: HorizonAge;

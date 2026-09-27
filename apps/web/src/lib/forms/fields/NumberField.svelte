@@ -1,11 +1,13 @@
 <script lang="ts">
-	// A labelled range whose reading is also an input, so a figure can be dragged to or typed in. Bounds and
-	// step come from the caller, so whatever describes the figure is what both controls are drawn from. Its
-	// three parts each sit in their own row of the PARENT grid, which must supply them, so that a stack of
-	// these aligns however many lines a label takes.
+	import { tick } from 'svelte';
+	import { NOT_SET } from '$lib/copy';
+	// A labelled figure typed into a field held to its bounds and stepped by the arrow keys, or, with `track`,
+	// dragged along a range under it, which moves the figure (and whatever draws it) as it goes. Bounds and
+	// step come from the caller, so whatever describes the figure is what the control is drawn from.
 	interface Props {
 		label: string;
-		value: number;
+		/** Null only where `optional`: a figure left unset. */
+		value: number | null;
 		min: number;
 		max: number;
 		step?: number;
@@ -15,12 +17,12 @@
 		grouped?: boolean;
 		/** Printed straight after the figure: a unit sign, never a word that needs spacing. */
 		suffix?: string;
-		/** A live figure under the track, for what the current value works out to. */
-		footnote?: string;
-		/** Sits beside the label — a "?" explaining how the figure is used. */
+		/** May be left empty, which reads as unset rather than as the minimum. */
+		optional?: boolean;
+		/** Draw a range under the field to drag the figure along. */
+		track?: boolean;
+		/** Sits beside the label: a "?" explaining how the figure is used, a reset. */
 		hint?: import('svelte').Snippet;
-		/** Sits at the foot of the block, under the help — a reset, say. */
-		footer?: import('svelte').Snippet;
 		disabled?: boolean;
 	}
 	let {
@@ -32,13 +34,11 @@
 		prefix = '',
 		grouped = false,
 		suffix = '',
-		footnote,
+		optional = false,
+		track = false,
 		hint,
-		footer,
 		disabled = false
 	}: Props = $props();
-
-	const id = $props.id();
 
 	/**
 	 * What the number field currently holds, as text. A buffer rather than the bound number: binding a
@@ -50,7 +50,9 @@
 
 	/** Grouped at rest so long figures are readable, plain while being typed into — separators in a field
 	    you are editing fight the caret. */
-	const shown = $derived(typed ?? (grouped ? value.toLocaleString() : String(value)));
+	const shown = $derived(
+		typed ?? (value === null ? '' : grouped ? value.toLocaleString() : String(value))
+	);
 
 	/**
 	 * How wide the field has to be: the longest text it can hold, not the text it holds now, or a box sized
@@ -66,138 +68,143 @@
 		)
 	);
 
-	const filled = $derived(max > min ? ((value - min) / (max - min)) * 100 : 0);
+	const filled = $derived(max > min && value !== null ? ((value - min) / (max - min)) * 100 : 0);
 
-	/** Commit the typed text, holding it to the bounds. Empty snaps to the minimum, which is what an
-	    emptied bounded field can only mean. */
+	/** Places the step carries, so repeated steps land on it rather than drifting in binary fractions. */
+	const places = $derived((String(step).split('.')[1] ?? '').length);
+	const held = (v: number) => Math.min(max, Math.max(min, Number(v.toFixed(places))));
+
+	function by(steps: number) {
+		typed = null;
+		value = held((value ?? min) + steps * step);
+	}
+
+	/** Commit the typed text, holding it to the bounds. Empty or unreadable text is unset where the figure
+	    may be, and otherwise the minimum, which is what an emptied bounded field can only mean. */
 	function commit() {
 		if (typed !== null) {
 			// Separators are stripped, so a grouped figure the caller pasted back in still parses.
 			const entered = Number(typed.replace(/,/g, ''));
-			value =
-				typed.trim() === '' || !Number.isFinite(entered)
-					? min
-					: Math.min(max, Math.max(min, entered));
+			const readable = typed.trim() !== '' && Number.isFinite(entered);
+			value = readable ? Math.min(max, Math.max(min, entered)) : optional ? null : min;
 		}
 		typed = null;
 	}
 </script>
 
-<div class="slider">
-	<div class="line">
-		<span class="naming"
-			><label for={id}>{label}</label>{#if hint}{@render hint()}{/if}</span
-		>
-		<span class="reading">
-			{#if prefix}<span class="sign">{prefix}</span>{/if}
-			<!-- Text, not number: a number input reports an empty or half-typed value as NaN, which is what
-			     made the digits undeletable. Bounds still ride along for assistive tech. -->
-			<input
-				class="num"
-				type="text"
-				inputmode="decimal"
-				aria-label={label}
-				role="spinbutton"
-				aria-valuemin={min}
-				aria-valuemax={max}
-				aria-valuenow={value}
-				style:width="calc({widest}ch + 1.6rem)"
-				{disabled}
-				value={shown}
-				onfocus={() => (typed = String(value))}
-				oninput={(e) => (typed = (e.currentTarget as HTMLInputElement).value)}
-				onchange={commit}
-				onblur={commit}
-				onkeydown={(e) => {
-					if (e.key === 'Enter') {
-						e.preventDefault();
-						(e.currentTarget as HTMLInputElement).blur();
-					}
-				}}
-			/>{#if suffix}<span class="sign">{suffix}</span>{/if}
-		</span>
-	</div>
-
-	<input
-		{id}
-		type="range"
-		{min}
-		{max}
-		{step}
-		{disabled}
-		style:--filled="{filled}%"
-		{value}
-		oninput={(e) => {
-			typed = null;
-			value = (e.currentTarget as HTMLInputElement).valueAsNumber;
-		}}
-	/>
-
-	<div class="notes">
-		{#if footnote}<p class="foot">{footnote}</p>{/if}
-		{#if footer}<div class="footer">{@render footer()}</div>{/if}
-	</div>
+<div class="numfield">
+	<span class="naming"
+		>{label}{#if hint}{@render hint()}{/if}</span
+	>
+	<span class="reading">
+		{#if prefix}<span class="sign">{prefix}</span>{/if}
+		<!-- Text, not number: a number input reports an empty or half-typed value as NaN, which is what
+		     made the digits undeletable. Bounds still ride along for assistive tech. -->
+		<input
+			class="num"
+			type="text"
+			inputmode="decimal"
+			aria-label={label}
+			role="spinbutton"
+			aria-valuemin={min}
+			aria-valuemax={max}
+			aria-valuenow={value ?? undefined}
+			placeholder={optional ? NOT_SET : undefined}
+			style:width="calc({widest}ch + 0.6rem)"
+			{disabled}
+			value={shown}
+			onfocus={(e) => {
+				const field = e.currentTarget as HTMLInputElement;
+				typed = value === null ? '' : String(value);
+				// Selected again once the grouping is dropped: the swap lands after the browser selected the
+				// old text, so typing appended to it (a reading of 63073400000, held to the maximum).
+				void tick().then(() => field.select());
+			}}
+			oninput={(e) => (typed = (e.currentTarget as HTMLInputElement).value)}
+			onchange={commit}
+			onblur={commit}
+			onkeydown={(e) => {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					(e.currentTarget as HTMLInputElement).blur();
+				} else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+					// A spinbutton steps by its arrows, as its role promises.
+					e.preventDefault();
+					by(e.key === 'ArrowUp' ? 1 : -1);
+					typed = String(value);
+				}
+			}}
+		/>{#if suffix}<span class="sign">{suffix}</span>{/if}
+	</span>
+	{#if track}
+		<input
+			type="range"
+			aria-label={label}
+			{min}
+			{max}
+			{step}
+			{disabled}
+			style:--filled="{filled}%"
+			value={value ?? min}
+			oninput={(e) => {
+				typed = null;
+				value = (e.currentTarget as HTMLInputElement).valueAsNumber;
+			}}
+		/>
+	{/if}
 </div>
 
 <style>
-	.slider {
+	.numfield {
 		display: grid;
-		grid-template-rows: subgrid;
-		grid-row: span 3;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: center;
+		gap: var(--space-2) var(--gap-inline);
 		min-width: 0;
-	}
-	.line {
-		display: flex;
-		align-items: end;
-		justify-content: space-between;
-		gap: var(--gap-inline);
-		/* Bottom-aligned within its row, so a label that wraps to two lines still sits its last line level
-		   with a neighbour's single one — and the reading beside it never floats. */
-		align-self: end;
-		padding-bottom: var(--space-3);
 	}
 	/* The label and its "?" flow as one run of text, so the mark trails the last word rather than landing
 	   alone on a new row. */
 	.naming {
 		min-width: 0;
+		font-size: var(--text-control);
+		color: var(--ink-2);
 	}
-	.naming :global(.hint) {
+	.naming :global(.hint),
+	.naming :global(.reset) {
 		margin-left: var(--space-2);
 	}
-	label {
-		font-size: var(--text-label);
-		color: var(--ink-3);
-		text-transform: uppercase;
-		letter-spacing: var(--ls-wide);
-		min-width: 0;
-	}
+	/* One width for every field, so a stack of them lines up whatever each one's bounds. */
 	.reading {
+		min-width: 7rem;
 		display: inline-flex;
 		align-items: baseline;
+		justify-content: flex-end;
 		gap: var(--space-1);
-		flex: 0 0 auto;
+		padding: var(--space-2) var(--space-3);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: var(--inset);
+	}
+	.reading:focus-within {
+		border-color: var(--control-line);
 	}
 	.num {
 		background: none;
-		border: 1px solid transparent;
-		border-radius: var(--radius-sm);
-		padding: 0 var(--space-2);
+		border: 0;
+		padding: 0;
 		color: var(--ink);
 		font: inherit;
-		font-size: var(--text-row);
+		font-size: var(--text-control);
 		font-weight: var(--fw-semibold);
 		font-variant-numeric: tabular-nums;
 		text-align: right;
 		min-width: 0;
 	}
-	/* Borderless until reached for, so the row reads as a figure rather than as a second form field. */
-	.num:hover:not(:disabled),
 	.num:focus {
-		border-color: var(--border);
-		background: var(--inset);
+		outline: none;
 	}
 	.sign {
-		font-size: var(--text-row);
+		font-size: var(--text-control);
 		font-weight: var(--fw-semibold);
 		color: var(--ink-2);
 	}
@@ -213,7 +220,7 @@
 		width: 100%;
 		min-width: 0;
 		height: 1.1rem;
-		align-self: center;
+		grid-column: 1 / -1;
 		background: none;
 		cursor: pointer;
 	}
@@ -267,23 +274,5 @@
 	input:disabled {
 		opacity: 0.6;
 		cursor: default;
-	}
-	.notes {
-		display: flex;
-		align-items: flex-start;
-		gap: var(--gap-inline);
-		padding-top: var(--space-3);
-	}
-	.foot {
-		flex: 1 1 auto;
-		min-width: 0;
-		margin: 0;
-		font-size: var(--text-caption);
-		color: var(--ink-2);
-		font-variant-numeric: tabular-nums;
-	}
-	.footer {
-		flex: 0 0 auto;
-		margin-left: auto;
 	}
 </style>

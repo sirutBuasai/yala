@@ -60,3 +60,42 @@ export function watchWidth(
 
 	return { force: () => run(true), stop: () => observer.disconnect() };
 }
+
+/**
+ * Scale one line of text down into the width it has rather than wrapping it, as a chart scales into its
+ * pane: `--fit` on `node` is the multiplier its font size reads. Under `least` the line would be too small to
+ * read, so it holds that size, states the width it cannot go under (`--content-floor`), and wraps where even
+ * that is not given, as on a phone. `node` must be styled not to wrap.
+ */
+export function scaleToFit(node: HTMLElement, least: number) {
+	const refit = () => {
+		node.style.setProperty('--fit', '1');
+		node.style.whiteSpace = '';
+		// The text's own width, not the box's: a line shorter than its box reports the box's width as its
+		// scroll width, which made the floor follow whatever width the pane had last been given.
+		const text = document.createRange();
+		text.selectNodeContents(node);
+		const need = text.getBoundingClientRect().width;
+		const room = node.clientWidth;
+		let fit = need && room ? Math.min(1, (room - SLACK) / need) : 1;
+		node.style.setProperty('--fit', String(Math.max(least, fit)));
+		// Whatever does not scale with the type (an icon, a margin) leaves the first guess a little over, so
+		// the overrun it left is taken off in the same proportion.
+		for (let pass = 0; pass < 3 && fit > least && node.scrollWidth > room; pass++) {
+			fit *= (room - SLACK) / node.scrollWidth;
+			node.style.setProperty('--fit', String(Math.max(least, fit)));
+		}
+		node.style.setProperty('--content-floor', contentFloor(need * least));
+		if (fit < least) node.style.whiteSpace = 'normal';
+	};
+	const watch = watchWidth(node, refit, { settled: true });
+	// The text changes with every assumption, and a longer sentence in the same box needs a new scale.
+	const text = new MutationObserver(() => watch.force());
+	text.observe(node, { characterData: true, childList: true, subtree: true });
+	return {
+		destroy: () => {
+			watch.stop();
+			text.disconnect();
+		}
+	};
+}

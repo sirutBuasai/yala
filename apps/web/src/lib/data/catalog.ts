@@ -56,10 +56,9 @@ import {
 	savedVsOther,
 	savedVsOtherByMonth,
 	topAccountShare,
-	yearsOfFreedom,
 	type GrowthPart
 } from './networth';
-import { depletionYear, investedProjection } from './projection';
+import { depletionYear, fiDate, investedProjection } from './projection';
 import { type Scope, type ScopeLevel, latestMonthKey, scopeYear } from './scope';
 import { words } from '$lib/ui/label';
 import { sumBy } from '$lib/utils/num';
@@ -489,7 +488,7 @@ const NETWORTH_STATS: DataDef[] = [
 			['networth.fi_number', 'FI number', fiNumber],
 			['networth.fi_progress', 'FI progress', fiProgress],
 			['networth.coast_fi', 'Coast FI', coastFi],
-			['networth.years_of_freedom', 'Years of freedom', yearsOfFreedom],
+			['networth.fi_date', 'FI date', fiDate],
 			['networth.runway', 'Liquid runway', liquidRunway],
 			['networth.top_account', 'Top account', topAccountShare],
 			['networth.depletion', 'Depletion year', depletionYear]

@@ -182,7 +182,11 @@ export interface MultiSeries {
 	labels: string[];
 	/** As on `Series`, for the shared axis. */
 	periods?: string[];
+	/** What each point's hover adds after its label, where the label alone does not place it. */
+	notes?: string[];
 	series: Series[];
+	/** A range drawn behind the series named `of`, in its colour: where it may land rather than one path. */
+	band?: { name: string; of: string; lo: number[]; hi: number[] };
 }
 
 /** What a flow node is, which the visualization layer maps to a colour. */
@@ -253,6 +257,8 @@ export interface BulletRow {
 	target: number;
 	/** Footnote under the row (already localized). */
 	note?: Label;
+	/** The same reading as the amounts behind it, where the figure is a share of one. */
+	amount?: { value: number; target: number; unit: Unit };
 }
 
 export interface Bullet {

@@ -1,0 +1,223 @@
+<title>Planning Timeline</title>
+<style>
+:root {
+	--bg: #f0ebdd; --surface: #faf6ec; --inset: #ece4d2; --border: #ddd2bb; --grid: #e6ddca;
+	--ink: #2e2a22; --ink-2: #5c5443; --ink-3: #6e6652;
+	--lav: #bb9af7; --green: #9ece6a; --gold: #e0af68; --teal: #7dcfff; --salmon: #f7768e;
+	--lav-text: #6a49bd; --good-text: #457124; --crit-text: #bb324a;
+	--shadow: 0 1px 2px rgba(120, 90, 40, 0.06), 0 14px 34px -18px rgba(120, 90, 40, 0.28);
+	--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+	--sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		color-scheme: dark;
+		--bg: #16161f; --surface: #1f1f2b; --inset: #2a2a3c; --border: #33334a; --grid: #2a2a3c;
+		--ink: #e6e0c8; --ink-2: #a8a28c; --ink-3: #969380;
+		--lav-text: #bb9af7; --good-text: #9ece6a; --crit-text: #f7768e;
+		--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+	}
+}
+:root[data-theme='dark'] {
+	color-scheme: dark;
+	--bg: #16161f; --surface: #1f1f2b; --inset: #2a2a3c; --border: #33334a; --grid: #2a2a3c;
+	--ink: #e6e0c8; --ink-2: #a8a28c; --ink-3: #969380;
+	--lav-text: #bb9af7; --good-text: #9ece6a; --crit-text: #f7768e;
+	--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 34px -18px rgba(0, 0, 0, 0.6);
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5; padding-inline: 20px; }
+.page { max-width: 1120px; margin: 0 auto; padding-block: 44px 100px; display: grid; gap: 26px; }
+h1, h2 { font-family: var(--serif); font-weight: 600; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 { font-size: clamp(30px, 5vw, 40px); line-height: 1.12; }
+h2 { font-size: 22px; }
+p { margin: 0; }
+.eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.lede { color: var(--ink-2); max-width: 80ch; }
+section { display: grid; gap: 10px; }
+.what { color: var(--ink-2); max-width: 82ch; font-size: 14px; }
+.tag { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.tag.new { color: var(--lav-text); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px 16px; box-shadow: var(--shadow); display: grid; gap: 10px; min-width: 0; }
+.headline { font-family: var(--serif); font-size: 26px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.headline b { color: var(--lav-text); font-weight: 600; }
+.q { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--ink-3); color: var(--ink-3); font: 600 10px var(--sans); vertical-align: middle; margin-left: 8px; }
+.tl { position: relative; height: var(--h, 120px); margin-inline: 16px; }
+.tl .rail, .tl .seg { position: absolute; left: 0; right: 0; height: 12px; border-radius: 999px; }
+.tl .rail { background: var(--inset); }
+.tl .seg { right: auto; border-radius: 0; }
+.tl .seg:first-of-type { border-radius: 999px 0 0 999px; }
+.tl .dot { position: absolute; width: 18px; height: 18px; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid var(--surface); background: #6b6352; box-shadow: 0 0 0 1px var(--border); }
+.tl .dot.done { background: var(--green); }
+.tl .dot.ghost { background: var(--surface); border: 2px dashed var(--lav-text); box-shadow: none; }
+.tl .lab { position: absolute; transform: translateX(-50%); text-align: center; white-space: nowrap; font-size: 11.5px; color: var(--ink-3); line-height: 1.3; }
+.tl .lab b { display: block; color: var(--ink); font-size: 13px; font-variant-numeric: tabular-nums; }
+.tl .lab em { display: block; font-style: normal; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.tl .tick { position: absolute; transform: translateX(-50%); font-size: 10.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.tl .tick::before { content: ''; display: block; width: 1px; height: 5px; background: var(--border); margin: 0 auto 2px; }
+.tl .phase { position: absolute; font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); transform: translateX(-50%); white-space: nowrap; }
+.tl svg { position: absolute; left: 0; width: 100%; overflow: visible; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { font-size: 12.5px; padding: 3px 10px; border-radius: 999px; background: var(--inset); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.chip b { color: var(--ink); }
+.chip.up b { color: var(--good-text); }
+.chip.down b { color: var(--crit-text); }
+.stats { display: flex; gap: 22px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+.stats b { display: block; font-family: var(--serif); font-size: 20px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.notes { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+.notes li { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 14px; font-size: 14px; color: var(--ink-2); border-top: 1px solid var(--border); padding-top: 10px; }
+.notes b { color: var(--ink); }
+.strings { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; }
+@media (max-width: 640px) { .notes li { grid-template-columns: 1fr; gap: 2px; } .headline { font-size: 19px; } }
+</style>
+
+<div class="page">
+	<header>
+		<span class="eyebrow">Yala redesign · Planning timeline mocks · sample data</span>
+		<h1>Planning timeline</h1>
+		<p class="lede">Three ways to give the summary pane more to say, each drawn under the pane as it is today. Sample plan: born 1990, $455k invested, $55k a year spent, $50k a year invested, retiring at 60, planning to 90. Everything here is derived from figures the page already has; nothing needs a new setting.</p>
+	</header>
+
+	<section>
+		<span class="tag">Today</span>
+		<div class="card"><p class="headline" data-headline></p><div class="tl" id="t0"></div></div>
+	</section>
+
+	<section>
+		<span class="tag new">A · Phases and ages</span>
+		<p class="what">The rail reads as three stretches of life: building to FI, working by choice until retirement, then drawing down. Ages tick along the bottom so each milestone reads as both a year and an age.</p>
+		<div class="card"><p class="headline" data-headline></p><div class="tl" id="ta" style="--h:150px"></div></div>
+	</section>
+
+	<section>
+		<span class="tag new">B · Balance along the way</span>
+		<p class="what">The projected invested balance rides above the rail as a small area, so the timeline shows where the money peaks and how it runs down. Each milestone carries its balance, and a row of counts says how far off each one is.</p>
+		<div class="card"><p class="headline" data-headline></p><div class="tl" id="tb" style="--h:180px"></div><div class="stats" id="sb"></div></div>
+	</section>
+
+	<section>
+		<span class="tag new">C · What-ifs</span>
+		<p class="what">The simulated markets answer what you would change: the earliest age you could retire and still succeed in 90% of markets, marked as a ghost on the rail, and a few nudges with their effect.</p>
+		<div class="card"><p class="headline" data-headline></p><div class="tl" id="tc" style="--h:130px"></div><div class="chips" id="cc"></div></div>
+	</section>
+
+	<section>
+		<h2>What to decide</h2>
+		<ul class="notes">
+			<li><b>Pick and mix</b><span>A, B and C stack: phases on the rail, the balance above it, the ghost for the earliest safe retirement. Taking all three makes the pane taller; each alone keeps it close to today's height.</span></li>
+			<li><b>Cost</b><span>A and B read what the page already computes. C runs the simulated markets once per candidate age (about 40 runs of 1,000), which is still quick, but is the only one with a real price.</span></li>
+			<li><b>Clicks</b><span>None proposed: like the rest of the page, the timeline only reads. A what-if chip in C could set the assumption it names, if you want that.</span></li>
+			<li><b>New UI strings</b><span class="strings">Building · Optional work · Drawing down · Age &lt;N&gt; ticks · &lt;N&gt; yr to FI · &lt;N&gt; yr to retirement · Peak &lt;$X&gt; at &lt;age&gt; · Earliest at 90%: &lt;age&gt; · Retire at &lt;age&gt; → &lt;N&gt;% · Spend &lt;$X&gt; less → FI in &lt;year&gt;</span></li>
+		</ul>
+	</section>
+</div>
+
+<script>
+const NOW = 2026, BORN = 1990;
+const P = { invested: 455000, spend: 55000, invest: 50000, real: 4.85, vol: 15, retire: 60, horizon: 90, swr: 4 };
+const FI = P.spend / (P.swr / 100);
+const k = (n) => n >= 1e6 ? `$${(n / 1e6).toFixed(2).replace(/0$/, '')}M` : `$${Math.round(n / 1e3)}k`;
+
+function walk(o = {}, returns) {
+	const q = { ...P, ...o }, years = [], bal = [];
+	let b = q.invested;
+	for (let y = NOW; y <= BORN + q.horizon; y++) {
+		if (y > NOW) b = Math.max(0, b * (1 + (returns ? returns() : q.real) / 100) + (y > BORN + q.retire ? -q.spend : q.invest));
+		years.push(y); bal.push(b);
+	}
+	return { years, bal };
+}
+function seeded(seed) { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 2 ** 32; }; }
+function success(o = {}) {
+	const next = seeded(1000), g = () => Math.sqrt(-2 * Math.log(Math.max(1e-12, next()))) * Math.cos(2 * Math.PI * next());
+	let last = 0;
+	for (let i = 0; i < 1000; i++) if (walk(o, () => P.real + P.vol * g()).bal.at(-1) > 0) last++;
+	return last / 10;
+}
+const plan = walk();
+const fiYear = plan.years[plan.bal.findIndex((b) => b >= FI)];
+const coastYear = plan.years[plan.bal.findIndex((b, i) => b >= FI / (1 + P.real / 100) ** Math.max(0, BORN + P.retire - plan.years[i]))];
+const retireYear = BORN + P.retire, end = BORN + P.horizon;
+const rate = success();
+const balAt = (y) => plan.bal[plan.years.indexOf(y)];
+
+document.querySelectorAll('[data-headline]').forEach((el) => (el.innerHTML = `You reach FI in <b>${fiYear}</b>, at ${fiYear - BORN}, with success rate of <b>${Math.round(rate)}%</b>.<span class="q">?</span>`));
+
+const MARKS = [
+	{ names: ['Today', ...(coastYear === NOW ? ['Coast FI'] : [])], year: NOW, done: true },
+	...(coastYear !== NOW ? [{ names: ['Coast FI'], year: coastYear, done: false }] : []),
+	{ names: ['FI'], year: fiYear, done: false },
+	{ names: ['Retire'], year: retireYear, done: false },
+	{ names: [`Age ${P.horizon}`], year: end, done: false }
+];
+const pct = (y) => `${(y - NOW) / (end - NOW) * 100}%`;
+
+/** One timeline: the rail at `railY`, labels above, with optional extras. */
+function draw(id, { railY, phases, ages, balances, area, ghost } = {}) {
+	const el = document.getElementById(id);
+	let h = '';
+	if (area) {
+		const W = 1000, H = railY - 44, top = 4;
+		const max = Math.max(...plan.bal);
+		const pts = plan.bal.map((b, i) => `${(i / (plan.bal.length - 1)) * W},${top + H - (b / max) * H}`);
+		const peak = plan.bal.indexOf(max);
+		h += `<svg viewBox="0 0 ${W} ${top + H}" preserveAspectRatio="none" style="top:0;height:${top + H}px"><polygon points="0,${top + H} ${pts.join(' ')} ${W},${top + H}" fill="color-mix(in srgb, var(--lav) 25%, transparent)"/><polyline points="${pts.join(' ')}" fill="none" stroke="var(--lav)" stroke-width="2" vector-effect="non-scaling-stroke"/><line x1="0" x2="${W}" y1="${top + H - (FI / max) * H}" y2="${top + H - (FI / max) * H}" stroke="var(--green)" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/></svg>`;
+		// Held inside the rail's ends, anchored inward where the peak sits near one.
+		const at = peak / (plan.bal.length - 1);
+		h += `<span class="phase" style="left:${pct(plan.years[peak])};top:${top - 2}px;transform:translateX(${at > 0.85 ? '-100%' : at < 0.15 ? '0' : '-50%'})">Peak ${k(max)} at ${plan.years[peak] - BORN}</span>`;
+	}
+	h += `<div class="rail" style="top:${railY}px"></div>`;
+	if (phases) {
+		const parts = [[NOW, fiYear, 'var(--lav)', 'Building'], [fiYear, retireYear, 'var(--green)', 'Optional work'], [retireYear, end, 'var(--gold)', 'Drawing down']];
+		parts.forEach(([a, b, c, name]) => {
+			h += `<div class="seg" style="top:${railY}px;left:${pct(a)};width:calc(${pct(b)} - ${pct(a)});background:color-mix(in srgb, ${c} 70%, transparent)"></div>`;
+			h += `<span class="phase" style="left:calc((${pct(a)} + ${pct(b)}) / 2);top:${railY + 18}px">${name}</span>`;
+		});
+	} else {
+		h += `<div class="seg" style="top:${railY}px;left:0;width:${pct(fiYear)};background:var(--lav);border-radius:999px"></div>`;
+	}
+	MARKS.forEach((m, i) => {
+		h += `<span class="dot ${m.done ? 'done' : ''}" style="left:${pct(m.year)};top:${railY + 6}px"></span>`;
+		const bal = balances && m.year !== NOW ? `<em>${k(balAt(m.year))}</em>` : balances ? `<em>${k(P.invested)}</em>` : '';
+		// Alternate rows when two marks sit close, as the app places them.
+		const close = i > 0 && (m.year - MARKS[i - 1].year) / (end - NOW) < 0.1;
+		const up = !close || i % 2 === 0;
+		h += `<div class="lab" style="left:${pct(m.year)};${up ? `top:${railY - (balances ? 50 : 36)}px` : `top:${railY + (phases ? 34 : 20)}px`}">${m.names.join(' · ')}<b>${m.year}</b>${bal}</div>`;
+	});
+	if (ages) {
+		for (let age = Math.ceil((NOW - BORN) / 5) * 5; age <= P.horizon; age += 5) {
+			const y = BORN + age;
+			if (y <= NOW || y >= end) continue;
+			h += `<span class="tick" style="left:${pct(y)};top:${railY + 58}px">${age}</span>`;
+		}
+	}
+	if (ghost) {
+		h += `<span class="dot ghost" style="left:${pct(BORN + ghost)};top:${railY + 6}px"></span><div class="lab" style="left:${pct(BORN + ghost)};top:${railY + 20}px;color:var(--lav-text)">Earliest at 90%<b>${BORN + ghost}</b>at ${ghost}</div>`;
+	}
+	el.innerHTML = h;
+}
+
+draw('t0', { railY: 60 });
+draw('ta', { railY: 60, phases: true, ages: true });
+draw('tb', { railY: 124, balances: true, area: true });
+const yearsTo = (y) => y - NOW;
+document.getElementById('sb').innerHTML = [
+	[`${yearsTo(fiYear)} yr`, 'to FI'],
+	[`${yearsTo(retireYear)} yr`, 'to retirement'],
+	[k(balAt(retireYear)), 'at retirement'],
+	[`${(P.spend / balAt(retireYear) * 100).toFixed(1)}%`, 'withdrawn in the first year']
+].map(([v, l]) => `<span><b>${v}</b>${l}</span>`).join('');
+
+// Earliest age whose success reaches 90%.
+let earliest = null;
+for (let age = NOW - BORN + 1; age <= P.retire; age++) if (success({ retire: age }) >= 90) { earliest = age; break; }
+draw('tc', { railY: 60, ghost: earliest });
+const soonerFi = (() => { const w = walk({ spend: P.spend - 5000 }); const f = (P.spend - 5000) / (P.swr / 100); return w.years[w.bal.findIndex((b) => b >= f)]; })();
+const earlier = success({ retire: P.retire - 5 });
+document.getElementById('cc').innerHTML = [
+	earliest ? `<span class="chip">Earliest at 90%: <b>${earliest}</b></span>` : '',
+	`<span class="chip ${earlier >= rate ? 'up' : 'down'}">Retire at ${P.retire - 5} → <b>${Math.round(earlier)}%</b></span>`,
+	`<span class="chip up">Spend $5k less → FI in <b>${soonerFi}</b></span>`,
+	`<span class="chip up">Retire at ${P.retire + 2} → <b>${Math.round(success({ retire: P.retire + 2 }))}%</b></span>`
+].join('');
+</script>

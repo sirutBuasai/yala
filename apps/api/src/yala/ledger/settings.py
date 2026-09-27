@@ -75,6 +75,20 @@ SETTINGS: tuple[SettingSpec, ...] = (
         default=Decimal(3),
         help="Long-run annual inflation rate.",
     ),
+    # Spread around the expected return, not a return: the projection's market-risk band draws each
+    # simulated year's real return from a normal distribution this wide.
+    SettingSpec(
+        key="volatility",
+        label="Return volatility",
+        kind="percent",
+        minimum=Decimal(0),
+        maximum=Decimal(30),
+        default=Decimal(15),
+        help=(
+            "How far a year's return strays from the expected one: around 15% for a mostly stock "
+            "portfolio, 10% for 60/40."
+        ),
+    ),
     SettingSpec(
         key="retire-age",
         label="Target retirement age",

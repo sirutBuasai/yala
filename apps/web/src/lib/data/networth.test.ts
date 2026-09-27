@@ -3,7 +3,7 @@ import { build, CATALOG_BY_ID, dataOfKind } from '$lib/data/catalog';
 import type { Scalar } from '$lib/data/primitives';
 import { formatUnit, MONTHS, PERCENT, YEARS } from '$lib/data/primitives';
 import { makeData, makeNetWorthData } from '$lib/data/__fixtures__/dashboard';
-import { netWorthParts } from '$lib/data/networth';
+import { coastYear, netWorthParts } from '$lib/data/networth';
 import type { Scope, ScopeLevel } from '$lib/data/scope';
 
 const scopeFor = (level: ScopeLevel): Scope =>
@@ -51,7 +51,7 @@ describe('catalog integrity', () => {
 			'networth.fi_number',
 			'networth.fi_progress',
 			'networth.coast_fi',
-			'networth.years_of_freedom',
+			'networth.fi_date',
 			'networth.runway',
 			'networth.balance_growth',
 			'networth.top_account'
@@ -158,19 +158,16 @@ describe('targets', () => {
 		expect(s.value!).toBeLessThan((NET_WORTH / (ANNUAL_SPEND / DEFAULT_SWR)) * 100);
 	});
 
-	it('measures years of freedom against annual spending', () => {
-		const s = scalar('networth.years_of_freedom');
-		expect(s.unit).toEqual(YEARS);
-		expect(s.value).toBeCloseTo(NET_WORTH / ANNUAL_SPEND, 5);
-	});
-
-	// The lifestyle it measures against is the recent one, so more spending has to shorten it.
-	it('shortens years of freedom when recent spending rises', () => {
-		const before = scalar('networth.years_of_freedom').value!;
+	it("dates Coast FI by when today's balance alone reaches the FI number", () => {
 		const data = makeNetWorthData();
-		data.months['2025-01']!.total_spent = 4000;
-		const after = (build(data, 'networth.years_of_freedom', { level: 'all' }) as Scalar).value!;
-		expect(after).toBeLessThan(before);
+		data.settings!.birth_year = 1990;
+		const now = new Date().getFullYear();
+		// A tiny FI number is already reached; one out of reach at no growth never is.
+		data.settings!.planned_spending = 1;
+		expect(coastYear(data)).toBe(now);
+		data.settings!.planned_spending = 1e9;
+		data.settings!.nominal_return = 0;
+		expect(coastYear(data)).toBeNull();
 	});
 
 	it('measures runway from liquid cash against monthly spending', () => {
@@ -189,6 +186,11 @@ describe('targets', () => {
 		const withYear = build(data, 'networth.coast_fi', { level: 'all' }) as Scalar;
 		expect(withYear.value).not.toBeNull();
 		expect(withYear.value!).toBeGreaterThan(0);
+		const retires = 1990 + data.settings!.retire_age;
+		const by = Number(withYear.note?.context?.match(/^reached FI by (\d{4})$/)?.[1]);
+		// Past 100% it gets there before retiring; short of it, after.
+		if (withYear.value! >= 100) expect(by).toBeLessThanOrEqual(retires);
+		else expect(by).toBeGreaterThan(retires);
 	});
 });
 
@@ -400,6 +402,20 @@ describe('thresholds bullet', () => {
 		const withIt = build(data, 'networth.thresholds', { level: 'all' });
 		if (withIt.kind !== 'bullet') throw new Error('expected bullet');
 		expect(withIt.rows.map((r) => r.label)).toContain('Coast FI');
+	});
+
+	it('reads each share row as the amounts behind it too', () => {
+		const data = makeNetWorthData();
+		data.settings!.birth_year = 1990;
+		const p = build(data, 'networth.thresholds', { level: 'all' });
+		if (p.kind !== 'bullet') throw new Error('expected bullet');
+		const row = (label: string) => p.rows.find((r) => r.label === label)!;
+
+		expect(row('Cash runway').amount).toBeUndefined();
+		for (const label of ['FI number', 'Coast FI']) {
+			const { value, target } = row(label).amount!;
+			expect(row(label).value).toBeCloseTo((value / target) * 100, 5);
+		}
 	});
 
 	it('measures percentage rows against a full 100', () => {

@@ -30,11 +30,14 @@ A figure has one owning page. Anywhere else it appears only as a headline that l
 - A pane's floor is measured once per resize from its content unwrapped (D41, D43): only text and figures hold it up, never a plot. A figure that could clip reports it (`data-clip`).
 - A figure shows its fullest reading that fits (D47): give it `readingsOf` and render it with `Reading`, grouped by `fitReadings` so figures read side by side switch together.
 - Edit must show the board as saved (D49): nothing may reserve more or less room while arranging.
+- Lay a pane's content out vertically with CSS, never from its own measured height: the measure lags a resize by a frame, so the floor search reads the last size's positions as a spill and lands a row under wherever the pane already was. A flexible grid row in a box of unknown height is sized at its most, so give the rows around it explicit heights and let the one flexible row take what is left (the Planning timeline, `Milestones.svelte`).
+- Keep CSS math to what every engine takes: no dividing a length by a length, no `round()`. Firefox rejects the first and threw away a whole grid definition; compute such values in script and pass plain lengths.
+- A pane's height moves in whole rows (`UNIT`), so up to a row is left over at its floor; anything that grows with the pane's height should grow by whole rows, or it reads differently at the floor from plan to plan.
 - A headline card opens its owner from its title (`open`, D48), never from its figures.
 - A bar chart selects and narrows its page; only a heatmap navigates (D20). `BarChart` takes `onpick` and `picked`, a figure's `mark` names the period in focus (a period key where the axis carries `periods`, else a label), and a `Scope` at `all` takes `since` for a trailing window. `lib/nav/picks.ts` is a board's year stepper, bar picks and span.
 - Every pick lives in the URL, and every view remembers its own URL and scroll, so a page or view switch returns it as it was left (D33, `lib/nav/left.ts`). `lib/nav/step.ts` is the one way to change a pick.
 - A click that opens another page goes through `drillTo` (`lib/nav/drill.ts`) with the pane it lands on (D34); give the pane's board id.
-- Axis labels come from `xAxisLabels` and `XLabels` (D31, D35): pass a chart's `periods` so a crowded axis over years names each year once. A pickable bar list uses `PickRow` (D32).
+- Axis labels come from `xAxisLabels` and `XLabels` (D31, D35, D54): pass a chart's `periods` so a crowded axis over years names each year once; a crowded axis of years names every fifth. A pickable bar list uses `PickRow` (D32).
 - A page's view is a path and a pick is a query parameter (D27): a reload keeps the first and drops the second. Decide which a new setting is by where it lives.
 - Each worktree needs its own `npm install` in `apps/web`; the primary checkout has none.
 
@@ -82,5 +85,5 @@ PYTHONPATH=$PWD/.worktrees/redesign-<topic>/apps/api/src YALA_API_PORT=8800 \
 | Analytics (was Cash flow) | [done](specs/analytics.md) | merged | started on 8800; keep reading real months |
 | Accounts | [done](specs/accounts.md) | merged | started on 8800; keep logging real month ends |
 | Dashboard | [done](specs/dashboard.md) | merged | started on 8800 |
-| Planning (moved) | not started | not started | not started |
+| Planning (moved) | [done](specs/planning.md) | built on `redesign/planning` | started on 8800 |
 | Manage (moved) | not needed | moved in with the shell | not started |

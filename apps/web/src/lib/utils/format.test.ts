@@ -70,7 +70,15 @@ describe('moneyK', () => {
 		expect(moneyK(1_000_000)).toBe('$1.0M');
 		expect(moneyK(9_900_000)).toBe('$9.9M');
 		expect(moneyK(50_000_000)).toBe('$50M');
-		expect(moneyK(999_999)).toBe('$1000k');
+		expect(moneyK(999_999)).toBe('$1.0M');
+	});
+
+	it('steps up to billions past a thousand million', () => {
+		expect(moneyK(999_000_000)).toBe('$999M');
+		expect(moneyK(999_600_000)).toBe('$1.0B');
+		expect(moneyK(1_000_000_000)).toBe('$1.0B');
+		expect(moneyK(12_300_000_000)).toBe('$12B');
+		expect(moneyK(-2_500_000_000)).toBe('-$2.5B');
 	});
 
 	it('handles negatives and nullish', () => {

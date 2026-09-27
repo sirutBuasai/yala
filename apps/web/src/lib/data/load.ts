@@ -8,6 +8,7 @@ import { get, writable } from 'svelte/store';
 import { asset } from '$app/paths';
 import { setAccountDirectory } from '$lib/data/directory.svelte';
 import type { AccountLists, DashboardData, SchemaVersion, SettingField } from '$lib/data/types';
+import { settingField } from '$lib/data/assumptions';
 
 // Typed as the contract's own version, so bumping the schema breaks this line at compile time.
 const EXPECTED_SCHEMA: SchemaVersion = 1;
@@ -433,10 +434,7 @@ export interface SettingsInfo {
 	specs: SettingSpec[];
 }
 
-/**
- * The settings the snapshot carries, in the shape the API serves. Needs re-keying: a setting's real key
- * is hyphenated, which is not a legal field name, so the contract spells it with underscores.
- */
+/** The settings the snapshot carries, in the shape the API serves, re-keyed from `settingField`. */
 function snapshotSettings(): SettingsInfo | null {
 	const doc = get(data);
 	if (!doc?.settings || !doc.setting_specs) return null;
@@ -444,7 +442,7 @@ function snapshotSettings(): SettingsInfo | null {
 	const stored = doc.settings as unknown as Record<string, number | null | undefined>;
 	// Keyed off the specs, so a setting can never appear in the form without a value beside it.
 	const values = Object.fromEntries(
-		doc.setting_specs.map((spec) => [spec.key, stored[spec.key.replaceAll('-', '_')] ?? null])
+		doc.setting_specs.map((spec) => [spec.key, stored[settingField(spec.key)] ?? null])
 	);
 	return { values, specs: doc.setting_specs };
 }
