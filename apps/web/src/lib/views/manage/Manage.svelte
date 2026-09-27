@@ -10,6 +10,7 @@
 	import AccountPanel from '$lib/views/manage/AccountPanel.svelte';
 	import NewAccount from '$lib/views/manage/NewAccount.svelte';
 	import { KIND_ORDER } from '$lib/views/manage/kinds';
+	import { matching, orNull, Pref } from '$lib/utils/persist.svelte';
 
 	interface Props {
 		data: DashboardData;
@@ -57,7 +58,15 @@
 		deduction: deductions.map(accountLeaf)
 	});
 
-	let selected = $state<string | null>(null);
+	/** Kept across reloads and page switches, so Manage reopens on the account last worked on. A ledger
+		account path is letters, digits, colons and hyphens. */
+	const selection = new Pref<string | null>(
+		'manage-selected',
+		null,
+		orNull(matching(/^[A-Za-z0-9:-]{1,200}$/))
+	);
+	const selected = $derived(selection.value);
+	const select = (account: string | null) => (selection.value = account);
 	// Opening an account is a flow of its own, over the page rather than in it — nothing on the page is
 	// being looked at while it runs.
 	let opening = $state(false);
@@ -69,7 +78,7 @@
 	/** An account that has just been renamed is at a new path. The panel resolves where it went, so only
 	    a close — or a rename it could not place — drops the selection. */
 	$effect(() => {
-		if (selected !== null && !accountInfo(selected)) selected = null;
+		if (selected !== null && !accountInfo(selected)) select(null);
 	});
 </script>
 
@@ -77,7 +86,7 @@
 
 <div class="console">
 	<aside>
-		<AccountIndex {kindNames} {selected} onselect={(account) => (selected = account)}>
+		<AccountIndex {kindNames} {selected} onselect={select}>
 			{#snippet actions()}
 				<button type="button" class="btn-primary new" onclick={() => (opening = true)}
 					>+ New account</button
@@ -97,7 +106,7 @@
 			{employers}
 			balance={balances[selected] ?? null}
 			onchanged={saved}
-			onrenamed={(account) => (selected = account)}
+			onrenamed={select}
 		/>
 	{:else}
 		<main>

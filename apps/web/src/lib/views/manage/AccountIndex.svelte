@@ -174,6 +174,7 @@
 						type="button"
 						class="acct"
 						class:on={account === selected}
+						aria-current={account === selected || undefined}
 						onclick={() => onselect(account)}
 					>
 						<span class="dot" style:background={accountVar(account)}></span>
