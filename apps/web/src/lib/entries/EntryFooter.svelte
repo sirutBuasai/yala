@@ -2,14 +2,15 @@
 	// Shared footer for the entry forms: a running summary left, and right either an Add button
 	// (add mode) or Save + Delete (edit mode).
 	import type { Snippet } from 'svelte';
-	import { SAVE_CHANGES } from '$lib/copy';
 	import DeleteConfirm from '$lib/ui/DeleteConfirm.svelte';
-	import type { EntryMessage } from '$lib/entries/entryForm.svelte';
+	import SaveButton from '$lib/forms/SaveButton.svelte';
+	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
+	import type { EntryForm } from '$lib/entries/entryForm.svelte';
 
 	interface Props {
 		editing: boolean;
-		/** The form's message strip, which is also where a cancelled delete clears its error. */
-		message: EntryMessage;
+		/** Reports the form's saves, and is where a cancelled delete clears its error. */
+		form: EntryForm;
 		addLabel: string;
 		onsubmit: () => void;
 		/** Edit mode only: what the delete button says, asks, and does. */
@@ -21,7 +22,7 @@
 	}
 	let {
 		editing,
-		message,
+		form,
 		addLabel,
 		onsubmit,
 		deleteLabel = '',
@@ -36,26 +37,20 @@
 		>{#if summary}{@render summary()}{/if}</span
 	>
 	<div class="right">
-		<!-- Same roles SaveFeedback uses: while this message was silent, a rejected submit looked to a
-		     screen-reader user like a button that did nothing. -->
-		{#if message.text}<span
-				class="edit-msg"
-				class:err={message.failed}
-				role={message.failed ? 'alert' : 'status'}>{message.text}</span
-			>{/if}
+		<SaveFeedback save={form} />
 		{#if editing}
 			<div class="actions">
-				<button class="btn-primary" onclick={onsubmit}>{SAVE_CHANGES}</button>
+				<SaveButton dirty={form.dirty} busy={form.busy} onclick={onsubmit} />
 				<!-- Backing out also drops the error a failed delete left, so the footer returns to rest. -->
 				<DeleteConfirm
 					label={deleteLabel}
 					question={deleteQuestion}
 					ondelete={() => ondelete?.()}
-					oncancel={() => message.clear()}
+					oncancel={() => form.reset()}
 				/>
 			</div>
 		{:else}
-			<button class="btn-primary" onclick={onsubmit}>{addLabel}</button>
+			<button class="btn-primary" disabled={form.busy} onclick={onsubmit}>{addLabel}</button>
 		{/if}
 	</div>
 </div>

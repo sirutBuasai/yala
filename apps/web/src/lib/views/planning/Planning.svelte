@@ -13,9 +13,10 @@
 		secondaryLines
 	} from '$lib/data/projection';
 	import { formatUnit } from '$lib/data/primitives';
-	import { DISCARD, NO_VALUE, PROGRESS, PROGRESS_CAPTION, SAVE_CHANGES, SAVED } from '$lib/copy';
+	import { DISCARD, NO_VALUE, PROGRESS, PROGRESS_CAPTION } from '$lib/copy';
 	import { labelText, words } from '$lib/ui/label';
 	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
+	import SaveButton from '$lib/forms/SaveButton.svelte';
 	import ViewHeader from '$lib/layout/ViewHeader.svelte';
 	import Board from '$lib/layout/grid/Board.svelte';
 	import Pane from '$lib/layout/grid/Pane.svelte';
@@ -94,13 +95,7 @@
 				disabled={!draft.info || draft.save.busy || !dirty}
 				onclick={() => draft.discard()}>{DISCARD}</button
 			>
-			<!-- The button says the state: nothing to write reads as saved, anything moved as a change to save. -->
-			<button
-				type="button"
-				class="btn-primary"
-				disabled={!draft.info || draft.save.busy || !dirty}
-				onclick={commit}>{dirty ? SAVE_CHANGES : SAVED}</button
-			>
+			<SaveButton {dirty} busy={draft.save.busy} disabled={!draft.info} onclick={commit} />
 		</div>
 	</Pane>
 

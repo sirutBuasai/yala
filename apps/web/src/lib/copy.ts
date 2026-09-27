@@ -6,8 +6,9 @@ export const NOT_SET = 'Not set';
 /** A picker's empty option: no sweep account, no employer. */
 export const NONE = 'None';
 
-/** A save button with nothing left to write; a status message adds the full stop. */
+/** A save button's three states (see `forms/SaveButton`). */
 export const SAVED = 'Saved';
+export const SAVING = 'Saving...';
 export const SAVE_CHANGES = 'Save changes';
 export const DISCARD = 'Discard';
 

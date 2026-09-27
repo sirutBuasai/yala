@@ -1,7 +1,8 @@
-// The footer's message strip and the round trips that report failure through it; `.svelte.ts` because the
-// strip is `$state`.
+// The round trips an entry form makes, reported through the shared `SaveState`; `.svelte.ts` because what
+// the entry loaded as is `$state`.
 
 import { deleteTransaction, fetchEntry, postJson, type AccountsInfo } from '$lib/data/load';
+import { SaveState } from '$lib/forms/saveState.svelte';
 
 /** What every add/edit entry form takes. Declared once: the three forms differ in what they ask
     for, never in how they are opened. */
@@ -15,34 +16,28 @@ export interface EntryFormProps {
 	onsaved: () => void;
 }
 
-/** One form's message strip. Every failure in a form goes through `fail`, so the footer has one source. */
-export class EntryMessage {
-	text = $state('');
-	failed = $state(false);
-
-	fail(message: string): void {
-		this.text = message;
-		this.failed = true;
-	}
-
-	clear(): void {
-		this.text = '';
-		this.failed = false;
-	}
-}
-
 /** An entry kind, which is also its API path segment: `/api/<kind>` adds, `/api/<kind>/update` edits. */
 export type EntryKind = 'transaction' | 'transfer' | 'paycheck';
 
-/** The strip plus the three round trips an add/edit form makes. */
-export class EntryForm extends EntryMessage {
+/** The three round trips an add/edit form makes. `body` is what the form would send, which is also how an edit
+    tells whether anything has changed since it loaded. */
+export class EntryForm extends SaveState {
 	readonly #kind: EntryKind;
 	readonly #onsaved: () => void;
+	readonly #body: () => object;
+	/** The body as the entry loaded, serialized; null while adding, when everything is new. */
+	#loaded = $state<string | null>(null);
 
-	constructor(kind: EntryKind, onsaved: () => void) {
+	constructor(kind: EntryKind, onsaved: () => void, body: () => object) {
 		super();
 		this.#kind = kind;
 		this.#onsaved = onsaved;
+		this.#body = body;
+	}
+
+	/** An add always has something to write; an edit, once the body differs from what loaded. */
+	get dirty(): boolean {
+		return this.#loaded === null || JSON.stringify(this.#body()) !== this.#loaded;
 	}
 
 	/** Prefill from the entry `locator` names, handing the record to `apply`. */
@@ -53,30 +48,27 @@ export class EntryForm extends EntryMessage {
 			return;
 		}
 		apply(entry);
+		this.#loaded = JSON.stringify(this.#body());
 	}
 
-	/** Adds or updates by whether `body` carries a locator. `remember` runs only after a successful add. */
-	async save(problem: string | null, body: object, remember?: () => void): Promise<void> {
+	/** Adds or updates by whether the body carries a locator. `remember` runs only after a successful add. */
+	async save(problem: string | null, remember?: () => void): Promise<void> {
 		if (problem) {
 			this.fail(problem);
 			return;
 		}
+		const body = this.#body();
 		const editing = 'locator' in body && body.locator != null;
-		const { ok, error } = await postJson(`/api/${this.#kind}${editing ? '/update' : ''}`, body);
-		if (!ok) {
-			this.fail(error ?? 'save failed');
-			return;
-		}
+		const ok = await this.run(async () => {
+			const { ok, error } = await postJson(`/api/${this.#kind}${editing ? '/update' : ''}`, body);
+			return ok ? null : (error ?? 'save failed');
+		});
+		if (!ok) return;
 		if (!editing) remember?.();
 		this.#onsaved();
 	}
 
 	async remove(locator: string): Promise<void> {
-		const problem = await deleteTransaction(locator);
-		if (problem) {
-			this.fail(problem);
-			return;
-		}
-		this.#onsaved();
+		if (await this.run(() => deleteTransaction(locator))) this.#onsaved();
 	}
 }

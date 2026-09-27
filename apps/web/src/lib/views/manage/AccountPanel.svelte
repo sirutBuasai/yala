@@ -12,12 +12,13 @@
 	} from '$lib/data/load';
 	import { accountDirectory, accountInfo } from '$lib/data/directory.svelte';
 	import type { AccountKind } from '$lib/data/types';
-	import { DISCARD, NONE, SAVED, SAVE_CHANGES } from '$lib/copy';
+	import { DISCARD, NONE } from '$lib/copy';
 	import { SaveState } from '$lib/forms/saveState.svelte';
 	import { problems, validateLabel, validateName, validateOptionalName } from '$lib/forms/validate';
 	import { dateLong, formatAccount, money } from '$lib/utils/format';
 	import Select from '$lib/forms/fields/Select.svelte';
 	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
+	import SaveButton from '$lib/forms/SaveButton.svelte';
 	import TextField from '$lib/forms/fields/TextField.svelte';
 	import TextRows, { rowValues, textRows, type TextRow } from '$lib/forms/fields/TextRows.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
@@ -231,7 +232,7 @@
 				return result.error;
 			}
 			return null;
-		}, `${SAVED}.`);
+		});
 
 		if (ok) {
 			// Ordered: the selection follows the rename BEFORE the dashboard reloads, or the panel is
@@ -352,12 +353,7 @@
 						<button type="button" class="btn-cancel" disabled={save.busy || !dirty} onclick={seed}
 							>{DISCARD}</button
 						>
-						<button
-							type="button"
-							class="btn-primary"
-							disabled={save.busy || !dirty}
-							onclick={submit}>{SAVE_CHANGES}</button
-						>
+						<SaveButton {dirty} busy={save.busy} onclick={submit} />
 					</div>
 				</footer>
 			{/if}

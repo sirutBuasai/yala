@@ -298,12 +298,12 @@ describe('AccountPanel — one Save, several writes, in one order', () => {
 		expect(onrenamed).not.toHaveBeenCalled();
 	});
 
-	it('cannot be saved until something differs', () => {
+	it('reads Saved, and cannot be saved, until something differs', () => {
 		setDirectory({ [BANK]: { kind: 'bank', institution_name: 'Bank of A' } });
 		stubFetch();
 		panel(BANK);
 
-		expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+		expect(screen.getByRole('button', { name: 'Saved' })).toBeDisabled();
 	});
 
 	it('sends nothing for a field that was only read', async () => {
@@ -315,7 +315,7 @@ describe('AccountPanel — one Save, several writes, in one order', () => {
 
 		await type('Institution alias', 'BoA');
 
-		expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+		expect(screen.getByRole('button', { name: 'Saved' })).toBeDisabled();
 		expect(postsTo(fetchSpy, '/api/account/meta')).toHaveLength(0);
 	});
 

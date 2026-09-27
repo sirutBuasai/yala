@@ -22,11 +22,13 @@
 
 <style>
 	/* The colours come from the shared `.err` / `.cap` voices; only the placement is local. */
+	/* `pre-line`, so each problem a form collects reads on its own line. */
 	.err,
 	.note {
 		display: block;
 		margin-top: var(--space-4);
 		font-size: var(--text-caption);
+		white-space: pre-line;
 	}
 	.note {
 		color: var(--ink-3);
