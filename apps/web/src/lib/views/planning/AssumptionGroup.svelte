@@ -59,10 +59,10 @@
 	function footnoteOf(spec: SettingSpec): string | undefined {
 		if (spec.key === 'swr') return standing;
 		if (spec.key === 'nominal-return' || spec.key === 'inflation') return adjusted;
-		return spec.key === 'out-of-pocket' ? investing : undefined;
+		return undefined;
 	}
 
-	/** What the plan invests a year, worked through, as the footnote and the hint both state it. */
+	/** What the plan invests a year, worked through. */
 	const investing = $derived(
 		`${money(rates.contributions)}/yr contributions + ${money(rates.investing - rates.contributions)} = ${money(rates.investing)}/yr`
 	);
