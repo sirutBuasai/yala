@@ -290,6 +290,11 @@
 		flex: 0 0 auto;
 		max-height: none;
 	}
+	/* The line budget stops a label growing its pane on the grid. Folded, the card hugs whatever the label
+	   takes, and a font that wraps a caption once more than another clipped it. */
+	.cell.folded :global([data-label-line]) {
+		max-height: none;
+	}
 	/* Stacked into columns, a card fills its cell, which may be stretched level with the next column; its
 	   body keeps its own height, which is what the card reports (see `contentHeight`). */
 	.cell.stacked > :global(.card) {

@@ -33,8 +33,9 @@ for (const size of VIEWPORTS) {
 
 		const p = await boxOf(pending);
 		const a = await boxOf(awaiting);
-		const beside = Math.abs(a.y - p.y) < 2 && a.x >= p.x + p.width;
-		const under = Math.abs(a.x - p.x) < 2 && a.y >= p.y + p.height;
+		// Half a pixel of slack: the boxes' edges are fractional, and rounding put one a hair above the other.
+		const beside = Math.abs(a.y - p.y) < 2 && a.x >= p.x + p.width - 0.5;
+		const under = Math.abs(a.x - p.x) < 2 && a.y >= p.y + p.height - 0.5;
 		expect(beside || under).toBe(true);
 
 		// The next tab stop after Pending, and operable from the keyboard.

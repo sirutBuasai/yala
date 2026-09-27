@@ -54,7 +54,12 @@ export async function openApp(page: Page): Promise<void> {
 		route.fulfill({ status: 200, contentType: 'application/json', body: SNAPSHOT })
 	);
 	await page.goto('/');
-	await page.addInitScript(() => localStorage.clear());
+	// Once per test, before the app's first script: a clear on every load wiped what a reload is meant to keep.
+	await page.addInitScript(() => {
+		if (sessionStorage.getItem('e2e-fresh')) return;
+		localStorage.clear();
+		sessionStorage.setItem('e2e-fresh', '1');
+	});
 	await page.evaluate(() => localStorage.clear());
 	await page.reload();
 	await expect(page.locator('#page')).toBeVisible();
@@ -68,7 +73,16 @@ export async function showPage(page: Page, label: string): Promise<void> {
 	if (!(await nav.isVisible())) await page.getByRole('button', { name: 'Open menu' }).click();
 	await nav.getByRole('link', { name: label, exact: true }).click();
 	await expect(page.getByRole('heading', { level: 2, name: label, exact: true })).toBeVisible();
+	// Off the rail, which stays open under a resting pointer: Firefox checks a click's target without
+	// moving the pointer first, so the open rail took every click near the page's left edge.
+	const view = page.viewportSize();
+	if (view) await page.mouse.move(view.width - 2, 2);
 	await settle(page);
+}
+
+/** One of a Year view's span tabs. */
+export function spanTab(page: Page, name: string): Locator {
+	return page.getByRole('tablist', { name: 'Years shown' }).getByRole('tab', { name, exact: true });
 }
 
 /** Open the Add entry modal from the first pane that offers one. */

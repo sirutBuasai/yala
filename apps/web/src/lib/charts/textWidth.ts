@@ -1,34 +1,43 @@
 // Chart label widths, measured in the font the labels are drawn in. Laying labels out by a per-glyph
-// estimate overlapped them wherever the real font ran wider; the estimate stays only where nothing can
-// measure, as under test.
+// estimate overlapped them wherever the real font ran wider. Measured in the DOM, not on a canvas: Firefox's
+// canvas resolved the system font stack to a narrower face than its pages draw in.
 
 const GLYPH_W = 6.2;
 
-let context: OffscreenCanvasRenderingContext2D | null | undefined;
-const measured = new Map<string, number>();
-
-/** The canvas that measures, set to the axis font once the stylesheet has declared it. */
-function measurer(): OffscreenCanvasRenderingContext2D | null {
-	if (context !== undefined) return context;
-	if (typeof OffscreenCanvas === 'undefined') return (context = null);
-	const style = getComputedStyle(document.documentElement);
-	const [size, family] = ['--text-axis', '--font-body'].map((v) =>
-		style.getPropertyValue(v).trim()
-	);
-	if (!size || !family) return null;
-	context = new OffscreenCanvas(1, 1).getContext('2d');
-	if (context) context.font = `${size} ${family}`;
-	return context;
+/** How a label is drawn: a type-size token and a weight, axis type by default. */
+export interface LabelType {
+	size?: '--text-axis' | '--text-caption' | '--text-micro';
+	weight?: number;
 }
 
-/** px `text` takes in chart axis type. */
-export function textWidth(text: string): number {
-	const canvas = measurer();
-	if (!canvas) return text.length * GLYPH_W;
-	let width = measured.get(text);
+let probe: HTMLElement | undefined;
+const measured = new Map<string, number>();
+
+function measurer(): HTMLElement {
+	if (!probe) {
+		probe = document.createElement('span');
+		probe.className = 'probe';
+		probe.style.cssText = 'width:auto;height:auto;white-space:pre;font-family:var(--font-body)';
+		probe.setAttribute('aria-hidden', 'true');
+		document.body.append(probe);
+	}
+	return probe;
+}
+
+/** px `text` takes in chart label type. Where nothing lays text out, as under test, an estimate. */
+export function textWidth(
+	text: string,
+	{ size = '--text-axis', weight = 400 }: LabelType = {}
+): number {
+	const key = `${size}|${weight}|${text}`;
+	let width = measured.get(key);
 	if (width === undefined) {
-		width = canvas.measureText(text).width;
-		measured.set(text, width);
+		const el = measurer();
+		el.style.fontSize = `var(${size})`;
+		el.style.fontWeight = String(weight);
+		el.textContent = text;
+		width = el.getBoundingClientRect().width || text.length * GLYPH_W;
+		if (el.getBoundingClientRect().width) measured.set(key, width);
 	}
 	return width;
 }
