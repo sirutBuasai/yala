@@ -21,8 +21,9 @@ class EntryDeleteIn(BaseModel):
 def post_entry_delete(body: EntryDeleteIn) -> dict:
     """Delete a located entry (spending transaction, paycheck, or transfer) from the ledger."""
     with api_errors():
-        entry = find_entry(ledger().entries, body.locator)
-        reject_if_sweep(entry)
+        led = ledger()
+        entry = find_entry(led.entries, body.locator)
+        reject_if_sweep(entry, led)
         sink().delete_entry(body.locator)
         reconcile_sweeps(entry.date)
 

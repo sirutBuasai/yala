@@ -18,13 +18,10 @@ from yala.routes.common import (
     dec,
     ledger,
     ok,
-    parse_date,
-    parse_date_opt,
-    reconcile_sweeps,
     sink,
     valid_money_account,
 )
-from yala.routes.entries.shared import entry_date
+from yala.routes.entries.shared import appended, replaced
 from yala.routes.errors import api_errors, invalid
 
 router = APIRouter()
@@ -46,11 +43,9 @@ class PaycheckUpdateIn(PaycheckIn):
     locator: str
 
 
-def _resolve_paycheck(
-    body: PaycheckIn, led: Ledger
-) -> tuple[str, list[tuple[str, Decimal]], list[tuple[str, str | None, Decimal]]]:
-    """Returns ``(income_account, deduction_legs, contribution_legs)``; 422 on an unknown employer
-    or an unoffered line item."""
+def _state(body: PaycheckIn, led: Ledger) -> dict:
+    """The validated fields a paycheck write takes, beyond its date; 422 on an unknown employer or
+    an unoffered line item."""
     valid_money_account(body.deposit_account)
 
     if body.employer not in payroll.employers(led):
@@ -65,11 +60,16 @@ def _resolve_paycheck(
             out.append((option, dec(amount)))
         return out
 
-    return (
-        f"{payroll.SALARY}{body.employer}",
-        [(o.account, amount) for o, amount in legs("deduction", body.deductions)],
-        [(o.account, o.label, amount) for o, amount in legs("contribution", body.contributions)],
-    )
+    return {
+        "gross": dec(body.gross),
+        "income_account": f"{payroll.SALARY}{body.employer}",
+        "deduction_legs": [(o.account, amount) for o, amount in legs("deduction", body.deductions)],
+        "contribution_legs": [
+            (o.account, o.label, amount) for o, amount in legs("contribution", body.contributions)
+        ],
+        "deposit_account": body.deposit_account,
+        "payee": body.payee,
+    }
 
 
 @router.get("/api/paycheck")
@@ -82,19 +82,8 @@ def get_paycheck(locator: str) -> dict:
 @router.post("/api/paycheck")
 def post_paycheck(body: PaycheckIn) -> dict:
     with api_errors():
-        income_account, deduction_legs, contribution_legs = _resolve_paycheck(body, ledger())
-
-        date = parse_date(body.date)
-        sink().append_paycheck(
-            date=date,
-            gross=dec(body.gross),
-            income_account=income_account,
-            deduction_legs=deduction_legs,
-            contribution_legs=contribution_legs,
-            deposit_account=body.deposit_account,
-            payee=body.payee,
-        )
-        reconcile_sweeps(date)
+        state = _state(body, ledger())
+        appended(body.date, lambda on: sink().append_paycheck(date=on, **state))
 
     return ok(f"appended paycheck dated {body.date or 'today'}")
 
@@ -102,20 +91,13 @@ def post_paycheck(body: PaycheckIn) -> dict:
 @router.post("/api/paycheck/update")
 def post_paycheck_update(body: PaycheckUpdateIn) -> dict:
     with api_errors():
-        income_account, deduction_legs, contribution_legs = _resolve_paycheck(body, ledger())
-
-        old_date = entry_date(body.locator)
-        new_date = parse_date_opt(body.date)
-        entry_id = sink().update_paycheck(
+        led = ledger()
+        state = _state(body, led)
+        entry_id = replaced(
             body.locator,
-            date=new_date,
-            gross=dec(body.gross),
-            income_account=income_account,
-            deduction_legs=deduction_legs,
-            contribution_legs=contribution_legs,
-            deposit_account=body.deposit_account,
-            payee=body.payee,
+            body.date,
+            led,
+            lambda on: sink().update_paycheck(body.locator, date=on, **state),
         )
-        reconcile_sweeps(old_date, new_date or old_date)
 
     return ok("updated paycheck", id=entry_id)
