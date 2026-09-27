@@ -23,7 +23,6 @@ from yala.schema import (
     SCHEMA_VERSION,
     CategoryAmount,
     DashboardData,
-    DateRange,
     Domains,
     IncomeSection,
     IncomeYear,
@@ -89,17 +88,10 @@ def _transfer_out(t) -> Transfer:
 
 
 def _meta(ledger, spending, income, categories, all_years, all_months, networth_has_data) -> Meta:
-    date_range = spending.date_range()
-
     return Meta(
         years=all_years,
         month_keys=[month_key(y, m) for y, m in all_months],
         transaction_count=spending.count(),
-        date_range=(
-            DateRange(start=date_range[0].isoformat(), end=date_range[1].isoformat())
-            if date_range
-            else None
-        ),
         categories=categories,
         accounts=account_directory(ledger),
         domains=Domains(

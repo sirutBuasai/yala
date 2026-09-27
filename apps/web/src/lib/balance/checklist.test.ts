@@ -8,7 +8,6 @@ import {
 	defaultReadOn,
 	expectedAt,
 	groupOf,
-	isBlocked,
 	missingEntryKind,
 	signedForLedger,
 	type Row
@@ -129,9 +128,9 @@ describe('checkOf / agrees', () => {
 	});
 });
 
-describe('isBlocked', () => {
+describe('blockReason', () => {
 	it('does not block an asset that drifted — that is what the adjustment plug is for', () => {
-		expect(isBlocked(asset, 1200, 1000)).toBe(false);
+		expect(blockReason(asset, 1200, 1000)).toBeNull();
 	});
 
 	it('blocks an impossible figure on an asset only', () => {
@@ -143,7 +142,7 @@ describe('isBlocked', () => {
 	});
 
 	it('does not block a card that disagrees before its baseline — the gap is its starting balance', () => {
-		expect(isBlocked(card, -1200, -1000)).toBe(false);
+		expect(blockReason(card, -1200, -1000)).toBeNull();
 	});
 
 	it('blocks a card past its baseline until its entries explain the figure', () => {
@@ -152,11 +151,11 @@ describe('isBlocked', () => {
 	});
 
 	it('does not block a liability that agrees', () => {
-		expect(isBlocked(card, -1000, -1000)).toBe(false);
+		expect(blockReason(card, -1000, -1000)).toBeNull();
 	});
 
 	it('does not block a row with nothing typed in it', () => {
-		expect(isBlocked(card, null, -1000)).toBe(false);
+		expect(blockReason(card, null, -1000)).toBeNull();
 	});
 
 	it("blocks a figure over a month's share snapshot, whatever was typed", () => {
@@ -166,7 +165,7 @@ describe('isBlocked', () => {
 	});
 
 	it('leaves a share-snapshot row alone until something is typed in it', () => {
-		expect(isBlocked(asset, null, 1000, false)).toBe(false);
+		expect(blockReason(asset, null, 1000, false)).toBeNull();
 	});
 });
 

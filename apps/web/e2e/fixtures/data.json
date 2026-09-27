@@ -6,10 +6,6 @@
 		"years": [2025, 2026],
 		"month_keys": ["2025-08", "2025-09", "2026-01"],
 		"transaction_count": 5,
-		"date_range": {
-			"start": "2025-08-02",
-			"end": "2026-01-04"
-		},
 		"categories": ["Grocery", "Subscription", "Takeouts"],
 		"accounts": {
 			"Assets:Cash:BankA": {

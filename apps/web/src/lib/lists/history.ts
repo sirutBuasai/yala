@@ -27,13 +27,6 @@ export interface HistoryFilter {
 	search: string;
 }
 
-export const NO_FILTER: HistoryFilter = {
-	type: null,
-	category: null,
-	account: null,
-	search: ''
-};
-
 /** Every entry of the month, newest first. */
 export function historyOf(md: MonthRows | undefined): HistoryEntry[] {
 	if (!md) return [];
@@ -84,7 +77,7 @@ export function filterHistory(entries: HistoryEntry[], f: HistoryFilter): Histor
 }
 
 /** The figure a row shows in its amount cell. */
-export function amountOf(e: HistoryEntry): number {
+function amountOf(e: HistoryEntry): number {
 	return e.type === 'pay' ? e.row.net : e.row.amount;
 }
 

@@ -380,25 +380,6 @@
       "title": "CategoryAmount",
       "type": "object"
     },
-    "DateRange": {
-      "additionalProperties": false,
-      "properties": {
-        "start": {
-          "title": "Start",
-          "type": "string"
-        },
-        "end": {
-          "title": "End",
-          "type": "string"
-        }
-      },
-      "required": [
-        "start",
-        "end"
-      ],
-      "title": "DateRange",
-      "type": "object"
-    },
     "Domains": {
       "additionalProperties": false,
       "description": "Which domains carry data.",
@@ -520,16 +501,6 @@
           "title": "Transaction Count",
           "type": "integer"
         },
-        "date_range": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/DateRange"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "categories": {
           "items": {
             "type": "string"
@@ -552,7 +523,6 @@
         "years",
         "month_keys",
         "transaction_count",
-        "date_range",
         "categories",
         "accounts",
         "domains"

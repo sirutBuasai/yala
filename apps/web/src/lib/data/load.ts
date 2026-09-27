@@ -96,7 +96,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<PostResult<T
 }
 
 /** GET + parse JSON (used to prefill edit forms). */
-export function getJson<T = Record<string, unknown>>(url: string): Promise<PostResult<T>> {
+function getJson<T = Record<string, unknown>>(url: string): Promise<PostResult<T>> {
 	return request<T>(url);
 }
 

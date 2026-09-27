@@ -220,7 +220,7 @@ const bulletRows = (p: Primitive) => ({ rows: (p as Bullet).rows });
 
 // --- the registry ---
 
-export const CHARTS: ChartDef[] = [
+const CHARTS: ChartDef[] = [
 	def({
 		id: 'donut',
 		label: 'Donut',
@@ -406,7 +406,7 @@ export const CHARTS_BY_ID: Record<string, ChartDef> = Object.fromEntries(
 );
 
 /** Charts that can render a given primitive kind. */
-export function chartsForKind(kind: PrimitiveKind): ChartDef[] {
+function chartsForKind(kind: PrimitiveKind): ChartDef[] {
 	return CHARTS.filter((c) => c.accepts.includes(kind));
 }
 

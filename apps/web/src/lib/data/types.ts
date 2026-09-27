@@ -11,8 +11,6 @@ export type Currency = string;
 export type Years = number[];
 export type MonthKeys = string[];
 export type TransactionCount = number;
-export type Start = string;
-export type End = string;
 export type Categories = string[];
 export type Name = string;
 export type InstitutionName = string | null;
@@ -160,14 +158,9 @@ export interface Meta {
 	years: Years;
 	month_keys: MonthKeys;
 	transaction_count: TransactionCount;
-	date_range: DateRange | null;
 	categories: Categories;
 	accounts: Accounts;
 	domains: Domains;
-}
-export interface DateRange {
-	start: Start;
-	end: End;
 }
 export interface Accounts {
 	[k: string]: AccountInfo;

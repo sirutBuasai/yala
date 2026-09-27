@@ -14,7 +14,6 @@ from yala.schema import (
     AccountKind,
     CategoryAmount,
     DashboardData,
-    DateRange,
     Domains,
     IncomeSection,
     IncomeYear,
@@ -41,7 +40,6 @@ def example_data() -> DashboardData:
             years=[2024, 2025],
             month_keys=["2024-12", "2025-01"],
             transaction_count=3,
-            date_range=DateRange(start="2024-12-05", end="2025-01-20"),
             categories=["Grocery", "Takeouts"],
             accounts={
                 "Liabilities:CC:CardA": AccountInfo(name="Card A", institution_name="BankA"),

@@ -31,7 +31,7 @@ export function flowOf(axis: MergeAxis): 'x' | 'y' {
 }
 
 /** The board's own floor along the axis. */
-export function floorOf(axis: MergeAxis): number {
+function floorOf(axis: MergeAxis): number {
 	return along(axis, MIN_W, MIN_H);
 }
 

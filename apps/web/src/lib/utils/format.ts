@@ -1,6 +1,5 @@
 // Small pure formatting helpers shared across components and charts.
 
-import { NO_VALUE } from '$lib/copy';
 import { accountInfo } from '$lib/data/directory.svelte';
 import { monthOf } from '$lib/utils/period';
 
@@ -103,10 +102,6 @@ export function numCompact(n: number | null | undefined): string {
 	const v = n || 0;
 
 	return Math.abs(v) >= 1000 ? withSign(v, tiered(Math.abs(v))) : String(Math.round(v));
-}
-
-export function pct(part: number, whole: number): string {
-	return whole ? ((part / whole) * 100).toFixed(0) + '%' : NO_VALUE;
 }
 
 /** First letter upper-cased, the rest left alone: a field's noun used to open a sentence. */

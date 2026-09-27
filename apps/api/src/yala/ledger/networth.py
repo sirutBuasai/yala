@@ -180,25 +180,6 @@ class NetWorth:
             for d in self.snapshot_dates()
         ]
 
-    def logged_in_month(self, any_day: dt.date) -> dict[str, LoggedBalance]:
-        """What each account's snapshot stands at within ``any_day``'s month.
-
-        A month may carry several snapshot dates covering different accounts, so the latest date
-        carrying *that account* wins rather than the latest date in the month. Share legs are summed
-        at their own date's prices, the figure the account was snapshotted to.
-
-        Only that latest snapshot is offered for correction, and only when it is a lone USD
-        assertion: reaching back to an earlier one would rewrite a date the displayed figure did not
-        come from, silently restating it and plugging the difference, and rewriting one leg of a
-        share-based snapshot is not a balance edit."""
-        out: dict[str, LoggedBalance] = {}
-        for account, entries in self._assertions().items():
-            in_month = [e for e in entries if month_of(e.date) == month_of(any_day)]
-            if in_month:
-                out[account] = self._latest_of(in_month)
-
-        return out
-
     def standing_at(self, as_of: dt.date) -> dict[str, LoggedBalance]:
         """Each account's latest snapshot as of a reading taken at the end of ``as_of``, which is
         asserted the day after. Only accounts snapshotted in that month are present: a month not yet

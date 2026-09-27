@@ -13,8 +13,7 @@ import {
 	moneyK,
 	monthDay,
 	monthLabel,
-	monthName,
-	pct
+	monthName
 } from '$lib/utils/format';
 
 describe('money', () => {
@@ -99,17 +98,6 @@ describe('moneyCompact', () => {
 	it('handles negatives and nullish', () => {
 		expect(moneyCompact(-1675)).toBe('-$1.7k');
 		expect(moneyCompact(null)).toBe('$0');
-	});
-});
-
-describe('pct', () => {
-	it('returns an integer percentage', () => {
-		expect(pct(25, 100)).toBe('25%');
-		expect(pct(1, 3)).toBe('33%');
-	});
-
-	it('guards divide-by-zero with an em dash', () => {
-		expect(pct(5, 0)).toBe('—');
 	});
 });
 

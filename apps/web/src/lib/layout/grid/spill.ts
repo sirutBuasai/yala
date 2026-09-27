@@ -57,12 +57,6 @@ export function overrun(card: HTMLElement, body?: HTMLElement): Overrun {
 	return { x, y };
 }
 
-/** True when the content no longer fits the card. */
-export function spills(card: HTMLElement, body?: HTMLElement): boolean {
-	const { x, y } = overrun(card, body);
-	return x > 0 || y > 0;
-}
-
 /** Which boxes are overrunning, and by how much — for a dev-mode log when a resize is refused, since the
     refusal is otherwise indistinguishable from a gesture that never ran. */
 export function spillReport(card: HTMLElement, body?: HTMLElement): string[] {

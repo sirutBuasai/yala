@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
 import { live } from '$lib/data/load';
-import type { AccountInfo, AccountLists } from '$lib/data/types';
+import type { AccountLists } from '$lib/data/types';
 import { makeAccounts, setDirectory } from '$lib/data/__fixtures__/dashboard';
 import { pick } from '$lib/forms/__fixtures__/listbox';
 import AccountPanel from '$lib/views/manage/AccountPanel.svelte';

@@ -227,8 +227,7 @@
 		{ name: 'gap-inline', px: 6, role: 'Chips, dots, button pairs' },
 		{ name: 'gap-row', px: 8, role: 'Row internals, selectors, toggles' },
 		{ name: 'gap-field', px: 12, role: 'Form field rows' },
-		{ name: 'gap-grid', px: 14, role: 'Pane / board / dashboard grid' },
-		{ name: 'gap-section', px: 18, role: 'Control sections, two-col forms' }
+		{ name: 'gap-grid', px: 14, role: 'Pane / board / dashboard grid' }
 	];
 
 	const padAliases = [

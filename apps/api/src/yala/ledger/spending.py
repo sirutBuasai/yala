@@ -109,7 +109,3 @@ class Spending:
 
     def months(self) -> list[Month]:
         return sorted({month_of(t.date) for t in self.transactions()})
-
-    def date_range(self) -> tuple[dt.date, dt.date] | None:
-        dates = [t.date for t in self.transactions()]
-        return (min(dates), max(dates)) if dates else None

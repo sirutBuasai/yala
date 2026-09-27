@@ -25,7 +25,6 @@
 	/* Ink for text/icons on an accent fill, picked against the FILL rather than the page. Shared across
 	   themes, since the accent fills don't change between light and dark. */
 	--on-accent: #1a1522;
-	--on-accent-light: #f4efe4;
 	/* The dimming behind a modal. One value, so every overlay dims by the same amount. */
 	--scrim: rgba(0, 0, 0, 0.5);
 	/* The arrange chrome's accent. The one accent that swaps with the theme, so arranging never
@@ -115,22 +114,10 @@
 	--lav-text: #bb9af7;
 	--teal-text: #7dcfff;
 	--salmon-text: #f7768e;
-	--role-balance-text: var(--lav-text);
-	--role-asset-text: var(--teal-text);
-	--role-liability-text: var(--salmon-text);
-	--role-saving-text: var(--good-text);
-	--role-spending-text: var(--salmon-text);
-	--role-market-text: var(--gold-text);
 	--entry-transaction-text: var(--salmon-text);
 	--entry-paycheck-text: var(--good-text);
 	--entry-transfer-text: var(--teal-text);
 	--grid: #2a2a3c;
-	--s1: #26263a;
-	--s2: #3c3560;
-	--s3: #574a8c;
-	--s4: #7461b8;
-	--s5: #957fdc;
-	--s6: #bb9af7;
 	--shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 14px 34px -18px rgba(0, 0, 0, 0.7);
 
 	/* ══════════════════════════════════════════════════════════════════════════
@@ -220,7 +207,6 @@
 	--gap-row: var(--space-4); /* row internals, selectors, toggle groups */
 	--gap-field: var(--space-6); /* form field rows */
 	--gap-grid: var(--space-7); /* pane / board / dashboard grid, view header */
-	--gap-section: var(--space-9); /* control sections, two-column form blocks */
 
 	/* ── Padding semantic aliases (compound) ──────────────────────────────────
 	   Card padding is split so its horizontal half doubles as the bleed anchor: --pad-card-x is
@@ -236,10 +222,6 @@
 	--pad-cell: var(--space-4); /* calendar / table cells */
 	--pad-listrow: var(--space-4) var(--pad-card-x); /* compact list rows, inset to card edge */
 	--pad-listrow-comfortable: var(--space-6) var(--pad-card-x); /* roomier row density */
-	/* Approximate height of one list row, for a box that needs a floor in row units. The pane, not
-	   the list, owns the real height. */
-	--listrow-h: 52px;
-	--listrow-h-comfortable: 58px;
 
 	/* ── Radius ───────────────────────────────────────────────────────────────*/
 	--radius-xs: 3px; /* color swatches */
@@ -304,12 +286,6 @@
 	--teal-text: #1a6f88;
 	--salmon-text: #b33b54;
 	--grid: #e6ddca;
-	--s1: #ece3f8;
-	--s2: #d6c4f0;
-	--s3: #b79fe3;
-	--s4: #9678d3;
-	--s5: #7658c1;
-	--s6: #563f9c;
 	--shadow: 0 1px 2px rgba(120, 90, 40, 0.06), 0 14px 34px -18px rgba(120, 90, 40, 0.28);
 	/* Retinted with the rest: a black shadow over a warm surface reads as grime, not elevation. */
 	--shadow-pop: 0 10px 30px -10px rgba(120, 90, 40, 0.45);
@@ -443,21 +419,6 @@ a {
 	margin: 0;
 }
 
-/* Text for screen readers only. Bug: with no positioned ancestor this box lays out against the
-   initial containing block and escapes every overflow clip on the way up — one inside a
-   horizontally scrolled table gave the whole PAGE a horizontal scrollbar. Anything using .sr-only
-   MUST give it a containing block (`position: relative`). */
-.sr-only {
-	position: absolute;
-	width: 1px;
-	height: 1px;
-	margin: -1px;
-	padding: 0;
-	border: 0;
-	overflow: hidden;
-	clip-path: inset(50%);
-	white-space: nowrap;
-}
 /* A caption in a pane HEADER also owns the gap down to the body. Scoped to the header so a caption
    used as body copy keeps margin: 0. */
 .head .cap {

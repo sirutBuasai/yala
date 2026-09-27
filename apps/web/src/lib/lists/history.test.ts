@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { PaycheckOut, Transfer, Txn } from '$lib/data/types';
-import { filterHistory, historyOf, NO_FILTER, sortHistory, summarize } from './history';
+import { filterHistory, historyOf, sortHistory, summarize, type HistoryFilter } from './history';
+
+const NO_FILTER: HistoryFilter = { type: null, category: null, account: null, search: '' };
 
 const txn = (
 	locator: string,

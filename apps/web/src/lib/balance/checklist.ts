@@ -125,11 +125,6 @@ export function missingEntryKind(gap: number): 'spending' | 'bill pay' {
 	return gap < 0 ? 'spending' : 'bill pay';
 }
 
-/** Whether there is a reason at all, for a caller that does not need to word it. */
-export function isBlocked(...args: Parameters<typeof blockReason>): boolean {
-	return blockReason(...args) !== null;
-}
-
 /**
  * A liability is typed the way a statement reads it — owed positive, a credit negative — and the
  * ledger keeps that inverted. The sign is flipped, not forced: forcing it made a credit impossible

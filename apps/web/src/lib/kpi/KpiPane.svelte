@@ -5,7 +5,6 @@
 	import type { DashboardData } from '$lib/data/types';
 	import type { PlacedPane, Rect } from '$lib/layout/grid/types';
 	import Pane from '$lib/layout/grid/Pane.svelte';
-	import { drag } from '$lib/layout/grid/drag';
 	import { overflows } from '$lib/layout/grid/spill';
 	import { COLS } from '$lib/layout/grid/units';
 	import { getArrangement, getGridEnv } from '$lib/layout/grid/context';

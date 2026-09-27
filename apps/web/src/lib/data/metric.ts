@@ -57,7 +57,7 @@ function goodUp(m: Measure): boolean {
 }
 
 /** News, not sign: which direction is good depends on the measure. A flat figure has no tone. */
-export function toneOf(m: Measure, delta: number): Tone | undefined {
+function toneOf(m: Measure, delta: number): Tone | undefined {
 	if (delta === 0) return undefined;
 	return delta > 0 === goodUp(m) ? 'good' : 'bad';
 }

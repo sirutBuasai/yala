@@ -39,10 +39,6 @@ def test_coverage_helpers():
     assert s.months() == [(2025, 8)]
     assert s.count() == 3
     assert s.categories() == ["Grocery", "Takeouts"]
-    rng = s.date_range()
-    assert rng is not None
-    lo, hi = rng
-    assert (lo.isoformat(), hi.isoformat()) == ("2025-08-02", "2025-08-19")
 
 
 def test_pending_flag_is_read_from_beancount():
@@ -61,5 +57,4 @@ def test_empty_ledger_is_queryable():
     assert s.years() == []
     assert s.months() == []
     assert s.count() == 0
-    assert s.date_range() is None
     assert s.categories() == ["Grocery"]

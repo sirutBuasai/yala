@@ -25,11 +25,6 @@ class _Base(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class DateRange(_Base):
-    start: str
-    end: str
-
-
 class Domains(_Base):
     """Which domains carry data."""
 
@@ -66,7 +61,6 @@ class Meta(_Base):
     years: list[int]
     month_keys: list[str]  # "YYYY-MM"
     transaction_count: int
-    date_range: DateRange | None
     categories: list[str]
     accounts: dict[str, AccountInfo]  # every declared account, keyed by full path
     domains: Domains
