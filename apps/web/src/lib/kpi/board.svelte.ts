@@ -1,6 +1,6 @@
 // Persisted apart from the arrangement: which panes the board has, not where they sit.
 
-import { listOf, oneOf, Pref, type Revive } from '$lib/utils/persist.svelte';
+import { listOf, number, oneOf, Pref, type Revive } from '$lib/utils/persist.svelte';
 import type { BoardLayout, PaneSpec, Rect } from '$lib/layout/grid/types';
 import {
 	boundsOf,
@@ -16,19 +16,17 @@ import {
 import type { KpiBoardDefs, KpiMerge, KpiSpec } from './spec';
 
 const axisOf = oneOf<MergeAxis>(['row', 'column']);
+const weightsOf = listOf(number(Number.MIN_VALUE));
 
 /** A group whose ids or weights are half-read is dropped — a mangled one would render sections
-    against the wrong figures. */
+    against the wrong figures. A rejected weight shortens the list, which the length check catches. */
 function storedGroups(): Revive<KpiGroup[]> {
 	return listOf((raw) => {
 		if (typeof raw !== 'object' || raw === null) return undefined;
 		const o = raw as Record<string, unknown>;
 		const axis = axisOf(o.axis);
 		const ids = Array.isArray(o.ids) && o.ids.every((v) => typeof v === 'string') ? o.ids : null;
-		const weights =
-			Array.isArray(o.weights) && o.weights.every((v) => typeof v === 'number' && v > 0)
-				? (o.weights as number[])
-				: null;
+		const weights = weightsOf(o.weights);
 		if (!axis || !ids || !weights || ids.length !== weights.length || ids.length < 2) {
 			return undefined;
 		}

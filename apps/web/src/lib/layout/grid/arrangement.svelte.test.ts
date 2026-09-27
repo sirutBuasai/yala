@@ -1,7 +1,7 @@
 // The state layer's wiring: what persists, what is re-derived, and a drag's round trip through storage.
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Arrangement } from '$lib/layout/grid/arrangement.svelte';
+import { Arrangement, LAYOUT_VERSION } from '$lib/layout/grid/arrangement.svelte';
 import { GridEnv } from '$lib/layout/grid/env.svelte';
 import { CONTENT, GAP, UNIT, WRAP_PAD } from '$lib/layout/grid/units';
 import type { BoardLayout } from '$lib/layout/grid/types';
@@ -268,7 +268,7 @@ describe('persistence', () => {
 		const env = wideEnv();
 		const key = `test-ghost-${seq++}`;
 		localStorage.setItem(
-			`yala-board-${key}`,
+			`yala-board-${key}-${LAYOUT_VERSION}`,
 			JSON.stringify([{ id: 'retired', x: 0, y: 0, w: 24, h: 6, mode: 'fixed', cap: 6 }])
 		);
 
@@ -281,11 +281,38 @@ describe('persistence', () => {
 		const env = wideEnv();
 		const key = `test-corrupt-${seq++}`;
 		localStorage.setItem(
-			`yala-board-${key}`,
+			`yala-board-${key}-${LAYOUT_VERSION}`,
 			JSON.stringify([{ id: 'tall', x: 0, w: 24, h: 6, mode: 'fixed', cap: 6 }]) // no `y`
 		);
 
 		expect(new Arrangement(key, LAYOUT, env).placed('tall')).toMatchObject({ y: 0, h: 12 });
+	});
+
+	it('falls back to the declared default for a size that is not a number or is too small', () => {
+		const env = wideEnv();
+		const key = `test-badsize-${seq++}`;
+		localStorage.setItem(
+			`yala-board-${key}-${LAYOUT_VERSION}`,
+			JSON.stringify([
+				{ id: 'tall', x: 0, y: 0, w: '24', h: 6, mode: 'fixed', cap: 6 },
+				{ id: 'wide', x: 0, y: 0, w: 0, h: 6, mode: 'fixed', cap: 6 }
+			])
+		);
+
+		const b = new Arrangement(key, LAYOUT, env);
+		expect(b.authored('tall')).toMatchObject({ x: 0, y: 0, w: 24, h: 12 });
+		expect(b.authored('wide')).toMatchObject({ x: 0, y: 12, w: 48, h: 8 });
+	});
+
+	it('rounds a stored fractional size to whole units', () => {
+		const env = wideEnv();
+		const key = `test-fraction-${seq++}`;
+		localStorage.setItem(
+			`yala-board-${key}-${LAYOUT_VERSION}`,
+			JSON.stringify([{ id: 'tall', x: 0.4, y: 0, w: 23.6, h: 12, mode: 'fixed', cap: 12 }])
+		);
+
+		expect(new Arrangement(key, LAYOUT, env).authored('tall')).toMatchObject({ x: 0, w: 24 });
 	});
 
 	it('reset puts the declared arrangement back and clears what was stored', () => {

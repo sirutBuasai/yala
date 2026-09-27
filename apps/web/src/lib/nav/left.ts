@@ -3,27 +3,30 @@
 
 import { goto } from '$app/navigation';
 import { onPress } from '$lib/charts/aria';
+import { matching, number, record, shape } from '$lib/utils/persist.svelte';
 import { pageOf } from './pages';
 
 const KEY = 'yala-page-state';
 
-interface Left {
+type Left = {
 	/** Each page's path as left, which names its view. */
 	views: Record<string, string>;
 	/** Each path's query as left, its picks and filters. */
 	searches: Record<string, string>;
 	/** How far down each path was left, in CSS pixels. */
 	scrolls: Record<string, number>;
-}
+};
+
+const revive = shape<Left>({
+	views: record(matching(/^\//)),
+	searches: record(matching(/^(\?.*)?$/)),
+	scrolls: record(number(0))
+});
 
 function read(): Left {
 	try {
-		const stored = JSON.parse(sessionStorage.getItem(KEY) ?? '{}');
-		return {
-			views: stored.views ?? {},
-			searches: stored.searches ?? {},
-			scrolls: stored.scrolls ?? {}
-		};
+		const stored = revive(JSON.parse(sessionStorage.getItem(KEY) ?? '{}'));
+		return { views: {}, searches: {}, scrolls: {}, ...stored };
 	} catch {
 		return { views: {}, searches: {}, scrolls: {} };
 	}

@@ -1,6 +1,6 @@
 // Runes only, no DOM. Only authored panes persist, in priority order; displacement is never written.
 
-import { Pref, listOf, type Revive } from '$lib/utils/persist.svelte';
+import { Pref, listOf, number, type Revive } from '$lib/utils/persist.svelte';
 import { assertNoOverlap, clampRect, resolve, boardRows } from './resolve';
 import { lift, type DragOrigin } from './lift';
 import { readingOrder } from './fold';
@@ -13,10 +13,11 @@ const MODES: HeightMode[] = ['fixed', 'fit', 'cap'];
 
 /** Bumped whenever a board's DEFAULT set of panes changes: new ids land at the back of the priority
     order, so an arrangement saved against the old set would bury them below everything else. */
-const LAYOUT_VERSION = 2;
+export const LAYOUT_VERSION = 2;
 
 function whole(v: unknown, min: number): number | undefined {
-	return typeof v === 'number' && Number.isFinite(v) && v >= min ? Math.round(v) : undefined;
+	const n = number(min)(v);
+	return n === undefined ? undefined : Math.round(n);
 }
 
 /** Every field must survive or the entry is dropped: a half-read rectangle would place a pane somewhere
