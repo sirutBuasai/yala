@@ -2,7 +2,7 @@
 // the page, for the rows behind a cell.
 
 import { expect, type Page } from '@playwright/test';
-import { openApp, settle, test } from './app';
+import { openApp, settle, spanTab, test } from './app';
 
 test.beforeEach(async ({ page }) => openApp(page));
 
@@ -85,14 +85,18 @@ test('a Category by month cell opens its rows in Transaction history, and back r
 	await expect(page).toHaveURL(/\/analytics/);
 });
 
-test('the Year view shows the last ten years unless another span is picked', async ({ page }) => {
+test('the Year view shows five years until another span is picked, which it keeps through a reload', async ({
+	page
+}) => {
 	await page.goto('/analytics/year');
 	await settle(page);
-	const spans = page.getByRole('tablist', { name: 'Years shown' });
-	await expect(spans.getByRole('tab', { name: '10Y' })).toHaveAttribute('aria-selected', 'true');
+	await expect(spanTab(page, '5Y')).toHaveAttribute('aria-selected', 'true');
 
-	await spans.getByRole('tab', { name: '5Y' }).click();
-	await expect(page).toHaveURL(/span=5/);
-	await spans.getByRole('tab', { name: '10Y' }).click();
+	await spanTab(page, '10Y').click();
+	await expect(spanTab(page, '10Y')).toHaveAttribute('aria-selected', 'true');
 	await expect(page).not.toHaveURL(/span=/);
+
+	await page.reload();
+	await settle(page);
+	await expect(spanTab(page, '10Y')).toHaveAttribute('aria-selected', 'true');
 });
