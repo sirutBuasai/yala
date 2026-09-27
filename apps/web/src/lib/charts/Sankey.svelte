@@ -5,6 +5,7 @@
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import { sumBy } from '$lib/utils/num';
 	import { chartLabel } from '$lib/charts/aria';
+	import { declutter } from '$lib/charts/declutter';
 	// The registry adapts a Flow primitive into these, adding a colour per node role.
 	interface SankeyNode {
 		id: string;
@@ -50,27 +51,6 @@
 	const M = { t: 28, b: 12, l: 92, r: 150 };
 	const iw = W - M.l - M.r;
 	const ih = H - M.t - M.b;
-
-	/** Push overlapping label anchors apart in one pass down then clamp up from the bottom. */
-	function declutter(items: { cy: number }[], minGap: number, top: number, bottom: number) {
-		const order = items.map((it, i) => ({ i, cy: it.cy, ly: it.cy })).sort((a, b) => a.cy - b.cy);
-		let last = -Infinity;
-		for (const o of order) {
-			o.ly = Math.max(o.cy, last + minGap, top);
-			last = o.ly;
-		}
-		const bottommost = order[order.length - 1];
-		if (bottommost && bottommost.ly > bottom) {
-			last = bottom;
-			for (let k = order.length - 1; k >= 0; k--) {
-				order[k]!.ly = Math.min(order[k]!.ly, last);
-				last = order[k]!.ly - minGap;
-			}
-		}
-		const out = new Array<number>(items.length);
-		for (const o of order) out[o.i] = o.ly;
-		return out;
-	}
 
 	const layout = $derived.by(() => {
 		const cols = [...new Set(nodes.map((n) => n.col))].sort((a, b) => a - b);
@@ -146,7 +126,7 @@
 		// Spread the last column's anchors apart; a leader line reconnects each to its node.
 		const rightViews = nodeViews.filter((v) => v.side === 'right');
 		const lys = declutter(
-			rightViews.map((v) => ({ cy: v.cy })),
+			rightViews.map((v) => v.cy),
 			LABEL_MIN_GAP,
 			M.t + 6,
 			H - M.b - LABEL_LINE

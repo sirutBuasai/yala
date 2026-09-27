@@ -1,6 +1,7 @@
 import { scaleLinear, scaleLog, type ScaleLinear, type ScaleLogarithmic } from 'd3-scale';
 import { money, moneyK } from '$lib/utils/format';
 import { inPeriod } from '$lib/utils/period';
+import { textWidth } from './textWidth';
 
 /** A value→pixel mapping plus the ticks to label it with. Generic so a builder keeps its d3 surface. */
 export interface ValueScale<S extends (v: number) => number = (v: number) => number> {
@@ -90,13 +91,10 @@ export function moneyAxisFormat(ticks: number[]): (v: number) => string {
 	return (v) => (v === 0 ? money(0) : abbreviate ? moneyK(v) : money(v));
 }
 
-/** Width one character of axis type takes, near enough to budget with. */
-const AXIS_GLYPH_W = 6.2;
-
 /** Half the width `text` takes in axis type, which is how far a centred label reaches either side of the
     point it is centred on. */
 export function halfLabelWidth(text: string): number {
-	return (text.length * AXIS_GLYPH_W) / 2;
+	return textWidth(text) / 2;
 }
 
 /** Centred, except at the ends, where it anchors inward: `svg.chart` does not clip, so a centred end label
@@ -112,7 +110,7 @@ const AXIS_LINE_H = 11;
 /** Room a label leaves below the plot when it lies flat. */
 const FLAT_BOTTOM = 28;
 
-const labelWidth = (text: string) => text.length * AXIS_GLYPH_W + 8;
+const labelWidth = (text: string) => textWidth(text) + 8;
 
 /** One label under a plot: where it sits, how it anchors there, and which points it names. */
 export interface AxisTick {

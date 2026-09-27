@@ -16,6 +16,7 @@
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Legend from '$lib/charts/Legend.svelte';
 	import { chartLabel } from '$lib/charts/aria';
+	import { declutter } from '$lib/charts/declutter';
 	import FocusBand from '$lib/charts/marks/FocusBand.svelte';
 	import XLabels from '$lib/charts/marks/XLabels.svelte';
 	import PickBands from '$lib/charts/marks/PickBands.svelte';
@@ -139,8 +140,7 @@
 		})
 	);
 
-	/** Right-edge labels nudged apart: each pushed below its predecessor, then back up from the last if the
-	    stack overruns, so every label lands on canvas. */
+	/** Right-edge labels are a line apart at least, and stay on the plot. */
 	const GAP = 14;
 	const ends = $derived.by(() => {
 		if (!endLabels) return [];
@@ -151,16 +151,14 @@
 				return i < 0 ? null : { name: s.name, color: s.color, value: s.values[i] as number, i };
 			})
 			.filter((e): e is NonNullable<typeof e> => e !== null)
-			.map((e) => ({ ...e, y0: y(e.value), y: y(e.value) }))
-			.sort((a, b) => a.y0 - b.y0);
-		for (let i = 1; i < list.length; i++) list[i]!.y = Math.max(list[i]!.y, list[i - 1]!.y + GAP);
-		const last = list[list.length - 1];
-		if (last && last.y > ih) {
-			last.y = ih;
-			for (let i = list.length - 2; i >= 0; i--)
-				list[i]!.y = Math.min(list[i]!.y, list[i + 1]!.y - GAP);
-		}
-		return list;
+			.map((e) => ({ ...e, y0: y(e.value) }));
+		const at = declutter(
+			list.map((e) => e.y0),
+			GAP,
+			0,
+			ih
+		);
+		return list.map((e, i) => ({ ...e, y: at[i]! }));
 	});
 
 	const bandPath = $derived(

@@ -103,6 +103,23 @@
 		return clamp(cx, half, Math.max(half, iw - half));
 	};
 
+	/** Every bar's figure or none: printed over a run of narrow bars they ran into each other. */
+	const showValues = $derived.by(() => {
+		const s = series[0];
+		if (!valueLabels || !single || !s) return false;
+		const spans = labels
+			.map((lb, i) => {
+				const v = s.values[i] ?? 0;
+				if (v === 0) return null;
+				const text = fmt(v);
+				const half = halfLabelWidth(text);
+				const cx = labelX((outer(lb) ?? 0) + (inner('0') ?? 0) + inner.bandwidth() / 2, text);
+				return [cx - half, cx + half] as const;
+			})
+			.filter((sp) => sp !== null);
+		return spans.every((sp, i) => i === 0 || spans[i - 1]![1] < sp[0]);
+	});
+
 	const label = $derived(
 		chartLabel(
 			'Bar chart',
@@ -173,7 +190,7 @@
 								)}
 							onmouseleave={hideTip}
 						/>
-						{#if valueLabels && single && v !== 0}
+						{#if showValues && v !== 0}
 							<text
 								class="vlabel"
 								class:below={v < 0}
