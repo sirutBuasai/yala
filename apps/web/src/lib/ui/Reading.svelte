@@ -1,6 +1,6 @@
 <script lang="ts">
 	// One figure shown as fully as its box allows. The most compact reading always holds the figure's place
-	// and is what a pane's floor is judged on (`data-clip`, D43); a fuller one, when `level` picks it, is laid
+	// and is what a pane's floor is judged on (`data-clip`); a fuller one, when `level` picks it, is laid
 	// over it rather than in the flow, so it never decides how narrow the pane may go. `fitReadings` picks
 	// the level from the widths the probe lays out.
 	interface Props {

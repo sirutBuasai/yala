@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Planning: when the plan reaches FI and how safely, the projection behind it, and the assumptions the
-	// ledger can't derive (docs/redesign/specs/planning.md). It reads now, so it has no period controls;
+	// ledger can't derive. It reads now, so it has no period controls;
 	// every pane draws the draft, and leaving the page drops it.
 	import { onMount } from 'svelte';
 	import type { DashboardData } from '$lib/data/types';
@@ -52,7 +52,7 @@
 		return swr && swr.min > 0 && spending ? spending / (swr.min / 100) : undefined;
 	});
 
-	// The user's own arrangement (D51). The rings and the timeline sit at their floors, found by resizing
+	// The user's own arrangement. The rings and the timeline sit at their floors, found by resizing
 	// in Edit; the assumption panes fit their fields.
 	const LAYOUT: BoardLayout = {
 		progress: {

@@ -3,7 +3,7 @@
 import { forgetPicks } from '$lib/nav/left';
 
 /**
- * A reload keeps the view but starts its picks over (D26, D27). The path names the view and is kept; the
+ * A reload keeps the view but starts its picks over. The path names the view and is kept; the
  * query holds the picks and filters and is dropped, and so is every view's remembered query and scroll. Preferences such as
  * board arrangements and the theme live in local storage, untouched.
  */

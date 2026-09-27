@@ -1,6 +1,6 @@
 <script lang="ts">
-	// Dashboard: where you stand this month, each card a headline that opens the page owning its figures
-	// (docs/redesign/specs/dashboard.md). It reads now, so it has no period controls.
+	// Dashboard: where you stand this month, each card a headline that opens the page owning its figures.
+	// It reads now, so it has no period controls.
 	import type { DashboardData } from '$lib/data/types';
 	import type { KpiBoardDefs } from '$lib/kpi/spec';
 	import { latestMonthKey, type Scope } from '$lib/data/scope';

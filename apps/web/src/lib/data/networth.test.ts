@@ -879,7 +879,7 @@ describe('a window of years', () => {
 		expect(bars.kind === 'multiseries' && bars.labels).toEqual(['2025']);
 	});
 
-	it('keeps a year with no snapshot on the year axis (D23)', () => {
+	it('keeps a year with no snapshot on the year axis', () => {
 		const data = makeNetWorthData();
 		data.networth!.series.push({ ...data.networth!.series[2]!, date: '2027-01-01' });
 		const bars = build(data, 'networth.saved_vs_other', { level: 'all' });

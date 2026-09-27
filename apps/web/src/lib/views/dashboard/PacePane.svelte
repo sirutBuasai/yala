@@ -1,6 +1,6 @@
 <script lang="ts">
 	// A month run up day by day against the month before it and your average, with where it stands today
-	// under it. A day opens Transactions' calendar at it (D40).
+	// under it. A day opens Transactions' calendar at it.
 	import type { MultiSeries } from '$lib/data/primitives';
 	import { formatDelta, formatUnit } from '$lib/data/primitives';
 	import { MONTH_PARAM } from '$lib/nav/focus';

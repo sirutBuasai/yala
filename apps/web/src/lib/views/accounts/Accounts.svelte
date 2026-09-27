@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Accounts: log balances and read net worth (docs/redesign/specs/accounts.md). Each grain is its own
+	// Accounts: log balances and read net worth. Each grain is its own
 	// board with its own stored arrangement.
 	import { page } from '$app/stores';
 	import type { DashboardData } from '$lib/data/types';

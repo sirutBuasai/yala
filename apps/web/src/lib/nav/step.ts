@@ -1,4 +1,4 @@
-// Moving within a view. Every step is its own history entry (D9), so back undoes it.
+// Moving within a view. Every step is its own history entry, so back undoes it.
 
 import { goto } from '$app/navigation';
 import { withParams } from './focus';

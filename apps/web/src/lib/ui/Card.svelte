@@ -37,7 +37,7 @@
 		card?: HTMLElement;
 		/** The body element, likewise — `grid/spill.ts` measures inside it. */
 		body?: HTMLElement;
-		/** The page the title opens, by its path: the one that owns what this card shows (D48). */
+		/** The page the title opens, by its path: the one that owns what this card shows. */
 		open?: string;
 		children: Snippet;
 	}

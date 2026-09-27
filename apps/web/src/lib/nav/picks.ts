@@ -1,5 +1,5 @@
-// A board's period picks (D20, D25), read from and written to the URL (D9). The view is the path, which a
-// reload keeps; the picks are the query, which it drops (D27). `scope` names the grain the board is narrowed
+// A board's period picks, read from and written to the URL. The view is the path, which a
+// reload keeps; the picks are the query, which it drops. `scope` names the grain the board is narrowed
 // to, and only counts on the view of that grain: `scope=month` on Month, `scope=year` on Year. `span` is how
 // far back Year reaches, always ending at the latest year.
 

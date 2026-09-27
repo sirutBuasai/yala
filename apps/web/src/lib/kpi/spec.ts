@@ -27,7 +27,7 @@ export interface KpiSpec {
 	series?: string;
 	/** Scale the chart to the series' own range; see `Spark`. */
 	level?: boolean;
-	/** The page the title opens, by its path (D48). A card with none has no link. */
+	/** The page the title opens, by its path. A card with none has no link. */
 	open?: string;
 }
 

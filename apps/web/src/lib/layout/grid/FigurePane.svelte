@@ -19,7 +19,7 @@
 		/** See `Figure`: makes the chart's rows or cells choosable, and marks the chosen one. */
 		onpick?: (key: string, sub: string | null) => void;
 		picked?: string | null;
-		/** The page the title opens: the owner of a figure shown here as a headline (D48). */
+		/** The page the title opens: the owner of a figure shown here as a headline. */
 		open?: string;
 	}
 	let { id, data, spec, actions, onpick, picked, open }: Props = $props();

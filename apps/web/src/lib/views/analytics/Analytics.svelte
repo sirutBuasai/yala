@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Analytics: read trends across months and years (docs/redesign/specs/analytics.md). Each grain is its
+	// Analytics: read trends across months and years. Each grain is its
 	// own board with its own stored arrangement.
 	import { page } from '$app/stores';
 	import type { DashboardData } from '$lib/data/types';

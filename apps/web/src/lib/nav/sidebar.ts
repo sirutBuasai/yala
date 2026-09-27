@@ -1,4 +1,4 @@
-// How much room the sidebar takes (docs/redesign D13): all of it while a full board still fits beside
+// How much room the sidebar takes: all of it while a full board still fits beside
 // it, an icon rail while only the rail does, and the hamburger sheet once even the rail would fold the
 // board to one column.
 

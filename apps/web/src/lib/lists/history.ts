@@ -1,4 +1,4 @@
-// One month's transactions, paychecks and bill pay as a single history (docs/redesign/specs/transactions.md):
+// One month's transactions, paychecks and bill pay as a single history:
 // the rows, the filters over them, and the summary of whatever the filters leave.
 
 import type { PaycheckOut, Transfer, Txn } from '$lib/data/types';

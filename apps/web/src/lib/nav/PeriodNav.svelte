@@ -1,6 +1,6 @@
 <script lang="ts">
 	// A board's period controls beside its view switch: Month steps its year, Year picks how far back it
-	// reaches (D25).
+	// reaches.
 	import type { View } from '$lib/nav/views';
 	import { SPANS, type periodPicks } from '$lib/nav/picks';
 	import Segmented from '$lib/nav/Segmented.svelte';

@@ -1,6 +1,6 @@
-// A drill-in: a click that opens another page at the pane it acts on (D34), rather than at that page's top.
+// A drill-in: a click that opens another page at the pane it acts on, rather than at that page's top.
 // The pane and anything to focus in it ride in history state, not the URL, so a view's remembered URL
-// never carries them to a later visit (D33).
+// never carries them to a later visit.
 
 import { goto } from '$app/navigation';
 

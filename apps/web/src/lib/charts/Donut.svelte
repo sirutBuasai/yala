@@ -100,7 +100,7 @@
 	}
 	.donut svg {
 		flex: 1 1 9rem;
-		/* A plot sets no floor (D43): the legend beside it is what holds the pane. */
+		/* A plot sets no floor: the legend beside it is what holds the pane. */
 		min-width: 0;
 		max-width: 15rem;
 	}

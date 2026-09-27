@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Needs attention: what only you can fix, each row opening the pane that clears it (D34). The balances
+	// Needs attention: what only you can fix, each row opening the pane that clears it. The balances
 	// row needs the API's dated read, so a read-only snapshot leaves it out rather than guessing.
 	import type { DashboardData } from '$lib/data/types';
 	import { attentionItems, type AttentionItem, type Unlogged } from '$lib/data/attention';

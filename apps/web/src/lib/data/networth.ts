@@ -267,7 +267,7 @@ function monthlyRun(data: DashboardData, year: number): Run {
 	};
 }
 
-/** The years a window of the record reads, gaps kept (D23): the lifetime when `since` is absent. */
+/** The years a window of the record reads, gaps kept: the lifetime when `since` is absent. */
 function windowYears(data: DashboardData, since?: number): number[] {
 	return spanYears(snapshotYears(data), since);
 }

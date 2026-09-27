@@ -58,7 +58,7 @@
 	const PICKS = new Set(['attribution', 'buckets']);
 	const pickedMonth = $derived(scoped ? monthName(monthKey) : undefined);
 
-	// Stacked, as the user arranged them (D14); the card splits evenly whatever the rectangles' spans.
+	// Stacked, as the user arranged them; the card splits evenly whatever the rectangles' spans.
 	const KPIS = $derived<KpiBoardDefs>({
 		saved: {
 			rect: { x: 41, y: 6, w: 7, h: 5 },

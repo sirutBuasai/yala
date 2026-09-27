@@ -1,6 +1,6 @@
 <script lang="ts">
-	// Transactions: log a month and check it as you go (docs/redesign/specs/transactions.md). The layout
-	// here is the user's own arrangement adopted as the default (D14); a later rearrangement is stored under
+	// Transactions: log a month and check it as you go. The layout
+	// here is the user's own arrangement adopted as the default; a later rearrangement is stored under
 	// this board's key.
 	import { page } from '$app/stores';
 	import type { DashboardData } from '$lib/data/types';
@@ -39,7 +39,7 @@
 	}
 	let { data, accounts, onsaved }: Props = $props();
 
-	// Page state in the URL (D9), beside the shared `month`.
+	// Page state in the URL, beside the shared `month`.
 	const P = {
 		day: 'day',
 		type: 'type',
@@ -51,7 +51,7 @@
 
 	const params = $derived($page.url.searchParams);
 	const monthKey = $derived(focusMonth($page.url, latestMonthKey(data)));
-	// A day outside the focus month is one the page was left at before the month moved on (D21).
+	// A day outside the focus month is one the page was left at before the month moved on.
 	const day = $derived.by(() => {
 		const d = params.get(P.day) ?? '';
 		return d.startsWith(`${monthKey}-`) ? d : '';

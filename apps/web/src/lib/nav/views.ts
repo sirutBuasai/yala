@@ -1,4 +1,4 @@
-// A page's views beyond its default, Month. A view is a path, so a reload keeps it (D27); each page's
+// A page's views beyond its default, Month. A view is a path, so a reload keeps it; each page's
 // param matcher in `src/params` accepts only these.
 
 export const VIEWS = ['year'] as const;

@@ -380,7 +380,7 @@
 
 	/* The figure box's own min/max height stop one tall figure dragging its neighbours out of alignment
 	   on a flow layout; on the grid the pane's height already answers that, so both are lifted. A plot
-	   scales, so it sets no floor of its own: a pane's floor is its text and values (D43). */
+	   scales, so it sets no floor of its own: a pane's floor is its text and values. */
 	.cell:not(.folded) :global(.figurebox),
 	.cell:not(.folded) :global(.sizebox) {
 		min-height: 0;

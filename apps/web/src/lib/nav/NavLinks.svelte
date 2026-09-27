@@ -1,6 +1,6 @@
 <script lang="ts">
 	// The page links, shared by the sidebar, its icon rail and the hamburger sheet. Each link reopens its
-	// page at the view it was left on, as that view was left (D33).
+	// page at the view it was left on, as that view was left.
 	import { page } from '$app/stores';
 	import { leftAt, viewAt } from '$lib/nav/left';
 	import { pageOf } from '$lib/nav/pages';

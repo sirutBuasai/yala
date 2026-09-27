@@ -1,4 +1,4 @@
-// Page state in the URL (docs/redesign D9, D33). Each view keeps its own focus month; year-level views
+// Page state in the URL. Each view keeps its own focus month; year-level views
 // read their year from it, so one parameter carries both grains.
 
 export const MONTH_PARAM = 'month';

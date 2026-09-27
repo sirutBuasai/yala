@@ -1,4 +1,4 @@
-// Where each page and view was left in this tab (D33). Every view (every path) keeps its own URL state and
+// Where each page and view was left in this tab. Every view (every path) keeps its own URL state and
 // its own scroll, so switching between views or pages returns each to how it was left, and a pick on one
 // never moves another. Session storage rather than local: it is about this visit, not a preference.
 
@@ -9,7 +9,7 @@ import { pageOf } from './pages';
 const KEY = 'yala-page-state';
 
 interface Left {
-	/** Each page's path as left, which names its view (D27). */
+	/** Each page's path as left, which names its view. */
 	views: Record<string, string>;
 	/** Each path's query as left, its picks and filters. */
 	searches: Record<string, string>;
@@ -51,7 +51,7 @@ export function rememberScroll(pathname: string, scroll: number): void {
 	save(left);
 }
 
-/** Keep each page's view but drop every view's picks and scroll: what a reload means (D26, D27). */
+/** Keep each page's view but drop every view's picks and scroll: what a reload means. */
 export function forgetPicks(): void {
 	save({ ...read(), searches: {}, scrolls: {} });
 }
@@ -84,7 +84,7 @@ export function restoreScroll(y: number, frames = 60): void {
 }
 
 /** Attributes that make a card's title a link to `page`, opened as the sidebar opens it: at the view it
-    was left on, as that view was left (D33). A heading rather than an anchor, since the title is also what
+    was left on, as that view was left. A heading rather than an anchor, since the title is also what
     a rename edits. Spread, so a title with no page gets none of them. */
 export function pageLink(page: string) {
 	const open = () => void goto(leftAt(viewAt(page)));
