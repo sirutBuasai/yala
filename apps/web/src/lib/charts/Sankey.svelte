@@ -42,7 +42,7 @@
 	const GAP = 20; // minimum vertical gap between nodes within a column
 	/** Second line of a right label, below its first. */
 	const LABEL_LINE = 12;
-	/** A right label is two lines, so its anchors must clear the whole block: at 15 the smallest
+	/** A right label is two lines, so its anchors must clear the whole block: at one line's gap the smallest
 	    categories' labels sat on top of one another. */
 	const LABEL_MIN_GAP = LABEL_LINE + 16;
 	// The top margin holds the middle columns' above-labels, the right margin the last column's

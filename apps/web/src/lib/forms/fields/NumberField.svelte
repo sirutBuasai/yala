@@ -108,7 +108,7 @@
 				const field = e.currentTarget as HTMLInputElement;
 				typed = value === null ? '' : String(value);
 				// Selected again once the grouping is dropped: the swap lands after the browser selected the
-				// old text, so typing appended to it (a reading of 63073400000, held to the maximum).
+				// old text, so typing appended to it (a reading far past the field, held to its maximum).
 				void tick().then(() => field.select());
 			}}
 			oninput={(e) => (typed = (e.currentTarget as HTMLInputElement).value)}
