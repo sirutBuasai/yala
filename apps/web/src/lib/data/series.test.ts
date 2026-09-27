@@ -3,11 +3,14 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+	earningPace,
+	spendingPace,
 	accumulate,
 	measureActive,
 	measureByMonth,
 	measureByYear,
-	measureTrailing
+	measureTrailing,
+	yearAxis
 } from '$lib/data/series';
 import { measureValue } from '$lib/data/metric';
 import { build } from '$lib/data/catalog';
@@ -170,5 +173,54 @@ describe('savingsRate', () => {
 		const p = build(d, 'overview.savings_rate', { level: 'all' });
 		if (p.kind !== 'series') throw new Error('expected series');
 		expect(p.reference?.value).toBeCloseTo(45, 6);
+	});
+});
+
+describe('yearAxis', () => {
+	it('keeps a year with nothing logged in its place, at zero', () => {
+		const data = makeData();
+		data.meta.years = [2022, 2024, 2025];
+		expect(yearAxis(data)).toEqual([2022, 2023, 2024, 2025]);
+		const spent = measureByYear(data, 'spending');
+		expect(spent.points.map((p) => p.label)).toEqual(['2022', '2023', '2024', '2025']);
+		expect(spent.points[1]!.value).toBe(0);
+	});
+
+	it('starts at `since` when the window is shorter than the record', () => {
+		const data = makeData();
+		expect(yearAxis(data, 2025)).toEqual([2025]);
+		expect(yearAxis(data, 1990)).toEqual([2024, 2025]);
+	});
+
+	it('is empty with no tracked years', () => {
+		const data = makeData();
+		data.meta.years = [];
+		expect(yearAxis(data)).toEqual([]);
+	});
+});
+
+describe('paces', () => {
+	/** A month with paychecks and spending in the fixture, and each line's last point. */
+	const data = makeData();
+	const key = data.meta.month_keys.find((k) => data.months[k]!.paychecks.length)!;
+	const ends = (p: ReturnType<typeof spendingPace>) => p.series.map((s) => s.points.at(-1)!.value);
+
+	it("runs a month's spending up to the sum of its rows", () => {
+		const month = data.meta.month_keys.find((k) => data.months[k]!.transactions.length)!;
+		const pace = spendingPace(data, month);
+		expect(pace.series.map((s) => s.name)).toEqual(['Spent', 'Last month', 'Average']);
+		const rows = data.months[month]!.transactions.reduce((t, x) => t + x.amount, 0);
+		expect(ends(pace)[0]).toBeCloseTo(rows);
+	});
+
+	it("runs net income up as paychecks land, to the month's net income", () => {
+		const pace = earningPace(data, key);
+		expect(ends(pace)[0]).toBeCloseTo(measureValue(data, { level: 'month', monthKey: key }, 'net'));
+	});
+
+	it("ends the month's own line at `through`", () => {
+		const pace = earningPace(data, key, `${key}-03`);
+		expect(pace.series[0]!.points[2]!.value).not.toBeNull();
+		expect(pace.series[0]!.points[3]!.value).toBeNull();
 	});
 });

@@ -858,9 +858,8 @@ def test_a_close_cannot_ask_for_a_destination_and_a_split_at_once(client: TestCl
 def test_closing_a_passthrough_retires_its_sweep_whichever_route_it_takes(
     client: TestClient, extra: dict
 ):
-    """A sweep is dated month-end, so closing earlier in the month would leave a transfer against
-    a closed account. Every route reads the balance after retiring, so all see the same figure.
-    """
+    """A sweep is dated month-end, so closing earlier would leave a transfer against a closed
+    account."""
     client.post(
         "/api/transfer",
         json={

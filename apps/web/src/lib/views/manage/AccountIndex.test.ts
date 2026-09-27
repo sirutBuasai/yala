@@ -1,6 +1,4 @@
-// The index is only about finding an account, so what is worth pinning is what it HIDES: an account
-// this app cannot act on, a group nobody opened, and a closed account — which is a group of its own
-// rather than a separate list, since a reopen has to be able to reach it.
+// Pins what the index hides: accounts this app can't act on, shut groups, and closed accounts.
 
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';

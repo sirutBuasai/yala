@@ -1,8 +1,5 @@
-"""Pointing a sweep at an account: which accounts may be a passthrough, and where one may land.
-
-A passthrough holds no money of its own, so what may be one and what may receive one is the kind's
-own business (:data:`yala.ledger.accounts.KINDS`).
-"""
+"""Which accounts may be a passthrough and where one may land is the kind's business
+(:data:`yala.ledger.accounts.KINDS`)."""
 
 from __future__ import annotations
 

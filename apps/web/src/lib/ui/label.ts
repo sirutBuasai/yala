@@ -25,11 +25,7 @@ export function words(text: string): Label {
 	return { text };
 }
 
-/**
- * A label built from the data. Rebuilt every render, and a rename adds to it rather than replacing it, which
- * is what keeps the value current. Reach for this whenever the string is interpolated: a rename that
- * swallowed the value would freeze it.
- */
+/** Rebuilt every render, and a rename adds to it, so an interpolated value never freezes. */
 export function live(context: string): Label {
 	return { context };
 }

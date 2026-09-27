@@ -57,10 +57,8 @@ export function formatDelta(value: number, unit: Unit): string {
 	return (value > 0 ? '+' : '') + formatUnit(value, unit);
 }
 
-/**
- * A magnitude held to `digits` digits, sign kept. A percentage against a near-zero base has no bound and a
- * card does; the figure it stands in for belongs in the tooltip beside it.
- */
+/** A percentage against a near-zero base is unbounded and a card is not; the full figure goes in the
+    tooltip. */
 export function capped(value: number, digits: number): number {
 	const ceiling = 10 ** digits - 1;
 
@@ -164,6 +162,9 @@ export interface Series {
 	axis: Axis;
 	name: string;
 	points: SeriesPoint[];
+	/** Each point's period key (ISO, as coarse as the point), where a label alone cannot place it in a
+	    period: a snapshot's date says which month it falls in, where its label names only the day. */
+	periods?: string[];
 	/** A second unit the same points can be read in, reported beside the value wherever a chart states an
 	    exact figure — so a pair of readings at two scales costs one chart rather than two. */
 	altUnit?: Unit;
@@ -177,7 +178,13 @@ export interface MultiSeries {
 	unit: Unit;
 	axis: Axis;
 	labels: string[];
+	/** As on `Series`, for the shared axis. */
+	periods?: string[];
+	/** What each point's hover adds after its label, where the label alone does not place it. */
+	notes?: string[];
 	series: Series[];
+	/** A range drawn behind the series named `of`, in its colour: where it may land rather than one path. */
+	band?: { name: string; of: string; lo: number[]; hi: number[] };
 }
 
 /** What a flow node is, which the visualization layer maps to a colour. */
@@ -223,10 +230,7 @@ export interface TableColumn {
 	label: string;
 	/** When set, the column is numeric and formatted in this unit. */
 	unit?: Unit;
-	/**
-	 * Shade this column's cells by magnitude, greenest and reddest at its own largest value. Scaled per
-	 * column, so a column of hundreds tints as strongly as one of tens of thousands.
-	 */
+	/** Shaded per column against its own largest value, so small-valued columns tint as strongly as large. */
 	tint?: TintDirection;
 }
 
@@ -234,6 +238,8 @@ export interface Table {
 	kind: 'table';
 	columns: TableColumn[];
 	rows: (string | number)[][];
+	/** Each row's period key, as on `Series`. */
+	periods?: string[];
 }
 
 /** One value against its threshold. The threshold is the row's full scale, so rows measured in
@@ -246,6 +252,8 @@ export interface BulletRow {
 	target: number;
 	/** Footnote under the row (already localized). */
 	note?: Label;
+	/** The same reading as the amounts behind it, where the figure is a share of one. */
+	amount?: { value: number; target: number; unit: Unit };
 }
 
 export interface Bullet {
@@ -253,10 +261,7 @@ export interface Bullet {
 	rows: BulletRow[];
 }
 
-/**
- * One row's latest figure against the range it usually falls in: `base` is the typical level, `lo`/`hi`
- * the extremes of the window that typical came from.
- */
+/** `base` is the typical level; `lo` and `hi` bound the window it came from. */
 export interface DeviationRow {
 	label: string;
 	value: number;
@@ -274,3 +279,15 @@ export interface Deviation {
 
 export type Primitive =
 	Scalar | Categorical | Series | MultiSeries | Flow | Matrix | Table | Bullet | Deviation;
+
+/** Fullest first: cents, whole, abbreviated. `signed` prints a plus on a gain. */
+export function readingsOf(value: number, unit: Unit, signed = false): string[] {
+	const plus = signed && value > 0 ? '+' : '';
+	const all =
+		unit.kind === 'money'
+			? [formatUnitExact(value, unit), formatUnit(value, unit), formatUnitCompact(value, unit)]
+			: unit.kind === 'count'
+				? [formatUnit(value, unit), formatUnitCompact(value, unit)]
+				: [formatUnit(value, unit)];
+	return [...new Set(all)].map((r) => plus + r);
+}

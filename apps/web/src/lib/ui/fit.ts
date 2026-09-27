@@ -1,19 +1,9 @@
-// Fitting content to the box it was given. A pane never resizes itself around its content (see
-// `grid/Pane.svelte`), so content too big for its box gives something up instead — a shorter reading, smaller
-// type — and states the size it cannot go under, which is what makes an over-narrow resize refuse.
-//
-// Every decision here is measured rather than predicted: a breakpoint written in this file would be wrong for
-// the next font, theme, or pane width somebody arranges.
+// A pane never resizes around its content, so content gives something up and states the size it can't go
+// under. Everything is measured, never a breakpoint.
 
 import { SLACK } from '$lib/layout/grid/spill';
 
-/**
- * Index of the richest level that fits. `widths` are each level's measured width in order, `chrome` whatever
- * else shares the room (a ring, a meter, the gaps).
- *
- * When none fit the last is the answer: a figure still has to say something, and the overrun it then leaves is
- * a genuine one.
- */
+/** `chrome` is whatever else shares the room. When none fit, the last: a figure must still say something. */
 export function levelThatFits(widths: number[], available: number, chrome = 0): number {
 	if (!widths.length) return 0;
 	const room = available - chrome + SLACK;
@@ -34,12 +24,8 @@ export interface SizeWatch {
 	stop(): void;
 }
 
-/**
- * Watch `el`'s inline size, calling `measure` with it and once immediately.
- *
- * `settled` skips a notification that carries no change of width: a measurement whose answer changes the
- * content inside the box would otherwise be re-run by the layout it caused, and answer itself for ever.
- */
+/** Calls `measure` once now and on each width change. `settled` skips no-change notifications, or a
+    measurement that changes the content re-runs forever. */
 export function watchWidth(
 	el: HTMLElement,
 	measure: (width: number) => void,
@@ -59,4 +45,39 @@ export function watchWidth(
 	run(true);
 
 	return { force: () => run(true), stop: () => observer.disconnect() };
+}
+
+/** Scales one line down via `--fit` instead of wrapping. Below `least` it holds, states `--content-floor`,
+    and wraps only where even that isn't given. `node` must not wrap. */
+export function scaleToFit(node: HTMLElement, least: number) {
+	const refit = () => {
+		node.style.setProperty('--fit', '1');
+		node.style.whiteSpace = '';
+		// The text's own width, not the box's: a line shorter than its box reports the box's width as its
+		// scroll width, which made the floor follow whatever width the pane had last been given.
+		const text = document.createRange();
+		text.selectNodeContents(node);
+		const need = text.getBoundingClientRect().width;
+		const room = node.clientWidth;
+		let fit = need && room ? Math.min(1, (room - SLACK) / need) : 1;
+		node.style.setProperty('--fit', String(Math.max(least, fit)));
+		// Whatever does not scale with the type (an icon, a margin) leaves the first guess a little over, so
+		// the overrun it left is taken off in the same proportion.
+		for (let pass = 0; pass < 3 && fit > least && node.scrollWidth > room; pass++) {
+			fit *= (room - SLACK) / node.scrollWidth;
+			node.style.setProperty('--fit', String(Math.max(least, fit)));
+		}
+		node.style.setProperty('--content-floor', contentFloor(need * least));
+		if (fit < least) node.style.whiteSpace = 'normal';
+	};
+	const watch = watchWidth(node, refit, { settled: true });
+	// The text changes with every assumption, and a longer sentence in the same box needs a new scale.
+	const text = new MutationObserver(() => watch.force());
+	text.observe(node, { characterData: true, childList: true, subtree: true });
+	return {
+		destroy: () => {
+			watch.stop();
+			text.disconnect();
+		}
+	};
 }

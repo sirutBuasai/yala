@@ -7,10 +7,7 @@ import { build } from '$lib/data/catalog';
 import type { Label } from '$lib/ui/label';
 import type { KpiSpec } from './spec';
 
-/**
- * The catalog's own label and note, with anything the view spelled out overriding them half by half — so
- * a spec that supplies only a `context` still gets the scalar's words behind it.
- */
+/** Anything the view spelled out overrides the catalog's words half by half. */
 export function kpiLabels(data: DashboardData, spec: KpiSpec): { title: Label; caption: Label } {
 	const scalar = build(data, spec.figure, spec.scope) as Scalar;
 	return {

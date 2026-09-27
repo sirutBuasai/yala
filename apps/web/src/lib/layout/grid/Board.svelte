@@ -1,10 +1,9 @@
 <script lang="ts">
-	// A view's board. All this adds over `BoardGrid` is the rebuild: merging two KPI cards changes
-	// which panes the board HAS, and the arrangement derives its ids from the layout at construction,
-	// so it is rebuilt when that set changes rather than being left reserving rows for a pane nobody
-	// renders any more. Keyed on the ids alone — a caption changing must not throw the board away.
-	import type { Snippet } from 'svelte';
+	// Rebuilds `BoardGrid` when the pane set changes, since the arrangement derives its ids at construction.
+	// Keyed on the ids alone, so a caption change doesn't throw the board away.
+	import { onMount, type Snippet } from 'svelte';
 	import BoardGrid from './BoardGrid.svelte';
+	import { getGridEnv } from './context';
 	import type { BoardLayout } from './types';
 
 	interface Props {
@@ -21,6 +20,14 @@
 	let { key, layout, names, onreset, children }: Props = $props();
 
 	const panes = $derived(Object.keys(layout).join(' '));
+
+	// onMount, not $effect: `boards++` reads the count it writes, so an effect would retrigger itself
+	// without end.
+	const env = getGridEnv();
+	onMount(() => {
+		env.boards++;
+		return () => env.boards--;
+	});
 </script>
 
 {#key panes}

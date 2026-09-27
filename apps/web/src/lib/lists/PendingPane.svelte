@@ -1,7 +1,5 @@
 <script lang="ts">
-	// The pending queue as a board pane: fronted money, waiting to be paid back. One component for
-	// every place it appears; the caller supplies already-scoped rows, so scoping stays where the
-	// scope is known.
+	// The caller supplies already-scoped rows, so scoping stays where the scope is known.
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import type { Label } from '$lib/ui/label';
 	import TransactionList, { type TxnRow } from '$lib/lists/TransactionList.svelte';
@@ -16,25 +14,17 @@
 		transactions: TxnRow[];
 		onedit: (locator: string) => void;
 		caption?: Label;
-		/** Offered beside the tally where this pane is also the page's "log something" home. */
-		onadd?: () => void;
 	}
-	let { id, transactions, onedit, caption, onadd }: Props = $props();
+	let { id, transactions, onedit, caption }: Props = $props();
 
 	const total = $derived(sumBy(transactions, (t) => t.amount));
 </script>
 
-<!-- Stays put on a clean month because it hosts the add button. -->
 <Pane {id} title={words('Pending transactions')} {caption} tone="attention">
 	{#snippet actions()}
-		<div class="pactions">
-			{#if transactions.length}
-				<span class="meta">{transactions.length} · {money(total)} out</span>
-			{/if}
-			{#if onadd}
-				<button class="btn-ghost" onclick={onadd}>+ Add entry</button>
-			{/if}
-		</div>
+		{#if transactions.length}
+			<span class="meta">{transactions.length} · {money(total)} out</span>
+		{/if}
 	{/snippet}
 	{#if transactions.length}
 		<TransactionList {transactions} {onedit} fields={['source']} />
@@ -44,12 +34,6 @@
 </Pane>
 
 <style>
-	.pactions {
-		display: flex;
-		gap: var(--gap-row);
-		align-items: center;
-		flex-wrap: wrap;
-	}
 	.meta {
 		color: var(--ink-3);
 		font-size: var(--text-secondary);

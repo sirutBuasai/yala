@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Bind a data primitive to a chart: ask the registry to adapt it into props, then render the matching
 	// chart. Views bind data here so the data→visual coupling lives entirely in the registry.
+	import type { PickGrain } from '$lib/charts/axis';
 	import type { Primitive } from '$lib/data/primitives';
 	import { CHARTS_BY_ID, defaultChart, type ColorBy } from './registry';
 	import Empty from '$lib/ui/Empty.svelte';
@@ -26,6 +27,15 @@
 		normalize?: 'row' | 'col' | 'global';
 		/** Fix a line chart's value axis to end here, so a level partway up is not squashed to the floor. */
 		ceiling?: number;
+		/** The period in focus; see `FigureSpec.mark`. */
+		mark?: string;
+		/** See `FigureSpec.pickBy`. */
+		pickBy?: PickGrain;
+		/** Makes a chart's rows (or cells) choosable, where the chart offers it: the key picked, and for a
+		    grid the column within it, null when a whole row was picked. */
+		onpick?: (key: string, sub: string | null) => void;
+		/** The key currently chosen, which the chart marks. */
+		picked?: string | null;
 	}
 	let {
 		primitive,
@@ -39,7 +49,11 @@
 		dashed,
 		valueLabels,
 		normalize,
-		ceiling
+		ceiling,
+		mark,
+		pickBy,
+		onpick,
+		picked
 	}: Props = $props();
 
 	const def = $derived(chart ? CHARTS_BY_ID[chart] : defaultChart(primitive.kind));
@@ -53,14 +67,16 @@
 		dashed,
 		valueLabels,
 		normalize,
-		ceiling
+		ceiling,
+		mark,
+		pickBy
 	});
 	const chartProps = $derived(def ? def.adapt(primitive, opts) : null);
 </script>
 
 {#if def && chartProps}
 	{@const Chart = def.component}
-	<Chart {...chartProps} />
+	<Chart {...chartProps} {onpick} {picked} />
 {:else}
 	<Empty>No chart accepts {primitive.kind} data.</Empty>
 {/if}

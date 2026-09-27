@@ -1,8 +1,8 @@
 // The transaction form's pending boxes. Awaiting a reimbursement qualifies Pending, so its box sits beside
 // Pending, or directly under it when Pending's cell is too narrow for both, never in a grid cell of its own.
 
-import { expect, test, type Locator } from '@playwright/test';
-import { openApp, settle, showTab, violations } from './app';
+import { expect, type Locator } from '@playwright/test';
+import { openAdd, openApp, settle, showPage, test, violations } from './app';
 
 test.beforeEach(async ({ page }) => openApp(page));
 
@@ -19,8 +19,8 @@ const boxOf = async (checkbox: Locator) => (await checkbox.locator('xpath=..').b
 for (const size of VIEWPORTS) {
 	test(`the reimbursement box sits with Pending at ${size.width}px`, async ({ page }) => {
 		await page.setViewportSize(size);
-		await showTab(page, 'Activity');
-		await page.getByRole('button', { name: '+ Add entry' }).click();
+		await showPage(page, 'Transactions');
+		await openAdd(page);
 		await settle(page);
 
 		const dialog = page.locator('dialog');

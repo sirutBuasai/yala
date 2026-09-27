@@ -1,13 +1,11 @@
-// Data loading, liveness, and the schema-version guard.
-//
-// One read path, tried in order: the local API, else the static `data.json` the builder wrote. Both
-// carry the same account lists, so every form renders either way; whether a write can land is answered
-// only in `postJson`.
+// One read path: the local API, else the static `data.json` the builder wrote. Both carry the account
+// lists, so every form renders either way; only `postJson` decides whether a write can land.
 
 import { get, writable } from 'svelte/store';
 import { asset } from '$app/paths';
 import { setAccountDirectory } from '$lib/data/directory.svelte';
 import type { AccountLists, DashboardData, SchemaVersion, SettingField } from '$lib/data/types';
+import { settingField } from '$lib/data/assumptions';
 
 // Typed as the contract's own version, so bumping the schema breaks this line at compile time.
 const EXPECTED_SCHEMA: SchemaVersion = 1;
@@ -94,8 +92,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<PostResult<T
 	}
 }
 
-/** GET + parse JSON (used to prefill edit forms). */
-export function getJson<T = Record<string, unknown>>(url: string): Promise<PostResult<T>> {
+function getJson<T = Record<string, unknown>>(url: string): Promise<PostResult<T>> {
 	return request<T>(url);
 }
 
@@ -136,10 +133,8 @@ function publish(doc: DashboardData, fromApi: boolean, lists: AccountsInfo | nul
 	loadState.set({ status: 'ready' });
 }
 
-/**
- * Load the dashboard: the local API first, the built snapshot second. Liveness is re-established every
- * load, never persisted — remembering a fallback made a transient failure permanent.
- */
+/** Liveness is re-established every load, never persisted: remembering a fallback made a transient failure
+    permanent. */
 export async function loadData(): Promise<void> {
 	loadState.set({ status: 'loading' });
 
@@ -211,11 +206,8 @@ export type CreatableAccountKind =
 /** An investment's tax tier. A path segment, so changing it is a move, not a metadata edit. */
 export type AccountTier = 'Taxable' | 'TaxAdvantaged';
 
-/**
- * How an account is to be named: the whole name in one field, or the two halves the API joins. Words
- * are sent as typed and the API composes the leaf. Aliases are short forms, used only when a rendered
- * name overruns.
- */
+/** The whole name, or two halves the API joins; words are sent as typed. Aliases apply only when a rendered
+    name overruns. */
 export interface AccountNaming {
 	name?: string;
 	institution_name?: string;
@@ -293,11 +285,8 @@ export async function setSweep(account: string, dest: string | null): Promise<st
 	return writeAccounts('/api/account/sweep', { account, dest }, 'sweep update failed');
 }
 
-/**
- * Rename an account, move an investment to another tax tier, or both. Not a metadata edit: this rewrites
- * the name in every posting, assertion and quoted value across the ledger. `account` in the result is
- * the new path, which only the API can spell.
- */
+/** Rewrites the name across the whole ledger. `account` in the result is the new path, which only the API
+    can spell. */
 export async function renameAccount(
 	account: string,
 	change: {
@@ -321,10 +310,7 @@ export async function reopenAccount(account: string): Promise<string | null> {
 	return writeAccounts('/api/account/reopen', { account }, 'reopen failed');
 }
 
-/**
- * Only the keys present are changed; an explicit null clears one. The two name halves are absent on
- * purpose: they name the account, so they go through `renameAccount`.
- */
+/** Only present keys change, null clearing one. Name halves go through `renameAccount`. */
 export interface AccountMeta {
 	institution_alias?: string | null;
 	account_alias?: string | null;
@@ -346,7 +332,7 @@ export async function relabelAccount(
 	return writeAccounts('/api/account/relabel', { account, old, new: next }, 'relabel failed');
 }
 
-/** Current USD value of an account's holdings (for prefilling the retirement split). */
+/** Current USD value of an account's holdings. */
 export async function investmentValue(
 	account: string
 ): Promise<{ value: number | null; error: string | null }> {
@@ -387,7 +373,13 @@ export async function updateBalance(
 		: { locator: null, error: error ?? 'edit failed' };
 }
 
-/** Per-account USD values + adjustment plugs as of a date (for the month-aware balance pane). */
+/** Per-account USD values and adjustment plugs as of a date. */
+export interface LoggedSnapshot {
+	date: string;
+	amount: number;
+	locator: string | null;
+}
+
 export interface NetWorthAt {
 	/** Snapshot-able accounts as the MONTH had them, not as today has them: one opened later or
 	    closed earlier is absent, and the month it opened or closed in still counts. */
@@ -395,10 +387,11 @@ export interface NetWorthAt {
 	liability_accounts: string[];
 	accounts: { account: string; value: number }[];
 	adjustments: { account: string; value: number }[];
-	/** account -> what its latest snapshot in the date's MONTH stands at. `locator` is present only
-	    where that snapshot can be rewritten; a share-based one cannot. `amount` is as stored, so a
-	    liability's is negative. */
-	logged: Record<string, { date: string; amount: number; locator: string | null }>;
+	/** Each account's snapshot as of the end of the date, for accounts snapshotted that month. `locator` only
+	    where rewritable; `amount` as stored, so a liability's is negative. */
+	standing: Record<string, LoggedSnapshot>;
+	/** account -> its snapshot before the standing one, or before the reading where none stands. */
+	previous: Record<string, LoggedSnapshot>;
 	/** card -> what its bank app should read at the END of the date, as stored (owed negative), and
 	    whether a reading then must match it rather than set the card's starting balance. */
 	cards: Record<string, { expected: number; must_agree: boolean }>;
@@ -425,10 +418,7 @@ export interface SettingsInfo {
 	specs: SettingSpec[];
 }
 
-/**
- * The settings the snapshot carries, in the shape the API serves. Needs re-keying: a setting's real key
- * is hyphenated, which is not a legal field name, so the contract spells it with underscores.
- */
+/** The settings the snapshot carries, in the shape the API serves, re-keyed from `settingField`. */
 function snapshotSettings(): SettingsInfo | null {
 	const doc = get(data);
 	if (!doc?.settings || !doc.setting_specs) return null;
@@ -436,7 +426,7 @@ function snapshotSettings(): SettingsInfo | null {
 	const stored = doc.settings as unknown as Record<string, number | null | undefined>;
 	// Keyed off the specs, so a setting can never appear in the form without a value beside it.
 	const values = Object.fromEntries(
-		doc.setting_specs.map((spec) => [spec.key, stored[spec.key.replaceAll('-', '_')] ?? null])
+		doc.setting_specs.map((spec) => [spec.key, stored[settingField(spec.key)] ?? null])
 	);
 	return { values, specs: doc.setting_specs };
 }

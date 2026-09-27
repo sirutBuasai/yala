@@ -1,27 +1,30 @@
 // The board under abuse: random gestures and pathological labels, auditing after every one.
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import {
 	audit,
-	dragBy,
 	doGesture,
+	dragBy,
 	expectClean,
 	GESTURES,
 	openApp,
 	settle,
-	showTab,
-	startArranging
+	showPage,
+	startArranging,
+	test
 } from './app';
 
 /** Long enough to outgrow any card, in both the shapes that behave differently: breakable and not. */
 const LONG_WORDS =
 	'Quarterly discretionary spending against the rolling twelve month average and more';
 const LONG_RUN = 'W'.repeat(110);
+/** Wider than a whole merged card: its section's floor alone would outrun the board. */
+const OVERLONG_WORDS = `${LONG_WORDS} ${LONG_WORDS}`;
 
 test.beforeEach(async ({ page }) => openApp(page));
 
 test('a pane grows for a long title and never shows it clipped', async ({ page }) => {
-	await showTab(page, 'Home');
+	await showPage(page, 'Transactions');
 	await startArranging(page);
 
 	for (const words of [LONG_WORDS, LONG_RUN]) {
@@ -38,7 +41,7 @@ test('a pane grows for a long title and never shows it clipped', async ({ page }
 test('a caption on a card that cannot grow is refused rather than stored clipped', async ({
 	page
 }) => {
-	await showTab(page, 'Home');
+	await showPage(page, 'Transactions');
 	await startArranging(page);
 
 	// A pane with no room left to take is the case the editor's single revert has to get right.
@@ -54,7 +57,7 @@ test('a caption on a card that cannot grow is refused rather than stored clipped
 test('moving straight from one card label to another sizes only the pane being typed into', async ({
 	page
 }) => {
-	await showTab(page, 'Home');
+	await showPage(page, 'Transactions');
 	await startArranging(page);
 
 	// No blur in between, so the first pane's measurement is still resolving when the second opens.
@@ -76,12 +79,12 @@ function random(seed: number) {
 }
 
 for (const [tab, seed] of [
-	['Home', 31],
-	['Activity', 64],
-	['Net Worth', 97]
+	['Transactions', 31],
+	['Transactions', 64],
+	['Accounts', 97]
 ] as const) {
 	test(`${tab} survives 30 random gestures (seed ${seed})`, async ({ page }) => {
-		await showTab(page, tab);
+		await showPage(page, tab);
 		await startArranging(page);
 
 		const rand = random(seed);
@@ -99,10 +102,10 @@ for (const [tab, seed] of [
 }
 
 test('merging and splitting a KPI card returns it to exactly its former size', async ({ page }) => {
-	await showTab(page, 'Activity');
+	await showPage(page, 'Transactions');
 	await startArranging(page);
 
-	const board = () => page.evaluate(() => localStorage.getItem('yala-board-activity:month-2'));
+	const board = () => page.evaluate(() => localStorage.getItem('yala-board-transactions-2'));
 	// Nothing is stored until a gesture stores it: only Edit mode may write a pane's rectangle, so the
 	// comparison starts after the first cycle rather than at rest.
 	expect(await board()).toBeNull();
@@ -126,14 +129,14 @@ test('merging and splitting a KPI card returns it to exactly its former size', a
 });
 
 // A merged card's sections share one rectangle, so every limit that holds for a card has to hold for a
-// section of one: the room a section is handed is its weighted share, which can be less than its content.
+// section of one: a section is never handed less than its floor, so the card's floor is theirs added up.
 test.describe("a merged card's sections", () => {
-	/** Home's KPI strip: three sections sharing one row, the shape where they compete for width. */
+	/** The KPI bar: four sections sharing one row, the shape where they compete for width. */
 	async function strip(page: Page) {
-		await showTab(page, 'Home');
+		await showPage(page, 'Transactions');
 		await startArranging(page);
 		const cell = page.locator('.cell:has(.sections)').first();
-		await expect(cell.locator('.section')).toHaveCount(3);
+		await expect(cell.locator('.section')).toHaveCount(4);
 		return cell;
 	}
 
@@ -151,37 +154,36 @@ test.describe("a merged card's sections", () => {
 		const before = await spans(page);
 
 		await cell.locator('.editable[aria-label*="rename title"]').nth(1).click();
-		await page.locator('[aria-label="Rename title"]').pressSequentially(LONG_WORDS);
+		await page.locator('[aria-label="Rename title"]').pressSequentially(OVERLONG_WORDS);
 		await page.keyboard.press('Enter');
 		await settle(page, 24);
 
-		expect(await spans(page)).toBeGreaterThan(before);
+		// The KPI bar opens at the full width, so it has no room to grow; it may only hold its span.
+		expect(await spans(page)).toBeGreaterThanOrEqual(before);
 		// Shorter than asked for: the card ran out of grid before the words ran out.
 		const shown = await cell.locator('.kpi h2').nth(1).innerText();
-		expect(shown.length).toBeLessThan(LONG_WORDS.length);
+		expect(shown.length).toBeLessThan(OVERLONG_WORDS.length);
 		expectClean('after a long title in a merged section', await audit(page));
 	});
 
 	test('refuse a resize that would squeeze a section rather than clip it', async ({ page }) => {
 		const cell = await strip(page);
 		await cell.locator('.editable[aria-label*="rename title"]').nth(1).click();
-		await page.locator('[aria-label="Rename title"]').pressSequentially(LONG_WORDS);
+		await page.locator('[aria-label="Rename title"]').pressSequentially(OVERLONG_WORDS);
 		await page.keyboard.press('Enter');
 		await settle(page, 24);
 
-		// The card is now as narrow as its widest section allows, so there is nothing left to give up.
+		// The card is now as narrow as its sections' floors added up, so there is nothing left to give up.
 		const grown = await spans(page);
 		await dragBy(cell.locator('.handle.e'), -700, 0);
 		expect(await spans(page)).toBe(grown);
 		expectClean('after a refused resize', await audit(page));
 	});
 
-	// Growth is bounded by the grid, not by a pass count. Budgeted, only the leftmost section reached the
-	// edge — its overrun propagates across the whole card and so reports the full shortfall at once, while
-	// its neighbours, which receive a share of each pass, ran out of passes part way.
+	// Bounded by the grid, not a pass count: budgeted, only the leftmost section reached the edge.
 	test('reach the same limit whichever section is being typed into', async ({ page }) => {
 		const reached: number[] = [];
-		for (const nth of [0, 1, 2]) {
+		for (const nth of [0, 1, 2, 3]) {
 			await openApp(page);
 			const cell = await strip(page);
 			await cell.locator('.editable[aria-label*="rename title"]').nth(nth).click();

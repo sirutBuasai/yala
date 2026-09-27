@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-	assumptionKey,
 	assumptionsOf,
 	realRate,
+	withSettings,
 	yearsToRetirement,
 	type Assumptions
 } from '$lib/data/assumptions';
@@ -16,6 +16,7 @@ describe('assumptions', () => {
 		data.settings!.swr = 3.5;
 		data.settings!.nominal_return = 7;
 		data.settings!.inflation = 2;
+		data.settings!.volatility = 10;
 		data.settings!.retire_age = 55;
 		data.settings!.runway_target = 9;
 		data.settings!.horizon_age = 90;
@@ -27,6 +28,7 @@ describe('assumptions', () => {
 			swr: 3.5,
 			nominalReturn: 7,
 			inflation: 2,
+			volatility: 10,
 			retireAge: 55,
 			runwayTarget: 9,
 			horizonAge: 90,
@@ -46,6 +48,7 @@ describe('assumptions', () => {
 			swr: 4,
 			nominalReturn: 8,
 			inflation: 3,
+			volatility: 15,
 			retireAge: 60,
 			runwayTarget: 6,
 			horizonAge: 95,
@@ -59,12 +62,20 @@ describe('assumptions', () => {
 		expect(assumptionsOf(makeNetWorthData()).birthYear).toBeNull();
 	});
 
-	it('spells every setting key as the assumption it feeds', () => {
-		expect(assumptionKey('swr')).toBe('swr');
-		expect(assumptionKey('nominal-return')).toBe('nominalReturn');
-		expect(assumptionKey('retire-age')).toBe('retireAge');
-		expect(assumptionKey('runway-target')).toBe('runwayTarget');
-		expect(assumptionKey('birth-year')).toBe('birthYear');
+	it('reads settings stated over the ledger by their ledger keys', () => {
+		const data = makeNetWorthData();
+		const a = assumptionsOf(
+			withSettings(data, { swr: 3.5, 'nominal-return': 7, 'birth-year': 1990, 'retire-age': null })
+		);
+		expect(a.swr).toBe(3.5);
+		expect(a.nominalReturn).toBe(7);
+		expect(a.birthYear).toBe(1990);
+		expect(a.retireAge).toBe(assumptionsOf(data).retireAge);
+	});
+
+	it('hands back the same data when nothing is stated', () => {
+		const data = makeNetWorthData();
+		expect(withSettings(data, { swr: null })).toBe(data);
 	});
 });
 
@@ -74,6 +85,7 @@ describe('years to retirement', () => {
 			swr: 4,
 			nominalReturn: 8,
 			inflation: 3,
+			volatility: 15,
 			retireAge,
 			runwayTarget: 6,
 			horizonAge: 95,
@@ -101,6 +113,7 @@ describe('the real rate', () => {
 		swr: 4,
 		nominalReturn,
 		inflation,
+		volatility: 15,
 		retireAge: 60,
 		runwayTarget: 6,
 		horizonAge: 95,
@@ -109,10 +122,7 @@ describe('the real rate', () => {
 		outOfPocket: null
 	});
 
-	/**
-	 * Fisher, not subtraction. 8.15% against 3% is exactly 5% because 1.05 × 1.03 = 1.0815, which makes
-	 * this the one case where the right answer is a round number and a slip would be obvious.
-	 */
+	/** Fisher, not subtraction: the one case where the right answer is round, so a slip is obvious. */
 	it('discounts the nominal return by inflation exactly', () => {
 		expect(realRate(at(8.15, 3))).toBeCloseTo(5, 10);
 		expect(realRate(at(7, 3))).toBeCloseTo(3.883495, 5);

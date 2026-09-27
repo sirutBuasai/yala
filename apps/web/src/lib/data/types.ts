@@ -11,8 +11,6 @@ export type Currency = string;
 export type Years = number[];
 export type MonthKeys = string[];
 export type TransactionCount = number;
-export type Start = string;
-export type End = string;
 export type Categories = string[];
 export type Name = string;
 export type InstitutionName = string | null;
@@ -98,6 +96,7 @@ export type Adjustments = NetWorthAdjustment[];
 export type Swr = number;
 export type NominalReturn = number;
 export type Inflation = number;
+export type Volatility = number;
 export type RetireAge = number;
 export type RunwayTarget = number;
 export type HorizonAge = number;
@@ -115,7 +114,6 @@ export type Help = string;
 export type Name1 = 'category' | 'bank' | 'card' | 'investment' | 'employer' | 'deduction';
 export type Prefix = string;
 export type Tiered = boolean;
-export type Plugged = boolean;
 export type Named = boolean;
 export type Product = boolean;
 export type Scopable = boolean;
@@ -159,22 +157,15 @@ export interface Meta {
 	years: Years;
 	month_keys: MonthKeys;
 	transaction_count: TransactionCount;
-	date_range: DateRange | null;
 	categories: Categories;
 	accounts: Accounts;
 	domains: Domains;
-}
-export interface DateRange {
-	start: Start;
-	end: End;
 }
 export interface Accounts {
 	[k: string]: AccountInfo;
 }
 /**
- * One account's whole record: what it is called, what it is, and what it carries. Every field
- * is resolved from ledger metadata by the backend, so the naming rule has one implementation
- * rather than one per language.
+ * Resolved by the backend, so the naming rule has one implementation.
  */
 export interface AccountInfo {
 	name: Name;
@@ -305,8 +296,12 @@ export interface NetWorthSnapshot {
 	liabilities: Liabilities;
 	net_worth: NetWorth;
 	breakdown: Breakdown;
+	owed?: Owed;
 }
 export interface Breakdown {
+	[k: string]: number;
+}
+export interface Owed {
 	[k: string]: number;
 }
 export interface NetWorthAccount {
@@ -329,6 +324,7 @@ export interface SettingsSection {
 	swr: Swr;
 	nominal_return: NominalReturn;
 	inflation: Inflation;
+	volatility: Volatility;
 	retire_age: RetireAge;
 	runway_target: RunwayTarget;
 	horizon_age: HorizonAge;
@@ -350,11 +346,8 @@ export interface SettingField {
 	help: Help;
 }
 /**
- * The pickable account sets the entry forms and the Manage panels choose from.
- *
- * Snapshotted into ``data.json`` as well as served live from ``/api/accounts`` so the forms still
- * render when the local API is down. Writes are then refused by the frontend's write guard rather
- * than by an absent list, since a form that vanishes reads as a missing feature.
+ * Snapshotted as well as served live, so forms render without the API; the write guard refuses
+ * writes instead of the forms vanishing.
  */
 export interface AccountLists {
 	kinds: Kinds;
@@ -371,15 +364,13 @@ export interface AccountLists {
 	sweeps: Sweeps1;
 }
 /**
- * What one kind of account is allowed to carry, so a form offers exactly the controls that
- * apply. Copied off :data:`yala.ledger.accounts.KINDS`, which the routes enforce and which
- * documents each flag, so the form and the API cannot disagree.
+ * Copied off :data:`yala.ledger.accounts.KINDS`, so forms offer exactly the controls the API
+ * allows.
  */
 export interface AccountKind {
 	name: Name1;
 	prefix: Prefix;
 	tiered: Tiered;
-	plugged: Plugged;
 	named: Named;
 	product: Product;
 	scopable: Scopable;

@@ -24,6 +24,11 @@ export function isoOf(d: Date): string {
 	return isoDate(monthKey(d.getFullYear(), d.getMonth() + 1), d.getDate());
 }
 
+/** How many days the month "YYYY-MM" has. */
+export function daysIn(key: string): number {
+	return new Date(yearOf(key), monthOf(key), 0).getDate();
+}
+
 export function todayIso(): string {
 	return isoOf(new Date());
 }
@@ -35,16 +40,18 @@ export function addDays(iso: string, delta: number): string {
 }
 
 /** Numeric Date args, so year rollover works and the string form's UTC parse pitfall is avoided. */
+/** Whether ISO `key` falls within ISO `period`: a day in its month, a month in its year, or itself. */
+export function inPeriod(key: string, period: string): boolean {
+	return key === period || key.startsWith(`${period}-`);
+}
+
 export function addMonths(key: string, delta: number): string {
 	const [y = 0, m = 1] = key.split('-').map(Number);
 	const d = new Date(y, m - 1 + delta, 1);
 	return monthKey(d.getFullYear(), d.getMonth() + 1);
 }
 
-/**
- * Every month with data, one empty month past the latest so you can step into an unpopulated month,
- * and `current` so a navigated-to month is always representable. Ascending and de-duped.
- */
+/** Ascending and de-duped, with one empty month past the latest to step into and `current` always present. */
 export function pickableMonths(monthKeys: string[], current: string): string[] {
 	const sorted = [...monthKeys].sort();
 	const latest = sorted[sorted.length - 1] ?? '';

@@ -1,11 +1,8 @@
-// A board looks the same whatever date it is showing, and only Edit mode may change that.
-//
-// The defect this guards against: a pane that measured its own content and grew to fit it wrote the bigger
-// rectangle to storage, so whichever period happened to carry the longest figures re-arranged the board for
-// every other period — and for every later visit.
+// A board looks the same whatever date it shows; only Edit mode may change it. Guards a pane that grew to fit
+// its content and stored that for every period.
 
-import { expect, test, type Page } from '@playwright/test';
-import { audit, expectClean, openApp, RANGES, settle, showTab, TABS, type Tab } from './app';
+import { expect, type Page } from '@playwright/test';
+import { audit, BOARD_PAGES, expectClean, openApp, settle, showPage, test } from './app';
 
 interface Cell {
 	x: number;
@@ -43,10 +40,7 @@ const cells = (page: Page): Promise<Cell[]> =>
 const stored = (page: Page): Promise<string[]> =>
 	page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('yala-board-')));
 
-/**
- * Same panes, same widths, same places. Height is compared too, except on a pane whose height mode is the
- * user's request to follow its content — the one thing a date is allowed to change.
- */
+/** Height too, except where the height mode follows content, the one thing a date may change. */
 function expectSameLayout(where: string, base: Cell[], now: Cell[]): void {
 	expect(now.length, `${where}: pane count`).toBe(base.length);
 	for (const [i, cell] of now.entries()) {
@@ -84,47 +78,43 @@ async function dates(page: Page): Promise<{ year: string; months: string[] }[]> 
 
 test.beforeEach(async ({ page }) => openApp(page));
 
-for (const tab of TABS) {
-	for (const range of RANGES[tab] ?? [undefined]) {
-		const board = `${tab}${range ? ` / ${range}` : ''}`;
+for (const board of BOARD_PAGES) {
+	test(`${board} renders the same on every date`, async ({ page }) => {
+		await showPage(page, board);
+		await settle(page);
+		if (!(await page.locator('.board > .cell').count())) return;
 
-		test(`${board} renders the same on every date`, async ({ page }) => {
-			await showTab(page, tab, range);
+		const base = await cells(page);
+		expectClean(`${board} as opened`, await audit(page));
+
+		for (const { year, months } of await dates(page)) {
+			await page.locator('select[aria-label="Year"]').first().selectOption(year);
 			await settle(page);
-			if (!(await page.locator('.board > .cell').count())) return;
-
-			const base = await cells(page);
-			expectClean(`${board} as opened`, await audit(page));
-
-			for (const { year, months } of await dates(page)) {
-				await page.locator('select[aria-label="Year"]').first().selectOption(year);
-				await settle(page);
-				for (const month of months.length ? months : [null]) {
-					if (month) {
-						await page.locator('select[aria-label="Month"]').first().selectOption(month);
-						await settle(page);
-					}
-					const where = `${board} at ${month ?? year}`;
-					expectSameLayout(where, base, await cells(page));
-					expectClean(where, await audit(page));
+			for (const month of months.length ? months : [null]) {
+				if (month) {
+					await page.locator('select[aria-label="Month"]').first().selectOption(month);
+					await settle(page);
 				}
+				const where = `${board} at ${month ?? year}`;
+				expectSameLayout(where, base, await cells(page));
+				expectClean(where, await audit(page));
 			}
+		}
 
-			// Nothing but Edit mode may write a rectangle, and browsing is not Edit mode.
-			expect(await stored(page), 'a board was stored by browsing').toEqual([]);
-		});
-	}
+		// Nothing but Edit mode may write a rectangle, and browsing is not Edit mode.
+		expect(await stored(page), 'a board was stored by browsing').toEqual([]);
+	});
 }
 
 test('a reload, a popup and a narrower window leave every pane where it was', async ({ page }) => {
-	await showTab(page, 'Activity', 'Month');
+	await showPage(page, 'Transactions');
 	await settle(page);
 	const base = await cells(page);
 
 	// The harness clears storage on every navigation, so this reopens the board from its declared defaults —
 	// which is the comparison worth making: a reload must not land on a different arrangement.
 	await page.reload();
-	await showTab(page, 'Activity', 'Month');
+	await showPage(page, 'Transactions');
 	await settle(page);
 	expectSameLayout('after a reload', base, await cells(page));
 

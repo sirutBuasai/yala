@@ -75,12 +75,12 @@ def test_get_accounts_describes_what_each_kind_can_carry(client: TestClient):
 
     assert set(kinds) == {"category", "bank", "card", "investment", "employer", "deduction"}
     assert kinds["investment"]["tiered"] and kinds["investment"]["splits"]
-    assert kinds["bank"]["plugged"] and kinds["bank"]["drains"]
+    assert kinds["bank"]["drains"]
     # a cash account is named by institution alone; a card has a product half too
     assert not kinds["bank"]["product"] and kinds["card"]["product"]
-    assert not kinds["card"]["plugged"] and not kinds["card"]["drains"]
+    assert not kinds["card"]["drains"]
     assert kinds["deduction"]["scopable"] and not kinds["deduction"]["labelled"]
-    assert not any(kinds["category"][f] for f in ("tiered", "named", "scopable", "plugged"))
+    assert not any(kinds["category"][f] for f in ("tiered", "named", "scopable"))
 
 
 def test_accounts_payroll_options_scoped_and_split(client: TestClient):
@@ -1066,10 +1066,8 @@ def test_post_paycheck_negative_deduction_is_422(client: TestClient):
 
 
 def test_post_transaction_payee_newline_is_sanitized(client: TestClient):
-    """A payee is a single line: newlines/control chars are stripped before it reaches the ledger.
-
-    beancount escapes quotes but preserves raw newlines, which would corrupt the line-based file.
-    """
+    """Beancount keeps raw newlines, which would corrupt the line-based file, so they are
+    stripped."""
     r = client.post(
         "/api/transaction",
         json=_txn_body(
@@ -1179,9 +1177,7 @@ def test_post_account_investment_label_with_a_comma_is_422(client: TestClient):
 def test_post_account_investment_label_takes_only_letters_digits_and_spaces(
     client: TestClient, label: str
 ):
-    """A label takes a space but no other whitespace and no punctuation: the labels an account
-    offers are written as one comma-joined value on a single ledger line, so a newline inside one
-    would end that line early."""
+    """Labels are one comma-joined value on one ledger line, so only spaces are allowed."""
     r = client.post(
         "/api/account",
         json={

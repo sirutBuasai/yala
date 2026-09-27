@@ -1,12 +1,12 @@
 <script lang="ts">
-	// A grid of figures where rows and columns both carry meaning: as loose tiles that structure is invisible
-	// and costs a row of height. A cell's number is a plain level and never coloured; a period-over-period
-	// change rides along as a badge, which is where the colour goes.
+	// A cell's number is a plain level and never coloured; a period-over-period change rides along as a badge.
 	import type { DashboardData } from '$lib/data/types';
 	import { NO_VALUE } from '$lib/copy';
 	import type { StatRow } from '$lib/charts/statMatrix';
 	import { build } from '$lib/data/catalog';
-	import { CAP_DIGITS, formatUnit, type Scalar } from '$lib/data/primitives';
+	import { CAP_DIGITS, readingsOf, type Scalar } from '$lib/data/primitives';
+	import { fitReadings } from '$lib/ui/readings';
+	import Reading from '$lib/ui/Reading.svelte';
 	import DeltaBadge from '$lib/ui/DeltaBadge.svelte';
 	import { DOT, labelText } from '$lib/ui/label';
 
@@ -18,13 +18,16 @@
 	}
 	let { data, columns, rows }: Props = $props();
 
+	/** How fully every figure reads, one level for the whole grid so it reads alike (see `Reading`). */
+	let levels = $state<Record<string, number>>({});
+
 	const body = $derived(
 		rows.map((r) => {
 			const values = r.cells.map((c) => {
 				const s = build(data, c.id, c.scope) as Scalar;
 				return {
 					key: c.id,
-					text: s.value === null ? NO_VALUE : formatUnit(s.value, s.unit),
+					readings: s.value === null ? [NO_VALUE] : readingsOf(s.value, s.unit),
 					// Read to text here: the row's cells are compared for agreement below, and two notes saying
 					// the same thing arrive as two objects.
 					note: labelText(s.note),
@@ -50,7 +53,7 @@
 <!-- Scrolls sideways inside its pane rather than out through the card: a column here is a period and a
      row a measure, so neither can be dropped or wrapped to make the figures fit (as in `charts/Table`). -->
 <div class="matrixbox scroller-x">
-	<table class="matrix">
+	<table class="matrix" use:fitReadings={(l) => (levels = l)}>
 		<thead>
 			<tr>
 				<th class="rh"><span class="vh">Period</span></th>
@@ -67,7 +70,7 @@
 					{#each r.values as v (v.key)}
 						<td>
 							<span class="figure">
-								{v.text}
+								<Reading readings={v.readings} level={levels[''] ?? 0} />
 								{#if v.delta}<DeltaBadge delta={v.delta} digits={CAP_DIGITS} />{/if}
 							</span>
 							{#if v.note}<small>{v.note}</small>{/if}
@@ -120,10 +123,9 @@
 		color: var(--ink-3);
 		font-size: var(--text-caption);
 	}
-	/* Never wrapped: overflowing is what makes the grid refuse the resize, where reflowing would let the
-	   pane go on narrowing while the table quietly degraded. */
+	/* Never wrapped: overflowing makes the grid refuse a resize, where reflowing would degrade quietly. */
 	.figure {
-		display: inline-flex;
+		display: flex;
 		align-items: baseline;
 		justify-content: flex-end;
 		white-space: nowrap;
@@ -133,6 +135,9 @@
 		font-weight: var(--fw-semibold);
 		font-variant-numeric: tabular-nums;
 		letter-spacing: var(--ls-tighter);
+	}
+	.figure > :global(.reading) {
+		flex: 1 1 auto;
 	}
 	.rl {
 		text-align: left;

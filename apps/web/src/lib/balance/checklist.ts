@@ -55,12 +55,8 @@ export function buildRows(
 	);
 }
 
-/**
- * What the ledger computes for an account at the end of the reading day, BEFORE anything new is
- * logged. A snapshot already standing on the reading has its own adjustment baked into the ledger's
- * figure, dated the reading day, so it must be backed out or the comparison reports agreement with
- * itself.
- */
+/** The ledger's figure at the end of the reading day, before anything new is logged. A snapshot already
+    standing on the reading is backed out, or the check agrees with itself. */
 export function expectedAt(
 	account: string,
 	atRead: Map<string, number>,
@@ -84,20 +80,12 @@ export function agrees(check: number | null): boolean {
 	return check != null && Math.abs(check) < EPSILON;
 }
 
-/**
- * `negative` is an impossible figure; `share-snapshot` is a month already snapshotted in shares,
- * which is not a balance to rewrite; `unreconciled` is a card past its baseline whose figure its
- * entries do not explain.
- */
+/** `negative` is impossible; `share-snapshot` is not a balance to rewrite; `unreconciled` is a card past its
+    baseline whose entries don't explain the figure. */
 export type BlockReason = 'negative' | 'share-snapshot' | 'unreconciled';
 
-/**
- * An asset's gap becomes an `Equity:Adjustments:*` plug and may not be negative. A card's gap before
- * its baseline becomes opening balance; past it there is nothing to absorb one, so `mustAgree` blocks
- * any gap until the missing spending or bill pay is entered.
- *
- * `correctable` false means the month's snapshot is share-based, which no typed USD figure replaces.
- */
+/** An asset's gap becomes a plug and may not be negative; a card's past its baseline blocks under `mustAgree`
+    until its entries explain it. `correctable` false means the month's snapshot is share-based. */
 export function blockReason(
 	row: Row,
 	typed: number | null,
@@ -112,10 +100,7 @@ export function blockReason(
 	return !row.liability && typed < 0 ? 'negative' : null;
 }
 
-/**
- * The day balances are read on by default: today in the current month, else the day before the
- * shown month's first, whose snapshot lands on that first.
- */
+/** Today in the current month, else the day before the shown month's first, whose snapshot lands on it. */
 export function defaultReadOn(monthKey: string, today: string): string {
 	return today.startsWith(monthKey) ? today : addDays(`${monthKey}-01`, -1);
 }
@@ -125,24 +110,12 @@ export function missingEntryKind(gap: number): 'spending' | 'bill pay' {
 	return gap < 0 ? 'spending' : 'bill pay';
 }
 
-/** Whether there is a reason at all, for a caller that does not need to word it. */
-export function isBlocked(...args: Parameters<typeof blockReason>): boolean {
-	return blockReason(...args) !== null;
-}
-
-/**
- * A liability is typed the way a statement reads it — owed positive, a credit negative — and the
- * ledger keeps that inverted. The sign is flipped, not forced: forcing it made a credit impossible
- * to enter, so an overpaid card came back as more owed.
- *
- * A flip is its own inverse, so `asTyped` is this same rule read the other way.
- */
+/** A liability is typed owed-positive and stored inverted. Flipped, not forced: forcing it made a credit
+    impossible to enter. */
 export function signedForLedger(row: Row, typed: number): number {
 	return row.liability ? -typed : typed;
 }
 
-/**
- * A stored figure in the convention it was typed in. Only the entry field and its ghost use it: the
- * figure columns stay in the ledger's sign, so logging an ordinary balance owed takes no minus.
- */
+/** A flip is its own inverse. Only the entry field and its ghost use it; figure columns keep the ledger's
+    sign. */
 export const asTyped = signedForLedger;

@@ -1,7 +1,6 @@
 <script lang="ts">
-	// Trigger button + a floating panel, shared by Select and DatePicker. Placement is Floating UI's;
-	// `fixed` is what lets the panel escape a modal's overflow clipping. This component owns open/close and
-	// outside-click dismiss; consumers own the panel's contents and the while-open keys (onkeynav).
+	// `fixed` placement lets the panel escape a modal's overflow clip. Owns open, close and outside-click;
+	// consumers own the contents and the while-open keys.
 	import type { Snippet } from 'svelte';
 	import { autoUpdate, computePosition, flip, offset, shift, size } from '@floating-ui/dom';
 	import { isTypeKey } from '$lib/utils/typeahead';

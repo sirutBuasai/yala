@@ -1,14 +1,10 @@
-// A close moves a whole balance and only a reopen undoes it, so the cases worth pinning are the ones a
-// wrong guess would send to the API: a split that doesn't add up, an employer's linked accounts closed
-// when nobody said to, and the review that stands between the button and the write.
-//
-// The flow is a question at a time, so most cases walk it: `Next` until the review, then Close account.
+// Pins what a wrong guess would send: splits that don't add up, unrequested linked closes, and the review.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent, waitFor } from '@testing-library/dom';
 import { live } from '$lib/data/load';
-import type { AccountInfo, AccountLists } from '$lib/data/types';
+import type { AccountLists } from '$lib/data/types';
 import { makeAccounts, setDirectory } from '$lib/data/__fixtures__/dashboard';
 import { pick } from '$lib/forms/__fixtures__/listbox';
 import CloseAccount from '$lib/views/manage/CloseAccount.svelte';
@@ -97,9 +93,7 @@ describe('CloseAccount — how many questions the kind needs', () => {
 		expect(screen.getByLabelText('Close date for CardA')).toBeInTheDocument();
 	});
 
-	// One question for every kind that holds anything, answerable either way: all to one account, or
-	// divided across several. A bank and an investment differ only in what the API takes underneath.
-	// `as const` so the kind narrows to the contract's union rather than to `string`.
+	// `as const` so the kind narrows to the contract's union rather than `string`.
 	it.each([
 		['bank', BANK, 'Closing account balance destination for BankA'],
 		['investment', BROKERAGE, 'Closing account balance destination for BrokerageA']
@@ -144,9 +138,7 @@ describe('CloseAccount — how many questions the kind needs', () => {
 		expect(body(fetchSpy)).toEqual({ account: BROKERAGE });
 	});
 
-	// The API refuses a close that would take a balance off the balance sheet with no entry saying
-	// where it went, and a card cannot move money — so the flow says so instead of walking to a button
-	// that will fail.
+	// A card can't move money, so the flow says so instead of walking to a button the API will refuse.
 	it('refuses a card that still owes, naming what to do instead', async () => {
 		setDirectory({ [CARD]: { kind: 'card' } });
 		const fetchSpy = stubFetch();

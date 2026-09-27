@@ -1,7 +1,4 @@
-"""Transfers: money moved between the owner's own accounts, with no Expenses or Income leg.
-
-That absence is what makes the read domains classify a transfer as neither spending nor income.
-"""
+"""No Expenses or Income leg, so the read domains count a transfer as neither."""
 
 from __future__ import annotations
 

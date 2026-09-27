@@ -1,8 +1,5 @@
-"""Credit-card reconciliation: the figure a card's bank app shows, and whether a snapshot may pad.
-
-After its baseline (see :func:`baseline`) a card's spending and bill pay explain its balance in
-full, so a later snapshot that disagrees means an entry is missing, not that money moved untracked.
-"""
+"""Past its baseline, a card's entries explain its balance in full, so a disagreeing snapshot means
+a missing entry."""
 
 from __future__ import annotations
 
@@ -60,11 +57,8 @@ def pending_meta(includes: bool) -> str | None:
 
 
 def unshown_pending(ledger: "Ledger", account: str, as_of: dt.date) -> Decimal:
-    """What the bank app's figure leaves out at the end of ``as_of``, in the ledger's sign: the
-    card's bank-pending charges, unless its bank counts them.
-
-    Only a charge waits to post: a pending payment or credit already lowers the app's balance.
-    """
+    """In the ledger's sign: bank-pending charges, unless its bank counts them. Payments and credits
+    never wait."""
     if includes_pending(ledger.account_meta().get(account)):
         return Decimal(0)
 
@@ -98,13 +92,8 @@ def refuse_gap(account: str, asserted: Decimal, standing: Decimal, date: dt.date
 
 
 def resynced(ledger: "Ledger") -> dict[Path, str]:
-    """Each file holding a card assertion the entries no longer add up to, with that assertion set
-    to what they add up to now.
-
-    An assertion records what the app showed that day. Editing an earlier entry (a pending charge
-    posting at another amount, a refund folded into its charge) leaves that reading true and only
-    its recorded figure stale; the next reading is what checks the entries against the bank.
-    """
+    """Each file with a card assertion its entries no longer sum to, reset to what they sum to now.
+    An earlier edit leaves the reading true and only its figure stale."""
     lines_of: dict[Path, list[str]] = {}
     for e in ledger.errors:
         entry = getattr(e, "entry", None)

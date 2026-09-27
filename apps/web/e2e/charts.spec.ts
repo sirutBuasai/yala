@@ -1,9 +1,8 @@
-// Every chart the boards actually draw, one at a time: the box it was given, the frame it drew into, and
-// the name it answers to. A chart that collapses to nothing still passes a bleed probe — there is no ink
-// to escape — so its geometry has to be asserted on its own.
+// A collapsed chart passes a bleed probe with no ink to escape, so each chart's geometry is asserted
+// directly.
 
-import { expect, test, type Page } from '@playwright/test';
-import { openApp, RANGES, setContentWidth, settle, showTab, TABS } from './app';
+import { expect, type Page } from '@playwright/test';
+import { BOARD_PAGES, openApp, setContentWidth, settle, showPage, test } from './app';
 
 /** Either side of the fold, which is where a chart's box comes from a different rule. */
 const WIDTHS = [1392, 700] as const;
@@ -62,33 +61,30 @@ async function drawn(page: Page): Promise<Drawn[]> {
 
 test.beforeEach(async ({ page }) => openApp(page));
 
-for (const tab of TABS) {
-	for (const range of RANGES[tab] ?? [undefined]) {
-		const board = range ? `${tab} · ${range}` : tab;
-		test(`every chart on ${board} is drawn a real box it stays inside`, async ({ page }) => {
-			await showTab(page, tab, range);
+for (const board of BOARD_PAGES) {
+	test(`every chart on ${board} is drawn a real box it stays inside`, async ({ page }) => {
+		await showPage(page, board);
 
-			for (const width of WIDTHS) {
-				await setContentWidth(page, width);
-				const charts = await drawn(page);
+		for (const width of WIDTHS) {
+			await setContentWidth(page, width);
+			const charts = await drawn(page);
 
-				for (const c of charts) {
-					const where = `${board} at ${width}px — ${c.kind} in "${c.card}"`;
-					// Collapsed to nothing is the failure a bleed probe cannot see.
-					expect(c.w, `${where}: no width`).toBeGreaterThan(0);
-					expect(c.h, `${where}: no height`).toBeGreaterThan(0);
-					// A scroller is allowed to be wider than its window; nothing may overflow vertically.
-					expect(c.outY, `${where}: ${c.outY}px past its box`).toBeLessThanOrEqual(2);
-					if (c.viewBox) {
-						const [, , vw, vh] = c.viewBox.split(/[ ,]+/).map(Number);
-						expect(vw, `${where}: degenerate viewBox`).toBeGreaterThan(0);
-						expect(vh, `${where}: degenerate viewBox`).toBeGreaterThan(0);
-					}
+			for (const c of charts) {
+				const where = `${board} at ${width}px — ${c.kind} in "${c.card}"`;
+				// Collapsed to nothing is the failure a bleed probe cannot see.
+				expect(c.w, `${where}: no width`).toBeGreaterThan(0);
+				expect(c.h, `${where}: no height`).toBeGreaterThan(0);
+				// A scroller is allowed to be wider than its window; nothing may overflow vertically.
+				expect(c.outY, `${where}: ${c.outY}px past its box`).toBeLessThanOrEqual(2);
+				if (c.viewBox) {
+					const [, , vw, vh] = c.viewBox.split(/[ ,]+/).map(Number);
+					expect(vw, `${where}: degenerate viewBox`).toBeGreaterThan(0);
+					expect(vh, `${where}: degenerate viewBox`).toBeGreaterThan(0);
 				}
 			}
-			await setContentWidth(page, null);
-		});
-	}
+		}
+		await setContentWidth(page, null);
+	});
 }
 
 test('every plotted chart is either named or replaced by text, never silently a picture', async ({
@@ -99,17 +95,15 @@ test('every plotted chart is either named or replaced by text, never silently a 
 	const silent: string[] = [];
 	let seen = 0;
 
-	for (const tab of TABS) {
-		for (const range of RANGES[tab] ?? [undefined]) {
-			await showTab(page, tab, range);
-			await settle(page);
-			for (const c of await drawn(page)) {
-				if (c.kind !== 'svg') continue;
-				seen++;
-				const named = !!c.name?.trim();
-				const spoken = c.hidden && c.alt > 0;
-				if (!named && !spoken) silent.push(`${tab} ${range ?? ''} — "${c.card}"`);
-			}
+	for (const board of BOARD_PAGES) {
+		await showPage(page, board);
+		await settle(page);
+		for (const c of await drawn(page)) {
+			if (c.kind !== 'svg') continue;
+			seen++;
+			const named = !!c.name?.trim();
+			const spoken = c.hidden && c.alt > 0;
+			if (!named && !spoken) silent.push(`${board} — "${c.card}"`);
 		}
 	}
 

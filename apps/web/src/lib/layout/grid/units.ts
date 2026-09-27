@@ -11,20 +11,12 @@ export const UNIT = 28;
 
 export const CONTENT = COLS * UNIT;
 
-/**
- * Deliberately not a grid gap: each pane insets itself by half of this instead, which keeps one unit a
- * whole number of pixels. A track boundary then lands on every multiple of the unit and the dot underlay
- * can be one repeating gradient; put the gap on the grid and no repeating background can follow it.
- */
+/** Not a grid gap: panes inset by half of it, so a unit stays whole pixels and the dot grid repeats. */
 export const GAP = 14;
 
 export const WRAP_PAD = 24;
 
-/**
- * Universal floor for a pane, in units. Pure-vector charts never overflow — they only get
- * illegible — so a declared floor is the only limit they can have. Everything else is measured:
- * the spill check raises the real minimum wherever the content has an intrinsic size.
- */
+/** Vector charts never overflow, only get illegible, so this is their only limit; the rest is measured. */
 export const MIN_W = 5;
 export const MIN_H = 3;
 
@@ -33,10 +25,7 @@ export const ONE_COLUMN = 960;
 
 export type FoldMode = 'full' | 'two' | 'one';
 
-/**
- * How a measured content width folds. Arranging is only offered at `'full'`: the stored
- * coordinates describe a 48-column board.
- */
+/** Arranging is offered only at `'full'`, the board the stored coordinates describe. */
 export function foldMode(content: number): FoldMode {
 	if (content >= CONTENT) return 'full';
 	return content <= ONE_COLUMN ? 'one' : 'two';

@@ -50,12 +50,8 @@ def get_accounts() -> dict:
 
 @router.get("/api/investment/value")
 def get_investment_value(account: str, date: str | None = None) -> dict:
-    """USD value of an account's holdings as of ``date``, today if omitted. Refused when a held
-    ticker has no price by then.
-
-    Dated because a retirement's legs must sum to the value *on the day it is dated*, so a form
-    offering a past date has to ask for the figure that applies then.
-    """
+    """As of ``date``, today if omitted, since a retirement's legs must sum to the value on its own
+    date. Refused when a held ticker has no price by then."""
     valid_name(account)
     with api_errors():
         as_of = parse_date(date) if date else None
@@ -66,12 +62,8 @@ def get_investment_value(account: str, date: str | None = None) -> dict:
 
 
 class NamedAccountIn(BaseModel):
-    """The naming half of any request that opens an account.
-
-    Every form sends each part of the name as a person writes it and the server composes the path
-    from them, recording the parts, so the display name and the stored name cannot disagree.
-    ``name`` carries the whole name for a kind not named after where it is held.
-    """
+    """Name parts as typed; the server composes and records them, so display and stored names agree.
+    ``name`` is the whole name for a kind not named after where it is held."""
 
     name: OptionalText = None
     institution_name: OptionalText = None
@@ -81,9 +73,7 @@ class NamedAccountIn(BaseModel):
 
     @property
     def naming_meta(self) -> dict[str, str]:
-        """The name parts to record, dropping the ones left unset. Field name and meta key are the
-        same word, so nothing here translates between them.
-        """
+        """Unset parts dropped. Field name and meta key are the same word."""
         typed = {field: getattr(self, field) for field in NAMING_FIELDS}
 
         return {field: valid_typed_name(value, field) for field, value in typed.items() if value}
@@ -142,11 +132,8 @@ def _reject_inapplicable(body: AccountIn, kind: Kind) -> None:
 
 
 def _reject_declared(led: Ledger, account: str) -> None:
-    """Refuse a name the ledger already declares.
-
-    Beancount rejects a second ``open``, so without this the strict reload fails and the caller gets
-    a parser message instead of the one thing it needs to know: that a closed account is reopened.
-    """
+    """Otherwise the strict reload fails with a parser message instead of saying to reopen the
+    closed account."""
     if account not in led.declared_accounts():
         return
 
@@ -155,11 +142,8 @@ def _reject_declared(led: Ledger, account: str) -> None:
 
 
 def _inherited_meta(led: Ledger, institution: str | None) -> dict[str, str]:
-    """The shared name parts an account joining ``institution`` takes from the ones already there.
-
-    A short form belongs to the institution, not to one account held at it, so a new account that
-    did not inherit it would leave one institution reading two ways.
-    """
+    """A short form belongs to the institution, so a new account inheriting none would read it two
+    ways."""
     if not institution:
         return {}
 
@@ -173,11 +157,8 @@ def _inherited_meta(led: Ledger, institution: str | None) -> dict[str, str]:
 
 
 def _open_plan(body: AccountIn) -> _OpenPlan:
-    """Resolve an open request into the account it names and the writes that declare it.
-
-    The plug shares the account's open date: a snapshot pads the day before the date it asserts, so
-    a plug opened later could not absorb the first one.
-    """
+    """The plug shares the open date: a snapshot pads the day before it asserts, so a later plug
+    would miss the first."""
     kind = KINDS_BY_NAME[body.kind]
     _reject_inapplicable(body, kind)
 
@@ -212,9 +193,7 @@ def _open_plan(body: AccountIn) -> _OpenPlan:
 
 @router.post("/api/account")
 def post_account(body: AccountIn) -> dict:
-    """Open an account. The response carries the resolved display name, so a form can confirm what
-    the account will be called without reimplementing the naming rule.
-    """
+    """Returns the resolved display name, so a form needn't reimplement the naming rule."""
     plan = _open_plan(body)
 
     with api_errors():

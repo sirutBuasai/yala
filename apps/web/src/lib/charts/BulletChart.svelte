@@ -10,22 +10,19 @@
 	import { NO_VALUE } from '$lib/copy';
 	import { SLACK } from '$lib/layout/grid/spill';
 	import { contentFloor, watchWidth } from '$lib/ui/fit';
-	import { fillTo, fillText } from '$lib/charts/progress';
-	import { formatUnit, type Unit } from '$lib/data/primitives';
-	import { labelText, type Label } from '$lib/ui/label';
+	import { amountText, fillTo, fillText } from '$lib/charts/progress';
+	import Bands from '$lib/charts/marks/Bands.svelte';
+	import { formatUnit, type BulletRow } from '$lib/data/primitives';
+	import { labelText } from '$lib/ui/label';
 
-	interface Row {
-		label: string;
-		unit: Unit;
-		value: number | null;
-		target: number;
-		/** Comes straight off the scalar behind the row, so it arrives as a label and is read for text. */
-		note?: Label;
-	}
 	interface Props {
-		rows: Row[];
+		rows: BulletRow[];
 	}
 	let { rows }: Props = $props();
+
+	/** One per chart, since a pattern is looked up by id across the whole page. */
+	const uid = $props.id();
+	const hatch = `hatch-${uid}`;
 
 	let box = $state<HTMLElement>();
 
@@ -70,6 +67,9 @@
 				<span class="name">
 					{row.label}{#if row.note}<small>{labelText(row.note)}</small>{/if}
 				</span>
+				{#if row.amount}
+					<span class="amount">{amountText(row.amount)}</span>
+				{/if}
 				<span class="figure" class:reached={f?.reached}>
 					{row.value == null ? NO_VALUE : formatUnit(row.value, row.unit)}
 					<span class="of">/ {formatUnit(row.target, row.unit)}</span>
@@ -85,9 +85,31 @@
 				aria-valuemax={row.target}
 				aria-valuetext={fillText(row.value, row.target, row.unit)}
 			>
-				{#if f}
-					<span class="value" class:reached={f.reached} style:width={f.width}></span>
-					{#if f.over}<span class="over" aria-hidden="true"></span>{/if}
+				<Bands
+					radius={6}
+					bands={[
+						{ from: 0, to: 100, fill: 'var(--inset)' },
+						...(f
+							? [
+									{
+										from: 0,
+										to: f.pct,
+										fill: f.reached ? 'var(--role-saving)' : 'var(--role-balance)'
+									}
+								]
+							: [])
+					]}
+				/>
+				{#if f?.over}
+					<!-- Hatched, so a full bar and an overflowing one are told apart without stretching the track. -->
+					<svg class="over" width="10" height="100%" aria-hidden="true">
+						<defs>
+							<pattern id={hatch} width="5" height="5" patternUnits="userSpaceOnUse">
+								<path d="M-1 1 L1 -1 M0 5 L5 0 M4 6 L6 4" />
+							</pattern>
+						</defs>
+						<rect width="10" height="100%" fill="url(#{hatch})" />
+					</svg>
 				{/if}
 			</div>
 		</div>
@@ -101,13 +123,8 @@
 		gap: var(--gap-row);
 		flex: 1 1 auto;
 	}
-	/* An equal share of the pane's height each, the fixed label line leaving the rest to the bar.
-
-	   The floor is load-bearing: `flex-basis: 0` alone has no intrinsic height, so in a container that
-	   states none — an overlay rather than a sized pane — every row collapsed onto the others. */
-	/* A basis of 0 resolves to no height at all where there is none to share out, and a folded card hugs its
-	   content — so rows claiming none measured zero and painted below the card's bottom edge. `min-content`
-	   is what makes the floor provably enough for whatever a row holds. */
+	/* Bug: a basis of 0 has no height where there is none to share, so rows collapsed in an overlay and painted
+	   past a folded card; the `min-content` floor holds whatever a row holds. */
 	.bul {
 		display: flex;
 		flex-direction: column;
@@ -138,6 +155,13 @@
 		font-size: calc(var(--text-caption) * var(--fit, 1));
 		margin-left: var(--space-3);
 	}
+	.amount {
+		margin-left: auto;
+		white-space: nowrap;
+		color: var(--ink-3);
+		font-size: calc(var(--text-caption) * var(--fit, 1));
+		font-variant-numeric: tabular-nums;
+	}
 	.figure {
 		font-size: calc(var(--text-row) * var(--fit, 1));
 		font-weight: var(--fw-semibold);
@@ -156,26 +180,15 @@
 		flex: 1 1 auto;
 		min-height: 10px;
 		max-height: 32px;
-		border-radius: var(--radius-sm);
-		background: var(--inset);
-		overflow: hidden;
 	}
-	.value {
-		position: absolute;
-		inset-block: 0;
-		left: 0;
-		border-radius: var(--radius-sm);
-		background: var(--role-balance);
-	}
-	.value.reached {
-		background: var(--role-saving);
-	}
-	/* Notched, so a full bar and an overflowing one are told apart without stretching the track. */
 	.over {
 		position: absolute;
 		inset-block: 0;
 		right: 0;
-		width: 10px;
-		background: repeating-linear-gradient(-45deg, var(--surface) 0 2px, transparent 2px 5px);
+		height: 100%;
+	}
+	.over path {
+		stroke: var(--surface);
+		stroke-width: 2;
 	}
 </style>

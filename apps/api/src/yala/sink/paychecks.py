@@ -1,8 +1,4 @@
-"""Writing a paycheck: gross in, deductions and contributions out, the rest deposited.
-
-A contribution's label is stamped as a ``label`` posting-meta rather than split into its own
-account, so the money stays in one holding while income can still break the split out.
-"""
+"""A contribution's label is a ``label`` posting-meta, so the money stays in one holding."""
 
 from __future__ import annotations
 

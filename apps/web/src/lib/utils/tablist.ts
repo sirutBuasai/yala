@@ -1,10 +1,7 @@
 // ARIA APG tablist keyboard model, shared by every roving-tabindex group. Anything the model does
 // not own is left alone, so typing still reaches the page.
 
-/**
- * Returns the newly selected index, or null when the key isn't one we own. Focus moves to the
- * matching `[role="tab"]` inside the event's current target, keeping selection and focus in step.
- */
+/** The new index, or null for a key we don't own; focus moves with selection. */
 export function tablistKeydown(
 	e: KeyboardEvent,
 	count: number,

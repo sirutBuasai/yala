@@ -1,8 +1,5 @@
-// Collision resolution: the whole geometry rule set, pure, with no DOM and no Svelte.
-//
-// Every collision resolves by pushing DOWN, never sideways: a 2D cascade has no termination guarantee. A
-// pane's top is the lowest of its authored top and the bottoms of the column-sharing panes ahead of it,
-// recomputed from scratch each render — the authored top is a floor, not a target.
+// Pure. Collisions always push down, since a 2D cascade has no termination guarantee; the authored top is a
+// floor, recomputed each render.
 
 import { COLS, MIN_H, MIN_W } from './units';
 import type { PlacedPane, Rect, SizedPane } from './types';
@@ -15,11 +12,8 @@ export function overlaps(a: Rect, b: Rect): boolean {
 	return sharesColumns(a, b) && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
-/**
- * Place every pane, pushing down out of collisions. `panes` arrives in priority order, which breaks
- * ties on authored top: stored intent rather than a transient memory of who moved last. Returned in
- * the input's order, each pane carrying the rows it was displaced by.
- */
+/** `panes` arrives in priority order, which breaks ties on authored top. Returned in input order, each with
+    its displacement. */
 export function resolve(panes: SizedPane[]): PlacedPane[] {
 	// Authored top first, so a pane authored higher can never be pushed by one authored lower.
 	const order = panes.map((p, i) => ({ p, i })).sort((a, b) => a.p.y - b.p.y || a.i - b.i);
@@ -34,9 +28,10 @@ export function resolve(panes: SizedPane[]): PlacedPane[] {
 		for (let moved = true; moved;) {
 			moved = false;
 			for (const q of settled) {
-				const bottom = q.y + q.h;
-				if (bottom > y && sharesColumns(p, q)) {
-					y = bottom;
+				// Only a pane it overlaps pushes it: one settled wholly below stranded a pane placed in the open space
+				// above.
+				if (overlaps({ ...p, y }, q)) {
+					y = q.y + q.h;
 					moved = true;
 				}
 			}

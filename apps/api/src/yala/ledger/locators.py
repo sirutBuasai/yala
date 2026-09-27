@@ -1,9 +1,5 @@
-"""Where a ledger entry is: the stable handle that names it, and the file and line it sits on.
-
-A locator is either ``id:<uuid>``, preferred because it survives line moves, or
-``line:<path>:<lineno>``, whose path is kept ledger-relative so an absolute path never leaves the
-machine.
-"""
+"""A locator is ``id:<uuid>``, which survives line moves, or ``line:<path>:<lineno>`` with a
+ledger-relative path."""
 
 from __future__ import annotations
 
@@ -34,11 +30,7 @@ def ledger_relative(filename: str) -> str:
 
 
 def scrub_paths(text: str) -> str:
-    """``text`` with the ledger's own directory stripped off any path it mentions.
-
-    Beancount stamps absolute paths into its error messages and those messages are reported to the
-    client verbatim, so a load failure would otherwise disclose where the ledger lives.
-    """
+    """Beancount's error messages carry absolute paths and reach the client verbatim."""
     base = str(config.LEDGER_DIR)
 
     for prefix in {base, os.path.realpath(base)}:
@@ -108,10 +100,7 @@ def entry_locator(entry: data.Transaction) -> str:
 
 
 def source_of(entry: data.Directive) -> tuple[Path, int]:
-    """The file a directive was parsed from and its 1-based first line.
-
-    Raises ``KeyError`` for a synthesized directive, which has no source.
-    """
+    """1-based first line. Raises ``KeyError`` for a synthesized directive."""
     meta = entry.meta or {}
     return Path(meta["filename"]), int(meta["lineno"])
 

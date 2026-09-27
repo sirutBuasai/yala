@@ -1,10 +1,5 @@
-"""Where a directive goes, and how it gets there safely.
-
-The machinery every write shares: which file a directive belongs in and which line of it
-(:mod:`yala.ledger.placement`), how a year file and its include are created, how an existing entry
-is located and replaced, and the validated commit that rolls back if the result doesn't load.
-Nothing here knows what is being written.
-"""
+"""Shared write machinery: file and line placement, year files, locating entries, and the validated
+commit. Nothing here knows what is written."""
 
 from __future__ import annotations
 
@@ -75,21 +70,13 @@ class LedgerWriter:
                 )
 
     def _entries(self) -> list[data.Directive]:
-        """Every directive currently in the ledger — the anchors a placement is measured against.
-
-        Read leniently: the include for a file about to be created is already wired, and a placement
-        is only ever a choice of line. The commit's strict reload is what judges the result.
-        """
+        """Read leniently: placement only picks a line, and the commit's strict reload judges the
+        result."""
         return Ledger(self.main_ledger, strict=False).load().entries
 
     def _account_file(self, account: str, entries: list[data.Directive]) -> Path:
-        """The ``.beancount`` file a directive for ``account`` belongs in, so it lands beside its
-        siblings however the ledger splits its account files.
-
-        An existing ``open`` for the same account wins (a close goes in the file that declared it);
-        otherwise the file most of the account's same-parent siblings live in; failing that, the
-        top-level ``accounts.beancount``.
-        """
+        """The file with the account's ``open``, else where most same-parent siblings live, else
+        ``accounts.beancount``."""
         opens = [e for e in entries if isinstance(e, data.Open)]
 
         for e in opens:
@@ -121,10 +108,8 @@ class LedgerWriter:
         spaced: bool,
         entries: list[data.Directive] | None = None,
     ) -> None:
-        """Write one dated ``block`` into ``path``, in date order among the directives ``keep``
-        accepts. With none to sit beside it goes at the end of the file, blank-line separated from
-        whatever group is above it.
-        """
+        """In date order among what ``keep`` accepts; with none, at the end, blank-line
+        separated."""
         entries = self._entries() if entries is None else entries
         lines = self._lines(path)
         anchors = placement.spans(entries, path, lines, keep)
@@ -135,10 +120,7 @@ class LedgerWriter:
     def _insert_account_directive(
         self, account: str, directive: str, date: dt.date, kind: type[data.Directive]
     ) -> None:
-        """Write an ``open`` or a ``close`` into the group that already holds the account's
-        siblings — the file's other directives of the same kind, closest first: those naming a
-        sibling under the same parent, else any of that kind.
-        """
+        """Beside the closest siblings: same parent first, else any of that kind."""
         entries = self._entries()
         path = self._account_file(account, entries)
         siblings = parent(account)
@@ -182,10 +164,8 @@ class LedgerWriter:
     def _entry_span(
         self, entry: data.Transaction, locator: str
     ) -> tuple[Path, str, list[str], int, int]:
-        """Locate an entry's source block: ``(path, original_text, lines, begin, end)``.
-
-        Raises on a stale locator: the ``begin`` line must still be the entry's ``<date> <flag>``
-        header, or the rewrite would clobber a different entry."""
+        """Returns ``(path, original_text, lines, begin, end)``. Raises on a stale locator, or the
+        rewrite would clobber another entry."""
         path, start = source_of(entry)
 
         original = path.read_text()
@@ -205,11 +185,7 @@ class LedgerWriter:
         self._insert(subdir, entry.date, printer.format_entry(entry))
 
     def append_built(self, subdir: str, build: EntryBuilder) -> str:
-        """Write a new entry into ``subdir`` and return the id it was stamped with.
-
-        ``build`` receives the id and the entry's date, so the three kinds of entry differ only in
-        the postings they assemble, never in how one is filed.
-        """
+        """``build`` gets the id and date, so entry kinds differ only in their postings."""
         entry_id = str(uuid.uuid4())
         self._insert_entry(subdir, build(entry_id, None))
 
@@ -218,11 +194,8 @@ class LedgerWriter:
     def update_built(
         self, subdir: str, locator: str, date: dt.date | None, build: EntryBuilder
     ) -> str:
-        """Replace the entry at ``locator`` with a freshly built one, re-placed if its date moved.
-
-        The located entry is handed to ``build`` so the rebuild can carry forward what the request
-        does not resend — the narration, tags, links and any metadata the app does not manage.
-        """
+        """The located entry goes to ``build`` so unmanaged narration, tags and metadata carry
+        forward."""
         entry, entry_id, carried, resolved_date = self._locate_for_update(locator, date)
         rebuilt = build(entry_id, Carried(entry, carried, resolved_date))
 
@@ -231,10 +204,8 @@ class LedgerWriter:
         return entry_id
 
     def _insert(self, subdir: str, date: dt.date, block: str, *, resync: bool = True) -> None:
-        """Write one dated block into ``<subdir>/<year>.beancount``, creating the year file and its
-        include when the year is new, and rolling every touched file back if the result won't load.
-        ``resync`` is as :func:`yala.ledger.files.load_checked` takes it.
-        """
+        """Creates the year file and its include when needed, rolling back if the result won't
+        load."""
         year_file = self.ledger_dir / subdir / f"{date.year}.beancount"
         include_line = f'include "{subdir}/{date.year}.beancount"'
         agg_file = self.ledger_dir / f"{subdir}.beancount"
@@ -295,10 +266,7 @@ class LedgerWriter:
     def _replace_located(
         self, entry: data.Transaction, resolved_date: dt.date, block: str, subdir: str, locator: str
     ) -> None:
-        """Swap ``entry``'s source block for ``block``, re-placing it when ``resolved_date`` moves
-        it: to ``<subdir>/<year>.beancount`` for another year, or to its new position in date order
-        within its own file.
-        """
+        """Re-placed when ``resolved_date`` moves it: to another year's file, or within its own."""
         path, original, lines, begin, end = self._entry_span(entry, locator)
 
         if resolved_date.year != entry.date.year:
@@ -328,9 +296,8 @@ class LedgerWriter:
         self._commit(path, placement.splice(kept, at, block, spaced=True))
 
     def _ensure_include(self, subdir: str, include_line: str) -> None:
-        """Register a new year file's include in the ``{subdir}.beancount`` aggregator, so a new
-        year joins the same load path as the existing ones rather than being scattered into main.
-        Wires the aggregator into main too, for a fresh ledger."""
+        """So a new year joins the existing load path; also wires the aggregator into main for a
+        fresh ledger."""
         self._ensure_main_include(f'include "{subdir}.beancount"')
         self._add_include(self.ledger_dir / f"{subdir}.beancount", include_line)
 

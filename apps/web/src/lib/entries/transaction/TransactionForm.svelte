@@ -175,9 +175,7 @@
 		gap: var(--gap-inline);
 		padding-bottom: var(--gap-row);
 	}
-	/* Pending is the last of its row's cells, so the last column is Pending's: the box drops under it
-	   there, or sits beside it when Pending wrapped to a row of its own. Sharing Pending's cell instead
-	   grew that bottom-aligned cell upward and pushed Pending up. */
+	/* Beside Pending, not in its cell: sharing that bottom-aligned cell grew it upward and pushed Pending up. */
 	.awaiting {
 		grid-column: -2 / -1;
 		/* Cancels the grid's row gap when it drops under Pending, so the two read as one group. Beside

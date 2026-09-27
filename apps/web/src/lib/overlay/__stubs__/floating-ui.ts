@@ -1,9 +1,5 @@
-// Stands in for `@floating-ui/dom` under vitest (aliased in vite.config.ts, test mode only). With no
-// layout every rect is zero, so the collision middleware finds nothing fits anywhere and works through
-// every fallback — seconds per call, enough to time a test out — and a coordinate derived from zero-sized
-// boxes would be meaningless anyway. Placement is asserted in `e2e/overlay.spec.ts`.
-//
-// The shape only has to satisfy `overlay/Popup`: a stub that grows features is a second implementation.
+// Replaces `@floating-ui/dom` under vitest: with no layout, collision middleware tries every fallback and
+// times tests out. Placement is asserted in `e2e/overlay.spec.ts`.
 
 interface Placed {
 	x: number;

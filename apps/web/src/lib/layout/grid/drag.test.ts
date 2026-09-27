@@ -1,14 +1,10 @@
-// The drag action. jsdom has no layout, so what is testable here is the event contract — which is
-// exactly where the bugs were: cumulative deltas, the movement threshold that lets a control share a
-// spot with a drag, and the opt-out for a control that must never start one.
+// jsdom has no layout, so this pins the event contract: cumulative deltas, the movement threshold, and the
+// opt-out.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { drag, type DragDetail } from '$lib/layout/grid/drag';
 
-/**
- * Dispatch a pointer event. Built from `MouseEvent` because jsdom does not implement `PointerEvent`;
- * `dispatchEvent` honours the type string, so the listeners see what they expect.
- */
+/** Built from `MouseEvent`, since jsdom lacks `PointerEvent`. */
 function press(target: Element, type: string, x = 0, y = 0, button = 0) {
 	const event = new MouseEvent(type, { bubbles: true, clientX: x, clientY: y, button });
 	Object.defineProperty(event, 'pointerId', { value: 1 });
@@ -126,10 +122,8 @@ describe('drag', () => {
 	});
 
 	it('does NOT start a gesture on a press inside an opted-out control', () => {
-		// The regression this exists for: Svelte delegates pointer events to the document root, so a
-		// `stopPropagation` on the control's own handler runs AFTER this action has already called
-		// preventDefault on the press — which swallows the click. Every button inside a drag surface was
-		// dead until the opt-out was checked here.
+		// Bug: Svelte delegates pointer events to the root, so the control's `stopPropagation` ran after this
+		// action's preventDefault and swallowed the click.
 		const { control, calls, moves } = surface();
 
 		press(control, 'pointerdown', 0, 0);

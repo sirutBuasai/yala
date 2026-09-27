@@ -1,7 +1,6 @@
 <script lang="ts">
-	// The app's one money input, so no field can miss the number/step/inputmode rules that make the
-	// browser accept decimals and give a phone the decimal keypad. The value is `number | null`, with
-	// null meaning "nothing typed yet" — the state the forms validate against.
+	// The one money input, so every field gets decimal acceptance and the phone's decimal keypad. Null means
+	// nothing typed yet.
 	interface Props {
 		/** Amount in currency units; null or undefined when empty (bindable). Undefined is allowed so
 		    a caller can bind a not-yet-created slot of a record. */

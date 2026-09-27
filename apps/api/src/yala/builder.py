@@ -1,9 +1,5 @@
-"""Build the versioned ``data.json`` from the ledger as a validated
-:class:`~yala.schema.DashboardData`.
-
-Run ``python -m yala.builder [OUT]`` to write the snapshot; ``$YALA_DATA_OUT`` overrides the
-default destination.
-"""
+"""Build the validated ``data.json`` snapshot: ``python -m yala.builder [OUT]``, or
+``$YALA_DATA_OUT``."""
 
 from __future__ import annotations
 
@@ -23,7 +19,6 @@ from yala.schema import (
     SCHEMA_VERSION,
     CategoryAmount,
     DashboardData,
-    DateRange,
     Domains,
     IncomeSection,
     IncomeYear,
@@ -89,17 +84,10 @@ def _transfer_out(t) -> Transfer:
 
 
 def _meta(ledger, spending, income, categories, all_years, all_months, networth_has_data) -> Meta:
-    date_range = spending.date_range()
-
     return Meta(
         years=all_years,
         month_keys=[month_key(y, m) for y, m in all_months],
         transaction_count=spending.count(),
-        date_range=(
-            DateRange(start=date_range[0].isoformat(), end=date_range[1].isoformat())
-            if date_range
-            else None
-        ),
         categories=categories,
         accounts=account_directory(ledger),
         domains=Domains(
@@ -222,6 +210,7 @@ def _networth_snapshot(p) -> NetWorthSnapshot:
         liabilities=money(p.liabilities),
         net_worth=money(p.net_worth),
         breakdown={k: money(v) for k, v in p.breakdown.items()},
+        owed={k: money(v) for k, v in p.owed.items()},
     )
 
 
@@ -277,9 +266,8 @@ def build(ledger: Ledger) -> DashboardData:
     all_transfers = transfers.transactions()
     income_months = {month_of(p.date) for p in income.paychecks()}
     transfer_months = {month_of(t.date) for t in all_transfers}
-    # A logged snapshot makes a month real on its own: a month can carry no entries at all and still
-    # be the one a balance was logged in, and leaving it out filed that balance under the month
-    # before it.
+    # A snapshot makes a month real on its own; leaving it out filed the balance under the month
+    # before.
     snapshot_dates = networth.snapshot_dates()
     snapshot_months = {month_of(d) for d in snapshot_dates}
     all_months = sorted(set(spending.months()) | income_months | transfer_months | snapshot_months)

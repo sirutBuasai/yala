@@ -1,10 +1,5 @@
-"""Net-worth domain: assets − liabilities over time, derived from ``balance`` snapshots.
-
-Net worth is never stored — it is recomputed at each logged assertion. Snapshots are written as
-``pad`` + ``balance`` pairs (see :meth:`FileLedgerSink.log_balance`), so each account's untracked
-delta lands in its own ``Equity:Adjustments:*`` plug, which this domain surfaces as a per-account
-sanity check on flows never entered as transactions.
-"""
+"""Net worth recomputed at each ``balance`` snapshot, never stored. Each account's untracked delta
+lands in its own ``Equity:Adjustments:*`` plug."""
 
 from __future__ import annotations
 
@@ -65,9 +60,8 @@ class AccountValue:
 
 @dataclass(frozen=True)
 class LoggedBalance:
-    """What a month already holds for one account, and whether it can be corrected.
-
-    ``amount`` is as stored, so a liability's is negative."""
+    """A snapshot figure and its rewrite handle. ``amount`` is as stored, so a liability's is
+    negative."""
 
     #: The snapshot the figure came from — not necessarily the month's first day.
     date: dt.date
@@ -96,6 +90,7 @@ class NetWorthSnapshot:
     liabilities: Decimal
     net_worth: Decimal
     breakdown: dict[str, Decimal]  # bucket -> asset USD (keys in BUCKETS order)
+    owed: dict[str, Decimal]  # liability label -> USD owed (a credit is negative); zero omitted
 
 
 @dataclass
@@ -121,24 +116,28 @@ class NetWorth:
             breakdown[bucket(a)] += self._led.value(a, as_of)
 
         assets = sum(breakdown.values(), Decimal(0))
-        liab_signed = sum(
-            (self._led.balance(a, as_of) for a in self._led.declared_accounts(LIABILITIES)),
-            Decimal(0),
-        )
+        meta = self._led.account_meta()
+        balances = {
+            a: self._led.balance(a, as_of) for a in self._led.declared_accounts(LIABILITIES)
+        }
+        liab_signed = sum(balances.values(), Decimal(0))
+        owed: dict[str, Decimal] = {}
+        for a, bal in balances.items():
+            if round_cents(bal):
+                label = account_name(a, meta.get(a))
+                owed[label] = owed.get(label, Decimal(0)) - bal
         return NetWorthSnapshot(
             (as_of or dt.date.today()).isoformat(),
             round_cents(assets),
             round_cents(-liab_signed),
             round_cents(assets + liab_signed),
             {b: round_cents(v) for b, v in breakdown.items()},
+            {k: round_cents(v) for k, v in owed.items()},
         )
 
     def accounts(self, as_of: dt.date | None = None) -> list[AccountValue]:
-        """Every currently-active balance-sheet account with its USD value.
-
-        Labels come from :func:`yala.ledger.naming.account_name`, the same resolver the account
-        directory uses, so a name cannot read one way here and another way elsewhere.
-        """
+        """Labelled by :func:`yala.ledger.naming.account_name`, so a name reads the same
+        everywhere."""
         meta = self._led.account_meta()
         out: list[AccountValue] = []
 
@@ -155,58 +154,66 @@ class NetWorth:
         return out
 
     def snapshot_dates(self) -> list[dt.date]:
-        """Every distinct ``balance``-assertion date — the trusted snapshot points.
-
-        One point per logged *day*, not per month: a month may carry several snapshots, and
-        collapsing them would silently drop the earlier ones."""
+        """One per logged day, since a month may carry several snapshots."""
         return sorted({e.date for e in self._led.entries if isinstance(e, data.Balance)})
 
     def series(self) -> list[NetWorthSnapshot]:
-        """Net-worth trend over every logged snapshot date, oldest first.
-
-        Each point is valued at the end of the preceding day, because beancount checks a ``balance``
-        before that day's postings; reading it at end-of-date would fold in transactions posted on
-        the snapshot day and drift the trend away from the asserted figures."""
+        """Each point is valued at the end of the preceding day, since beancount checks a
+        ``balance`` before that day's postings."""
         return [
             replace(self.totals(d - dt.timedelta(days=1)), date=d.isoformat())
             for d in self.snapshot_dates()
         ]
 
-    def logged_in_month(self, any_day: dt.date) -> dict[str, LoggedBalance]:
-        """What each account's snapshot stands at within ``any_day``'s month.
-
-        A month may carry several snapshot dates covering different accounts, so the latest date
-        carrying *that account* wins rather than the latest date in the month. Share legs are summed
-        at their own date's prices, the figure the account was snapshotted to.
-
-        Only that latest snapshot is offered for correction, and only when it is a lone USD
-        assertion: reaching back to an earlier one would rewrite a date the displayed figure did not
-        come from, silently restating it and plugging the difference, and rewriting one leg of a
-        share-based snapshot is not a balance edit."""
-        in_month: dict[str, list[data.Balance]] = {}
-        for e in self._led.entries:
-            if isinstance(e, data.Balance) and month_of(e.date) == month_of(any_day):
-                in_month.setdefault(e.account, []).append(e)
-
+    def standing_at(self, as_of: dt.date) -> dict[str, LoggedBalance]:
+        """As of a reading at the end of ``as_of``, asserted the day after. Only accounts
+        snapshotted in that month are present."""
+        asserted = as_of + dt.timedelta(days=1)
         out: dict[str, LoggedBalance] = {}
-        for account, entries in in_month.items():
-            latest = max(e.date for e in entries)
-            at_latest = [e for e in entries if e.date == latest]
-
-            held: dict[str, Decimal] = {}
-            for e in at_latest:
-                held[e.amount.currency] = held.get(e.amount.currency, Decimal(0)) + (
-                    e.amount.number or Decimal(0)
-                )
-
-            rewritable = len(at_latest) == 1 and at_latest[0].amount.currency == DEFAULT_CURRENCY
-            out[account] = LoggedBalance(
-                date=latest,
-                amount=self._led.value_of(held, latest),
-                locator=locator_of(at_latest[0].meta) if rewritable else None,
-            )
+        for account, entries in self._assertions().items():
+            upto = [e for e in entries if e.date <= asserted]
+            if upto and any(month_of(e.date) == month_of(asserted) for e in entries):
+                out[account] = self._latest_of(upto)
 
         return out
+
+    def previous_at(self, as_of: dt.date) -> dict[str, LoggedBalance]:
+        """Each account's snapshot before the one it stands at as of a reading at the end of
+        ``as_of`` (see :meth:`standing_at`), or before the reading where it stands at none."""
+        standing = self.standing_at(as_of)
+        cutoff = as_of + dt.timedelta(days=2)
+        out: dict[str, LoggedBalance] = {}
+        for account, entries in self._assertions().items():
+            before = standing[account].date if account in standing else cutoff
+            earlier = [e for e in entries if e.date < before]
+            if earlier:
+                out[account] = self._latest_of(earlier)
+
+        return out
+
+    def _assertions(self) -> dict[str, list[data.Balance]]:
+        """Every ``balance`` assertion, by account."""
+        out: dict[str, list[data.Balance]] = {}
+        for e in self._led.entries:
+            if isinstance(e, data.Balance):
+                out.setdefault(e.account, []).append(e)
+        return out
+
+    def _latest_of(self, entries: list[data.Balance]) -> LoggedBalance:
+        """Share legs summed at that date's prices. Only a lone USD assertion gets a locator."""
+        latest = max(e.date for e in entries)
+        at_latest = [e for e in entries if e.date == latest]
+        held: dict[str, Decimal] = {}
+        for e in at_latest:
+            held[e.amount.currency] = held.get(e.amount.currency, Decimal(0)) + (
+                e.amount.number or Decimal(0)
+            )
+        rewritable = len(at_latest) == 1 and at_latest[0].amount.currency == DEFAULT_CURRENCY
+        return LoggedBalance(
+            date=latest,
+            amount=self._led.value_of(held, latest),
+            locator=locator_of(at_latest[0].meta) if rewritable else None,
+        )
 
     def card_checks(self, as_of: dt.date) -> dict[str, CardCheck]:
         """Every card's :class:`CardCheck` for a reading taken at the end of ``as_of``, which is
@@ -227,12 +234,7 @@ class NetWorth:
         ]
 
     def _snapshotable(self, pick: Callable[[str], list[str]]) -> list[str]:
-        """The snapshot-able accounts ``pick`` finds under each asset subtree, passthroughs removed.
-
-        Every loggable account is opened with a plug to pad into, so the rule is stated rather than
-        inferred from a plug's presence: what is excluded is a passthrough, whose balance is swept
-        to its destination and so belongs there.
-        """
+        """Passthroughs are excluded by rule, since their balance is swept to its destination."""
         meta = self._led.account_meta()
         found = [a for prefix in SNAPSHOT_ASSETS for a in pick(prefix)]
 
@@ -243,11 +245,8 @@ class NetWorth:
         return self._snapshotable(self._led.active_accounts)
 
     def loggable_in_month(self, any_day: dt.date) -> tuple[list[str], list[str]]:
-        """``(assets, liabilities)`` snapshot-able in ``any_day``'s month.
-
-        Membership is the month's, not today's: an account opened part-way through it belongs to
-        it, one closed part-way through does not belong to the month after, and one opened later
-        does not appear at all."""
+        """Membership is the month's, not today's: accounts opened or closed part-way count for
+        it."""
         start, end = month_bounds(any_day)
 
         def during(prefix: str) -> list[str]:

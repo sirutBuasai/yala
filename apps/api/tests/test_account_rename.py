@@ -1,9 +1,5 @@
-"""Renaming and moving accounts: one operation that rewrites every reference across every file.
-
-It serves four user-facing actions — fix a mistyped category, rename an account, move an investment
-between tax tiers, rename an employer — plus renaming a contribution label, which rewrites the
-label's own history for the same reason.
-"""
+"""One rewrite behind every rename: categories, accounts, tax tiers, employers and contribution
+labels."""
 
 from __future__ import annotations
 
@@ -483,9 +479,8 @@ def test_the_four_parts_are_stored_and_shown_back_as_typed(client: TestClient):
 
 
 def test_both_rename_paths_agree_on_the_segment_a_name_owns(client: TestClient):
-    """Renaming the institution and renaming the product half used to disagree: one replaced the
-    last segment, the other everything below the tax tier. Round-tripping an account through both is
-    what catches them drifting apart again."""
+    """Bug: institution and product renames disagreed on which segment a name owns; round-tripping
+    through both catches drift."""
     opened = client.post(
         "/api/account",
         json={

@@ -34,9 +34,7 @@
 		firstValue = ''
 	}: Props = $props();
 
-	/** A row follows the one above it, so filling a column of related lines is one pick, not one per
-	    row. Read at click time so it tracks whatever the last row was changed to, and seeded so a
-	    value the options no longer carry falls back to one they do. */
+	/** Read at click time so it follows the last row's current value, falling back to one the options carry. */
 	const nextValue = () => seed(rows.at(-1)?.value || firstValue, options);
 </script>
 

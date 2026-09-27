@@ -1,10 +1,5 @@
-"""Per-institution presentation, declared in the ledger as ``custom`` directives.
-
-Colour belongs to the institution holding an account rather than to the account itself, so it is
-keyed by the ``institution_name`` each ``open`` declares and stated once per institution. Dated and
-superseding, so a recolour leaves the old choice behind as history; an institution with no directive
-gets no colour.
-"""
+"""Institution colour, as dated ``custom`` directives keyed by ``institution_name``. With none, no
+colour."""
 
 from __future__ import annotations
 
@@ -33,11 +28,8 @@ def parse_color(value: object) -> str | None:
 
 
 def colors(entries: list[data.Directive]) -> dict[str, str]:
-    """Colour per institution, the latest directive winning (``entries`` arrive date-sorted).
-
-    A malformed directive is skipped rather than raising: the ledger is hand-editable, and one bad
-    line should not blank every colour in the app.
-    """
+    """The latest directive wins. A malformed one is skipped, so one bad line can't blank every
+    colour."""
     out: dict[str, str] = {}
 
     for entry in entries:
@@ -62,11 +54,8 @@ def colors(entries: list[data.Directive]) -> dict[str, str]:
 
 
 def named(entries: list[data.Directive]) -> set[str]:
-    """Every institution the ledger names — on an account's ``open`` or as a colour swatch.
-
-    A swatch counts even with no account behind it: renaming another institution onto that name
-    would leave two directives claiming one colour, and the later one would silently win.
-    """
+    """A swatch counts with no account behind it, or a rename onto that name leaves two colours
+    claiming it."""
     out = {
         institution
         for entry in entries

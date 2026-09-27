@@ -1,6 +1,4 @@
-// The form choices that carry over to the next add; everything else on a form resets when it reopens.
-// Storage is not trusted: every consumer resolves a remembered value against the live option list
-// via `seed`, so an account that has since been closed falls back to the first available one.
+// Choices carried to the next add. Storage isn't trusted: `seed` resolves each against the live options.
 
 import { listOf, matching, oneOf, persisted, type Revive } from '$lib/utils/persist.svelte';
 
@@ -34,7 +32,7 @@ export const lastTransferTo = persisted('last-transfer-to', '', anyString);
 /** ISO "YYYY-MM-DD". Logging is a batch job, so the date just used beats today as the next default. */
 export const lastEntryDate = persisted('last-entry-date', '', matching(/^\d{4}-\d{2}-\d{2}$/));
 
-export const ENTRY_KINDS = ['transaction', 'paycheck', 'transfer', 'balance'] as const;
+export const ENTRY_KINDS = ['transaction', 'paycheck', 'transfer'] as const;
 export type EntryKind = (typeof ENTRY_KINDS)[number];
 
 /** Only honoured when the invocation actually offers that kind. */

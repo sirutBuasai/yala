@@ -1,6 +1,4 @@
-// What the app calls each kind of account, and what it says about one. Capabilities — which fields a
-// kind carries — come from the API's kind table; only wording lives here, so a kind gains a control
-// server-side and gains a heading here.
+// Wording only; capabilities come from the API's kind table.
 
 /** The order kinds read in, broadest first, payroll last. */
 export const KIND_ORDER = ['bank', 'card', 'investment', 'category', 'employer', 'deduction'];

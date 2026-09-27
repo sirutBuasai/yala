@@ -9,11 +9,7 @@ export function isTypeKey(e: KeyboardEvent): boolean {
 	return e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
 }
 
-/**
- * Index of the option matching `query`, searched from `active` and wrapping, or -1 for none. A query
- * of one repeated character cycles through the options starting with it, so typing a letter again
- * moves on from the current match instead of staying on it.
- */
+/** -1 for none. Searched from `active` and wrapping, so repeating a letter cycles its matches. */
 export function matchIndex(labels: string[], query: string, active: number): number {
 	const q = query.toLowerCase();
 	const cycling = [...q].every((c) => c === q[0]);

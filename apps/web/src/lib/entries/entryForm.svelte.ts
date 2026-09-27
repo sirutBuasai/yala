@@ -1,7 +1,5 @@
-// The write half the entry forms share: the footer's message strip, and the round trips that all report
-// failure through it.
-//
-// `.svelte.ts` because the strip is `$state` the footer reads.
+// The footer's message strip and the round trips that report failure through it; `.svelte.ts` because the
+// strip is `$state`.
 
 import { deleteTransaction, fetchEntry, postJson, type AccountsInfo } from '$lib/data/load';
 
@@ -57,11 +55,7 @@ export class EntryForm extends EntryMessage {
 		apply(entry);
 	}
 
-	/**
-	 * Save `body`, adding or updating by whether it carries a locator. `problem` is what validation
-	 * refused, or null. `remember` runs only on a successful add, where this entry's picks become the
-	 * next one's defaults.
-	 */
+	/** Adds or updates by whether `body` carries a locator. `remember` runs only after a successful add. */
 	async save(problem: string | null, body: object, remember?: () => void): Promise<void> {
 		if (problem) {
 			this.fail(problem);

@@ -2,6 +2,7 @@
 // shape, so declaring it there would be a cycle.
 
 import type { ColorBy } from '$lib/charts/registry';
+import type { PickGrain } from '$lib/charts/axis';
 import type { Scope } from '$lib/data/scope';
 import type { Label } from '$lib/ui/label';
 
@@ -28,15 +29,17 @@ export interface FigureSpec {
 	dashed?: string[];
 	/** Print each bar's own figure above it (a lone series only). */
 	valueLabels?: boolean;
+	/** The period in focus: its period key where the axis carries them (`YYYY-MM` names a month's
+	    snapshots), else its label. */
+	mark?: string;
+	/** The grain a line or area chart's click picks at, for an axis whose points are finer than it. */
+	pickBy?: PickGrain;
 	/** Heatmap scaling: per row (default) or one scale for the whole grid. */
 	normalize?: 'row' | 'col' | 'global';
 }
 
-/**
- * The figure-bearing entries of a view's pane table, in declaration order, with the figure
- * non-optional so the call site needs no assertion. `content` is in the constraint only to keep it
- * from being all-optional, which TypeScript would match against every pane.
- */
+/** Figure non-optional, so the call site needs no assertion. `content` keeps the constraint from being
+    all-optional, which TypeScript would match against every pane. */
 export function figurePanes<K extends string, P extends { content: unknown; figure?: FigureSpec }>(
 	panes: Record<K, P>
 ): [K, FigureSpec][] {

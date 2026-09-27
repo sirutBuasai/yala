@@ -1,8 +1,6 @@
 <script lang="ts">
-	// One managed account: what it is named, what it is linked to, and the end of its life. Which controls
-	// appear comes from the kind capabilities the API sends. Renaming is not a mode — one Save covers the lot —
-	// but a rename rewrites the account's path in every entry that mentions it while an alias only changes what
-	// the name renders as, so the two go to different endpoints in a fixed order (see `submit`).
+	// Controls come from the kind capabilities the API sends. A rename rewrites every entry while an alias only
+	// changes rendering, so one Save hits separate endpoints in order (see `submit`).
 	import {
 		relabelAccount,
 		renameAccount,
@@ -207,10 +205,8 @@
 		return checks.message() || null;
 	}
 
-	/**
-	 * One Save for everything on this panel, in the only order that works: a relabel and a meta edit both
-	 * address the account by its current path, so the rename goes last. The first failure stops there.
-	 */
+	/** The rename goes last, since the relabel and meta edits address the current path. Stops at the first
+	    failure. */
 	async function submit() {
 		const invalid = problem();
 		if (invalid) return save.fail(invalid);

@@ -1,10 +1,5 @@
-"""What the user has, and what they can pick from it: the reference data every form needs.
-
-Served live from ``/api/accounts`` and ``/api/settings`` *and* snapshotted into ``data.json``, so it
-sits above both: a route asking the builder for the account lists would make the live path depend
-on the file-writing one. The ledger package knows nothing about the wire contract; this is where the
-two meet.
-"""
+"""The reference data every form needs, served live and snapshotted. Sits above both, so the live
+path never depends on the file-writing one."""
 
 from __future__ import annotations
 
@@ -20,11 +15,7 @@ from yala.schema import AccountInfo, AccountKind, AccountLists, PayrollOption, S
 
 
 def account_directory(ledger: Ledger) -> dict[str, AccountInfo]:
-    """Every declared account's record: what it is called, what kind it is, and what it carries.
-
-    Closed accounts included: they still appear in historical rows and are what a reopen offers, so
-    a caller never needs a naming rule of its own for an account it can see.
-    """
+    """Closed accounts included: they appear in historical rows and are what a reopen offers."""
     account_meta = ledger.account_meta()
     palette = institution_colors(ledger.entries)
     active = set(ledger.active_accounts())
@@ -52,12 +43,8 @@ def account_directory(ledger: Ledger) -> dict[str, AccountInfo]:
 
 
 def account_lists(ledger: Ledger) -> AccountLists:
-    """The pickable account sets, for the forms and the Manage panels.
-
-    Each list is a *pickability* rule the backend owns rather than a restatement of the directory:
-    what a payment may come from, what may be snapshotted, what a paycheck may name. Shared by the
-    snapshot and the accounts endpoint, which the frontend treats as interchangeable.
-    """
+    """Each list is a pickability rule the backend owns. Shared by the snapshot and the accounts
+    endpoint, which the frontend treats as interchangeable."""
     cash = ledger.active_accounts(CASH)
     cards = ledger.active_accounts(CREDIT_CARDS)
 

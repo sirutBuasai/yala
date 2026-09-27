@@ -1,9 +1,6 @@
 <script lang="ts">
-	// Closing an account, asked as questions. What it asks comes from the kind, so an account with
-	// nothing to place asks nothing at all and opens straight on the review.
-	//
-	// The review is the confirmation: a close moves a whole balance and only a reopen undoes it, so it is
-	// stated in full before the button that does it, and there is no second prompt.
+	// Questions come from the kind, so an account with nothing to place opens on the review. The review is the
+	// confirmation, since only a reopen undoes a close.
 	import { SvelteSet } from 'svelte/reactivity';
 	import { closeAccount, investmentValue, type CloseOptions, type DrainLeg } from '$lib/data/load';
 	import { accountDirectory, accountInfo } from '$lib/data/directory.svelte';
@@ -57,9 +54,7 @@
 	    so rather than walking to a button that will fail. */
 	const owing = $derived(!moves && balance != null && Math.abs(balance) > 0.005);
 
-	/** Whether there is anything to move. An empty account is closed with nothing sent, so it is never
-	    asked where its nothing should go — but the question stays up while the figure is still coming,
-	    rather than appearing a moment later. */
+	/** An empty account isn't asked where its nothing goes, but the question stays up while the figure loads. */
 	const holds = $derived(value != null && Math.abs(value) > 0.005);
 	const asks = $derived(moves && (valuing || holds));
 
@@ -70,9 +65,7 @@
 	// no legs at all.
 	const moving = $derived(legs.filter((leg) => (leg.amount ?? 0) !== 0));
 
-	/** The accounts scoped to this employer, open ones only. Matched on the account's leaf, which is
-	    what the `employer` meta stores — the display name has been through the renderer and reads
-	    differently as soon as it splits into words. */
+	/** Matched on the leaf, which the `employer` meta stores; the display name reads differently. */
 	const linked = $derived(
 		kind.name === 'employer'
 			? accountDirectory()
@@ -195,11 +188,8 @@
 		return list;
 	});
 
-	/**
-	 * The close, in the shape this kind's route accepts. "All to one account" is a `destination` where
-	 * the kind drains and a single leg carrying the whole value where it only splits — the same act,
-	 * and the API refuses a `destination` it has no way to apply.
-	 */
+	/** "All to one account" is a `destination` where the kind drains, else one leg with the whole value, since
+	    the API refuses a `destination` it can't apply. */
 	function options(): CloseOptions {
 		const opts: CloseOptions = { date: date || undefined };
 		if (holds) {

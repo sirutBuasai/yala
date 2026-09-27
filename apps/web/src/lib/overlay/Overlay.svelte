@@ -1,8 +1,6 @@
 <script lang="ts">
-	// A dismissible panel floating near the top of the page over a scrim; the header stays fixed and the body
-	// scrolls. A native `<dialog>` opened with `showModal()`, so the top layer, the scrim, Esc and focus
-	// restoration are the platform's (see overlay/modal). Transitions are CSS, because a `::backdrop` is not an
-	// element a Svelte transition can reach.
+	// A native `<dialog>` via `showModal()`, so the top layer, scrim, Esc and focus restoration are the
+	// platform's. Transitions are CSS, since Svelte can't reach a `::backdrop`.
 	import type { Snippet } from 'svelte';
 	import { modal } from './modal';
 	import { dur } from '$lib/utils/motion';
@@ -20,10 +18,7 @@
 		caption?: string;
 		/** Room for two columns of content side by side — controls beside what they drive. */
 		wide?: boolean;
-		/**
-		 * The children scroll their own regions rather than the body scrolling as one. For a panel split
-		 * into panes that must move independently; the body then fills the panel and clips.
-		 */
+		/** The children scroll their own regions, and the body fills the panel and clips. */
 		paned?: boolean;
 		/** Extra header content below the title row, inside the band. */
 		controls?: Snippet;
@@ -131,7 +126,11 @@
 		padding: var(--space-8) var(--space-11);
 	}
 	.head.tinted {
-		background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+		background: color-mix(
+			in srgb,
+			oklch(from var(--accent) var(--wash-lightness) c h) calc(14% * var(--wash-scale)),
+			var(--surface)
+		);
 		border-bottom: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
 	}
 	.titlerow {
@@ -181,16 +180,13 @@
 	.body {
 		padding: var(--space-10) var(--space-11);
 	}
-	/* Handed to the content instead: the body takes the leftover height and clips, so a pane inside it has
-	   a bounded box to scroll within. `min-height: 0` is load-bearing — without it a flex child refuses to
-	   shrink below its content and the panel grows past `max-height` instead of the pane scrolling. */
+	/* `min-height: 0` is load-bearing: without it the flex child won't shrink, and the panel grows past
+	   `max-height` instead of the pane scrolling. */
 	.body.paned {
 		flex: 1 1 auto;
 		min-height: 0;
 		overflow: hidden;
-		/* A single grid row rather than a block: the body's height here is FLEX-RESOLVED, not specified, so a
-		   `height: 100%` child fell back to auto and grew past it. `minmax(0, 1fr)` hands the child a
-		   definite height and still lets it shrink. */
+		/* A grid row: the body's height is flex-resolved, so a `height: 100%` child fell back to auto and grew. */
 		display: grid;
 		grid-template-rows: minmax(0, 1fr);
 	}

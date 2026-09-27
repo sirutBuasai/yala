@@ -1,7 +1,4 @@
-/**
- * The busy / error / confirmation state around one async write. Callers supply only the call and
- * its messages; the sequence lives here so no two controls can drift.
- */
+/** The busy, error and confirmation sequence around one async write, kept here so no two controls drift. */
 export class SaveState {
 	busy = $state(false);
 	/** Message from the last failed attempt ('' when the last attempt succeeded or none was made). */

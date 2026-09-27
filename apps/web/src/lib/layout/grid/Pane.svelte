@@ -11,12 +11,11 @@
 </script>
 
 <script lang="ts">
-	// One pane on the board: the grid item, the arrange affordances, and the two measurements the pure
-	// layer cannot make for itself. It COMPOSES `Card` rather than being one, so the card stays
-	// grid-agnostic and the folded layout reuses it untouched.
+	// Composes `Card` rather than being one, so the card stays grid-agnostic and the folded layout reuses it.
 	import { tick, type Snippet } from 'svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import { labelText, type Label } from '$lib/ui/label';
+	import { DEV_TOOLS } from '$lib/nav/devtools';
 	import SizeMode from '$lib/icons/SizeMode.svelte';
 	import { getArrangement, getGridEnv, getLabels } from './context';
 	import { drag, type DragParams } from './drag';
@@ -24,7 +23,7 @@
 	import { foldSpan } from './fold';
 	import { EDGES, type Edge } from './resize';
 	import { PaneGesture } from './gesture.svelte';
-	import { COLS, UNIT } from './units';
+	import { COLS, pxForRows, UNIT } from './units';
 
 	interface Props {
 		/** Pane id — a key of the board's layout. */
@@ -36,10 +35,11 @@
 		actions?: Snippet;
 		tone?: 'default' | 'attention';
 		density?: 'figure' | 'panel';
-		/** Extra arrange-mode controls, drawn over the card alongside the height modes and resize strips.
-		    Outside the card because the card is `inert` while arranging. Anything laid over an edge must
-		    carry `data-no-drag`, or the strip beneath reads a press on it as the start of a resize. */
+		/** Drawn over the card, which is `inert` while arranging. Anything over an edge must carry `data-no-drag`,
+		    or the strip beneath reads a press as a resize. */
 		affordances?: Snippet;
+		/** Where the title opens; see `Card`. */
+		open?: string;
 		children: Snippet;
 	}
 	let {
@@ -52,6 +52,7 @@
 		tone,
 		density,
 		affordances,
+		open,
 		children
 	}: Props = $props();
 
@@ -64,10 +65,14 @@
 	const hug = $derived(arrangement.hugs(id));
 	const arranging = $derived(env.arranging);
 	const capped = $derived(mode === 'cap');
+	/** How far a capped pane's ceiling reaches below the room it takes, in px: drawn while arranging, where
+	    its bottom edge is dragged, but never reserved (see `reservedRows`). */
+	const ceilingBelow = $derived(
+		capped ? Math.max(0, arrangement.capPx(id) - pxForRows(placed.h)) : 0
+	);
 	const span = $derived(foldSpan(placed.w, env.columns));
-	// A declared title is what makes a card one we name; its caption may then be added where the view wrote
-	// none. A KPI card declares neither, and its pane id is also its leader section's id — look the store
-	// up regardless and a renamed section came back as a heading on the card around it, one it never had.
+	// Only a declared title gets a stored rename. A KPI pane id is also its leader section's id, so looking it
+	// up regardless put a section's rename on the card around it.
 	const shownTitle = $derived(title && labels.label(id, 'title', title));
 	const shownCaption = $derived(title ? labels.label(id, 'caption', caption) : caption);
 	// What the arrange controls announce: the card's rendered heading, so a pane the user renamed is
@@ -89,14 +94,13 @@
 		return () => observer.disconnect();
 	});
 
-	// One rule for both gestures and the label editor (`everythingFits`), labels included: a resize that
-	// clipped a card's own caption left it in a state no rename could recover from. `tick` is what makes a
-	// candidate size real before it is measured.
+	// One rule for gestures and the label editor, labels included: a resize that clipped a caption left it
+	// unrecoverable by rename.
 	const gesture = new PaneGesture(() => id, arrangement, {
 		spills: () => {
 			if (!cardEl) return false;
 			const fits = everythingFits(cardEl);
-			if (!fits && import.meta.env.DEV) {
+			if (!fits && DEV_TOOLS) {
 				console.debug(`[grid] ${id} refused:`, [
 					...spillReport(cardEl, bodyEl),
 					...clippedLabels(cardEl)
@@ -107,14 +111,8 @@
 		settle: tick
 	});
 
-	/**
-	 * Measure, apply, and measure again until the content fits or the pane can grow no further. One pass is
-	 * never enough: the room a card is given changes how its own text wraps, and a section of a merged card
-	 * receives only its weighted share of what the card gains, so it understates the growth needed.
-	 *
-	 * Bounded by the grid rather than by a pass count — a pass that fails to change the placed size is against
-	 * a limit, and a fixed budget left some sections short of the edge while others reached it.
-	 */
+	/** Repeats until the content fits or the pane can't grow: room changes wrapping, and a merged section gets
+	    only its weighted share. Bounded by the grid, since a pass budget left some sections short. */
 	async function growUntilItFits(apply: (w: number, h: number) => void): Promise<void> {
 		for (let pass = 0; pass < COLS; pass++) {
 			if (!cardEl) return;
@@ -127,24 +125,17 @@
 		}
 	}
 
-	// NOTHING here observes the content and resizes the pane around it: an observer that grew a pane to fit
-	// its content also grew it for whichever period's figures ran longest, wrote that to storage, and every
-	// other period inherited the deviation. Content adapts to the pane instead — a chart scales, a KPI figure
-	// clamps, a list scrolls — and only an arrange gesture or a rename may change the rectangle.
+	// Nothing here grows a pane to fit its content: that stored whichever period's figures ran longest for
+	// every period. Only an arrange gesture or a rename changes the rectangle.
 
 	/** The field a label edit opens (see `ui/LabelLine`), whose own events say when one is in progress. */
 	const isLabelField = (t: EventTarget | null) =>
 		t instanceof HTMLElement && t.isContentEditable && t.classList.contains('name');
 
-	/**
-	 * A label with more words than its line budget allows. Its own `overflow: hidden` is what bounds the
-	 * card (see `--label-lines` in app.css), and that same hidden overflow is why the card's spill probe
-	 * cannot see it — so it is asked for separately.
-	 *
-	 * Both axes: a wrapping label runs out of LINES, one that cannot wrap runs out of WIDTH.
-	 */
+	/** A label past its line budget, or a figure (`data-clip`) its box cuts off. Asked separately because their
+	    own `overflow: hidden` hides them from the spill probe. */
 	const clippedLabels = (el: HTMLElement) =>
-		[...el.querySelectorAll('[data-label-line]')]
+		[...el.querySelectorAll('[data-label-line], [data-clip]')]
 			.filter((l) => l.scrollHeight > l.clientHeight + 1 || l.scrollWidth > l.clientWidth + 1)
 			.map((l) => `label "${l.textContent?.trim().slice(0, 20)}"`);
 
@@ -173,14 +164,8 @@
 		selection?.addRange(range);
 	}
 
-	/**
-	 * Follow a label as it is typed: the pane grows when the words stop fitting and gives the room back as they
-	 * are deleted, down to the size the edit opened at. Dropping to that size first is what makes shrinking
-	 * possible — measured at its grown size a pane reports no overflow and never learns it could be smaller.
-	 *
-	 * Words that still do not fit once the pane has all the room it may take are put back. The limit is the
-	 * card's, never a character count, since it depends on the card's width and on whether the label wraps.
-	 */
+	/** Grows as a label is typed and gives room back down to the size the edit opened at, which it drops to
+	    first, or it never learns it could shrink. Words that can't fit are put back. */
 	async function trackLabel(field: HTMLElement): Promise<void> {
 		if (!cardEl || reverting) return;
 		const run = ++tracking;
@@ -193,9 +178,7 @@
 			fitting = field.textContent ?? '';
 			return;
 		}
-		// Put the words back and re-fit once. Deliberately not a loop: if the restored words do not fit
-		// either, the pane is already as large as it may get and there is nothing further to try — and a
-		// loop here spun for ever the first time that happened.
+		// Not a loop: a loop here spun forever when the restored words didn't fit either.
 		reverting = true;
 		field.textContent = fitting;
 		field.dispatchEvent(new Event('input', { bubbles: true }));
@@ -234,6 +217,7 @@
 
 <div
 	class="cell"
+	data-pane={id}
 	class:folded={env.folded}
 	class:arranging
 	class:hug
@@ -243,6 +227,7 @@
 	style:grid-row={env.folded ? null : `${placed.y + 1} / span ${placed.h}`}
 	style:order={env.folded ? arrangement.order[id] : null}
 	style:--cap-h={capped ? `${arrangement.capPx(id)}px` : null}
+	style:--ceiling-below={`${ceilingBelow}px`}
 	onfocusin={(e) => {
 		if (!isLabelField(e.target)) return;
 		fitting = (e.target as HTMLElement).textContent ?? '';
@@ -268,6 +253,7 @@
 		{tone}
 		{density}
 		scroll={arrangement.scrolls(id)}
+		{open}
 		{children}
 	/>
 
@@ -279,6 +265,7 @@
 			aria-label={`Move ${name}. Arrows move it; shift and arrows resize it.`}
 			onkeydown={onArrangeKey}
 			use:drag={{
+				autoscroll: true,
 				onstart: () => gesture.beginMove(),
 				onmove: ({ dx, dy }) => gesture.moveTo(dx, dy),
 				onend: ({ dx, dy }) => gesture.endMove(dx, dy),
@@ -286,12 +273,8 @@
 			}}
 		></div>
 
-		<!-- A SIBLING of the drag surface, not a child: `.grab` is itself a `role="button"`, and buttons
-		     inside it made every pane a nested interactive control. Being no longer a descendant is also what
-		     lets `data-no-drag` go — a press here can no longer reach the drag listener at all.
-
-		     Rendered only where there is something to choose: with the grip gone, a chart pane has no height
-		     mode and the bar would be an empty pill sitting on the card. -->
+		<!-- A sibling of the drag surface: inside `.grab`, itself a button, these were nested interactive controls.
+		     Rendered only where there is a height mode to choose. -->
 		{#if arrangement.canSetHeight(id)}
 			<div class="tools modes" role="group" aria-label={`Height of ${name}`}>
 				{#each MODE_ORDER as m (m)}
@@ -307,6 +290,11 @@
 					</button>
 				{/each}
 			</div>
+		{/if}
+
+		{#if capped}
+			<!-- The ceiling the list may grow to, drawn over whatever sits below rather than reserved. -->
+			<div class="ceiling" aria-hidden="true"></div>
 		{/if}
 
 		<!-- Resize strips straddling the card's edges. Not focusable and not announced: the card itself is the
@@ -345,10 +333,8 @@
 		flex: 1 1 auto;
 		min-height: 0;
 	}
-	/* A fitted card owns its height, and `flex: 0 0 auto` is the load-bearing half: with `1 1 auto` the
-	   flex algorithm stretches it to the cell, so the next measurement reads back the height the cell
-	   imposed rather than the height the content needs, and the pane ratchets one way and never comes
-	   back. */
+	/* `flex: 0 0 auto`: with `1 1 auto` the cell stretches the card, the next measurement reads that height
+	   back, and the pane ratchets. */
 	.cell.hug > :global(.card) {
 		flex: 0 0 auto;
 	}
@@ -361,14 +347,10 @@
 		max-height: none;
 	}
 
-	/* The figure box's own min/max height stop one tall figure dragging its neighbours out of alignment
-	   on a flow layout; on the grid the pane's height already answers that, so both are lifted — except
-	   `--figure-h-floor` (see app.css). Without that floor a figure with a DETACHED legend has no
-	   data-dependent minimum at all: the plot shrinks to nothing and the legend always fits. With it,
-	   the pane's minimum is the floor plus however many rows the legend wraps onto. */
+	/* On the grid the pane's height aligns neighbours, so the figure box's own clamps are lifted. */
 	.cell:not(.folded) :global(.figurebox),
 	.cell:not(.folded) :global(.sizebox) {
-		min-height: var(--figure-h-floor);
+		min-height: 0;
 		max-height: none;
 	}
 	/* The width content that scales or clamps has stated it cannot go under (see `ui/fit`). Grid only: a folded
@@ -376,15 +358,11 @@
 	.cell:not(.folded) :global([data-floor]) {
 		min-width: var(--content-floor, 0);
 	}
-	/* Let out of its box only while arranging, where the overrun is what makes a resize REFUSE (see
-	   charts/StatMatrix). Elsewhere it scrolls, or a new column would bleed out of the card. */
-	.cell.arranging:not(.folded) :global(.matrixbox) {
+	/* Let out while arranging, where the overrun makes a resize refuse; elsewhere it scrolls. */
+	.cell.arranging:not(.folded) :global(.scroller-x) {
 		overflow-x: visible;
 	}
-	/* Folded, the card hugs its content, so a size container inside it has no height to take and would
-	   collapse to zero, spilling the figure. The figure sizes itself here instead, and the ceiling goes
-	   with the containment: a figure whose contents REFLOW can need more height than `--figure-h-max`,
-	   and nothing here is aligned against a neighbour for that ceiling to protect. */
+	/* Folded, the card hugs its content, so a size container would collapse to zero; the figure sizes itself. */
 	.cell.folded :global(.sizebox) {
 		container-type: normal;
 		max-height: none;
@@ -416,14 +394,22 @@
 	.grab:active {
 		cursor: grabbing;
 	}
-	/* The ceiling a capped pane holds open, so nothing gets placed in the room the list will grow into. */
-	.cell.capped .grab {
-		outline-style: dashed;
-		outline-width: 1.5px;
+	/* The ceiling a capped pane may grow to: the card's footprint carried down to it, dashed. */
+	.ceiling {
+		position: absolute;
+		z-index: 2;
+		top: var(--pane-inset);
+		left: var(--pane-inset);
+		right: var(--pane-inset);
+		height: var(--cap-h);
+		border-radius: var(--radius-xl);
+		outline: 1.5px dashed var(--arrange-line);
+		outline-offset: -1px;
+		pointer-events: none;
 	}
 	.cell.invalid .grab {
 		outline: 2px solid var(--crit);
-		background: color-mix(in srgb, var(--crit) 10%, transparent);
+		background: color-mix(in srgb, var(--crit-wash) calc(10% * var(--wash-scale)), transparent);
 	}
 	/* The pointer's target. Inset and rounded like a card so it reads as the pane's own footprint, and
 	   above the panes it crosses, since where it is going is what the user is looking at. */
@@ -477,9 +463,7 @@
 		gap: 1px;
 	}
 
-	/* Each strip is centred on the card's boundary, so the grab zone reaches either side of the visible
-	   edge. Corners are placed at the ends of the edges, so the edges inset by a whole reach to clear
-	   them. */
+	/* Centred on the edge so the grab zone reaches both sides; edges inset by a reach to clear the corners. */
 	.handle {
 		--reach: 12px;
 		--edge: calc(var(--pane-inset) - var(--reach) / 2);
@@ -508,8 +492,9 @@
 	.handle.n {
 		top: var(--edge);
 	}
+	/* A capped pane's bottom edge is its ceiling, wherever that is drawn. */
 	.handle.s {
-		bottom: var(--edge);
+		bottom: calc(var(--edge) - var(--ceiling-below));
 	}
 	.handle.e {
 		right: var(--edge);
@@ -535,12 +520,12 @@
 		cursor: nwse-resize;
 	}
 	.handle.se {
-		bottom: var(--edge);
+		bottom: calc(var(--edge) - var(--ceiling-below));
 		right: var(--edge);
 		cursor: nwse-resize;
 	}
 	.handle.sw {
-		bottom: var(--edge);
+		bottom: calc(var(--edge) - var(--ceiling-below));
 		left: var(--edge);
 		cursor: nesw-resize;
 	}

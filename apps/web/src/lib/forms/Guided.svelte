@@ -10,25 +10,16 @@
 		/** What refuses Next, as a full sentence — checked on the way out of the step, so a problem is
 		    reported while its own fields are still on screen. */
 		problem?: () => string | null;
-		/**
-		 * Outside the numbering. For a question that decides the SHAPE of the flow — how many questions
-		 * there are and which — since before it is answered there is no total to count towards. The
-		 * numbering starts at the step after it.
-		 */
+		/** Outside the numbering: it decides which questions follow, so before it there is no total. */
 		uncounted?: boolean;
-		/**
-		 * As far as the flow goes: there is nothing to answer and no way forward, only out. Its footer
-		 * is a single dismissal rather than Back and Next.
-		 */
+		/** Nothing to answer and no way forward; its footer is a single dismissal. */
 		terminal?: boolean;
 		body: Snippet;
 	}
 </script>
 
 <script lang="ts">
-	// A form asked as questions: one on screen at a time, and a review at the end that can jump back to
-	// any of them. Which questions there are is the caller's business, so two flows sharing no field can
-	// still be the same shape.
+	// One question on screen at a time, then a review that can jump back to any of them.
 	import Overlay from '$lib/overlay/Overlay.svelte';
 	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
 	import type { SaveState } from '$lib/forms/saveState.svelte';

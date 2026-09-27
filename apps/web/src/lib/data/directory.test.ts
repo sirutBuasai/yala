@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { get } from 'svelte/store';
 import { accountInfo, setAccountDirectory } from '$lib/data/directory.svelte';
 import { data } from '$lib/data/load';
 import type { DashboardData } from '$lib/data/types';

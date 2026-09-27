@@ -1,9 +1,6 @@
 <script lang="ts">
-	// A help mark beside a control that reveals how its figure is worked out. Hovering previews it; clicking
-	// PINS it open so the text can be read and selected without keeping the pointer still.
-	//
-	// The text is real DOM content the button points at with `aria-describedby`: a pointer-only tooltip puts the
-	// arithmetic out of reach of a keyboard or a screen reader.
+	// Hover previews, click pins. The text is real DOM behind `aria-describedby`, so keyboards and screen
+	// readers reach the arithmetic.
 	import type { Snippet } from 'svelte';
 	import Help from '$lib/icons/Help.svelte';
 
@@ -24,11 +21,8 @@
 	/** Viewport coordinates, because the bubble is positioned `fixed`. Null until measured. */
 	let at = $state<{ left: number; top: number } | null>(null);
 
-	/**
-	 * Placed against the viewport rather than the mark it belongs to: an absolutely-positioned bubble is clipped
-	 * by any scrolling ancestor, and these sit inside a pane that scrolls. Alignment is measured rather than
-	 * decided by column, since the column count moves with the panel's width.
-	 */
+	/** Placed against the viewport, since a scrolling pane clips an absolute bubble. Alignment is measured,
+	    since the column count moves with width. */
 	function place() {
 		if (!root || !bubble) return;
 
@@ -90,7 +84,7 @@
 >
 	<button
 		type="button"
-		class="dot"
+		class="hint-button"
 		class:pinned
 		aria-label={`How ${label} is calculated`}
 		aria-describedby={id}
@@ -123,7 +117,7 @@
 		display: inline-flex;
 		vertical-align: text-bottom;
 	}
-	.dot {
+	.hint-button {
 		display: grid;
 		place-items: center;
 		padding: 0;
@@ -132,9 +126,9 @@
 		color: var(--ink-3);
 		cursor: help;
 	}
-	.dot:hover,
-	.dot:focus-visible,
-	.dot.pinned {
+	.hint-button:hover,
+	.hint-button:focus-visible,
+	.hint-button.pinned {
 		color: var(--control-line);
 	}
 	/* `fixed`, so no scrolling ancestor can clip it; `place()` supplies the coordinates. */

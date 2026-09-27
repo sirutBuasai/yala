@@ -1,10 +1,11 @@
-// Matrix primitive: spending per category per month, oriented months (rows) × categories (cols).
+// Matrix primitive: spending per category per period, oriented periods (rows) × categories (cols).
 
 import type { DashboardData } from '$lib/data/types';
 import type { Matrix } from './primitives';
 import { MONEY } from './primitives';
 import { MONTHS } from '$lib/utils/format';
 import { sumBy } from '$lib/utils/num';
+import { categorySpendByYear } from './series';
 
 export function categoryByMonth(data: DashboardData, year: number): Matrix {
 	const yd = data.years[String(year)];
@@ -35,5 +36,17 @@ export function categoryByMonth(data: DashboardData, year: number): Matrix {
 		rows: logged.map((r) => r.label),
 		cols: cats,
 		values: logged.map((r) => r.cells)
+	};
+}
+
+/** Year by year from `since`: the category-by-year series turned into a grid, so both readings agree. */
+export function categoryByYear(data: DashboardData, since?: number): Matrix {
+	const byYear = categorySpendByYear(data, since);
+	return {
+		kind: 'matrix',
+		unit: byYear.unit,
+		rows: byYear.labels,
+		cols: byYear.series.map((s) => s.name),
+		values: byYear.labels.map((_, i) => byYear.series.map((s) => s.points[i]?.value ?? 0))
 	};
 }

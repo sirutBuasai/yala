@@ -296,7 +296,7 @@
 		cursor: pointer;
 	}
 	.day.hl {
-		background: color-mix(in srgb, var(--lav) 20%, transparent);
+		background: color-mix(in srgb, var(--lav-wash) calc(20% * var(--wash-scale)), transparent);
 	}
 	.day.sel {
 		background: var(--lav);

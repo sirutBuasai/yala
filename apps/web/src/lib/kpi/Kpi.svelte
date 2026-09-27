@@ -13,6 +13,7 @@
 		formatUnit,
 		formatUnitCompact,
 		formatUnitExact,
+		readingsOf,
 		type DeltaDetail
 	} from '$lib/data/primitives';
 	import { contentFloor, levelThatFits, watchWidth } from '$lib/ui/fit';
@@ -23,6 +24,7 @@
 	import { DOT, labelText, type Slot } from '$lib/ui/label';
 	import { tryLabels } from '$lib/layout/grid/context';
 	import { kpiLabels } from './labels';
+	import { pageLink } from '$lib/nav/left';
 	import Spark from './Spark.svelte';
 	import Ring from './Ring.svelte';
 	import Meter from './Meter.svelte';
@@ -61,12 +63,8 @@
 	);
 	const title = $derived(labelText(named.title));
 	const caption = $derived(labelText(named.caption, DOT));
-	/**
-	 * The figure, at a given amount of detail. `abbreviate` gives up the thousands, `digits` holds the magnitude
-	 * to a ceiling; either is a fallback for a box that cannot hold the whole reading.
-	 *
-	 * A tone means the sign carries the meaning (see `Scalar.tone`), so the sign is shown.
-	 */
+	/** `abbreviate` and `digits` are fallbacks for a box that can't hold the whole reading. A toned figure
+	    shows its sign (see `Scalar.tone`). */
 	function reading({ abbreviate = false, digits = Infinity } = {}): string {
 		if (scalar.value === null) return NO_VALUE;
 
@@ -77,6 +75,10 @@
 	}
 
 	const value = $derived(reading());
+	/** Its fullest reading, to the cent, for a card with room to spare. */
+	const exact = $derived(
+		scalar.value === null ? NO_VALUE : readingsOf(scalar.value, scalar.unit, !!scalar.tone)[0]!
+	);
 	const behind = $derived(
 		spec.series && spec.chart && spec.chart !== 'ring' && spec.chart !== 'meter'
 			? { series: build(data, spec.series, spec.scope) as Series, shape: spec.chart }
@@ -100,22 +102,19 @@
 	const deltaText = (detail: DeltaDetail | null) =>
 		delta && detail ? deltaLabel(delta, detail) : '';
 
-	/**
-	 * What this reading may give up to fit its pane, richest first: the delta's note, then the delta's
-	 * magnitude, then the figure's thousands, then the delta itself, and only last the figure's own magnitude.
-	 * The figure is never dropped and the type never shrinks — a wider pane stops higher up the ladder, so every
-	 * ceiling here is the pane's rather than a number written in this file.
-	 */
+	/** What the reading gives up to fit, richest first; the figure is never dropped and the type never shrinks.
+	    The last rung is the card's floor. */
 	const LEVELS = $derived.by(() => {
 		const short = reading({ abbreviate: true });
 		const capping: DeltaDetail = { digits: CAP_DIGITS, note: false };
 		const rungs: Rung[] = [
+			{ num: exact, delta: {} },
 			{ num: value, delta: {} },
 			{ num: value, delta: { note: false } },
 			{ num: value, delta: capping },
 			{ num: short, delta: capping },
-			{ num: short, delta: null },
-			{ num: reading({ abbreviate: true, digits: CAP_DIGITS }), delta: null }
+			// No rung past this: a reading capped in magnitude states a figure that is not the value.
+			{ num: short, delta: null }
 		];
 
 		const seen = new Set<string>();
@@ -164,7 +163,10 @@
 			.filter(Boolean)
 			.join(' ')
 	);
-	const clamped = $derived(shown.num !== value || deltaText(shown.delta) !== full);
+	const clamped = $derived(shown.num !== exact || deltaText(shown.delta) !== full);
+
+	// On the title alone, and not while it is being named: a click on it is then a rename.
+	const link = $derived(spec.open && !naming ? pageLink(spec.open) : {});
 </script>
 
 <div
@@ -174,7 +176,7 @@
 	<!-- Held open by `nameable`, not by `naming`: a line that appeared only while editing made the card
 	     measure taller in one mode than the other, and the pane banked the difference. -->
 	{#if title || nameable}
-		<h2 class="serif" data-label-line>
+		<h2 class="serif" class:link={!!spec.open && !naming} data-label-line {...link}>
 			<LabelLine
 				label={named.title}
 				what="title"
@@ -200,7 +202,7 @@
 	<div class="stat">
 		{#if behind}
 			<div class="behind">
-				<Spark series={behind.series} shape={behind.shape} color={markColor} />
+				<Spark series={behind.series} shape={behind.shape} color={markColor} level={spec.level} />
 			</div>
 		{/if}
 		<!-- Its own layer, so the figure and badge paint over the chart untinted. -->
@@ -244,12 +246,7 @@
 </div>
 
 <style>
-	/**
-	 * The floor is the TIGHTEST reading this figure can fall back to (see the levels above), not its widest:
-	 * at `min-content` the card's minimum was the longest figure it might ever show, so a pane refused to be
-	 * narrowed into the very sizes the clamp exists to serve. A label that would clip still refuses, but that
-	 * is the probe's job (see `grid/Pane.svelte`), not this box's.
-	 */
+	/** The tightest reading, not the widest: at `min-content` a pane refused the very sizes the clamp serves. */
 	.kpi {
 		position: relative;
 		display: flex;
@@ -257,9 +254,15 @@
 		flex: 1 1 auto;
 		min-width: max(var(--content-floor, 0px), min-content);
 	}
-	/* One line each, and neither may be shrunk: `[data-label-line]` clips to `--label-lines`, so a host
-	   that leaves it unset bounds nothing, and the column is then free to squeeze a line under its own
-	   box and clip the glyphs. */
+	.link {
+		cursor: pointer;
+	}
+	.link:hover,
+	.link:focus-visible {
+		text-decoration: underline;
+		text-underline-offset: 0.2em;
+	}
+	/* Neither may shrink, or an unset `--label-lines` lets the column squeeze a line and clip its glyphs. */
 	.kpi h2,
 	.cap {
 		--label-lines: 1;
@@ -272,17 +275,14 @@
 		min-height: calc(var(--text-secondary) * var(--lh-body));
 		white-space: nowrap;
 	}
-	/* Pins the figure to the bottom, and is the box the chart scales into. No minimum of its own on either
-	   axis: the mark is decorative and drawn at a fixed viewBox that its box scales (see `Spark`), so a floor
-	   here would be a data-dependent one — a series with more points would refuse a resize a shorter series
-	   allowed. */
+	/* No minimum: the mark is decorative, and a floor here would refuse resizes by series length. */
 	.stat {
 		position: relative;
 		flex: 1 1 auto;
 		display: flex;
 		align-items: flex-end;
 		margin-top: auto;
-		padding-top: var(--space-4);
+		padding-top: var(--space-2);
 		min-width: 0;
 	}
 	.behind {
@@ -291,14 +291,8 @@
 		z-index: 0;
 		pointer-events: none;
 	}
-	/**
-	 * Spans the stat's width, so an inline mark asking for the leftover space (see `Meter`) has some. `hidden`,
-	 * so the figure can never spill the card: the clamp is what keeps it readable.
-	 *
-	 * `contain: inline-size` keeps the figure out of the card's own min-content, which is what the LABELS are
-	 * measured by — a rename grows the pane, and the widest figure standing in that number made the card
-	 * refuse the narrow sizes the clamp exists for. The figure's floor is `--content-floor` instead.
-	 */
+	/* `hidden`, so the figure never spills the card. `contain: inline-size` keeps it out of the card's
+	   min-content, which made the card refuse narrow sizes; its floor is `--content-floor`. */
 	.front {
 		position: relative;
 		z-index: 1;
@@ -320,10 +314,8 @@
 		font-weight: var(--fw-semibold);
 		font-variant-numeric: tabular-nums;
 		letter-spacing: var(--ls-tighter);
-		/* `normal`, not `--lh-tight`: a line-height tighter than the font's own ascent-plus-descent leaves
-		   the glyphs overflowing the line box, which the resize probe reads as content that no longer fits
-		   and which pinned every card. Deriving the box from the font makes the overshoot zero for any
-		   font, so this must not go back to a fixed ratio. */
+		/* `normal`, never a fixed ratio: a tighter line box overflows its glyphs, and the resize probe pinned every
+		   card. */
 		line-height: normal;
 		/* Wrapping would let the card narrow while the figure quietly reflowed. */
 		white-space: nowrap;
@@ -334,9 +326,8 @@
 	.num.bad {
 		color: var(--crit-text);
 	}
-	/* Laid out but unpainted: `display: none` measures nothing. Zero-sized and clipped because an absolutely
-	   positioned descendant still counts towards an ancestor's SCROLLABLE overflow — sized, the probe read as
-	   content spilling the card and every KPI pane refused to be resized. */
+	/* Zero-sized and clipped: an absolute descendant still counts toward scrollable overflow, and a sized probe
+	   made every KPI pane refuse resizes. */
 	.probe {
 		position: absolute;
 		top: 0;

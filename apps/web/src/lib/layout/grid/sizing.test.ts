@@ -53,35 +53,30 @@ describe('rowsForPx', () => {
 
 describe('reservedRows', () => {
 	it('a chart reserves the height it was given, whatever it measured', () => {
-		expect(reservedRows(authored(), 'scale', 4000, false)).toBe(8);
+		expect(reservedRows(authored(), 'scale', 4000)).toBe(8);
 	});
 
 	it('a fixed list reserves its set height, even with two rows in it', () => {
-		expect(reservedRows(authored({ mode: 'fixed' }), 'flow', 40, false)).toBe(8);
+		expect(reservedRows(authored({ mode: 'fixed' }), 'flow', 40)).toBe(8);
 	});
 
 	it('a fitted list reserves what it measured, without limit', () => {
 		const tall = 30 * UNIT - GAP;
-		expect(reservedRows(authored({ mode: 'fit' }), 'flow', tall, false)).toBe(30);
+		expect(reservedRows(authored({ mode: 'fit' }), 'flow', tall)).toBe(30);
 	});
 
 	it('a capped list stops at its ceiling', () => {
 		const tall = 30 * UNIT - GAP;
-		expect(reservedRows(authored({ mode: 'cap', cap: 12 }), 'flow', tall, false)).toBe(12);
+		expect(reservedRows(authored({ mode: 'cap', cap: 12 }), 'flow', tall)).toBe(12);
 	});
 
-	it('a capped list under its ceiling reserves only what it uses — in normal mode', () => {
+	it('a capped list under its ceiling reserves only what it uses, arranging or not', () => {
 		const short = 5 * UNIT - GAP;
-		expect(reservedRows(authored({ mode: 'cap', cap: 12 }), 'flow', short, false)).toBe(5);
-	});
-
-	it('but reserves the WHOLE ceiling while arranging, so nothing is placed in its room to grow', () => {
-		const short = 5 * UNIT - GAP;
-		expect(reservedRows(authored({ mode: 'cap', cap: 12 }), 'flow', short, true)).toBe(12);
+		expect(reservedRows(authored({ mode: 'cap', cap: 12 }), 'flow', short)).toBe(5);
 	});
 
 	it('falls back to the authored height before the first measurement', () => {
-		expect(reservedRows(authored({ mode: 'fit', h: 9 }), 'flow', undefined, false)).toBe(9);
+		expect(reservedRows(authored({ mode: 'fit', h: 9 }), 'flow', undefined)).toBe(9);
 	});
 });
 
@@ -96,10 +91,10 @@ describe('sizePanes', () => {
 	];
 	const measured = { list: 20 * UNIT - GAP };
 	const size = (floors: Parameters<typeof sizePanes>[3] = {}) =>
-		new Map(sizePanes(panes, specs, measured, floors, false).map((p) => [p.id, p]));
+		new Map(sizePanes(panes, specs, measured, floors).map((p) => [p.id, p]));
 
 	it('resolves each pane by its own kind and keeps the priority order', () => {
-		const sized = sizePanes(panes, specs, measured, {}, false);
+		const sized = sizePanes(panes, specs, measured, {});
 		expect(sized.map((s) => [s.id, s.h])).toEqual([
 			['list', 20],
 			['chart', 10]

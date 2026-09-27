@@ -1,9 +1,5 @@
-"""The write path: turning a reviewed change into directives appended or rewritten in the ledger.
-
-One class composed from several, split by *what* is written, each over the shared file machinery in
-:mod:`yala.sink.writer`. Every write re-loads the ledger strictly and a broken result restores every
-file it touched before re-raising, so a bad write never leaves a corrupt ledger on disk.
-"""
+"""The write path, one class composed by what is written over :mod:`yala.sink.writer`. A write that
+fails a strict reload restores every file it touched."""
 
 from __future__ import annotations
 

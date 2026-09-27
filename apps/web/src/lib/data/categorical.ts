@@ -53,3 +53,16 @@ export function whereItWent(
 
 	return { kind: 'categorical', unit, points };
 }
+
+/** A month's income as what was spent and what was kept. Saved is floored at zero, so a month spending
+    past its income reads as all spent rather than as a negative part. */
+export function incomeParts(income: number, spent: number, unit: Unit = MONEY()): Categorical {
+	return {
+		kind: 'categorical',
+		unit,
+		points: [
+			{ key: 'Spent', value: Math.max(0, spent) },
+			{ key: 'Saved', value: Math.max(0, income - spent) }
+		]
+	};
+}

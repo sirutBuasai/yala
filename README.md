@@ -28,6 +28,7 @@ make bootstrap   # install backend + frontend deps (first run)
 make gen         # regenerate the contract: data.schema.json + types.ts
 make serve       # clean → generate data.json → build → serve the snapshot alone (localhost:4173)
 make serve-api   # clean → generate data.json → build → serve site + edit API (127.0.0.1:8000)
+                 # DEV=1 on either builds in the /dev token gallery, hidden otherwise
 make test        # backend + frontend test suites
 make test-api    # backend only (pytest)
 make test-web    # frontend only (vitest)

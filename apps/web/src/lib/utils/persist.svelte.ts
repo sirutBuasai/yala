@@ -1,8 +1,5 @@
-// Sticky UI preferences in localStorage. Only PREFERENCES belong here, never ledger data.
-//
-// Every read goes through a `revive` validator, because a stored preference outlives the release
-// that wrote it: a key from a shape the app no longer uses WILL show up. Rejected values fall back
-// to the default.
+// Preferences only, never ledger data. Every read is revived, since a stored value outlives the shape that
+// wrote it; rejects fall back to the default.
 
 import { writable, type Writable } from 'svelte/store';
 

@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
-	fitFontSize,
+	pickGroups,
+	pickKeys,
 	halfLabelWidth,
 	labelAnchor,
-	labelIndices,
+	markedIndices,
+	xAxisLabels,
 	moneyAxisFormat,
 	moneyYScale,
 	signedYScale
@@ -114,10 +116,7 @@ describe('moneyYScale', () => {
 		expect(moneyYScale([0, 3_600_000], 300).y(3_600_000)).toBeGreaterThan(0);
 	});
 
-	/**
-	 * Bug: a chart capped at a chosen level had `.nice()` round the ceiling up, leaving a dead band above
-	 * lines that were already clipped — so the plot stopped short of where the frame said it did.
-	 */
+	/** Bug: `.nice()` rounded a chosen ceiling up, leaving a dead band above the clipped lines. */
 	it('puts a capped top exactly at the top edge', () => {
 		const { y, ticks } = moneyYScale([0, 3_600_000], 300, 3_600_000);
 		expect(y(3_600_000)).toBe(0);
@@ -131,54 +130,82 @@ describe('moneyYScale', () => {
 	});
 });
 
-describe('labelIndices', () => {
-	const dates = (n: number) =>
-		Array.from({ length: n }, (_, i) => `2026-${String((i % 12) + 1).padStart(2, '0')}-01`);
+describe('xAxisLabels', () => {
+	const evenly = (n: number, width: number) =>
+		Array.from({ length: n }, (_, i) => (n > 1 ? (i * width) / (n - 1) : width / 2));
+	const names = (n: number) => Array.from({ length: n }, (_, i) => `Mon ${2020 + i}`);
 
-	it('shows every label when they all fit', () => {
-		expect(labelIndices(4, 900, dates(4))).toEqual([0, 1, 2, 3]);
+	it('lays every label flat where each fits', () => {
+		const axis = xAxisLabels(evenly(4, 900), names(4), undefined, true);
+		expect(axis.angle).toBe(0);
+		expect(axis.ticks.map((t) => t.text)).toEqual(names(4));
 	});
 
-	it('thins to what the width allows, not to a fixed count', () => {
-		const wide = labelIndices(24, 900, dates(24));
-		const narrow = labelIndices(24, 260, dates(24));
-		expect(narrow.length).toBeLessThan(wide.length);
+	it('turns labels that would overlap, and grows the room below the plot to hold them', () => {
+		const flat = xAxisLabels(evenly(4, 900), names(4), undefined, true);
+		const turned = xAxisLabels(evenly(24, 600), names(24), undefined, true);
+		expect(turned.angle).toBe(45);
+		expect(turned.ticks).toHaveLength(24);
+		expect(turned.bottom).toBeGreaterThan(flat.bottom);
 	});
 
-	it('always keeps the last label — it is the one readers look for', () => {
-		for (const n of [7, 9, 13, 24, 38]) {
-			expect(labelIndices(n, 400, dates(n)).at(-1)).toBe(n - 1);
-		}
+	it('names every fifth year of a crowded axis of years, flat', () => {
+		const years = Array.from({ length: 60 }, (_, i) => String(2026 + i));
+		const axis = xAxisLabels(evenly(60, 600), years, undefined, true);
+		expect(axis.angle).toBe(0);
+		expect(axis.ticks.map((t) => t.text)).toEqual([
+			'2030',
+			'2035',
+			'2040',
+			'2045',
+			'2050',
+			'2055',
+			'2060',
+			'2065',
+			'2070',
+			'2075',
+			'2080'
+		]);
 	});
 
-	it('drops the neighbour that would collide with the last label', () => {
-		// A narrow box, where a plain stride would place one label right beside the final one.
-		const shown = labelIndices(9, 300, dates(9));
-		const [secondLast, last] = shown.slice(-2);
-		expect(last! - secondLast!).toBeGreaterThan(1);
+	it('steps further out where every fifth year still crowds', () => {
+		const years = Array.from({ length: 60 }, (_, i) => String(2026 + i));
+		const texts = xAxisLabels(evenly(60, 200), years, undefined, true).ticks.map((t) => t.text);
+		expect(texts.every((t) => Number(t) % 10 === 0)).toBe(true);
 	});
 
-	/**
-	 * Bug: a long axis printed its last two labels on top of each other. The old guard only dropped a
-	 * neighbour closer than HALF a stride, but the room a label needs is a pixel measurement rather than a
-	 * fraction of a stride.
-	 */
-	it('keeps every drawn label at least its own width apart on a long axis', () => {
-		const years = Array.from({ length: 70 }, (_, i) => String(2026 + i));
-		const innerWidth = 592;
-		const shown = labelIndices(70, innerWidth, years);
-		const room = 4 * 6.2 + 12;
-
-		for (let i = 1; i < shown.length; i++) {
-			const gap = ((shown[i]! - shown[i - 1]!) * innerWidth) / 69;
-			expect(gap, `${years[shown[i - 1]!]} to ${years[shown[i]!]}`).toBeGreaterThanOrEqual(room);
-		}
-		expect(shown.at(-1)).toBe(69);
+	it('stands labels upright once even a slant would collide', () => {
+		expect(xAxisLabels(evenly(80, 600), names(80), undefined, true).angle).toBe(90);
 	});
 
-	it('handles degenerate series', () => {
-		expect(labelIndices(0, 500, [])).toEqual([]);
-		expect(labelIndices(1, 500, ['2026-01-01'])).toEqual([0]);
+	// Bug: the first label is anchored at its start, so it reaches a whole width right, where the next,
+	// centred, reaches half a width back: a gap that fits two centred labels still overlaps these two.
+	it('measures the inward-anchored end labels as they are drawn', () => {
+		const xs = [0, 70, 140, 210];
+		expect(xAxisLabels(xs, names(4), undefined, false).angle).toBe(0);
+		expect(xAxisLabels(xs, names(4), undefined, true).angle).not.toBe(0);
+	});
+
+	describe('a crowded axis spanning years', () => {
+		// Monthly points from Feb of the first year to Jan of the last.
+		const periods = Array.from({ length: 36 }, (_, i) => {
+			const m = i + 1;
+			return `${2023 + Math.floor(m / 12)}-${String((m % 12) + 1).padStart(2, '0')}-01`;
+		});
+		const labels = periods.map((p) => `Mon ${p.slice(0, 4)}`);
+		const axis = xAxisLabels(evenly(36, 500), labels, periods, true);
+
+		it('names each year once, flat, centred on its points', () => {
+			expect(axis.angle).toBe(0);
+			const y2024 = axis.ticks.find((t) => t.text === '2024')!;
+			const xs = evenly(36, 500);
+			expect(y2024.x).toBe((xs[y2024.points[0]!]! + xs[y2024.points.at(-1)!]!) / 2);
+			expect(y2024.points).toHaveLength(12);
+		});
+
+		it('leaves a year unlabelled where its label would run past the end of the plot', () => {
+			expect(axis.ticks.map((t) => t.text)).not.toContain('2026');
+		});
 	});
 });
 
@@ -197,32 +224,6 @@ describe('labelAnchor', () => {
 	});
 });
 
-describe('fitFontSize', () => {
-	it('shrinks to fit a long label in a tight gutter', () => {
-		const tight = fitFontSize(60, ['Tax-advantaged:BrokerageAIndividual']);
-		const roomy = fitFontSize(200, ['Tax-advantaged:BrokerageAIndividual']);
-		expect(tight).toBeLessThan(roomy);
-	});
-
-	it('never drops below the floor, however long the label', () => {
-		expect(fitFontSize(20, ['x'.repeat(400)], 8, 12)).toBe(8);
-	});
-
-	it('never exceeds the ceiling, however short the label', () => {
-		expect(fitFontSize(400, ['a'], 8, 12)).toBe(12);
-	});
-
-	it('sizes to the LONGEST label, not the first', () => {
-		expect(fitFontSize(100, ['a', 'a very long category name'])).toBe(
-			fitFontSize(100, ['a very long category name'])
-		);
-	});
-
-	it('survives an empty label list rather than returning NaN', () => {
-		expect(fitFontSize(100, [], 8, 12)).toBe(12);
-	});
-});
-
 describe('halfLabelWidth', () => {
 	it('grows with the text, so a longer figure is held further from the edge', () => {
 		expect(halfLabelWidth('$1k')).toBeLessThan(halfLabelWidth('-$123,456'));
@@ -230,5 +231,47 @@ describe('halfLabelWidth', () => {
 
 	it('reaches nothing at all for an empty label', () => {
 		expect(halfLabelWidth('')).toBe(0);
+	});
+});
+
+describe('markedIndices', () => {
+	it('marks every point whose period falls in the mark', () => {
+		expect(
+			markedIndices(
+				['Aug 1', 'Aug 26', 'Sep 1'],
+				['2026-08-01', '2026-08-26', '2026-09-01'],
+				'2026-08'
+			)
+		).toEqual([0, 1]);
+	});
+
+	it('marks by label on an axis without periods', () => {
+		expect(markedIndices(['Jan', 'Feb'], undefined, 'Feb')).toEqual([1]);
+	});
+
+	it('marks nothing without a mark', () => {
+		expect(markedIndices(['Jan'], undefined)).toEqual([]);
+	});
+});
+
+describe('pickKeys', () => {
+	it("cuts each point's period to the grain it picks at", () => {
+		const periods = ['2025-12-31', '2026-01-01', '2026-01-15'];
+		expect(pickKeys(['a', 'b', 'c'], periods, 'month')).toEqual(['2025-12', '2026-01', '2026-01']);
+		expect(pickKeys(['a', 'b', 'c'], periods, 'year')).toEqual(['2025', '2026', '2026']);
+	});
+
+	it('picks by label on an axis without periods', () => {
+		expect(pickKeys(['2024', '2025'], undefined, 'year')).toEqual(['2024', '2025']);
+	});
+});
+
+describe('pickGroups', () => {
+	it('tiles the plot, each run reaching halfway to the next', () => {
+		expect(pickGroups([0, 10, 20, 40], ['a', 'a', 'b', 'c'], 50)).toEqual([
+			{ key: 'a', from: 0, to: 15 },
+			{ key: 'b', from: 15, to: 30 },
+			{ key: 'c', from: 30, to: 50 }
+		]);
 	});
 });

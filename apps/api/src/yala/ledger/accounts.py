@@ -1,9 +1,5 @@
-"""What an account is: the kind its prefix puts it in, what is opened beside it, and what stands in
-the way of closing it.
-
-Everything here is a fact read off the ledger. The HTTP layer turns a refusal into a status code;
-:mod:`yala.ledger.plans` turns a change into rewritten text.
-"""
+"""What an account is, what opens beside it, and what blocks closing it: facts read off the
+ledger."""
 
 from __future__ import annotations
 
@@ -77,9 +73,10 @@ class Kind:
     reconciled: bool = False
 
 
-#: The fields the wire contract ships for each kind. Everything but ``currency``, which is a detail
-#: of writing the ``open`` directive and tells a form nothing.
-KIND_FIELDS: tuple[str, ...] = tuple(f.name for f in fields(Kind) if f.name != "currency")
+#: The fields the wire contract ships for each kind: all but those only writing the ``open`` needs.
+KIND_FIELDS: tuple[str, ...] = tuple(
+    f.name for f in fields(Kind) if f.name not in ("currency", "plugged")
+)
 
 #: Every manageable kind, longest prefix first so a deduction is never read as a spending category.
 KINDS: tuple[Kind, ...] = (
@@ -131,9 +128,8 @@ def tier_of(account: str) -> str | None:
 
 # --- paths ---
 #
-# An account's path is ``prefix + tier + stem``, and the stem is one segment composed from the
-# name's parts. Opening, renaming a part and renaming an institution all build a path through these
-# two functions, so they cannot disagree about which part of a path a name owns.
+# Every path is built through these two functions, so no caller disagrees about which part a name
+# owns.
 
 
 def stem_of(account: str, kind: Kind) -> str:
@@ -153,13 +149,8 @@ def named_path(kind: Kind, institution: str | None, product: str | None, tier: s
 
 
 def plug_account(account: str) -> str | None:
-    """The ``Equity:Adjustments:*`` plug paired with snapshots of ``account``, or ``None`` for an
-    account that gets none (a card, a category, an employer).
-
-    One plug per account, the investment tier included: two accounts differing only by tier are
-    different accounts, and a shared plug would make opening the second, retiring either, or
-    renaming one ambiguous.
-    """
+    """``None`` for an account with no plug. One per account, tier included: a shared plug would
+    make opening, retiring or renaming one of a pair ambiguous."""
     if account.startswith(CASH):
         return ADJUSTMENTS + account[len(CASH) :]
     if account.startswith(INVESTMENTS):
@@ -168,12 +159,8 @@ def plug_account(account: str) -> str | None:
 
 
 def snapshot_plug(account: str) -> str:
-    """Where a snapshot of ``account`` pads the difference it cannot explain.
-
-    A card pads into opening balances, and only up to its baseline (see
-    :func:`yala.ledger.cards.must_agree`). Any other liability gets a per-account plug like an
-    asset's, created the first time it is snapshotted.
-    """
+    """A card pads into opening balances up to its baseline (see
+    :func:`yala.ledger.cards.must_agree`); any other liability gets a per-account plug."""
     if account.startswith(CREDIT_CARDS):
         return OPENING_BALANCES
     if account.startswith(LIABILITIES):
@@ -197,10 +184,8 @@ def open_entry(ledger: "Ledger", account: str) -> data.Open | None:
 
 
 def employer_scope(meta: Mapping[str, object] | None) -> str | None:
-    """The employer an account is scoped to, or ``None`` when it serves every employer.
-
-    Optional by design: a shared deduction outlives any one job, and so does a retirement plan.
-    """
+    """``None`` when it serves every employer, since a shared deduction or plan outlives any one
+    job."""
     return meta_str(meta, EMPLOYER_META)
 
 
@@ -223,11 +208,7 @@ def declared_family(ledger: "Ledger", account: str) -> list[str]:
 
 
 def sweep_referrers(ledger: "Ledger", account: str) -> list[str]:
-    """Active accounts that sweep into ``account``.
-
-    Closing it would leave each of them sweeping into a closed account, which reconcile can only
-    skip; the referrers are named so they can be repointed first.
-    """
+    """Named so they can be repointed before a close leaves them sweeping into a closed account."""
     meta = ledger.account_meta()
     return sorted(
         a
@@ -244,11 +225,8 @@ def scoped_to(ledger: "Ledger", prefix: str, employer: str, *, active: bool = Tr
 
 
 def employer_links(ledger: "Ledger", account: str) -> list[str]:
-    """The active accounts scoped to employer ``account`` — its deductions and its plans.
-
-    What closing it has to decide about, not what it closes: nothing follows an employer out on its
-    own. A deduction with no ``employer`` meta serves every employer and is not linked to any.
-    """
+    """What closing it must decide about; nothing follows an employer out on its own. An unscoped
+    deduction is linked to none."""
     if kind_of(account) is not KINDS_BY_NAME["employer"]:
         return []
 

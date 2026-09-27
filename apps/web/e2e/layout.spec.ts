@@ -1,45 +1,25 @@
 // Nothing a card holds may paint outside it, and no label may be cut off, at any width the app folds to.
 
-import { test } from '@playwright/test';
-import { audit, expectClean, openApp, RANGES, setContentWidth, showTab, TABS, WIDTHS } from './app';
+import {
+	audit,
+	expectClean,
+	openApp,
+	PAGE_LABELS,
+	setContentWidth,
+	showPage,
+	test,
+	WIDTHS
+} from './app';
 
 test.beforeEach(async ({ page }) => openApp(page));
 
-for (const tab of TABS) {
-	for (const range of RANGES[tab] ?? [undefined]) {
-		const board = range ? `${tab} · ${range}` : tab;
-		test(`${board} contains its content at every width`, async ({ page }) => {
-			await showTab(page, tab, range);
-			for (const width of WIDTHS) {
-				await setContentWidth(page, width);
-				expectClean(`${board} at ${width}px`, await audit(page));
-			}
-			await setContentWidth(page, null);
-		});
-	}
-}
-
-test('the calendar keeps one cell per weekday when it drops the week gutter', async ({ page }) => {
-	await showTab(page, 'Home');
-	await setContentWidth(page, 390);
-
-	// The grid drops the gutter COLUMN at this width; its cells have to go with it.
-	const shape = await page.evaluate(() => {
-		const cal = document.querySelector('.cal')!;
-		const columns = getComputedStyle(cal).gridTemplateColumns.split(' ').length;
-		const weekCells = [...cal.querySelectorAll('.wkcell')].filter(
-			(el) => getComputedStyle(el).display !== 'none'
-		).length;
-		const tops = new Set(
-			[...cal.querySelectorAll('.cell:not(.blank)')].map((c) =>
-				Math.round(c.getBoundingClientRect().top)
-			)
-		);
-		return { columns, weekCells, rows: tops.size };
+for (const label of PAGE_LABELS) {
+	test(`${label} contains its content at every width`, async ({ page }) => {
+		await showPage(page, label);
+		for (const width of WIDTHS) {
+			await setContentWidth(page, width);
+			expectClean(`${label} at ${width}px`, await audit(page));
+		}
+		await setContentWidth(page, null);
 	});
-
-	test.expect(shape.weekCells).toBe(0);
-	test.expect(shape.columns).toBe(7);
-	// A month spans five or six weeks; a cascade gives one row per DAY.
-	test.expect(shape.rows).toBeLessThanOrEqual(6);
-});
+}

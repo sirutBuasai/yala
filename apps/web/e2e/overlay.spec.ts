@@ -1,11 +1,13 @@
 // The modal and the anchored popup: what the platform now owes us, and what a popup must never do.
 
-import { expect, test } from '@playwright/test';
-import { openApp, settle, showTab } from './app';
+import { expect } from '@playwright/test';
+import { openAdd, openApp, settle, showPage, test } from './app';
 
 test.beforeEach(async ({ page }) => openApp(page));
 
 test('the nav drawer opens as a real modal and hands focus back on Escape', async ({ page }) => {
+	// Narrow enough that the sidebar folds into the sheet.
+	await page.setViewportSize({ width: 900, height: 900 });
 	const burger = page.getByRole('button', { name: 'Open menu' });
 	await burger.click();
 	await settle(page);
@@ -13,7 +15,7 @@ test('the nav drawer opens as a real modal and hands focus back on Escape', asyn
 	const sheet = page.locator('dialog.sheet');
 	await expect(sheet).toHaveAttribute('open', '');
 	// Not the dismiss button: opening a panel should not announce "close".
-	await expect(page.getByRole('link', { name: 'Home' })).toBeFocused();
+	await expect(page.getByRole('link', { name: 'Dashboard' })).toBeFocused();
 
 	// The page behind is inert — asserted through its effect, since inertness has no attribute to read.
 	for (let i = 0; i < 12; i++) await page.keyboard.press('Tab');
@@ -28,8 +30,8 @@ test('the nav drawer opens as a real modal and hands focus back on Escape', asyn
 test('a dropdown inside a modal escapes the panel rather than being clipped by it', async ({
 	page
 }) => {
-	await showTab(page, 'Activity');
-	await page.getByRole('button', { name: '+ Add entry' }).click();
+	await showPage(page, 'Transactions');
+	await openAdd(page);
 	await settle(page);
 
 	const trigger = page.locator('dialog [role=combobox][aria-label="Category"]');
@@ -56,6 +58,7 @@ test('a dropdown inside a modal escapes the panel rather than being clipped by i
 });
 
 test('a popup never runs off the viewport, whichever side it opens on', async ({ page }) => {
+	await showPage(page, 'Transactions');
 	await page.setViewportSize({ width: 1100, height: 380 });
 	await settle(page);
 
@@ -83,8 +86,8 @@ test('a popup never runs off the viewport, whichever side it opens on', async ({
 
 test('a date picker with no room below flips above its trigger', async ({ page }) => {
 	await page.setViewportSize({ width: 1100, height: 380 });
-	await showTab(page, 'Activity');
-	await page.getByRole('button', { name: '+ Add entry' }).click();
+	await showPage(page, 'Transactions');
+	await openAdd(page);
 	await settle(page);
 
 	const trigger = page.locator('dialog [role=combobox][aria-label="Date"]');
@@ -105,6 +108,7 @@ test('a date picker with no room below flips above its trigger', async ({ page }
 test('typing in a dropdown highlights the match and scrolls it into view', async ({ page }) => {
 	// The fixture's lists are short, so the panel is capped to leave the last option out of view.
 	await page.addStyleTag({ content: '.listbox { --panel-max: 48px !important; }' });
+	await showPage(page, 'Transactions');
 
 	const trigger = page.locator('[role=combobox][aria-label="Year"]');
 	await trigger.click();

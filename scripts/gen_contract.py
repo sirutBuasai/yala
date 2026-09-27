@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
-"""Generate the committed contract artifact the frontend builds against.
-
-Writes ``packages/contract/data.schema.json`` (the JSON Schema the frontend codegens its TS
-types from), committed so the frontend never hand-maintains the contract shape.
-"""
+"""Writes ``packages/contract/data.schema.json``, committed so the frontend never hand-maintains the
+contract."""
 
 from __future__ import annotations
 

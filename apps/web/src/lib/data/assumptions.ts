@@ -10,6 +10,8 @@ export interface Assumptions {
 	nominalReturn: number;
 	/** Long-run inflation the return is discounted by, as a percentage. */
 	inflation: number;
+	/** How far a year's return strays from the expected one (a standard deviation), as a percentage. */
+	volatility: number;
 	retireAge: number;
 	/** Months of spending to hold liquid. */
 	runwayTarget: number;
@@ -29,6 +31,7 @@ const FALLBACK: Assumptions = {
 	swr: 4,
 	nominalReturn: 8,
 	inflation: 3,
+	volatility: 15,
 	retireAge: 60,
 	runwayTarget: 6,
 	horizonAge: 95,
@@ -46,6 +49,7 @@ export function assumptionsOf(data: DashboardData): Assumptions {
 		swr: s.swr ?? FALLBACK.swr,
 		nominalReturn: s.nominal_return ?? FALLBACK.nominalReturn,
 		inflation: s.inflation ?? FALLBACK.inflation,
+		volatility: s.volatility ?? FALLBACK.volatility,
 		retireAge: s.retire_age ?? FALLBACK.retireAge,
 		runwayTarget: s.runway_target ?? FALLBACK.runwayTarget,
 		horizonAge: s.horizon_age ?? FALLBACK.horizonAge,
@@ -55,21 +59,30 @@ export function assumptionsOf(data: DashboardData): Assumptions {
 	};
 }
 
-/**
- * The rate every projection compounds at: the nominal return discounted by inflation, so a balance and the
- * spending it funds are both in today's purchasing power. A percentage.
- *
- * The Fisher relation, `(1+real) = (1+nominal)/(1+inflation)`, NOT `nominal - inflation`: the shortcut
- * overstates the real rate, which compounds to a badly wrong balance over a lifetime horizon.
- */
+/** The real rate every projection compounds at, as a percentage. Fisher's relation, NOT `nominal -
+    inflation`: the shortcut overstates the rate, which compounds to a badly wrong balance over a lifetime
+    horizon. */
 export function realRate(a: Assumptions): number {
 	return ((1 + a.nominalReturn / 100) / (1 + a.inflation / 100) - 1) * 100;
 }
 
-/** The assumption a setting feeds, for a form holding its values by the ledger's key. Derived rather than
-    mapped: the two spellings differ only in casing, so a table of them would fall out of step. */
-export function assumptionKey(settingKey: string): keyof Assumptions {
-	return settingKey.replace(/-(\w)/g, (_, c: string) => c.toUpperCase()) as keyof Assumptions;
+/** A setting's field in `data.settings`. The ledger's key is hyphenated, which is not a legal field name,
+    so the contract spells it with underscores. */
+export function settingField(settingKey: string): string {
+	return settingKey.replaceAll('-', '_');
+}
+
+/** `data` as if the ledger stated `values` (keyed as the ledger keys them), so every figure built from it
+    previews them. A null is a setting left at what the ledger states. */
+export function withSettings(
+	data: DashboardData,
+	values: Record<string, number | null>
+): DashboardData {
+	const stated = Object.entries(values).filter(([, v]) => v != null);
+	if (!stated.length || !data.settings) return data;
+
+	const overrides = Object.fromEntries(stated.map(([key, v]) => [settingField(key), v]));
+	return { ...data, settings: { ...data.settings, ...overrides } };
 }
 
 /** Years until the retirement age stated, or null without a birth year to count from. */

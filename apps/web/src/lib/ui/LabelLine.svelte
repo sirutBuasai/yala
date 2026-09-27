@@ -1,11 +1,6 @@
 <script lang="ts">
-	// One card label, renamed by clicking the words themselves. The field IS the words, an inline
-	// `contenteditable`: an `<input>` scrolls its own overflow, so a title long enough to wrap left the card
-	// reporting that everything still fitted. A label's derived half sits in front as ghost text, so the period
-	// or count cannot be typed over.
-	//
-	// No pencil beside the words, because the pane's minimum is measured off this content: any affordance here
-	// made a card's smallest size depend on whether the board was being edited.
+	// A `contenteditable`, not an `<input>`, which scrolls its overflow and hid a wrapped title from the fit
+	// check. No pencil beside it, or the pane's minimum would depend on whether the board is being edited.
 	import type { Snippet } from 'svelte';
 	import { LABEL_MAX, labelGhost, labelText, type Label } from './label';
 
@@ -20,9 +15,8 @@
 		after?: Snippet;
 		/** What this slot's two halves read with, unless the label names its own. */
 		join?: string;
-		/** This slot is one the user names, whether or not it is being edited now. An emptied label then keeps
-		    a small box in both modes: without it there is nothing left to click to get the label back, and
-		    reserving it only while editing would make the card measure wider in one mode than the other. */
+		/** An emptied label keeps a small box in both modes: without it nothing is left to click, and only while
+		    editing would change the card's measured width. */
 		nameable?: boolean;
 		/** This label as the app declares it — what a reset goes back to. Its words stand in the empty field,
 		    so typing them back is the undo. Passed whole, so no caller needs to know which half that is. */
@@ -60,9 +54,8 @@
 		if (next !== (label.text ?? '')) onrename?.(next);
 	}
 
-	/** Select the words rather than just focusing them: renaming usually replaces the name, and a caret at the
-	    end makes you clear it first. Focused explicitly, because placing a selection inside a `contenteditable`
-	    does not focus it — and the pane follows this edit by the field's own focus events. */
+	/** Selected, since a rename usually replaces the name. Focused explicitly: a selection in a
+	    `contenteditable` doesn't focus it, and the pane follows focus events. */
 	$effect(() => {
 		if (!editing || !field) return;
 		field.focus();
@@ -115,17 +108,13 @@
 {/if}
 
 <style>
-	/* Lifted over the edit-mode drag surface that covers the card (see `grid/Pane`), or the press meant to
-	   put a caret in a label starts moving the pane. The rest of the header stays under it, so a card can
-	   still be dragged by its title. */
+	/* Over the edit-mode drag surface, or a press meant for a caret moves the pane. */
 	.editable,
 	.name {
 		position: relative;
 		z-index: 3;
 	}
-	/* An underline and a text cursor, which is as much as an editable word needs to say. Both are free: a
-	   decoration draws inside the line box and a cursor is not layout, so an editable label measures exactly
-	   as the same words do when they are not. */
+	/* Neither affects layout, so an editable label measures exactly as its plain words. */
 	.editable {
 		cursor: text;
 		text-decoration: underline dotted var(--ink-3);
@@ -144,9 +133,7 @@
 		min-height: 1em;
 		vertical-align: baseline;
 	}
-	/* An underline needs a word to sit under, so an emptied label has to show the box itself or there is
-	   nothing to tell the user the slot is theirs to fill. Drawn as a tint and an inset rule, both of which
-	   paint inside the box the slot already holds — a border would have added a pixel to it. */
+	/* An emptied label has no word to underline, so the box shows itself; tint and inset rule add no size. */
 	.editable:empty:not(.slot) {
 		border-radius: var(--radius-sm);
 		background: color-mix(in srgb, var(--ink-3) 12%, transparent);
@@ -174,10 +161,7 @@
 	.name:empty::before {
 		content: attr(data-placeholder);
 	}
-	/* Inline and unstyled, so nothing moves or restyles on the way into edit and the words wrap where they
-	   always did. Deliberately not `.field`, the app's form-field wrapper, which lays its contents out as a
-	   flex column. Nothing sets a width: the field is text, so it takes the width text takes — which is also
-	   why it can no longer widen the card the way a sized input once did. */
+	/* Not `.field`, which lays out as a flex column. No width, so the field can't widen the card. */
 	.name {
 		font: inherit;
 		color: inherit;

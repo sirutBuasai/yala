@@ -143,6 +143,7 @@
 					aria-selected={opt === value}
 					class:hl={i === active}
 					onpointerenter={() => (active = i)}
+					onmousedown={(e) => e.preventDefault()}
 					onclick={() => choose(opt)}
 				>
 					<span class="check" aria-hidden="true"
@@ -182,7 +183,7 @@
 		white-space: nowrap;
 	}
 	li.hl {
-		background: color-mix(in srgb, var(--lav) 20%, transparent);
+		background: color-mix(in srgb, var(--lav-wash) calc(20% * var(--wash-scale)), transparent);
 	}
 	li[aria-selected='true'] {
 		color: var(--lav-text);

@@ -17,7 +17,7 @@ import {
 	savingsRate
 } from '$lib/data/series';
 import { moneyFlow } from './flow';
-import { categoryByMonth } from './matrix';
+import { categoryByMonth, categoryByYear } from './matrix';
 import { paychecks } from './table';
 import {
 	balanceGrowth,
@@ -42,6 +42,7 @@ import {
 	netWorthChange,
 	netWorthGrowth,
 	netWorthGrowthPerYear,
+	netWorthGrowthPace,
 	netWorthGrowthPerMonth,
 	netWorthLiabilities,
 	netWorthMonthlyTable,
@@ -55,10 +56,9 @@ import {
 	savedVsOther,
 	savedVsOtherByMonth,
 	topAccountShare,
-	yearsOfFreedom,
 	type GrowthPart
 } from './networth';
-import { depletionYear, investedProjection } from './projection';
+import { depletionYear, fiDate, investedProjection } from './projection';
 import { type Scope, type ScopeLevel, latestMonthKey, scopeYear } from './scope';
 import { words } from '$lib/ui/label';
 import { sumBy } from '$lib/utils/num';
@@ -75,7 +75,7 @@ import {
 	measureLabel,
 	ratio,
 	signed,
-	vsTypical,
+	vsAverage,
 	type Countable,
 	type ExtremumOf,
 	type Field,
@@ -88,15 +88,14 @@ const LIFETIME: ScopeLevel[] = ['all'];
 const YEARLY: ScopeLevel[] = ['all', 'year'];
 const ALL_SCOPES: ScopeLevel[] = ['all', 'year', 'month'];
 
-/** The scope's year, or undefined at lifetime scope — what a builder that spans both takes. */
+/** The scope's year (a month's own), or undefined at lifetime scope: what a builder that spans both takes. */
 const optionalYear = (data: DashboardData, scope: Scope) =>
-	scope.level === 'year' ? scopeYear(data, scope) : undefined;
+	scope.level === 'all' ? undefined : scopeYear(data, scope);
 
 interface DataDef {
 	id: string;
 	label: string;
 	kind: PrimitiveKind;
-	/** Scope levels this data supports. */
 	scopes: ScopeLevel[];
 	build(data: DashboardData, scope: Scope): Primitive;
 }
@@ -167,11 +166,18 @@ const CHART_DEFS: DataDef[] = [
 		label: 'Category by year',
 		kind: 'multiseries',
 		scopes: LIFETIME,
-		build: (data) => categorySpendByYear(data)
+		build: (data, scope) => categorySpendByYear(data, scope.since)
+	},
+	{
+		id: 'spending.category_by_year_grid',
+		label: 'Category by year',
+		kind: 'matrix',
+		scopes: LIFETIME,
+		build: (data, scope) => categoryByYear(data, scope.since)
 	},
 	{
 		id: 'spending.vs_average',
-		label: 'Unusual this month',
+		label: 'Spending by category',
 		kind: 'deviation',
 		scopes: ['month'],
 		build: (data, scope) =>
@@ -195,21 +201,21 @@ const CHART_DEFS: DataDef[] = [
 		label: 'Net income vs take-home vs spending vs saved',
 		kind: 'multiseries',
 		scopes: YEARLY,
-		build: (data, scope) => cashFlowBars(data, optionalYear(data, scope))
+		build: (data, scope) => cashFlowBars(data, optionalYear(data, scope), scope.since)
 	},
 	{
 		id: 'overview.savings_rate',
 		label: 'Savings rate',
 		kind: 'series',
 		scopes: LIFETIME,
-		build: (data) => savingsRate(data)
+		build: (data, scope) => savingsRate(data, scope.since)
 	},
 	{
 		id: 'money.flow',
 		label: 'Money flow',
 		kind: 'flow',
-		scopes: YEARLY,
-		build: (data, scope) => moneyFlow(data, optionalYear(data, scope))
+		scopes: ALL_SCOPES,
+		build: (data, scope) => moneyFlow(data, scope)
 	},
 	{
 		id: 'networth.by_month',
@@ -238,7 +244,7 @@ const CHART_DEFS: DataDef[] = [
 		label: 'Change by asset type',
 		kind: 'multiseries',
 		scopes: LIFETIME,
-		build: (data) => bucketChangeByYear(data)
+		build: (data, scope) => bucketChangeByYear(data, scope.since)
 	},
 	{
 		id: 'networth.bucket_monthly_table',
@@ -252,14 +258,14 @@ const CHART_DEFS: DataDef[] = [
 		label: 'Change by asset type',
 		kind: 'table',
 		scopes: LIFETIME,
-		build: (data) => bucketYearTable(data)
+		build: (data, scope) => bucketYearTable(data, scope.since)
 	},
 	{
 		id: 'networth.vs_assets',
 		label: 'Net worth & assets over time',
 		kind: 'multiseries',
 		scopes: YEARLY,
-		build: (data, scope) => netWorthVsAssets(data, optionalYear(data, scope))
+		build: (data, scope) => netWorthVsAssets(data, optionalYear(data, scope), scope.since)
 	},
 	{
 		id: 'networth.thresholds',
@@ -282,21 +288,21 @@ const CHART_DEFS: DataDef[] = [
 		label: 'Liabilities over time',
 		kind: 'series',
 		scopes: YEARLY,
-		build: (data, scope) => netWorthLiabilities(data, optionalYear(data, scope))
+		build: (data, scope) => netWorthLiabilities(data, optionalYear(data, scope), scope.since)
 	},
 	{
 		id: 'networth.allocation_share',
 		label: 'Allocation mix over time',
 		kind: 'multiseries',
 		scopes: YEARLY,
-		build: (data, scope) => netWorthAllocationShare(data, optionalYear(data, scope))
+		build: (data, scope) => netWorthAllocationShare(data, optionalYear(data, scope), scope.since)
 	},
 	{
 		id: 'networth.allocation_value',
 		label: 'Allocation by value',
 		kind: 'multiseries',
 		scopes: YEARLY,
-		build: (data, scope) => netWorthAllocationValue(data, optionalYear(data, scope))
+		build: (data, scope) => netWorthAllocationValue(data, optionalYear(data, scope), scope.since)
 	},
 	{
 		id: 'networth.accounts',
@@ -310,7 +316,7 @@ const CHART_DEFS: DataDef[] = [
 		label: 'You vs the market, by year',
 		kind: 'multiseries',
 		scopes: LIFETIME,
-		build: (data) => savedVsOther(data)
+		build: (data, scope) => savedVsOther(data, scope.since)
 	},
 	{
 		id: 'networth.saved_vs_other_by_month',
@@ -337,7 +343,7 @@ const CHART_DEFS: DataDef[] = [
 		label: 'Year by year',
 		kind: 'table',
 		scopes: LIFETIME,
-		build: (data) => netWorthYearTable(data)
+		build: (data, scope) => netWorthYearTable(data, scope.since)
 	},
 	// One entry per field rather than one parameterized entry: a KPI names its series by id.
 	{
@@ -382,14 +388,14 @@ const CHART_DEFS: DataDef[] = [
 		label: 'Net worth & assets change',
 		kind: 'multiseries',
 		scopes: LIFETIME,
-		build: (data) => netWorthAssetsChangeByYear(data)
+		build: (data, scope) => netWorthAssetsChangeByYear(data, scope.since)
 	},
 	{
 		id: 'networth.liabilities_change_by_year',
 		label: 'Liabilities change',
 		kind: 'multiseries',
 		scopes: LIFETIME,
-		build: (data) => liabilitiesChangeByYear(data)
+		build: (data, scope) => liabilitiesChangeByYear(data, scope.since)
 	},
 	// The shape of net worth's yearly rate, for the mark behind the compound-growth card.
 	{
@@ -397,16 +403,25 @@ const CHART_DEFS: DataDef[] = [
 		label: 'Growth rate by year',
 		kind: 'series',
 		scopes: LIFETIME,
-		build: (data) => growthRateByYear(data)
+		build: (data, scope) => growthRateByYear(data, scope.since)
 	}
 ];
 
 // --- one measure over time ---
-//
-// Generated over the same measures the scalars use, so a KPI's chart and its number agree.
+// Generated over the scalars' measures, so a KPI's chart and number agree.
 
-/** Measures with a period-by-period trend. Month scope reads as the trailing twelve. */
-const TRENDS: Field[] = ['income', 'spending', 'saved', 'takehome'];
+/** Measures with a period-by-period trend, and a month's reading against its average. Month scope
+    reads as the trailing twelve. */
+const TRENDS: Field[] = [
+	'income',
+	'spending',
+	'saved',
+	'takehome',
+	'gross',
+	'deductions',
+	'contributions',
+	'net'
+];
 
 /** Measures with a running total. */
 const RUNNING: Field[] = ['gross', 'deductions', 'contributions', 'net', 'takehome', 'saved'];
@@ -433,7 +448,7 @@ const SERIES_DEFS: DataDef[] = [
 			accumulate(
 				scope.level === 'year'
 					? measureActive(data, f, scopeYear(data, scope))
-					: measureByYear(data, f)
+					: measureByYear(data, f, scope.since)
 			)
 	})),
 	...RUNNING.map((f): DataDef => ({
@@ -454,7 +469,7 @@ const NETWORTH_STATS: DataDef[] = [
 			['networth.liabilities', 'Liabilities', 'liabilities']
 		] as const
 	).map(([id, label, field]) =>
-		scalarDef(id, label, LIFETIME, (data) => netWorthScalar(data, field, words(label)))
+		scalarDef(id, label, YEARLY, (data, scope) => netWorthScalar(data, field, words(label), scope))
 	),
 	...(
 		[
@@ -462,15 +477,17 @@ const NETWORTH_STATS: DataDef[] = [
 			['networth.saved', 'Saved', netWorthSaved],
 			['networth.other', 'Market & other', netWorthOther]
 		] as const
-	).map(([id, label, build]) => scalarDef(id, label, YEARLY, build)),
+	).map(([id, label, build]) => scalarDef(id, label, ALL_SCOPES, build)),
+	scalarDef('networth.balance_growth', 'Balance growth', YEARLY, (data, scope) =>
+		balanceGrowth(data, scope)
+	),
 	...(
 		[
 			['networth.fi_number', 'FI number', fiNumber],
 			['networth.fi_progress', 'FI progress', fiProgress],
 			['networth.coast_fi', 'Coast FI', coastFi],
-			['networth.years_of_freedom', 'Years of freedom', yearsOfFreedom],
+			['networth.fi_date', 'FI date', fiDate],
 			['networth.runway', 'Liquid runway', liquidRunway],
-			['networth.balance_growth', 'Balance growth', balanceGrowth],
 			['networth.top_account', 'Top account', topAccountShare],
 			['networth.depletion', 'Depletion year', depletionYear]
 		] as const
@@ -481,9 +498,7 @@ const NETWORTH_STATS: DataDef[] = [
 ];
 
 // --- the decomposition behind a change in net worth ---
-//
-// The same three figures the KPI cards carry, re-read as a matrix. At year scope each level is badged
-// against last year's; over a lifetime there is no prior lifetime, so the rows are rates instead.
+// At year scope each level is badged against last year's; a lifetime has no prior, so its rows are rates.
 
 const GROWTH_PARTS: { slug: GrowthPart; label: string }[] = [
 	{ slug: 'change', label: 'Change' },
@@ -496,7 +511,8 @@ export const NET_WORTH_GROWTH = GROWTH_PARTS.map((part) => ({
 	slug: part.slug,
 	total: `networth.growth_${part.slug}`,
 	perYear: `avg.networth_${part.slug}_per_year`,
-	perMonth: `avg.networth_${part.slug}_per_month`
+	perMonth: `avg.networth_${part.slug}_per_month`,
+	pace: `networth.growth_${part.slug}_pace`
 }));
 
 export type NetWorthGrowthColumn = (typeof NET_WORTH_GROWTH)[number];
@@ -509,13 +525,16 @@ const NET_WORTH_GROWTH_DEFS: DataDef[] = GROWTH_PARTS.flatMap((part) => [
 		`avg.networth_${part.slug}_per_year`,
 		`Avg ${part.label.toLowerCase()} / year`,
 		LIFETIME,
-		(data) => netWorthGrowthPerYear(data, part.slug, words(part.label))
+		(data, scope) => netWorthGrowthPerYear(data, scope, part.slug, words(part.label))
 	),
 	scalarDef(
 		`avg.networth_${part.slug}_per_month`,
 		`Avg ${part.label.toLowerCase()} / month`,
 		YEARLY,
 		(data, scope) => netWorthGrowthPerMonth(data, scope, part.slug, words(part.label))
+	),
+	scalarDef(`networth.growth_${part.slug}_pace`, `${part.label} pace`, ['year'], (data, scope) =>
+		netWorthGrowthPace(data, scope, part.slug, words(part.label))
 	)
 ]);
 
@@ -644,13 +663,14 @@ const CHANGES: { field: Field; period: 'year' | 'month' }[] = (['year', 'month']
 	(period) => CHANGE_FIELDS.map((field) => ({ field, period }))
 );
 
-const VS_TYPICAL: DataDef[] = [
-	scalarDef('spending.vs_typical', 'vs your average', ['month'], (data, scope) =>
+// A month's level against its own recent average: the KPI bar's figures.
+const VS_AVERAGE: DataDef[] = TRENDS.map((field) =>
+	scalarDef(`vsavg.${field}`, measureLabel(field), ['month'], (data, scope) =>
 		scope.monthKey
-			? vsTypical(data, scope.monthKey, 'spending', { label: words('vs your average') })
-			: scalar(MONEY(data.currency), words('vs your average'), null)
+			? vsAverage(data, scope.monthKey, field)
+			: scalar(MONEY(data.currency), words(measureLabel(field)), null)
 	)
-];
+);
 
 const STAT_DEFS: DataDef[] = [
 	...AMOUNTS.map((a) =>
@@ -692,7 +712,7 @@ export const CATALOG: DataDef[] = [
 	...CHART_DEFS,
 	...SERIES_DEFS,
 	...STAT_DEFS,
-	...VS_TYPICAL,
+	...VS_AVERAGE,
 	...NETWORTH_STATS,
 	...NET_WORTH_GROWTH_DEFS
 ];

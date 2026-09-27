@@ -1,16 +1,16 @@
 <script lang="ts">
-	// The faint chart behind a KPI's number. One component for all three shapes, which differ only in
-	// the mark drawn over one shared scale.
-	//
-	// Axis-less and tooltip-less by intent: this says shape, the number in front says the value.
+	// Axis-less and tooltip-less on purpose: this says shape, the number in front says the value.
 	import type { Series } from '$lib/data/primitives';
 
 	interface Props {
 		series: Series;
 		shape: 'bar' | 'line' | 'area';
 		color: string;
+		/** Scale to the series' own range rather than from zero, for a level such as net worth whose
+		    movement is a few percent of its size: zero-anchored, it draws as a flat block. */
+		level?: boolean;
 	}
-	let { series, shape, color }: Props = $props();
+	let { series, shape, color, level = false }: Props = $props();
 
 	// Stretched rather than measured: the mark is decorative, so it costs nothing to draw at a fixed
 	// viewBox and let the box scale it.
@@ -18,9 +18,12 @@
 	const H = 32;
 
 	const values = $derived(series.points.map((p) => p.value ?? 0));
-	// Zero-anchored, so a bar's height reads as a magnitude and a dip towards zero reads as one.
-	const top = $derived(Math.max(0, ...values) || 1);
-	const bottom = $derived(Math.min(0, ...values));
+	// Zero-anchored, so a bar's height reads as a magnitude and a dip towards zero reads as one. A level
+	// keeps a quarter of its range under its low, so its lowest point does not sit on the card's edge.
+	const lo = $derived(Math.min(...values));
+	const hi = $derived(Math.max(...values));
+	const top = $derived(level ? hi : Math.max(0, hi) || 1);
+	const bottom = $derived(level ? lo - (hi - lo || Math.abs(hi) || 1) / 4 : Math.min(0, lo));
 	const span = $derived(top - bottom || 1);
 
 	const y = (v: number) => H - ((v - bottom) / span) * H;
@@ -39,7 +42,8 @@
 	const line = $derived(values.map((v, i) => `${x(i)},${y(v)}`).join(' '));
 	// Closed on the ZERO line, not the box's bottom edge: for a series that dips negative those are not
 	// the same place, and filling to the edge would shade the dip as if it were a gain.
-	const filled = $derived(`0,${y(0)} ${line} ${W},${y(0)}`);
+	const floor = $derived(level ? H : y(0));
+	const filled = $derived(`0,${floor} ${line} ${W},${floor}`);
 </script>
 
 <svg
@@ -66,15 +70,16 @@
 		display: block;
 		width: 100%;
 		height: 100%;
+		--mark-hue: oklch(from var(--mark) var(--wash-lightness) c h);
 	}
 	/* How faint is pitched at the BADGE, not the number: it is the smallest type on the card, and a red
 	   badge over a red fill is the tightest pair there is. Strength is per theme (see app.css). */
 	.fill {
-		fill: color-mix(in srgb, var(--mark) var(--mark-wash), transparent);
+		fill: color-mix(in srgb, var(--mark-hue) var(--mark-wash), transparent);
 	}
 	.stroke {
 		fill: none;
-		stroke: color-mix(in srgb, var(--mark) var(--mark-line), transparent);
+		stroke: color-mix(in srgb, var(--mark-hue) var(--mark-line), transparent);
 		stroke-width: 1.5;
 		/* The viewBox is stretched, so an unscaled width keeps the line the same weight at any pane size. */
 		vector-effect: non-scaling-stroke;

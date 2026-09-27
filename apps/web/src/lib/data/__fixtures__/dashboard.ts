@@ -16,7 +16,6 @@ const KIND_FLAGS = [
 	'product',
 	'scopable',
 	'labelled',
-	'plugged',
 	'drains',
 	'splits',
 	'sweeps',
@@ -31,12 +30,12 @@ const KIND_TABLE: Record<KindName, { prefix: string; on: (typeof KIND_FLAGS)[num
 	category: { prefix: 'Expenses:', on: [] },
 	bank: {
 		prefix: 'Assets:Cash:',
-		on: ['named', 'plugged', 'drains', 'splits', 'sweeps', 'sweep_target']
+		on: ['named', 'drains', 'splits', 'sweeps', 'sweep_target']
 	},
 	card: { prefix: 'Liabilities:CC:', on: ['named', 'product', 'reconciled'] },
 	investment: {
 		prefix: 'Assets:Investments:',
-		on: ['tiered', 'named', 'product', 'scopable', 'labelled', 'plugged', 'splits', 'sweep_target']
+		on: ['tiered', 'named', 'product', 'scopable', 'labelled', 'splits', 'sweep_target']
 	},
 	employer: { prefix: 'Income:Salary:', on: [] },
 	deduction: { prefix: 'Expenses:Deductions:', on: ['scopable'] }
@@ -102,7 +101,6 @@ export function makeData(): DashboardData {
 			years: [2024, 2025],
 			month_keys: ['2024-12', '2025-01'],
 			transaction_count: 4,
-			date_range: { start: '2024-12-05', end: '2025-01-20' },
 			categories: ['Grocery', 'Takeouts'],
 			accounts: {
 				'Assets:Cash:BankA': { name: 'Bank A', institution_name: 'Bank of Example' },
@@ -208,10 +206,7 @@ export function makeData(): DashboardData {
 	};
 }
 
-/**
- * The base fixture plus a net-worth section and settings. Its figures are chosen so the growth
- * decomposition is checkable by hand against the base fixture's `saved` rows.
- */
+/** Figures chosen so the growth decomposition checks by hand against the base fixture's `saved` rows. */
 export function makeNetWorthData(): DashboardData {
 	const snapshot = (
 		date: string,
@@ -275,6 +270,7 @@ export function makeNetWorthData(): DashboardData {
 		swr: 4,
 		nominal_return: 8,
 		inflation: 3,
+		volatility: 15,
 		retire_age: 60,
 		runway_target: 6,
 		horizon_age: 95,

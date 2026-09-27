@@ -1,10 +1,8 @@
-// One pane's gesture as a state object: what the press captured, what the pointer has done since, and
-// whether the content will stand for it. No DOM — spilling and settling arrive as functions, so a test
-// can drive a gesture with scripted answers instead of a browser.
+// No DOM: spilling and settling arrive as functions, so a test can script the content.
 
-import { EDGES, moveRect, resizeRect, type Edge } from './resize';
+import { EDGES, holdFloor, lowest, moveRect, resizeRect, type Edge, type Floor } from './resize';
 import { clampRect } from './resolve';
-import { UNIT } from './units';
+import { COLS, UNIT } from './units';
 import type { DragOrigin } from './lift';
 import type { AuthoredPane, HeightMode, Rect } from './types';
 
@@ -15,6 +13,7 @@ export interface GestureTarget {
 	snapshot(): AuthoredPane[];
 	restore(panes: AuthoredPane[]): void;
 	beginDrag(): DragOrigin;
+	rebase(id: string): void;
 	dragTo(id: string, x: number, y: number, origin: DragOrigin): void;
 	resizeTo(id: string, rect: Rect): void;
 	commit(): void;
@@ -34,14 +33,10 @@ export class PaneGesture {
 	readonly #spills: () => boolean;
 	readonly #settle: () => Promise<void>;
 
-	/** True while the pointer is pushing past the size the content will fit in. */
+	/** True while the pointer is pushing past the pane's floor. */
 	invalid = $state(false);
 
-	/**
-	 * The grid rectangle the pointer is over during a move, for the board to draw a target on. Not where
-	 * the pane will land: a raise the push rule refuses leaves the card behind while this goes on, which
-	 * is the whole reason to show it — the swap only fires once it has covered the pane above.
-	 */
+	/** Where the pointer is, not where the pane lands: a raise the push rule refuses leaves the card behind. */
 	aim = $state<Rect | null>(null);
 
 	/** The whole board as it was at the press, so Escape puts it back — including the promotion. */
@@ -50,10 +45,10 @@ export class PaneGesture {
 	#base: Rect | null = null;
 	/** The board a move re-derives from, so a swap made mid-drag can be undone by dragging back. */
 	#origin: DragOrigin | null = null;
-	/** The most recent candidate whose content fitted. A rejected resize is held here, so the edge sticks
-	    the way a native min-size does rather than the gesture being thrown away on release. */
-	#fitting: Rect | null = null;
-	/** Serial, so a superseded spill check cannot undo a newer candidate. */
+	/** Measured once at the press: per candidate, the floor moved with the path the pointer took. */
+	#floor: Promise<Floor> | null = null;
+	/** Serial, so a candidate from a pointer move the floor was still being measured for cannot undo a newer
+	    one. */
 	#attempt = 0;
 
 	/** `pane` is a getter, not a value: which pane a component shows is a live prop, and a gesture that
@@ -86,6 +81,7 @@ export class PaneGesture {
 		if (this.#before) this.#arrangement.restore(this.#before);
 		this.#before = null;
 		this.#base = null;
+		this.#floor = null;
 		this.#origin = null;
 		this.invalid = false;
 		this.aim = null;
@@ -117,37 +113,51 @@ export class PaneGesture {
 
 	beginResize(): void {
 		this.#before = this.#arrangement.snapshot();
+		this.#arrangement.rebase(this.#id);
 		this.#base = this.#editable();
-		this.#fitting = this.#base;
+		this.#floor = this.#measureFloor(this.#base);
 		this.invalid = false;
 		this.#attempt++;
 	}
 
-	async previewResize(edge: Edge, dx: number, dy: number): Promise<void> {
-		if (!this.#base) return;
-		const seq = ++this.#attempt;
-		this.#arrangement.resizeTo(this.#id, resizeRect(this.#base, edge, dx, dy));
+	/** The content's height laid out unwrapped across the board, then the least width it fits at that height, so
+	    the floor is never taller than designed. A fitted pane only has a width floor. */
+	async #measureFloor(base: Rect): Promise<Floor> {
+		const fits = async (rect: Rect) => {
+			this.#arrangement.resizeTo(this.#id, rect);
+			await this.#settle();
+			return !this.#spills();
+		};
+		const fitted = this.#arrangement.mode(this.#id) === 'fit';
+		const h = fitted
+			? base.h
+			: await lowest(1, base.h + COLS, (h) => fits({ ...base, x: 0, w: COLS, h }));
+		const w = await lowest(1, COLS, (w) => fits({ ...base, w, h }));
+		this.#arrangement.resizeTo(this.#id, base);
 		await this.#settle();
-		// A newer pointer move has already replaced this candidate; its check is the one that counts.
-		if (seq !== this.#attempt) return;
+		return { w, h: fitted ? 0 : h };
+	}
 
-		if (this.#spills()) {
-			this.invalid = true;
-			if (this.#fitting) this.#arrangement.resizeTo(this.#id, this.#fitting);
-		} else {
-			this.invalid = false;
-			this.#fitting = this.#editable();
-		}
+	async previewResize(edge: Edge, dx: number, dy: number): Promise<void> {
+		if (!this.#base || !this.#floor) return;
+		const seq = ++this.#attempt;
+		const floor = await this.#floor;
+		// A newer pointer move has already replaced this candidate.
+		if (seq !== this.#attempt || !this.#base) return;
+
+		const wanted = resizeRect(this.#base, edge, dx, dy);
+		const held = holdFloor(this.#base, edge, wanted, floor);
+		this.invalid = held.w !== wanted.w || held.h !== wanted.h;
+		this.#arrangement.resizeTo(this.#id, held);
 	}
 
 	async endResize(edge: Edge, dx: number, dy: number): Promise<void> {
 		await this.previewResize(edge, dx, dy);
-		// Whatever the pointer ended on, the pane keeps the last size its content fitted in.
-		if (this.invalid && this.#fitting) this.#arrangement.resizeTo(this.#id, this.#fitting);
 		this.invalid = false;
 		this.#arrangement.commit();
 		this.#before = null;
 		this.#base = null;
+		this.#floor = null;
 	}
 
 	/** One keypress worth of gesture: pressed, travelled a unit and released at once. Does nothing if this

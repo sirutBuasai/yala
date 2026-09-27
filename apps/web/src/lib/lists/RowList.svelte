@@ -1,10 +1,9 @@
 <script lang="ts" generics="T extends { locator: string }">
-	// Shared skeleton for the transaction / paycheck / transfer lists: bleed-to-edge grid rows
-	// (date? · dot · main · N columns · amount) with hover, divider and click-to-edit. Callers supply
-	// the column template and snippets for the divergent cells. The pane owns the height, not the
-	// list — a list that overruns scrolls inside its pane.
+	// Shared by the transaction, paycheck and transfer lists; callers supply the column template and divergent
+	// cells. The pane owns the height, so an overrunning list scrolls inside it.
 	import { monthDay } from '$lib/utils/format';
 	import type { Snippet } from 'svelte';
+	import Dot from '$lib/charts/marks/Dot.svelte';
 
 	interface Props {
 		items: T[];
@@ -36,11 +35,8 @@
 
 	const clickable = $derived(!!onedit);
 
-	// The amount track is a floor, not a width: a fixed width clipped large totals, so `max-content` lets
-	// the amount take what it needs and the payee column gives it up. The payee's own floor is its
-	// min-content, so the row reports a real shortfall once the tracks stop fitting — which is what lets
-	// the pane grow with the data (see `grid/spill.ts`). Crushable to zero, it reported nothing and the
-	// payee silently vanished instead.
+	// The amount track is a floor, not a width, which clipped large totals. The payee's min-content floor makes
+	// the row report a real shortfall; crushable to zero, the payee silently vanished.
 	const template = $derived(
 		[
 			dateOf ? 'var(--col-date)' : '',
@@ -67,7 +63,7 @@
 			onclick={clickable ? () => onedit?.(item.locator) : undefined}
 		>
 			{#if dateOf}<span class="date">{monthDay(dateOf(item))}</span>{/if}
-			<span class="dot" style:background={dotColor(item)} aria-hidden="true"></span>
+			<Dot color={dotColor(item)} />
 			{@render main(item)}
 			<!-- `display: contents` keeps each middle column its own grid track while giving the group
 			     one switch: at narrow widths the wrapper goes `display: none` and the tracks collapse. -->
@@ -103,9 +99,8 @@
 			display: none;
 		}
 	}
-	/* Narrower than the row's own min-content, where the pane cannot grow to make the shortfall up: the
-	   main column gives up its floor and the payee (already ellipsised) truncates instead of pushing the
-	   amount out of the card. A custom property, since the template is an inline style. */
+	/* Past the row's min-content, where the pane can't grow, the payee truncates rather than pushing the amount
+	   out. A custom property, since the template is an inline style. */
 	@container (max-width: 20rem) {
 		.row {
 			--col-main-floor: 0;
@@ -142,16 +137,11 @@
 		cursor: pointer;
 	}
 	.row.clickable:hover {
-		background: color-mix(in srgb, var(--lav) 9%, transparent);
+		background: color-mix(in srgb, var(--lav-wash) calc(9% * var(--wash-scale)), transparent);
 	}
 	.date {
 		color: var(--ink-3);
 		font-size: var(--text-meta);
 		font-variant-numeric: tabular-nums;
-	}
-	.dot {
-		width: 8px;
-		height: 8px;
-		border-radius: var(--radius-pill);
 	}
 </style>

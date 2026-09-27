@@ -18,13 +18,14 @@ export interface KpiSpec {
 	title?: Label;
 	/** Caption override. The scalar's own note otherwise. */
 	caption?: Label;
-	/**
-	 * The chart under (or before) the stat. `ring` reads the scalar's own percentage and `meter` its own
-	 * `target`; every other shape needs `series` — a catalog series id at the same scope.
-	 */
+	/** `ring` reads the scalar's percentage and `meter` its `target`; every other shape needs a `series` id. */
 	chart?: KpiChart;
 	/** Catalog id of the series a bar / line / area chart draws. */
 	series?: string;
+	/** Scale the chart to the series' own range; see `Spark`. */
+	level?: boolean;
+	/** The page the title opens, by its path. A card with none has no link. */
+	open?: string;
 }
 
 /** One KPI as a view declares it: the spec, plus where it sits when it is its own card. */
@@ -41,4 +42,7 @@ export type KpiBoardDefs = Record<string, KpiDef>;
 export interface KpiMerge {
 	ids: string[];
 	axis: MergeAxis;
+	/** How the card divides between its sections, where that is not their rectangles' spans: a card whose
+	    span the sections' whole units cannot split evenly. */
+	weights?: number[];
 }

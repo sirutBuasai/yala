@@ -2,7 +2,7 @@
   "$defs": {
     "AccountInfo": {
       "additionalProperties": false,
-      "description": "One account's whole record: what it is called, what it is, and what it carries. Every field\nis resolved from ledger metadata by the backend, so the naming rule has one implementation\nrather than one per language.",
+      "description": "Resolved by the backend, so the naming rule has one implementation.",
       "properties": {
         "name": {
           "title": "Name",
@@ -174,7 +174,7 @@
     },
     "AccountKind": {
       "additionalProperties": false,
-      "description": "What one kind of account is allowed to carry, so a form offers exactly the controls that\napply. Copied off :data:`yala.ledger.accounts.KINDS`, which the routes enforce and which\ndocuments each flag, so the form and the API cannot disagree.",
+      "description": "Copied off :data:`yala.ledger.accounts.KINDS`, so forms offer exactly the controls the API\nallows.",
       "properties": {
         "name": {
           "enum": [
@@ -194,10 +194,6 @@
         },
         "tiered": {
           "title": "Tiered",
-          "type": "boolean"
-        },
-        "plugged": {
-          "title": "Plugged",
           "type": "boolean"
         },
         "named": {
@@ -241,7 +237,6 @@
         "name",
         "prefix",
         "tiered",
-        "plugged",
         "named",
         "product",
         "scopable",
@@ -257,7 +252,7 @@
     },
     "AccountLists": {
       "additionalProperties": false,
-      "description": "The pickable account sets the entry forms and the Manage panels choose from.\n\nSnapshotted into ``data.json`` as well as served live from ``/api/accounts`` so the forms still\nrender when the local API is down. Writes are then refused by the frontend's write guard rather\nthan by an absent list, since a form that vanishes reads as a missing feature.",
+      "description": "Snapshotted as well as served live, so forms render without the API; the write guard refuses\nwrites instead of the forms vanishing.",
       "properties": {
         "kinds": {
           "items": {
@@ -378,25 +373,6 @@
         "amount"
       ],
       "title": "CategoryAmount",
-      "type": "object"
-    },
-    "DateRange": {
-      "additionalProperties": false,
-      "properties": {
-        "start": {
-          "title": "Start",
-          "type": "string"
-        },
-        "end": {
-          "title": "End",
-          "type": "string"
-        }
-      },
-      "required": [
-        "start",
-        "end"
-      ],
-      "title": "DateRange",
       "type": "object"
     },
     "Domains": {
@@ -520,16 +496,6 @@
           "title": "Transaction Count",
           "type": "integer"
         },
-        "date_range": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/DateRange"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "categories": {
           "items": {
             "type": "string"
@@ -552,7 +518,6 @@
         "years",
         "month_keys",
         "transaction_count",
-        "date_range",
         "categories",
         "accounts",
         "domains"
@@ -764,6 +729,14 @@
             "type": "number"
           },
           "title": "Breakdown",
+          "type": "object"
+        },
+        "owed": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "default": {},
+          "title": "Owed",
           "type": "object"
         }
       },
@@ -985,6 +958,10 @@
           "title": "Inflation",
           "type": "number"
         },
+        "volatility": {
+          "title": "Volatility",
+          "type": "number"
+        },
         "retire_age": {
           "title": "Retire Age",
           "type": "number"
@@ -1038,6 +1015,7 @@
         "swr",
         "nominal_return",
         "inflation",
+        "volatility",
         "retire_age",
         "runway_target",
         "horizon_age"

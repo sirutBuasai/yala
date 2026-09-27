@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Dot from '$lib/charts/marks/Dot.svelte';
 	// One day in the month grid. A gridcell rather than a plain button: the grid around it owns
 	// arrow-key movement, and this cell only reports whether it is the selected one.
 	import type { DayCell } from '$lib/calendar/days';
@@ -42,7 +43,7 @@
 	<span class="dn" aria-hidden="true">{cell.day}</span>
 	{#if cell.cats.length}
 		<span class="cdots" aria-hidden="true">
-			{#each cell.cats as cat (cat)}<i style:background={categoryVar(cat)}></i>{/each}
+			{#each cell.cats as cat (cat)}<Dot color={categoryVar(cat)} size={6} />{/each}
 			{#if cell.more}<span class="more">+</span>{/if}
 		</span>
 	{/if}
@@ -75,7 +76,11 @@
 	}
 	.cell.pending {
 		border-color: var(--pend);
-		background: color-mix(in srgb, var(--pend) 13%, var(--surface-2));
+		background: color-mix(
+			in srgb,
+			oklch(from var(--pend) var(--wash-lightness) c h) calc(13% * var(--wash-scale)),
+			var(--surface-2)
+		);
 	}
 	.cell.sel {
 		border-color: var(--sel);
@@ -99,12 +104,6 @@
 		flex-wrap: wrap;
 		max-width: 46px;
 		justify-content: flex-end;
-	}
-	.cdots i {
-		width: 6px;
-		height: 6px;
-		border-radius: var(--radius-pill);
-		display: block;
 	}
 	.cdots .more {
 		font-size: var(--text-micro);
@@ -130,10 +129,8 @@
 	.inc {
 		color: var(--good-text);
 	}
-	/* Too narrow for a figure: seven columns leave a cell smaller than one, and both of these are out of
-	   flow, so they overrun rather than reporting a shortfall. The dots alone carry "something happened
-	   here" and the figures are a tap away in the day panel. Scoped to the width at which the grid drops
-	   its week gutter (see CalendarGrid), so the cell changes shape once. */
+	/* Seven columns leave a cell narrower than a figure, and these are out of flow, so they would overrun.
+	   Scoped to the width where the grid drops its week gutter, so the cell changes shape once. */
 	@container (max-width: 30rem) {
 		.camounts {
 			display: none;

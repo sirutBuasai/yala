@@ -1,8 +1,4 @@
-"""Account-path taxonomy: the ledger's account prefixes and meta-key sets.
-
-Postings are classified by account prefix, so these are the single source of truth for what each
-account subtree means.
-"""
+"""Account prefixes and meta-key sets: the single source of truth for what each subtree means."""
 
 from __future__ import annotations
 
@@ -57,11 +53,7 @@ DROPPED_META = INTERNAL_META | RETIRED_META | MANAGED_META
 
 
 def meta_str(meta: Mapping[str, object] | None, key: str) -> str | None:
-    """One metadata value as text, or ``None`` when it is absent or empty.
-
-    The one reader for every optional meta key: beancount hands values back untyped, and an empty
-    string has to read the same as a missing key, or a cleared field would look like a set one.
-    """
+    """``None`` when absent or empty, so a cleared field never reads as a set one."""
     value = (meta or {}).get(key)
 
     return str(value) if value else None

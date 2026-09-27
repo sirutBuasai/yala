@@ -1,7 +1,5 @@
-// One guided flow serves all six kinds, so the cases worth pinning are the ones where the *kind*
-// decides what is asked: how many questions there are, which name fields they ask for, and the gate in
-// front of the POST. A name that composes to nothing has to be refused here with a sentence naming the
-// field — the API's own rejection reads in terms of the composed leaf, which is not what was typed.
+// Pins where the kind decides what is asked, and the gate before the POST: a name composing to nothing is
+// refused here, since the API's error names the composed leaf.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';

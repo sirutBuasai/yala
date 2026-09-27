@@ -1,8 +1,4 @@
-"""Composing a single beancount directive as text.
-
-Written as text rather than through beancount's printer wherever the file's own formatting matters:
-an aligned amount column, a metadata line, a year-file header.
-"""
+"""Directives written as text where the file's own formatting matters."""
 
 from __future__ import annotations
 
@@ -28,14 +24,8 @@ MONTHLY = frozenset({"assets", "liabilities"})
 
 
 def stored_amount(account: str, amount: Decimal) -> Decimal:
-    """The signed figure a ``balance`` assertion carries for ``account``.
-
-    A liability is passed in the way a statement reads it — owed positive, a credit negative — and
-    beancount keeps that inverted, so the sign is flipped rather than forced. Forcing it made a
-    credit impossible to state: an overpaid card came back as more owed.
-
-    Raises for a negative asset, which has no meaning.
-    """
+    """A liability is passed owed-positive and flipped, not forced, which made a credit impossible.
+    Raises for a negative asset."""
     if account.startswith(LIABILITIES):
         return -amount
     if amount < 0:
@@ -56,11 +46,8 @@ def posting(account: str, number: Decimal, meta: dict | None = None) -> data.Pos
 
 
 def meta_line(key: str, value: str) -> str:
-    """One indented ``key: "value"`` metadata line.
-
-    A quote or backslash must be escaped: unescaped, it ends the string early and the file no longer
-    parses. A newline is the opposite hazard — beancount accepts it inside the quotes, so a strict
-    reload passes and the file silently gains a line."""
+    """Quotes and backslashes are escaped, or the string ends early. A newline passes a strict
+    reload yet silently adds a line."""
     escaped = single_line(str(value), key).replace("\\", "\\\\").replace('"', '\\"')
     return f'  {key}: "{escaped}"'
 
@@ -71,10 +58,8 @@ def meta_lines(meta: dict[str, str] | None) -> str:
 
 
 def balance_directive(date: dt.date, account: str, amount: Decimal, entry_id: str) -> str:
-    """A ``balance`` assertion plus the ``id`` meta that makes it addressable by locator.
-
-    Without the id the only handle is the source line, which shifts whenever anything above it in
-    the file changes."""
+    """The ``id`` makes it addressable; the source line shifts whenever anything above it
+    changes."""
     return (
         f"{date.isoformat()} {BALANCE} {account}    {amount:,.2f} {DEFAULT_CURRENCY}\n"
         f'  id: "{entry_id}"'

@@ -16,10 +16,7 @@ export interface ChartFormat {
 	tick(v: number): string;
 }
 
-/**
- * `ticks` are the labels the value axis is about to draw, which is what decides whether a money axis
- * abbreviates — see `moneyAxisFormat`. Omit them for a chart with no value axis.
- */
+/** `ticks` decide whether a money axis abbreviates (see `moneyAxisFormat`); omit without a value axis. */
 export function chartFormat(unit: Unit, ticks: number[] = []): ChartFormat {
 	const moneyTick = moneyAxisFormat(ticks);
 

@@ -3,6 +3,7 @@ import { build, CATALOG_BY_ID, dataOfKind } from '$lib/data/catalog';
 import type { Scalar } from '$lib/data/primitives';
 import { formatUnit, MONTHS, PERCENT, YEARS } from '$lib/data/primitives';
 import { makeData, makeNetWorthData } from '$lib/data/__fixtures__/dashboard';
+import { coastYear, netWorthParts } from '$lib/data/networth';
 import type { Scope, ScopeLevel } from '$lib/data/scope';
 
 const scopeFor = (level: ScopeLevel): Scope =>
@@ -50,7 +51,7 @@ describe('catalog integrity', () => {
 			'networth.fi_number',
 			'networth.fi_progress',
 			'networth.coast_fi',
-			'networth.years_of_freedom',
+			'networth.fi_date',
 			'networth.runway',
 			'networth.balance_growth',
 			'networth.top_account'
@@ -157,19 +158,16 @@ describe('targets', () => {
 		expect(s.value!).toBeLessThan((NET_WORTH / (ANNUAL_SPEND / DEFAULT_SWR)) * 100);
 	});
 
-	it('measures years of freedom against annual spending', () => {
-		const s = scalar('networth.years_of_freedom');
-		expect(s.unit).toEqual(YEARS);
-		expect(s.value).toBeCloseTo(NET_WORTH / ANNUAL_SPEND, 5);
-	});
-
-	// The lifestyle it measures against is the recent one, so more spending has to shorten it.
-	it('shortens years of freedom when recent spending rises', () => {
-		const before = scalar('networth.years_of_freedom').value!;
+	it("dates Coast FI by when today's balance alone reaches the FI number", () => {
 		const data = makeNetWorthData();
-		data.months['2025-01']!.total_spent = 4000;
-		const after = (build(data, 'networth.years_of_freedom', { level: 'all' }) as Scalar).value!;
-		expect(after).toBeLessThan(before);
+		data.settings!.birth_year = 1990;
+		const now = new Date().getFullYear();
+		// A tiny FI number is already reached; one out of reach at no growth never is.
+		data.settings!.planned_spending = 1;
+		expect(coastYear(data)).toBe(now);
+		data.settings!.planned_spending = 1e9;
+		data.settings!.nominal_return = 0;
+		expect(coastYear(data)).toBeNull();
 	});
 
 	it('measures runway from liquid cash against monthly spending', () => {
@@ -188,6 +186,11 @@ describe('targets', () => {
 		const withYear = build(data, 'networth.coast_fi', { level: 'all' }) as Scalar;
 		expect(withYear.value).not.toBeNull();
 		expect(withYear.value!).toBeGreaterThan(0);
+		const retires = 1990 + data.settings!.retire_age;
+		const by = Number(withYear.note?.context?.match(/^reached FI by (\d{4})$/)?.[1]);
+		// Past 100% it gets there before retiring; short of it, after.
+		if (withYear.value! >= 100) expect(by).toBeLessThanOrEqual(retires);
+		else expect(by).toBeGreaterThan(retires);
 	});
 });
 
@@ -401,6 +404,20 @@ describe('thresholds bullet', () => {
 		expect(withIt.rows.map((r) => r.label)).toContain('Coast FI');
 	});
 
+	it('reads each share row as the amounts behind it too', () => {
+		const data = makeNetWorthData();
+		data.settings!.birth_year = 1990;
+		const p = build(data, 'networth.thresholds', { level: 'all' });
+		if (p.kind !== 'bullet') throw new Error('expected bullet');
+		const row = (label: string) => p.rows.find((r) => r.label === label)!;
+
+		expect(row('Cash runway').amount).toBeUndefined();
+		for (const label of ['FI number', 'Coast FI']) {
+			const { value, target } = row(label).amount!;
+			expect(row(label).value).toBeCloseTo((value / target) * 100, 5);
+		}
+	});
+
 	it('measures percentage rows against a full 100', () => {
 		const p = build(makeNetWorthData(), 'networth.thresholds', { level: 'all' });
 		if (p.kind !== 'bullet') throw new Error('expected bullet');
@@ -454,9 +471,7 @@ describe('year-end levels behind a KPI', () => {
 
 // --- how a snapshot's date reads on an axis ---
 
-/** The fixture with balances logged on the 1st of two consecutive months, which is what lets a month's
-    move be measured: a balance dated the 1st is taken before that month's money has moved, so the month
-    opens on its own snapshot and closes on the next month's. */
+/** Balances on the 1st of consecutive months: a month opens on its own snapshot, closes on the next's. */
 function loggedOnTheFirst() {
 	const data = makeNetWorthData();
 	data.networth!.series = [
@@ -614,9 +629,7 @@ describe('change by month', () => {
 		return p;
 	};
 
-	// Month over month, so a bar is measured from the freshest reading in the month before — a bar is
-	// therefore labelled one month after the movement it describes. That is the cost of using the newest
-	// balance rather than the one dated at the month's edge.
+	// Month over month from the freshest prior reading, so a bar is labelled a month after its movement.
 	it('plots the two levels that can share one chart, as percentages', () => {
 		const p = changeOf('networth.change_by_month');
 
@@ -744,18 +757,13 @@ describe('monthly attribution', () => {
 		});
 		if (p.kind !== 'multiseries') throw new Error('expected multiseries');
 
-		// February's bar spans January's snapshot to February's, so it carries January's move (6000 − 3000)
-		// AND January's logged saving. `saved` follows the window, not the calendar month, so the two always
-		// describe the same stretch of time and `other` is a real remainder.
+		// `saved` follows the window, not the calendar month, so `other` is a real remainder.
 		const [saved, other] = p.series;
 		expect(saved!.points[1]!.value).toBe(2254.5);
 		expect(other!.points[1]!.value).toBe(745.5);
 	});
 
-	// The bug this pairing fixes: measuring a month against the last snapshot dated INSIDE it put the
-	// balance move of one month against the logged saving of the next.
-	// The window and the saving it is judged against must cover the same days, or `other` is the difference
-	// between two unrelated stretches of time.
+	// Bug: measuring against the last snapshot inside the month set one month's move against the next's saving.
 	it('measures saving over the window, not over the calendar month', () => {
 		const p = build(loggedOnTheFirst(), 'networth.saved_vs_other_by_month', {
 			level: 'year',
@@ -831,5 +839,86 @@ describe('the year against last year', () => {
 		expect(CATALOG_BY_ID['networth.growth_change']!.label).toBe('Change');
 		expect(CATALOG_BY_ID['networth.growth_saved']!.label).toBe('Saved');
 		expect(CATALOG_BY_ID['networth.growth_other']!.label).toBe('Market & other');
+	});
+});
+
+describe('a picked period', () => {
+	it('reads a year’s levels at its close, each with its move over the year', () => {
+		const assets = scalar('networth.assets', { level: 'year', year: 2025 });
+		expect(assets.value).toBe(6500);
+		expect(assets.delta).toMatchObject({ value: 3500, tone: 'good', note: 'this year' });
+	});
+
+	it('reads a rise in what is owed as bad news', () => {
+		const owed = scalar('networth.liabilities', { level: 'year', year: 2025 });
+		expect(owed.delta).toMatchObject({ value: 500, tone: 'bad' });
+	});
+
+	it('reads a month over the window its bar spans, so the card agrees with the bar', () => {
+		const change = scalar('networth.change', { level: 'month', monthKey: '2025-06' });
+		expect(change.value).toBe(6000);
+		expect(change.delta).toMatchObject({ value: 3000, note: 'this month' });
+	});
+});
+
+describe('a window of years', () => {
+	it('reads only the years it covers', () => {
+		const bars = build(makeNetWorthData(), 'networth.saved_vs_other', {
+			level: 'all',
+			since: 2025
+		});
+		expect(bars.kind === 'multiseries' && bars.labels).toEqual(['2025']);
+	});
+
+	it('keeps a year with no snapshot on the year axis', () => {
+		const data = makeNetWorthData();
+		data.networth!.series.push({ ...data.networth!.series[2]!, date: '2027-01-01' });
+		const bars = build(data, 'networth.saved_vs_other', { level: 'all' });
+		expect(bars.kind === 'multiseries' && bars.labels).toEqual(['2024', '2025', '2026', '2027']);
+	});
+
+	it('names each snapshot’s date as its period, so a month marks every snapshot in it', () => {
+		const lines = build(makeNetWorthData(), 'networth.vs_assets', { level: 'year', year: 2024 });
+		expect(lines.kind === 'multiseries' && lines.periods).toEqual(['2024-01-01', '2024-12-01']);
+	});
+});
+
+describe('netWorthParts', () => {
+	const keyed = (points: { key: string; value: number }[]) =>
+		Object.fromEntries(points.map((p) => [p.key, p.value]));
+
+	it("splits the scope's closing snapshot into buckets and what each account owes", () => {
+		const data = makeNetWorthData();
+		data.networth!.series[2]!.owed = { CardA: 400, CardB: 100 };
+		const { assets, liabilities } = netWorthParts(data, { level: 'year', year: 2025 });
+		expect(keyed(assets.points)).toEqual({ Liquid: 1300, Taxable: 2600, 'Tax-advantaged': 2600 });
+		expect(keyed(liabilities.points)).toEqual({ CardA: 400, CardB: 100 });
+	});
+
+	it('owes as one part where the snapshot predates the split', () => {
+		const { liabilities } = netWorthParts(makeNetWorthData(), { level: 'year', year: 2025 });
+		expect(keyed(liabilities.points)).toEqual({ Liabilities: 500 });
+	});
+});
+
+describe('levels since the last snapshot', () => {
+	it('moves every level, a debt growing read as bad', () => {
+		const data = makeNetWorthData();
+		const all: Scope = { level: 'all' };
+		const assets = build(data, 'networth.assets', all) as Scalar;
+		const owed = build(data, 'networth.liabilities', all) as Scalar;
+		expect(assets.delta).toMatchObject({ value: 3500, tone: 'good', note: 'since last' });
+		expect(owed.delta).toMatchObject({ value: 500, tone: 'bad', note: 'since last' });
+	});
+});
+
+describe('growth pace', () => {
+	it("holds a year's monthly rate for twelve months, against last year's total", () => {
+		const data = makeNetWorthData();
+		const year: Scope = { level: 'year', year: 2025 };
+		const pace = build(data, 'networth.growth_change_pace', year) as Scalar;
+		const perMonth = build(data, 'avg.networth_change_per_month', year) as Scalar;
+		expect(pace.value).toBeCloseTo(perMonth.value! * 12);
+		expect(pace.delta).toMatchObject({ note: 'YoY' });
 	});
 });

@@ -6,10 +6,13 @@
 	import { type Unit } from '$lib/data/primitives';
 	import { chartFormat } from '$lib/charts/format';
 	import { showTip, hideTip, withAlt } from '$lib/utils/tooltip';
-	import { labelAnchor, labelIndices, plotSize } from '$lib/charts/axis';
+	import { focusPad, pickGroups, plotSize, xAxisLabels } from '$lib/charts/axis';
 	import { ChartBox } from '$lib/charts/box.svelte';
 	import Legend from '$lib/charts/Legend.svelte';
 	import { chartLabel } from '$lib/charts/aria';
+	import FocusBand from '$lib/charts/marks/FocusBand.svelte';
+	import XLabels from '$lib/charts/marks/XLabels.svelte';
+	import PickBands from '$lib/charts/marks/PickBands.svelte';
 
 	interface Band {
 		name: string;
@@ -25,19 +28,46 @@
 		/** The unit each band's `alt` is in — a band's other reading, so one hover answers both "how much"
 		    and "what fraction". */
 		altUnit?: Unit;
+		/** The points of the period in focus, shaded behind the bands. */
+		marked?: number[];
+		/** Each point's period key, which lets a crowded axis spanning years name each year once. */
+		periods?: string[];
+		/** The period each point picks (`pickKeys`); with `onpick`, a click picks the run a point is in. */
+		picks?: string[];
+		onpick?: (key: string) => void;
+		picked?: string | null;
 	}
-	let { labels, series, unit, altUnit }: Props = $props();
+	let {
+		labels,
+		series,
+		unit,
+		altUnit,
+		marked = [],
+		periods,
+		picks,
+		onpick,
+		picked
+	}: Props = $props();
 
 	const box = new ChartBox();
 	const W = $derived(box.w);
 	const H = $derived(box.h);
-	const m = { t: 12, r: 16, b: 28, l: 46 };
-	const plot = $derived(plotSize(W, H, m));
-	const iw = $derived(plot.iw);
-	const ih = $derived(plot.ih);
+	const side = { t: 12, r: 16, l: 46 };
+	// The bottom margin is whatever the x-labels need, so the width is found without it.
+	const iw = $derived(Math.max(0, W - side.l - side.r));
 	const n = $derived(labels.length);
+	const xs = $derived(labels.map((_, i) => xPos(i)));
+	const xAxis = $derived(xAxisLabels(xs, labels, periods, true));
+	const m = $derived({ ...side, b: xAxis.bottom });
+	const ih = $derived(plotSize(W, H, m).ih);
 
 	const xPos = (i: number) => (n > 1 ? (iw * i) / (n - 1) : iw / 2);
+	const markWidth = $derived(focusPad(n, iw));
+
+	const pickable = $derived(!!onpick && !!picks);
+	const groups = $derived(pickable ? pickGroups(xs, picks!, iw) : []);
+	/** How far a pick reaches below the plot, so a click on a point's axis label picks it too. */
+	const LABEL_REACH = 26;
 
 	const label = $derived(
 		chartLabel(
@@ -77,8 +107,6 @@
 		})
 	);
 
-	const shown = $derived(new Set(labelIndices(n, iw, labels)));
-
 	const bandValue = (band: Band, i: number) =>
 		withAlt(f.exact(band.values[i] ?? 0), band.alt?.[i], altUnit);
 
@@ -104,23 +132,30 @@
 </script>
 
 <div class="figurebox" bind:clientWidth={box.clientWidth} bind:clientHeight={box.clientHeight}>
-	<svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
+	<svg class="chart" viewBox={`0 0 ${W} ${H}`} role={pickable ? 'group' : 'img'} aria-label={label}>
 		<g class="axis" transform={`translate(${m.l},${m.t})`}>
 			{#each ticks as t (t)}
 				<line class="gridline" x1="0" y1={y(t)} x2={iw} y2={y(t)} />
 				<text x={-8} y={y(t) + 4} text-anchor="end">{f.tick(t)}</text>
 			{/each}
 
+			{#if pickable}
+				<PickBands
+					{groups}
+					hovered={at === null ? null : picks![at]!}
+					{picked}
+					onpick={onpick!}
+					height={ih + LABEL_REACH}
+				/>
+			{/if}
+			<FocusBand xs={marked.map(xPos)} pad={markWidth} height={ih + 26} />
+
 			{#each paths as p (p.band.name)}
 				<path d={p.fill} fill={p.band.color} opacity="0.75" />
 				<path d={p.edge} fill="none" stroke={p.band.color} stroke-width="1.5" />
 			{/each}
 
-			{#each labels as lb, i (lb + i)}
-				{#if shown.has(i)}
-					<text x={xPos(i)} y={ih + 19} text-anchor={labelAnchor(i, n)}>{lb}</text>
-				{/if}
-			{/each}
+			<XLabels axis={xAxis} top={ih} {marked} />
 
 			<!-- Marked on each band's upper boundary: a band's value is its thickness, so it has no single
 			     point of its own to mark. -->
@@ -156,10 +191,12 @@
 					x={from}
 					y="0"
 					width={Math.min(iw, xPos(i) + half) - from}
-					height={ih}
+					height={pickable ? ih + LABEL_REACH : ih}
 					fill="transparent"
+					class:pick={pickable}
 					onmousemove={(e) => onMove(e, i)}
 					onmouseleave={onLeave}
+					onclick={pickable ? () => onpick!(picks![i]!) : undefined}
 					role="presentation"
 				/>
 			{/each}
@@ -171,3 +208,9 @@
 	<!-- Reversed, so the keys read top-to-bottom in the order the bands stack. -->
 	<Legend keys={series} below reverse />
 {/if}
+
+<style>
+	.pick {
+		cursor: pointer;
+	}
+</style>

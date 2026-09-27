@@ -1,10 +1,5 @@
-"""What a rename or a reopen would rewrite, planned before anything is written.
-
-An account's name *is* the path in every posting, assertion, pad and quoted meta value, so changing
-it means rewriting text across every file; a reopen is the one change the ledger cannot express as
-a further entry, so it means deleting text. Both are planned here as ``{path: new text}`` and given
-to :meth:`yala.sink.FileLedgerSink.rewrite_files`, which applies the set atomically.
-"""
+"""Renames and reopens planned as ``{path: new text}`` before anything is written, then applied
+atomically by :meth:`yala.sink.FileLedgerSink.rewrite_files`."""
 
 from __future__ import annotations
 
@@ -34,13 +29,8 @@ if TYPE_CHECKING:
 
 
 def rename_problem(ledger: "Ledger", old: str, new: str) -> str | None:
-    """Why ``old`` cannot be renamed to ``new``, or ``None`` if it can.
-
-    A rename moves an account, it does not change what it is: the two paths must belong to the same
-    kind, which is what lets an investment change tax tier while refusing to turn a category into a
-    bank account. Any name already declared is refused whether or not it is still open, so a rename
-    can never merge two accounts — least of all two employers.
-    """
+    """``None`` if it can. Both paths must be the same kind, and any declared name is refused, so a
+    rename can never merge two accounts."""
     if old == new:
         return "the new name matches the current one"
 
@@ -84,13 +74,8 @@ def rename_plan(
     *,
     meta: Mapping[str, str | None] | None = None,
 ) -> dict[Path, str]:
-    """The files a rename rewrites, and their new text.
-
-    An employer's name is duplicated — once as the account path, once as the bare string that scopes
-    contributions and deductions to it — so both are rewritten together. ``meta`` sets keys on the
-    renamed account's ``open`` in the same commit, which is how a name part that is stored as well
-    as composed into the path moves with it.
-    """
+    """An employer's name is also the bare string scoping its deductions and plans, so both are
+    rewritten. ``meta`` sets keys on the ``open`` in the same commit."""
     renames = rename_map(ledger, old, new)
     employer_rename = kind_of(old) is KINDS_BY_NAME["employer"]
 
@@ -115,11 +100,7 @@ def rename_plan(
 
 
 def institution_accounts(ledger: "Ledger", institution: str) -> list[str]:
-    """Every declared account held at ``institution``, closed ones included.
-
-    Closed ones too: their names still record the institution, and a rename that skipped them would
-    leave the old name in the history.
-    """
+    """Closed ones included, or the old name would remain in history."""
     meta = ledger.account_meta()
 
     return sorted(
@@ -128,12 +109,8 @@ def institution_accounts(ledger: "Ledger", institution: str) -> list[str]:
 
 
 def institution_rename_map(ledger: "Ledger", old: str, new: str) -> dict[str, str]:
-    """Every account path renaming institution ``old`` to ``new`` rewrites.
-
-    The institution's name is duplicated into every path composed from it, so all of them move
-    together. An account this app does not manage, or one whose product half was never recorded and
-    so cannot be recomposed, keeps its path: only its metadata follows.
-    """
+    """An unmanaged account, or one with no recorded product half, keeps its path; only its metadata
+    follows."""
     meta = ledger.account_meta()
     renames: dict[str, str] = {}
 
@@ -178,12 +155,8 @@ def institution_rename_problem(ledger: "Ledger", old: str, new: str) -> str | No
 def institution_rename_plan(
     ledger: "Ledger", files: Mapping[Path, str], old: str, new: str
 ) -> tuple[dict[Path, str], dict[str, str]]:
-    """The files renaming an institution rewrites, and the account renames it applies.
-
-    Three places hold the name: every path composed from it, the ``institution_name`` meta that
-    scopes an alias and picks the colour, and the colour swatch keyed by it. Rewriting fewer than
-    all three leaves the institution split in two.
-    """
+    """The name lives in paths, the ``institution_name`` meta and the colour swatch; missing any
+    splits the institution in two."""
     renames = institution_rename_map(ledger, old, new)
 
     after: dict[Path, str] = {}
@@ -198,12 +171,8 @@ def institution_rename_plan(
 def label_rename_plan(
     files: Mapping[Path, str], account: str, old: str, new: str
 ) -> dict[Path, str]:
-    """The files renaming one of ``account``'s contribution labels rewrites.
-
-    The label lives in two places: the account's ``labels`` meta, which is what the paycheck form
-    offers, and a ``label`` posting-meta on every contribution already logged under it. Rewriting
-    only the first would split one line item's history in two.
-    """
+    """Both the ``labels`` meta and every logged ``label`` posting-meta, or one line item's history
+    splits."""
     after = {}
     for path, text in files.items():
         offered = rewrite.rename_meta_in_scope(text, account, LABELS_META, old, new, listed=True)
@@ -216,11 +185,8 @@ def label_rename_plan(
 
 
 def reopen_targets(ledger: "Ledger", account: str) -> list[data.Close]:
-    """The ``close`` directives that reopening ``account`` deletes.
-
-    Its own, its plug's, and any close a cascade stamped with this account — which is how a rehire
-    brings the employer's own deductions back without disturbing one that was closed independently.
-    """
+    """Its own, its plug's, and any cascade stamped with it, so a rehire restores only what the
+    employer's close took."""
     wanted = {account}
     plug = plug_account(account)
     if plug is not None:
@@ -239,11 +205,7 @@ def reopen_targets(ledger: "Ledger", account: str) -> list[data.Close]:
 def reopen_plan(
     ledger: "Ledger", files: Mapping[Path, str], account: str
 ) -> tuple[dict[Path, str], list[str]]:
-    """The files a reopen rewrites, and the accounts it brings back.
-
-    Beancount rejects a second ``open`` for an account, so undoing a close means deleting the
-    ``close`` directive. It carries no money, so nothing is lost with it.
-    """
+    """Beancount rejects a second ``open``, so the ``close`` is deleted; it carries no money."""
     closes = reopen_targets(ledger, account)
 
     by_file: dict[Path, list[int]] = {}

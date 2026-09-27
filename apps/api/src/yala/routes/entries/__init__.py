@@ -1,8 +1,4 @@
-"""Ledger entries over HTTP, one module per kind, plus the delete they share.
-
-What separates the three is which accounts they post to, which is exactly what the read domains
-classify them by — so each kind gets its own module rather than one file of near-identical forms.
-"""
+"""Entries by kind, which the accounts they post to decide, plus a shared delete."""
 
 from yala.routes.entries import deleting, paychecks, transactions, transfers
 

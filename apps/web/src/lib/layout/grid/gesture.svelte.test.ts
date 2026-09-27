@@ -1,6 +1,4 @@
-// The gesture, driven with a fake arrangement and a scripted spill answer. This is where the awkward
-// cases live — a superseded probe, a rejected size, a capped pane's bottom edge — and none of them
-// need a browser, because the gesture is handed its answers rather than reading them off the DOM.
+// The gesture is handed its answers rather than reading the DOM, so these awkward cases need no browser.
 
 import { describe, expect, it } from 'vitest';
 import { PaneGesture, type GestureTarget } from '$lib/layout/grid/gesture.svelte';
@@ -23,11 +21,7 @@ interface Fake extends GestureTarget {
 	drags: { x: number; y: number }[];
 }
 
-/**
- * A board with two panes, the one under test SECOND so its promotion is visible. `dragTo` and
- * `resizeTo` reuse the same pure rules as `Arrangement`, so what the test pins down is the gesture.
- * Every pane carries the same `offset`, which is enough to exercise the displacement round-trip.
- */
+/** The pane under test comes second, so its promotion is visible. */
 function fake(over: Partial<AuthoredPane> = {}, offset = 0): Fake {
 	const patch = (id: string, next: (i: AuthoredPane) => AuthoredPane) => {
 		self.panes = self.panes.map((i) => (i.id === id ? next(i) : i));
@@ -46,6 +40,7 @@ function fake(over: Partial<AuthoredPane> = {}, offset = 0): Fake {
 		restore: (panes) => {
 			self.panes = panes.map((i) => ({ ...i }));
 		},
+		rebase: () => {},
 		beginDrag: () => ({
 			authored: self.snapshot(),
 			placed: self.panes.map((i): PlacedPane => ({
@@ -82,19 +77,18 @@ function fake(over: Partial<AuthoredPane> = {}, offset = 0): Fake {
 	return self;
 }
 
-/**
- * A gesture whose spill answers come from a script, one per probe, the last standing for the rest.
- * `gates` holds the settle back so a test can interleave two pointer moves; without it a candidate
- * is laid out the moment it is asked for.
- */
-function gesture(arrangement: Fake, answers: boolean[] = [], gates?: (() => void)[]) {
+/** Content that needs more height as it narrows, so its floor depends on the width it is given. */
+const wraps = (rect: { w: number; h: number }) => rect.w < 6 || rect.h < Math.max(4, 20 - rect.w);
+
+/** A gesture over `content`, which says whether the pane's current rectangle spills. */
+function gesture(arrangement: Fake, content: (rect: AuthoredPane) => boolean = () => false) {
 	const probes = { calls: 0 };
 	const s = new PaneGesture(() => ID, arrangement, {
 		spills: () => {
 			probes.calls++;
-			return answers[probes.calls - 1] ?? answers.at(-1) ?? false;
+			return content(arrangement.authored(ID));
 		},
-		settle: () => (gates ? new Promise<void>((resolve) => gates.push(resolve)) : Promise.resolve())
+		settle: () => Promise.resolve()
 	});
 	return { s, probes };
 }
@@ -180,12 +174,12 @@ describe('abandoning', () => {
 		expect(arrangement.committed).toBeNull();
 	});
 
-	it('restores a resize too, and clears the rejected state', async () => {
+	it('restores a resize too, and clears the held state', async () => {
 		const arrangement = fake();
-		const { s } = gesture(arrangement, [true]);
+		const { s } = gesture(arrangement, wraps);
 
 		s.beginResize();
-		await s.previewResize('e', px(20), 0);
+		await s.previewResize('e', px(-20), 0);
 		expect(s.invalid).toBe(true);
 
 		s.abandon();
@@ -195,85 +189,81 @@ describe('abandoning', () => {
 });
 
 describe('resizing', () => {
-	it('follows the pointer while the content fits', async () => {
+	it('follows the pointer above the floor', async () => {
 		const arrangement = fake();
-		const { s } = gesture(arrangement, [false]);
+		const { s } = gesture(arrangement, wraps);
 
 		s.beginResize();
-		await s.previewResize('se', px(3), px(2));
+		await s.previewResize('se', px(6), px(10));
 
-		expect(arrangement.authored(ID)).toMatchObject({ w: 15, h: 8 });
+		expect(arrangement.authored(ID)).toMatchObject({ w: 18, h: 16 });
 		expect(s.invalid).toBe(false);
 	});
 
-	it('holds the preview at the last fitting size once the content spills', async () => {
-		const arrangement = fake();
-		const { s } = gesture(arrangement, [false, true, true]);
+	it('holds each axis at the floor, the far edge staying put', async () => {
+		const arrangement = fake({ w: 20, h: 16 });
+		const { s } = gesture(arrangement, wraps);
 
 		s.beginResize();
-		await s.previewResize('w', px(-2), 0); // 14 wide, and it fits
-		expect(arrangement.authored(ID)).toMatchObject({ x: 2, w: 14 });
+		await s.previewResize('nw', px(18), px(14));
 
-		await s.previewResize('w', px(-6), 0); // 18 wide, and it does not
-		expect(arrangement.authored(ID)).toMatchObject({ x: 2, w: 14 });
+		// 16 by 4, the floor, with the right and bottom edges where the press left them.
+		expect(arrangement.authored(ID)).toMatchObject({ x: 8, w: 16, y: 16, h: 4 });
 		expect(s.invalid).toBe(true);
 
-		await s.previewResize('w', px(-10), 0); // pushing further changes nothing
-		expect(arrangement.authored(ID)).toMatchObject({ x: 2, w: 14 });
-		expect(s.invalid).toBe(true);
-	});
-
-	it('keeps the last fitting size on release, and stops wearing the rejected state', async () => {
-		const arrangement = fake();
-		const { s } = gesture(arrangement, [false, true]);
-
-		s.beginResize();
-		await s.previewResize('e', px(2), 0); // 14 wide, and it fits
-		await s.endResize('e', px(9), 0); // released well past the limit
-
-		// The gesture is never thrown away: the pane keeps the widest size its content fitted in.
-		expect(arrangement.authored(ID)).toMatchObject({ w: 14 });
+		await s.endResize('nw', px(18), px(14));
+		expect(arrangement.authored(ID)).toMatchObject({ x: 8, w: 16, y: 16, h: 4 });
 		expect(s.invalid).toBe(false);
 		expect(arrangement.committed).toEqual(arrangement.panes);
 	});
 
-	it('rejects even the first candidate back to the press-time size', async () => {
-		const arrangement = fake();
-		const { s } = gesture(arrangement, [true]);
+	it('keeps the same floor whatever path the pointer took', async () => {
+		const arrangement = fake({ w: 20, h: 16 });
+		const { s } = gesture(arrangement, wraps);
 
 		s.beginResize();
-		await s.endResize('s', px(0), px(-2));
+		await s.endResize('s', 0, px(-20));
+		expect(arrangement.authored(ID)).toMatchObject({ h: 4 });
 
-		expect(arrangement.authored(ID)).toMatchObject({ y: 4, h: 6 });
-		expect(s.invalid).toBe(false);
+		// Then wider, then back to the narrowest: at 4 rows every width down to 16 is still allowed.
+		s.beginResize();
+		await s.endResize('e', px(20), 0);
+		s.beginResize();
+		await s.endResize('e', px(-60), 0);
+		expect(arrangement.authored(ID)).toMatchObject({ w: 16, h: 4 });
 	});
 
-	it('lets no superseded probe overwrite a newer candidate', async () => {
-		const arrangement = fake();
-		const gates: (() => void)[] = [];
-		const { s, probes } = gesture(arrangement, [false], gates);
+	it('is never taller than the content unwrapped, whatever width the press was at', async () => {
+		const arrangement = fake({ w: 16, h: 6 });
+		const { s } = gesture(arrangement, wraps);
 
 		s.beginResize();
-		const stale = s.previewResize('e', px(2), 0); // 14 wide
-		const fresh = s.previewResize('e', px(6), 0); // 18 wide, and this is the live one
+		await s.endResize('s', 0, px(-10));
+		expect(arrangement.authored(ID)).toMatchObject({ h: 4 });
+	});
 
-		gates.shift()!();
-		await stale;
-		// The stale candidate does not even get to ask: whatever the DOM says now, it is answering about
-		// a size the pointer has already left, and acting on it would undo the newer one.
-		expect(probes.calls).toBe(0);
-		expect(arrangement.authored(ID)).toMatchObject({ w: 18 });
+	it("measures a fitted pane's width alone", async () => {
+		const arrangement = fake({ mode: 'fit', h: 6 });
+		const { s } = gesture(arrangement, (r) => r.w < 6);
 
-		gates.shift()!();
-		await fresh;
-		expect(probes.calls).toBe(1);
-		expect(arrangement.authored(ID)).toMatchObject({ w: 18 });
-		expect(s.invalid).toBe(false);
+		s.beginResize();
+		await s.endResize('e', px(-20), 0);
+		expect(arrangement.authored(ID)).toMatchObject({ w: 6, h: 6 });
+	});
+
+	it('puts the press-time size back once the floor is measured', async () => {
+		const arrangement = fake({ w: 20, h: 16 });
+		const { s, probes } = gesture(arrangement, wraps);
+
+		s.beginResize();
+		await s.previewResize('e', 0, 0);
+		expect(probes.calls).toBeGreaterThan(0);
+		expect(arrangement.authored(ID)).toMatchObject({ w: 20, h: 16 });
 	});
 
 	it("edits a capped pane's ceiling, not its height", async () => {
 		const arrangement = fake({ mode: 'cap', h: 6, cap: 10 });
-		const { s } = gesture(arrangement, [false]);
+		const { s } = gesture(arrangement);
 
 		s.beginResize();
 		// The press-time rectangle takes its vertical extent from the CEILING, so the bottom edge picks
@@ -305,7 +295,7 @@ describe('keyboard steps', () => {
 
 	it('resizes by one unit on the edge the arrow points at', async () => {
 		const arrangement = fake();
-		const { s } = gesture(arrangement, [false]);
+		const { s } = gesture(arrangement);
 
 		s.step(1, 0, true);
 		await flush();
@@ -318,7 +308,7 @@ describe('keyboard steps', () => {
 
 	it("refuses a resize on an edge this height mode does not put in the user's hands", async () => {
 		const arrangement = fake({ mode: 'fit' });
-		const { s } = gesture(arrangement, [false]);
+		const { s } = gesture(arrangement);
 
 		s.step(0, 1, true);
 		await flush();

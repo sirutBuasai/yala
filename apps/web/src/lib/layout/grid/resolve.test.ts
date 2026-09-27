@@ -145,3 +145,17 @@ describe('clampRect', () => {
 		expect(clampRect({ x: 0, y: 0, w: 99, h: 4 })).toMatchObject({ x: 0, w: COLS });
 	});
 });
+
+describe('open space above a displaced pane', () => {
+	it('keeps a pane in the gap above one pushed below it, rather than stranding it underneath', () => {
+		// `low` is authored at the top but pushed down by `wide`; `side` sits in the open space above it.
+		const placed = resolve([
+			p('wide', 0, 0, 24, 10),
+			p('low', 0, 2, 48, 4),
+			p('side', 24, 4, 24, 4)
+		]);
+		expect(at(placed, 'low')).toBe(10);
+		expect(at(placed, 'side')).toBe(4);
+		expect(firstOverlap(placed)).toBeNull();
+	});
+});

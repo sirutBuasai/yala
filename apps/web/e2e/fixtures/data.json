@@ -6,10 +6,6 @@
 		"years": [2025, 2026],
 		"month_keys": ["2025-08", "2025-09", "2026-01"],
 		"transaction_count": 5,
-		"date_range": {
-			"start": "2025-08-02",
-			"end": "2026-01-04"
-		},
 		"categories": ["Grocery", "Subscription", "Takeouts"],
 		"accounts": {
 			"Assets:Cash:BankA": {
@@ -633,7 +629,7 @@
 					"category": "Takeouts",
 					"source": "Liabilities:CC:CardA",
 					"pending": false,
-					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2025.beancount:3",
+					"locator": "line:../ledger/spending/2025.beancount:3",
 					"bill": null
 				},
 				{
@@ -643,7 +639,7 @@
 					"category": "Grocery",
 					"source": "Liabilities:CC:CardA",
 					"pending": false,
-					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2025.beancount:8",
+					"locator": "line:../ledger/spending/2025.beancount:8",
 					"bill": null
 				}
 			],
@@ -663,7 +659,7 @@
 					},
 					"net": 2300.0,
 					"take_home": 1550.0,
-					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/income/2025.beancount:3"
+					"locator": "line:../ledger/income/2025.beancount:3"
 				}
 			],
 			"transfers": []
@@ -685,7 +681,7 @@
 					"category": "Takeouts",
 					"source": "Liabilities:CC:CardA",
 					"pending": true,
-					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2025.beancount:12",
+					"locator": "line:../ledger/spending/2025.beancount:12",
 					"bill": null
 				}
 			],
@@ -713,7 +709,7 @@
 					"category": "Subscription",
 					"source": "Liabilities:CC:CardB",
 					"pending": false,
-					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2026.beancount:3",
+					"locator": "line:../ledger/spending/2026.beancount:3",
 					"bill": null
 				},
 				{
@@ -723,7 +719,7 @@
 					"category": "Takeouts",
 					"source": "Liabilities:CC:CardA",
 					"pending": false,
-					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/spending/2026.beancount:8",
+					"locator": "line:../ledger/spending/2026.beancount:8",
 					"bill": null
 				}
 			],
@@ -743,7 +739,7 @@
 					},
 					"net": 4750.0,
 					"take_home": 3000.0,
-					"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/income/2026.beancount:3"
+					"locator": "line:../ledger/income/2026.beancount:3"
 				}
 			],
 			"transfers": []
@@ -788,7 +784,7 @@
 				},
 				"net": 4750.0,
 				"take_home": 3000.0,
-				"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/income/2026.beancount:3"
+				"locator": "line:../ledger/income/2026.beancount:3"
 			},
 			{
 				"date": "2025-08-15",
@@ -805,7 +801,7 @@
 				},
 				"net": 2300.0,
 				"take_home": 1550.0,
-				"locator": "line:/Users/sbuasai/personal_dev/yala-project/yala/.worktrees/ui-hardening/apps/api/tests/fixtures/ledger/income/2025.beancount:3"
+				"locator": "line:../ledger/income/2025.beancount:3"
 			}
 		]
 	},
@@ -966,6 +962,7 @@
 		"swr": 4.0,
 		"nominal_return": 8.0,
 		"inflation": 3.0,
+		"volatility": 15.0,
 		"retire_age": 60.0,
 		"runway_target": 6.0,
 		"horizon_age": 95.0,
@@ -1000,6 +997,15 @@
 			"max": 15.0,
 			"default": 3.0,
 			"help": "Long-run annual inflation rate."
+		},
+		{
+			"key": "volatility",
+			"label": "Return volatility",
+			"kind": "percent",
+			"min": 0.0,
+			"max": 30.0,
+			"default": 15.0,
+			"help": "How far a year's return strays from the expected one: around 15% for a mostly stock portfolio, 10% for 60/40."
 		},
 		{
 			"key": "retire-age",
@@ -1062,7 +1068,6 @@
 				"name": "deduction",
 				"prefix": "Expenses:Deductions:",
 				"tiered": false,
-				"plugged": false,
 				"named": false,
 				"product": false,
 				"scopable": true,
@@ -1077,7 +1082,6 @@
 				"name": "employer",
 				"prefix": "Income:Salary:",
 				"tiered": false,
-				"plugged": false,
 				"named": false,
 				"product": false,
 				"scopable": false,
@@ -1092,7 +1096,6 @@
 				"name": "card",
 				"prefix": "Liabilities:CC:",
 				"tiered": false,
-				"plugged": false,
 				"named": true,
 				"product": true,
 				"scopable": false,
@@ -1107,7 +1110,6 @@
 				"name": "investment",
 				"prefix": "Assets:Investments:",
 				"tiered": true,
-				"plugged": true,
 				"named": true,
 				"product": true,
 				"scopable": true,
@@ -1122,7 +1124,6 @@
 				"name": "bank",
 				"prefix": "Assets:Cash:",
 				"tiered": false,
-				"plugged": true,
 				"named": true,
 				"product": false,
 				"scopable": false,
@@ -1137,7 +1138,6 @@
 				"name": "category",
 				"prefix": "Expenses:",
 				"tiered": false,
-				"plugged": false,
 				"named": false,
 				"product": false,
 				"scopable": false,

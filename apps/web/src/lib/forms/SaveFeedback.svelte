@@ -1,7 +1,5 @@
 <script lang="ts">
-	// The outcome line under a write control: error, else confirmation, else the caller's resting
-	// hint. Paired with `SaveState` so every control reports in the same place with the same roles
-	// (`alert` vs `status`).
+	// Paired with `SaveState`, so every write control reports in the same place with the same roles.
 	import type { Snippet } from 'svelte';
 	import type { SaveState } from '$lib/forms/saveState.svelte';
 

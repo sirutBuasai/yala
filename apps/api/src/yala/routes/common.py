@@ -1,8 +1,4 @@
-"""What every route shares: ledger and sink access, and the request field types.
-
-Validation lives here rather than in each router so one rule is enforced once; reporting a failure
-is :mod:`yala.routes.errors`.
-"""
+"""Ledger and sink access and the request field types, validated once here."""
 
 from __future__ import annotations
 
@@ -31,9 +27,8 @@ SEGMENT_RE = re.compile(r"^[A-Z][A-Za-z0-9-]*$")
 # name carrying one is refused rather than silently cleaned into a different name.
 TYPED_NAME_RE = re.compile(r"^[A-Za-z0-9 ]+$")
 
-# Sanity ceilings, defense-in-depth rather than domain rules. Money stays well below float's
-# precision cliff (2^53 cents) so cent-exact arithmetic stays exact, and leg lists are capped so one
-# request cannot balloon a ledger file.
+# Defense-in-depth ceilings, not domain rules: money stays under float's exact-cents limit, and leg
+# lists are capped so one request can't balloon a file.
 MAX_AMOUNT = 1e12
 MAX_TEXT = 200
 MAX_LEAF = 60
@@ -131,9 +126,8 @@ def valid_name(value: str) -> str:
 
 
 def valid_money_account(value: str) -> str:
-    """A leg that moves money names a balance-sheet account, never an Expenses/Income one: that is
-    what separates a transfer or a reimbursement from spending.
-    """
+    """A money-moving leg names a balance-sheet account, which separates a transfer from
+    spending."""
     valid_name(value)
     if not value.startswith((ASSETS, LIABILITIES)):
         raise invalid(f"{value!r} must be an asset or liability account")
@@ -148,24 +142,15 @@ def valid_leaf(value: str, field: str = "account name") -> str:
 
 
 def valid_typed_name(typed: str, field: str) -> str:
-    """A name as a person typed it, whether it composes an account segment or only shortens one.
-
-    One rule for every name in the app: letters, digits and spaces. Composition would treat anything
-    else as a separator and drop it, and a short form has no reason to allow more than the name it
-    stands in for.
-    """
+    """Letters, digits and spaces, for every name: composition would drop anything else."""
     if not TYPED_NAME_RE.match(typed):
         raise invalid(f"{field} can only contain letters, numbers and spaces")
     return typed
 
 
 def valid_segment(segment: str, field: str, typed: str) -> str:
-    """A composed account segment: legal for beancount, and within the length ceiling.
-
-    Reported against the field the words came from rather than as a bad account name, since the
-    caller typed words and never saw the segment they compose to. Length is reported apart from the
-    character rule: a name can be legal and still be too long.
-    """
+    """Reported against the field typed, since the caller never saw the composed segment. Length is
+    reported apart from the character rule."""
     if len(segment) > MAX_LEAF:
         raise invalid(f"{field} must be at most {MAX_LEAF} characters")
 
@@ -183,10 +168,8 @@ def valid_composed_leaf(typed: str, field: str) -> str:
 
 
 def valid_label(value: str, field: str = "contribution option") -> str:
-    """A contribution label. Shown as typed rather than composed into a path, so it takes a space
-    but not whitespace at large: labels are written as one comma-joined value on a single ledger
-    line, which a newline would break and a comma would split in two.
-    """
+    """Spaces allowed but no other whitespace or commas: labels are one comma-joined value on one
+    line."""
     if not 0 < len(value) <= MAX_LEAF or not TYPED_NAME_RE.match(value):
         raise invalid(
             f"{field} must be 1-{MAX_LEAF} letters, digits or spaces, with no comma: {value!r}"
@@ -195,9 +178,7 @@ def valid_label(value: str, field: str = "contribution option") -> str:
 
 
 def parse_date(value: str | None) -> dt.date:
-    """Parse an ISO date, defaulting to today: the date is the one field a form may leave to the
-    server.
-    """
+    """Defaults to today; the one field a form may leave to the server."""
     if not value:
         return dt.date.today()
 

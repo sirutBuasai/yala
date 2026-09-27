@@ -1,9 +1,7 @@
-// The state layer, driven the way a gesture drives it. The pure math has its own tests; this covers
-// the wiring — what gets persisted, what gets re-derived, and the round-trip a drag makes through
-// storage.
+// The state layer's wiring: what persists, what is re-derived, and a drag's round trip through storage.
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Arrangement } from '$lib/layout/grid/arrangement.svelte';
+import { Arrangement, LAYOUT_VERSION } from '$lib/layout/grid/arrangement.svelte';
 import { GridEnv } from '$lib/layout/grid/env.svelte';
 import { CONTENT, GAP, UNIT, WRAP_PAD } from '$lib/layout/grid/units';
 import type { BoardLayout } from '$lib/layout/grid/types';
@@ -15,10 +13,11 @@ const LAYOUT = {
 	wide: { x: 0, y: 12, w: 48, h: 8, content: 'flow', mode: 'cap', cap: 8 }
 } satisfies BoardLayout;
 
-/** A full-width environment, so the board is not folded. */
+/** A full-width environment with this board on screen, so the board is not folded. */
 function wideEnv(): GridEnv {
 	const env = new GridEnv();
 	env.width = CONTENT + 2 * WRAP_PAD;
+	env.boards = 1;
 	return env;
 }
 
@@ -83,13 +82,13 @@ describe('fitted panes', () => {
 		expect(b.placed('wide').y).toBe(12);
 	});
 
-	it('holds a capped pane open to its whole ceiling while arranging, and not otherwise', () => {
+	it('reserves a capped pane the same room whether arranging or not, so Edit shows the saved board', () => {
 		const { arrangement: b, env } = arrangement();
 		b.setMeasured('wide', rows(3));
 
 		expect(b.placed('wide').h).toBe(3);
 		env.arrangeRequested = true;
-		expect(b.placed('wide').h).toBe(8);
+		expect(b.placed('wide').h).toBe(3);
 	});
 });
 
@@ -269,7 +268,7 @@ describe('persistence', () => {
 		const env = wideEnv();
 		const key = `test-ghost-${seq++}`;
 		localStorage.setItem(
-			`yala-board-${key}`,
+			`yala-board-${key}-${LAYOUT_VERSION}`,
 			JSON.stringify([{ id: 'retired', x: 0, y: 0, w: 24, h: 6, mode: 'fixed', cap: 6 }])
 		);
 
@@ -282,11 +281,38 @@ describe('persistence', () => {
 		const env = wideEnv();
 		const key = `test-corrupt-${seq++}`;
 		localStorage.setItem(
-			`yala-board-${key}`,
+			`yala-board-${key}-${LAYOUT_VERSION}`,
 			JSON.stringify([{ id: 'tall', x: 0, w: 24, h: 6, mode: 'fixed', cap: 6 }]) // no `y`
 		);
 
 		expect(new Arrangement(key, LAYOUT, env).placed('tall')).toMatchObject({ y: 0, h: 12 });
+	});
+
+	it('falls back to the declared default for a size that is not a number or is too small', () => {
+		const env = wideEnv();
+		const key = `test-badsize-${seq++}`;
+		localStorage.setItem(
+			`yala-board-${key}-${LAYOUT_VERSION}`,
+			JSON.stringify([
+				{ id: 'tall', x: 0, y: 0, w: '24', h: 6, mode: 'fixed', cap: 6 },
+				{ id: 'wide', x: 0, y: 0, w: 0, h: 6, mode: 'fixed', cap: 6 }
+			])
+		);
+
+		const b = new Arrangement(key, LAYOUT, env);
+		expect(b.authored('tall')).toMatchObject({ x: 0, y: 0, w: 24, h: 12 });
+		expect(b.authored('wide')).toMatchObject({ x: 0, y: 12, w: 48, h: 8 });
+	});
+
+	it('rounds a stored fractional size to whole units', () => {
+		const env = wideEnv();
+		const key = `test-fraction-${seq++}`;
+		localStorage.setItem(
+			`yala-board-${key}-${LAYOUT_VERSION}`,
+			JSON.stringify([{ id: 'tall', x: 0.4, y: 0, w: 23.6, h: 12, mode: 'fixed', cap: 12 }])
+		);
+
+		expect(new Arrangement(key, LAYOUT, env).authored('tall')).toMatchObject({ x: 0, w: 24 });
 	});
 
 	it('reset puts the declared arrangement back and clears what was stored', () => {
@@ -344,6 +370,14 @@ describe('seed', () => {
 	});
 });
 
+describe('offering arranging', () => {
+	it('offers nothing on a page without a board', () => {
+		const env = wideEnv();
+		env.boards = 0;
+		expect(env.canArrange).toBe(false);
+	});
+});
+
 describe('folding', () => {
 	it('sequences the folded layout in the arrangement’s reading order', () => {
 		const { arrangement: b } = arrangement();
@@ -363,6 +397,7 @@ describe('folding', () => {
 
 	it('does not offer arranging when the full content width does not fit', () => {
 		const env = new GridEnv();
+		env.boards = 1;
 		env.width = CONTENT; // short of the padding, so the content column is 48px narrow
 		expect(env.canArrange).toBe(false);
 		env.arrangeRequested = true;
@@ -512,5 +547,25 @@ describe('a label being typed into', () => {
 			b.relaxDraft('top');
 			expect(b.placed('tall').h).toBe(16);
 		});
+	});
+});
+
+describe('rebasing at a resize', () => {
+	// `under` is authored at row 4 but drawn at 10, pushed down by `z`; `grower` is drawn above it at 6.
+	const STACK = {
+		z: { x: 0, y: 0, w: 20, h: 10, content: 'scale' },
+		under: { x: 0, y: 4, w: 24, h: 4, content: 'scale' },
+		grower: { x: 24, y: 6, w: 24, h: 3, content: 'scale' }
+	} satisfies BoardLayout;
+
+	it('lets a pane grown into one drawn below it push that one down, rather than jump beneath it', () => {
+		const b = new Arrangement(`test-${seq++}`, STACK, wideEnv());
+		expect(b.placed('under').y).toBe(10);
+
+		b.rebase('grower');
+		b.resizeTo('grower', { x: 20, y: 6, w: 28, h: 6 });
+
+		expect(b.placed('grower').y).toBe(6);
+		expect(b.placed('under').y).toBe(12);
 	});
 });

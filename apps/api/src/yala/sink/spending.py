@@ -1,8 +1,5 @@
-"""Writing a spending transaction: one ``Expenses:*`` category, any reimbursements, one funder.
-
-The single ``Expenses`` posting carries the *net* share, so a split bill counts what you paid rather
-than what was billed; the pre-reimbursement total is kept as a ``bill`` meta.
-"""
+"""The ``Expenses`` posting carries the net share; the pre-reimbursement total is a ``bill``
+meta."""
 
 from __future__ import annotations
 

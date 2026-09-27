@@ -1,8 +1,5 @@
-"""Spending domain: discretionary ``Expenses:*`` transactions, meaning everything outside the
-``Expenses:Deductions:*`` subtree, payroll deductions belonging to income rather than spending.
-
-**Invariant:** a discretionary spending transaction has exactly one ``Expenses:*`` posting.
-"""
+"""Discretionary ``Expenses:*`` spending, outside ``Expenses:Deductions:*``. Invariant: exactly one
+``Expenses:*`` posting per transaction."""
 
 from __future__ import annotations
 
@@ -109,7 +106,3 @@ class Spending:
 
     def months(self) -> list[Month]:
         return sorted({month_of(t.date) for t in self.transactions()})
-
-    def date_range(self) -> tuple[dt.date, dt.date] | None:
-        dates = [t.date for t in self.transactions()]
-        return (min(dates), max(dates)) if dates else None

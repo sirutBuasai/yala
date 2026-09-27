@@ -6,8 +6,11 @@ import {
 	balanceAtRetirement,
 	breakEven,
 	depletionYear,
+	fiDate,
 	investedProjection,
 	lastsToHorizon,
+	marketRisk,
+	plan,
 	secondaryLines
 } from '$lib/data/projection';
 import { fiNumber, plannedRates, trailingAnnual } from '$lib/data/networth';
@@ -18,9 +21,7 @@ const THIS_YEAR = new Date().getFullYear();
 /** The invested part of the fixture's position: everything but the Liquid bucket. */
 const INVESTED = 2600 + 2600;
 
-/** Assumptions naming the REAL rate directly. Inflation is zeroed, so the nominal and real figures are
-    the same number and an expectation need not restate the Fisher step — `assumptions.test.ts` covers
-    that on its own. */
+/** Inflation zeroed, so nominal and real match and expectations skip the Fisher step. */
 const assume = ({
 	realReturn = 5,
 	...over
@@ -28,6 +29,7 @@ const assume = ({
 	swr: 4,
 	nominalReturn: realReturn,
 	inflation: 0,
+	volatility: 15,
 	retireAge: 60,
 	runwayTarget: 6,
 	horizonAge: 95,
@@ -47,6 +49,13 @@ const valuesOf = (p: MultiSeries, name: string) =>
 	lineNamed(p, name).points.map((pt) => pt.value ?? 0);
 
 describe('projection', () => {
+	it("notes each year's age for the hover", () => {
+		const p = investedProjection(makeNetWorthData(), assume());
+		expect(p.notes?.[0]).toBe('age 30');
+		expect(p.notes?.at(-1)).toBe('age 95');
+		expect(p.notes).toHaveLength(p.labels.length);
+	});
+
 	it('runs from this year to the horizon age', () => {
 		const a = assume({ horizonAge: 90 });
 		const p = investedProjection(makeNetWorthData(), a);
@@ -166,9 +175,8 @@ describe('projection', () => {
 });
 
 describe('planned rates', () => {
-	// "Saved" is income less spending — a residual, not a measured flow into the market. Payroll
-	// contributions ARE measured and always land there; how much of the leftover is invested is a choice,
-	// and assuming all of it overstated the rate.
+	// Saved is a residual; only payroll contributions are a measured flow, and investing all of it overstated
+	// the rate.
 	it('splits saved into contributions, which always invest, and a leftover that need not', () => {
 		const data = makeNetWorthData();
 		const contributions = trailingAnnual(data, 'contributions');
@@ -220,9 +228,8 @@ describe('planned rates', () => {
 });
 
 describe('break-even', () => {
-	// The level that actually decides whether a balance lasts. Comparing the withdrawal RATE against the
-	// return only describes a portfolio sitting exactly at the FI number, which is how a warning came to
-	// claim a balance could not last while the chart correctly drew it rising forever.
+	// Rate against return only describes a portfolio exactly at the FI number, and once claimed a rising balance
+	// couldn't last.
 	it('is the balance whose return alone covers planned spending', () => {
 		const data = makeNetWorthData();
 		const a = assume({ realReturn: 5, plannedSpending: 50000 });
@@ -325,5 +332,156 @@ describe('depletion year', () => {
 
 	it('is null without a birth year, like the projection it reads', () => {
 		expect(depletionYear(makeNetWorthData(), assume({ birthYear: null })).value).toBeNull();
+	});
+});
+
+describe('market risk', () => {
+	it('is not run without volatility to spread it', () => {
+		expect(marketRisk(makeNetWorthData(), assume({ volatility: 0 }))).toBeNull();
+	});
+
+	it('brackets the expected path, and holds still between runs', () => {
+		const data = makeNetWorthData();
+		const a = assume();
+		const risk = marketRisk(data, a)!;
+		const line = valuesOf(investedProjection(data, a, null), 'Investing');
+
+		expect(risk.lo).toHaveLength(line.length);
+		const mid = Math.floor(line.length / 2);
+		expect(risk.lo[mid]!).toBeLessThan(line[mid]!);
+		expect(risk.hi[mid]!).toBeGreaterThan(line[mid]!);
+		expect(marketRisk(data, a)).toEqual(risk);
+	});
+
+	it('lasts less often the wilder the markets', () => {
+		const data = makeNetWorthData();
+		const calm = marketRisk(data, assume({ volatility: 5, realReturn: 2 }))!;
+		const wild = marketRisk(data, assume({ volatility: 30, realReturn: 2 }))!;
+		expect(wild.lasting).toBeLessThanOrEqual(calm.lasting);
+	});
+
+	it('draws the band behind the investing line', () => {
+		const data = makeNetWorthData();
+		const p = investedProjection(data, assume());
+		expect(p.band?.of).toBe('Investing');
+		expect(investedProjection(data, assume({ volatility: 0 })).band).toBeUndefined();
+	});
+});
+
+describe('FI date', () => {
+	it('names the year the investing line reaches the FI number, and the age then', () => {
+		const data = makeNetWorthData();
+		const a = assume({ plannedSpending: 800 });
+		const p = investedProjection(data, a);
+		const target = fiNumber(data, a).value!;
+		const at = valuesOf(p, 'Investing').findIndex((v) => v >= target);
+
+		const s = fiDate(data, a);
+		expect(s.unit).toEqual(YEAR);
+		expect(s.value).toBe(Number(p.labels[at]));
+		if (at > 0) expect(s.note?.context).toContain(`at ${s.value! - a.birthYear!}`);
+	});
+
+	it('asks for a birth year it cannot place a year without', () => {
+		const s = fiDate(makeNetWorthData(), assume({ birthYear: null }));
+		expect(s.value).toBeNull();
+		expect(s.note?.text).toContain('birth year');
+	});
+
+	it('is null where the plan never gets there', () => {
+		const s = fiDate(makeNetWorthData(), assume({ realReturn: 0, plannedSpending: 1e6 }));
+		expect(s.value).toBeNull();
+		expect(s.note?.context).toContain('not reached');
+	});
+});
+
+describe('plan', () => {
+	it('runs from today to the horizon, one milestone per year, oldest first', () => {
+		const a = assume({ plannedSpending: 800 });
+		const marks = plan(makeNetWorthData(), a)!.milestones;
+		const years = marks.map((m) => m.year);
+
+		expect(years[0]).toBe(THIS_YEAR);
+		expect(years.at(-1)).toBe(a.birthYear! + a.horizonAge);
+		expect(years).toEqual([...new Set(years)].sort((p, q) => p - q));
+		expect(marks.flatMap((m) => m.names)).toEqual(
+			expect.arrayContaining(['Today', 'Retire', `Age ${a.horizonAge}`])
+		);
+	});
+
+	it('shares one milestone between milestones in the same year', () => {
+		// Retiring this year puts retirement on today.
+		const marks = plan(makeNetWorthData(), assume({ birthYear: THIS_YEAR - 60 }))!.milestones;
+		expect(marks[0]!.names).toEqual(expect.arrayContaining(['Today', 'Retire']));
+		expect(marks[0]!.reached).toBe(true);
+	});
+
+	it('places FI where the FI date does, with the investing line balance there', () => {
+		const data = makeNetWorthData();
+		const a = assume({ plannedSpending: 800 });
+		const p = plan(data, a)!;
+		const fi = p.milestones.find((m) => m.names.includes('FI'))!;
+		expect(fi.year).toBe(fiDate(data, a).value);
+		const line = investedProjection(data, a, null);
+		expect(fi.balance).toBe(valuesOf(line, 'Investing')[line.labels.indexOf(String(fi.year))]);
+	});
+
+	it('names the phases between milestones, tiling today to the horizon', () => {
+		const a = assume({ plannedSpending: 800 });
+		const { phases } = plan(makeNetWorthData(), a)!;
+		expect(phases[0]!.from).toBe(THIS_YEAR);
+		expect(phases.at(-1)!.to).toBe(a.birthYear! + a.horizonAge);
+		phases.slice(1).forEach((p, i) => expect(p.from).toBe(phases[i]!.to));
+		expect(phases.at(-1)!.name).toBe('Drawing down');
+	});
+
+	it('drops a phase whose milestone never comes before retiring', () => {
+		// Spending no balance could fund: no Coast FI, no FI, so building runs straight to retirement.
+		const names = plan(makeNetWorthData(), assume({ plannedSpending: 1e9 }))!.phases.map(
+			(p) => p.name
+		);
+		expect(names).toEqual(['Building', 'Drawing down']);
+	});
+
+	it('drops the phases already behind, once retired', () => {
+		const names = plan(makeNetWorthData(), assume({ birthYear: THIS_YEAR - 70 }))!.phases.map(
+			(p) => p.name
+		);
+		expect(names).toEqual(['Drawing down']);
+	});
+
+	it('counts the years to FI and retirement', () => {
+		const data = makeNetWorthData();
+		const a = assume({ plannedSpending: 800 });
+		const p = plan(data, a)!;
+		expect(p.toFi).toBe(fiDate(data, a).value! - THIS_YEAR);
+		expect(p.toRetire).toBe(a.birthYear! + a.retireAge - THIS_YEAR);
+	});
+
+	it('finds the smallest monthly cut to spending, and addition to investing, that bring FI sooner', () => {
+		const data = makeNetWorthData();
+		const a = assume({ plannedSpending: 4000 });
+		const { levers } = plan(data, a)!;
+		const fi = fiDate(data, a).value!;
+		for (const lever of [levers.spend!, levers.invest!]) {
+			expect(lever.year).toBeLessThan(fi);
+			expect(lever.monthly % 50).toBe(0);
+		}
+		// A step less of either would not have done it.
+		const { residual } = plannedRates(data, a);
+		if (levers.spend!.monthly > 50) {
+			const yearly = (levers.spend!.monthly - 50) * 12;
+			expect(fiDate(data, { ...a, plannedSpending: 4000 - yearly }).value).toBe(fi);
+		}
+		if (levers.invest!.monthly > 50) {
+			const yearly = (levers.invest!.monthly - 50) * 12;
+			expect(fiDate(data, { ...a, outOfPocket: residual + yearly }).value).toBe(fi);
+		}
+	});
+
+	it('leaves out past milestones: a retirement years ago is not on the timeline', () => {
+		const marks = plan(makeNetWorthData(), assume({ birthYear: THIS_YEAR - 70 }))!.milestones;
+		expect(marks.every((m) => m.year >= THIS_YEAR)).toBe(true);
+		expect(marks.flatMap((m) => m.names)).not.toContain('Retire');
 	});
 });

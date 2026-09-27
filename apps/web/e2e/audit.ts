@@ -20,14 +20,8 @@ export interface Audit {
 	overlap: { a: string; b: string }[];
 }
 
-/**
- * Every way a card can fail to contain what it holds: ink outside its box, a label cut off by its line
- * budget (which the bleed probe cannot see, since that budget clips), and two cards drawn over each other,
- * which the grid's push rule forbids.
- *
- * A box only counts as bleeding if NOTHING between it and the card clips; without that, every legitimate
- * `.scroller-x` reads as one.
- */
+/** Ink outside its box, a label cut by its line budget, or overlapping cards. A box bleeds only if nothing
+    between it and the card clips, or every `.scroller-x` would count. */
 export function auditPage(tolerance = 2): Audit {
 	const describe = (el: Element): string => {
 		const cls =
@@ -55,6 +49,16 @@ export function auditPage(tolerance = 2): Audit {
 		return null;
 	};
 
+	/** Whether `el` or an ancestor below `card` is placed against the viewport or paints nothing. Its
+	    children count too, though their own computed styles say otherwise: a hint's closed bubble. */
+	const outOfCard = (el: Element, card: Element): boolean => {
+		for (let p: Element | null = el; p && p !== card; p = p.parentElement) {
+			const cs = getComputedStyle(p);
+			if (cs.position === 'fixed' || cs.opacity === '0') return true;
+		}
+		return false;
+	};
+
 	const bleed: Finding[] = [];
 	const clipped: Clip[] = [];
 	const overlap: { a: string; b: string }[] = [];
@@ -67,13 +71,7 @@ export function auditPage(tolerance = 2): Audit {
 			.slice(0, 24);
 		for (const el of card.querySelectorAll('*')) {
 			const cs = getComputedStyle(el);
-			if (
-				cs.position === 'fixed' ||
-				cs.display === 'none' ||
-				cs.visibility === 'hidden' ||
-				cs.opacity === '0'
-			)
-				continue;
+			if (cs.display === 'none' || cs.visibility === 'hidden' || outOfCard(el, card)) continue;
 			const r = el.getBoundingClientRect();
 			if (r.width === 0 || r.height === 0) continue;
 			const inner = clipper(el, card);

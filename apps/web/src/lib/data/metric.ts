@@ -7,7 +7,7 @@ import { MONEY, PERCENT, COUNT, scalar } from './primitives';
 import { money } from '$lib/utils/format';
 import { sumBy, sumValues } from '$lib/utils/num';
 import { addMonths } from '$lib/utils/period';
-import { type Scope, latestYear, priorMonths, scopeYear, scopeKey } from './scope';
+import { type Scope, inWindow, latestYear, priorMonths, scopeYear, scopeKey } from './scope';
 import { labelText, live, words, type Label } from '$lib/ui/label';
 
 // --- measures ---
@@ -57,7 +57,7 @@ function goodUp(m: Measure): boolean {
 }
 
 /** News, not sign: which direction is good depends on the measure. A flat figure has no tone. */
-export function toneOf(m: Measure, delta: number): Tone | undefined {
+function toneOf(m: Measure, delta: number): Tone | undefined {
 	if (delta === 0) return undefined;
 	return delta > 0 === goodUp(m) ? 'good' : 'bad';
 }
@@ -87,8 +87,10 @@ function monthsInScope(data: DashboardData, scope: Scope): [string, MonthPage][]
 			const md = scope.monthKey ? data.months[scope.monthKey] : undefined;
 			return md && scope.monthKey ? [[scope.monthKey, md]] : [];
 		}
-		const prefix = scope.level === 'year' ? `${scopeYear(data, scope)}-` : '';
-		return Object.entries(data.months).filter(([k]) => !prefix || k.startsWith(prefix));
+		if (scope.level === 'all')
+			return Object.entries(data.months).filter(([k]) => inWindow(scope, Number(k.slice(0, 4))));
+		const prefix = `${scopeYear(data, scope)}-`;
+		return Object.entries(data.months).filter(([k]) => k.startsWith(prefix));
 	});
 }
 
@@ -104,9 +106,11 @@ function scopeTxns(data: DashboardData, scope: Scope): Txn[] {
 
 type Totals = Record<Field, number>;
 
-/** The yearly rows a non-month scope covers: all of them, or just the scope's year. */
+/** The yearly rows a non-month scope covers: those in its window, or just the scope's year. */
 function yearRows<R extends { year: number }>(rows: R[], data: DashboardData, scope: Scope): R[] {
-	return scope.level === 'all' ? rows : rows.filter((r) => r.year === scopeYear(data, scope));
+	return scope.level === 'all'
+		? rows.filter((r) => inWindow(scope, r.year))
+		: rows.filter((r) => r.year === scopeYear(data, scope));
 }
 
 function totals(data: DashboardData, scope: Scope): Totals {
@@ -158,12 +162,8 @@ function totals(data: DashboardData, scope: Scope): Totals {
 /** A month is active once ANYTHING is logged in it. */
 const isActive = (md: MonthPage): boolean => md.total_income > 0 || md.total_spent > 0;
 
-/**
- * The ONE divisor every run-rate uses, whatever the measure: counting only the months a measure itself moved
- * in gives each column of a run-rate row its own denominator, and the row has to reconcile.
- *
- * 0 when nothing is logged in the scope, so callers floor it themselves.
- */
+/** The ONE divisor every run-rate uses, so a run-rate row's columns reconcile. 0 when nothing is logged in
+    the scope, so callers floor it themselves. */
 export function activeMonthsIn(data: DashboardData, scope: Scope): number {
 	return monthsInScope(data, scope).filter(([, md]) => isActive(md)).length;
 }
@@ -172,22 +172,33 @@ export function activeMonthsIn(data: DashboardData, scope: Scope): number {
 export const activeMonthsNote = (months: number): Label => live(`${months} active months`);
 export const trackedYearsNote = (years: number): Label => live(`${years} tracked years`);
 
+/** Spending per category over a scope, closed categories included. */
+export function categoryTotals(data: DashboardData, scope: Scope): Record<string, number> {
+	return memo(data, `cat:${scopeKey(scope)}`, () => {
+		const totals: Record<string, number> = {};
+		const add = (c: string, v: number) => (totals[c] = (totals[c] ?? 0) + v);
+		if (scope.level === 'month') {
+			for (const c of (scope.monthKey && data.months[scope.monthKey]?.by_category) || [])
+				add(c.category, c.amount);
+		} else if (scope.level === 'all' && scope.since == null) {
+			for (const c of data.overview.all_time_by_category) add(c.category, c.amount);
+		} else {
+			const years =
+				scope.level === 'year'
+					? [scopeYear(data, scope)]
+					: data.meta.years.filter((y) => inWindow(scope, y));
+			for (const y of years) {
+				for (const row of data.years[String(y)]?.matrix ?? []) {
+					for (const [c, v] of Object.entries(row.spent)) add(c, v);
+				}
+			}
+		}
+		return totals;
+	});
+}
+
 function categorySpend(data: DashboardData, scope: Scope, category: string): number {
-	if (scope.level === 'month') {
-		const items = scope.monthKey ? (data.months[scope.monthKey]?.by_category ?? []) : [];
-		return sumBy(
-			items.filter((c) => c.category === category),
-			(c) => c.amount
-		);
-	}
-	if (scope.level === 'year') {
-		const yd = data.years[String(scopeYear(data, scope))];
-		return yd ? sumBy(yd.matrix, (row) => row.spent[category] ?? 0) : 0;
-	}
-	return sumBy(
-		data.overview.all_time_by_category.filter((c) => c.category === category),
-		(c) => c.amount
-	);
+	return categoryTotals(data, scope)[category] ?? 0;
 }
 
 /** Resolve any measure to a raw number at a scope. Shared so callers reuse the memoized aggregates. */
@@ -277,12 +288,14 @@ export function average(
 	const unit = MONEY(data.currency);
 	const name = measureLabel(m).toLowerCase();
 
+	// Over the scope's window at `all`, and over the whole record from a single year.
+	const all: Scope = { level: 'all', since: scope.level === 'all' ? scope.since : undefined };
 	if (per === 'year') {
-		const years = data.overview.by_year.length || 1;
+		const years = yearRows(data.overview.by_year, data, all).length || 1;
 		return scalar(
 			unit,
 			opts.label ?? words(`Avg ${name} / year`),
-			measureValue(data, { level: 'all' }, m) / years,
+			measureValue(data, all, m) / years,
 			{
 				note: opts.note ?? trackedYearsNote(years)
 			}
@@ -294,7 +307,7 @@ export function average(
 		return scalar(
 			unit,
 			opts.label ?? words(`Avg ${name} / month`),
-			measureValue(data, { level: 'all' }, m) / months,
+			measureValue(data, all, m) / months,
 			{
 				note: opts.note ?? activeMonthsNote(months)
 			}
@@ -449,26 +462,27 @@ export function extremum(
 	});
 }
 
-/** A month against its own recent norm: the month less the trailing average of the prior `window` months
-    with data. `null` without the history to form one. */
-export function vsTypical(
+/** A month's level, with how far it sits from its own recent norm (the average of the prior `window`
+    months with data) as the delta. No delta without the history to form one. */
+export function vsAverage(
 	data: DashboardData,
 	monthKey: string,
 	m: Measure,
 	opts: Opts & { window?: number } = {}
 ): Scalar {
-	const prior = priorMonths(data, monthKey, opts.window);
+	const unit = MONEY(data.currency);
 	const label = opts.label ?? words(measureLabel(m));
-	if (!prior.length) {
-		return scalar(MONEY(data.currency), label, null, { note: opts.note });
-	}
+	const now = measureValue(data, { level: 'month', monthKey }, m);
+	const prior = priorMonths(data, monthKey, opts.window);
+	if (!prior.length) return scalar(unit, label, now, { note: opts.note });
 
 	const avg =
 		sumBy(prior, (k) => measureValue(data, { level: 'month', monthKey: k }, m)) / prior.length;
-	const delta = measureValue(data, { level: 'month', monthKey }, m) - avg;
+	const delta = now - avg;
 
-	return scalar(MONEY(data.currency), label, delta, {
-		tone: toneOf(m, delta),
+	return scalar(unit, label, now, {
+		// No note on the badge: the caption already names the average it compares against.
+		delta: { value: delta, unit, tone: toneOf(m, delta) },
 		note: opts.note ?? live(`vs your ${money(avg)} / mo average`)
 	});
 }

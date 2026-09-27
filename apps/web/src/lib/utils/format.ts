@@ -1,6 +1,5 @@
 // Small pure formatting helpers shared across components and charts.
 
-import { NO_VALUE } from '$lib/copy';
 import { accountInfo } from '$lib/data/directory.svelte';
 import { monthOf } from '$lib/utils/period';
 
@@ -19,14 +18,8 @@ export const MONTHS = [
 	'Dec'
 ];
 
-/**
- * A rendered magnitude with its sign put back on, ahead of any currency symbol rather than between
- * the symbol and the digits.
- *
- * `value` is what decides the sign, and is the caller's already-rounded figure where it rounds: a
- * magnitude under half a unit reads as zero, and signing the raw input would print a minus in front
- * of it.
- */
+/** The sign goes ahead of any currency symbol. `value` must be the caller's rounded figure, or a magnitude
+    that rounds to zero prints a minus. */
 function withSign(value: number, magnitude: string, prefix = ''): string {
 	return (value < 0 ? '-' : '') + prefix + magnitude;
 }
@@ -48,6 +41,13 @@ export function amountExact(n: number | null | undefined): string {
 	return withSign(v, cents(Math.abs(v)));
 }
 
+/** Whole dollars without the currency. */
+export function amountWhole(n: number | null | undefined): string {
+	const r = Math.round(n || 0);
+
+	return withSign(r, Math.abs(r).toLocaleString());
+}
+
 /** Money to the cent, for reconciliation figures the user has to match exactly. */
 export function moneyExact(n: number | null | undefined): string {
 	const v = n || 0;
@@ -55,15 +55,24 @@ export function moneyExact(n: number | null | undefined): string {
 	return withSign(v, cents(Math.abs(v)), '$');
 }
 
-/**
- * An unsigned magnitude abbreviated to its tier: thousands as `k`, millions as `M`, one decimal until the
- * tier's tens so a label is never more than four digits wide. Both tiers, because a projection compounds
- * past a million and `k` alone left the axis unreadable.
- */
+/** The tiers a magnitude abbreviates to, largest first. */
+const TIERS: [number, string][] = [
+	[1e9, 'B'],
+	[1e6, 'M'],
+	[1e3, 'k']
+];
+
+/** Abbreviated to `k`, `M` or `B`, at most four digits wide; projections compound past a million. */
 function tiered(magnitude: number): string {
-	return magnitude >= 1e6
-		? (magnitude / 1e6).toFixed(magnitude < 1e7 ? 1 : 0) + 'M'
-		: (magnitude / 1e3).toFixed(magnitude < 1e4 ? 1 : 0) + 'k';
+	const read = (tier: number) => {
+		const [size, suffix] = TIERS[tier]!;
+		const value = magnitude / size;
+		return value.toFixed(value < 10 ? 1 : 0) + suffix;
+	};
+	let tier = TIERS.findIndex(([size]) => magnitude >= size);
+	if (tier === -1) tier = TIERS.length - 1;
+	// A figure that rounds up to a thousand of its tier reads in the next one: $1.0M, never $1000k.
+	return tier > 0 && parseFloat(read(tier)) >= 1000 ? read(tier - 1) : read(tier);
 }
 
 export function moneyK(n: number | null | undefined): string {
@@ -83,10 +92,6 @@ export function numCompact(n: number | null | undefined): string {
 	const v = n || 0;
 
 	return Math.abs(v) >= 1000 ? withSign(v, tiered(Math.abs(v))) : String(Math.round(v));
-}
-
-export function pct(part: number, whole: number): string {
-	return whole ? ((part / whole) * 100).toFixed(0) + '%' : NO_VALUE;
 }
 
 /** First letter upper-cased, the rest left alone: a field's noun used to open a sentence. */
@@ -159,4 +164,11 @@ export function monthDay(date: string): string {
 	if (!m || !d) return date;
 
 	return `${+m}/${+d}`;
+}
+
+/** A day of the month as it reads in prose: 1st, 2nd, 3rd, 11th, 24th. */
+export function ordinal(n: number): string {
+	const teen = n % 100 >= 11 && n % 100 <= 13;
+	const suffix = teen ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
+	return `${n}${suffix}`;
 }

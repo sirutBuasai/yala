@@ -1,15 +1,10 @@
-// One board's renamed labels: the `text` half of any title or caption the user has rewritten. Its own
-// storage key rather than a field on the arrangement, since which panes a board HAS and what they are
-// called are separate decisions. Only `text` is stored — `context` is rebuilt every render, so a renamed
-// pane still says which period or slice it is showing.
+// Only the `text` half is stored; `context` is rebuilt each render, so a renamed pane still names its period.
 
 import { Pref, record, shape, text } from '$lib/utils/persist.svelte';
 import { LABEL_MAX, type Label, type Slot } from '$lib/ui/label';
 
-/** Bumped when an id on a board starts NAMING something else — a pane repointed at another figure. A
-    rename outlives the code that declared the label, so without this the old name would sit on the new
-    card claiming to describe it. Not for a board merely GAINING a card: unknown ids are dropped on read,
-    and every other rename on that board should survive. */
+/** Bump when a board id starts naming something else, or its old rename sits on the new card. Not needed for
+    a new card: unknown ids drop on read. */
 const VERSION = 1;
 
 type Renamed = Partial<Record<Slot, string>>;

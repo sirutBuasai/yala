@@ -1,10 +1,5 @@
-"""Settling ``pad`` directives after a ``balance`` assertion is edited.
-
-Editing an assertion shifts the running balance until the next assertion re-pins it, so a pad may be
-needed at the edited date *and* at that next one, possibly in another year's file. Rather than
-predict them, each round writes the candidate files and lets beancount name what is missing (a
-failed assertion → add its pad) or redundant (an unused pad → drop it).
-"""
+"""Rather than predict the pads an edited assertion needs, each round writes and lets beancount name
+what is missing or redundant."""
 
 from __future__ import annotations
 
@@ -53,11 +48,7 @@ def _working(path: Path, work: Work, originals: Originals) -> list[str]:
 def _apply_one(
     account: str, errors: list, work: Work, originals: Originals, pad_through: dt.date | None
 ) -> bool:
-    """Add or drop one of ``account``'s pads in response to ``errors``; True if anything moved.
-
-    Only this account's pads are touched — an unrelated complaint is left for the caller to surface
-    rather than papered over with a plug. Neither is an assertion dated after ``pad_through``.
-    """
+    """True if anything moved. Only this account's pads are touched, so unrelated errors surface."""
     for e in errors:
         source = getattr(e, "source", None) or {}
         entry = getattr(e, "entry", None)
@@ -95,12 +86,8 @@ def settle(
     originals: Originals,
     pad_through: dt.date | None = None,
 ) -> None:
-    """Write ``work``, then add or drop ``account``'s pads until the ledger loads clean, padding no
-    assertion dated after ``pad_through`` (None: any).
-
-    Any error other than a pad this account can fix, or exhausting :data:`MAX_ROUNDS`, restores
-    every touched file and re-raises.
-    """
+    """Pads no assertion after ``pad_through`` (None: any). Any other error, or :data:`MAX_ROUNDS`,
+    restores every touched file and re-raises."""
     try:
         for _ in range(MAX_ROUNDS):
             for path, lines in work.items():

@@ -15,15 +15,18 @@ import type {
 	Table
 } from '$lib/data/primitives';
 import { accountVar, CATEGORY_TOKEN, categoryVar } from '$lib/utils/theme';
+import { markedIndices, pickKeys, type PickGrain } from '$lib/charts/axis';
+import { matrixGrid, tableGrid } from '$lib/charts/heat';
 
 import Donut from '$lib/charts/Donut.svelte';
 import HBarChart from '$lib/charts/HBarChart.svelte';
 import LineChart from '$lib/charts/LineChart.svelte';
 import BarChart from '$lib/charts/BarChart.svelte';
 import Sankey from '$lib/charts/Sankey.svelte';
-import Dumbbell from '$lib/charts/Dumbbell.svelte';
+import RangeBars from '$lib/charts/RangeBars.svelte';
 import StackedArea from '$lib/charts/StackedArea.svelte';
 import BulletChart from '$lib/charts/BulletChart.svelte';
+import RingChart from '$lib/charts/RingChart.svelte';
 import Heatmap from './Heatmap.svelte';
 import DataTable from './Table.svelte';
 
@@ -49,6 +52,10 @@ interface AdaptOpts {
 	dashed?: string[];
 	/** Print each bar's own figure above it (a lone series only) — see `BarChart`. */
 	valueLabels?: boolean;
+	/** The period in focus: its period key where the axis carries them, else its label. */
+	mark?: string;
+	/** The grain a continuous axis's click picks at. */
+	pickBy?: PickGrain;
 }
 
 export interface ChartDef<P extends Record<string, unknown> = Record<string, unknown>> {
@@ -106,7 +113,10 @@ const SERIES_ROLE: Record<string, string> = {
 	// Growth decomposition. `Saved` is above, shared with the cash-flow boards: one hue per measure.
 	'Market & other': 'var(--role-market)',
 	// A rate on the balance rather than the balance itself, so it takes its own hue and not net worth's.
-	'Balance growth': 'var(--role-growth)'
+	'Balance growth': 'var(--role-growth)',
+	// Spending pace's references, neutral so the month being read is the one reading in colour.
+	'Last month': 'var(--ink-3)',
+	Average: 'var(--ink-2)'
 };
 
 /** For series with no role and no category. */
@@ -135,7 +145,7 @@ export function seriesColor(name: string, index = 0): string {
     categories, ledger accounts, or roles. */
 export type ColorBy = 'category' | 'account' | 'role';
 
-function keyColor(key: string, mode: ColorBy = 'category'): string {
+export function keyColor(key: string, mode: ColorBy = 'category'): string {
 	// Neither the synthetic residual nor the rolled-up tail is a member of the set being coloured, so
 	// both outrank every mode.
 	if (key === 'Saved') return 'var(--role-saving)';
@@ -155,12 +165,19 @@ const FLOW_ROLE_SERIES = {
 
 // --- series collection ---
 
-/** Flatten a series/multiseries into its series list and the labels they share. */
-function seriesOf(p: Series | MultiSeries): { labels: string[]; list: Series[] } {
+/** Flatten a series/multiseries into its series list and the labels and periods they share. */
+function seriesOf(p: Series | MultiSeries): {
+	labels: string[];
+	periods?: string[];
+	notes?: string[];
+	band?: MultiSeries['band'];
+	list: Series[];
+} {
 	const list = p.kind === 'series' ? [p] : [...p.series];
 	const base = list[0];
 	if (!base) return { labels: [], list };
-	return { labels: base.points.map((pt) => pt.label), list };
+	const { notes, band } = p.kind === 'multiseries' ? p : {};
+	return { labels: base.points.map((pt) => pt.label), periods: p.periods, notes, band, list };
 }
 
 /** A lone series may be given an explicit fill; an override can't speak for a set of them. */
@@ -198,9 +215,12 @@ function toLineSeries(list: Series[], opts: AdaptOpts) {
 	}));
 }
 
+/** A bullet set draws the same rows as bars or as rings. */
+const bulletRows = (p: Primitive) => ({ rows: (p as Bullet).rows });
+
 // --- the registry ---
 
-export const CHARTS: ChartDef[] = [
+const CHARTS: ChartDef[] = [
 	def({
 		id: 'donut',
 		label: 'Donut',
@@ -262,26 +282,38 @@ export const CHARTS: ChartDef[] = [
 		component: LineChart,
 		adapt(p, opts = {}) {
 			const sm = p as Series | MultiSeries;
-			const { labels, list } = seriesOf(sm);
+			const { labels, periods, notes, band, list } = seriesOf(sm);
+			const series = toLineSeries(list, opts);
 			return {
 				labels,
-				series: toLineSeries(list, opts),
+				notes,
+				series,
+				band: band && {
+					...band,
+					color: series.find((s) => s.name === band.of)?.color ?? 'var(--ink-3)'
+				},
 				unit: sm.unit,
 				log: opts.log,
 				endLabels: opts.endLabels,
-				ceiling: opts.ceiling
+				ceiling: opts.ceiling,
+				marked: markedIndices(labels, periods, opts.mark),
+				periods,
+				picks: pickKeys(labels, periods, opts.pickBy)
 			};
 		}
 	}),
 	def({
-		id: 'dumbbell',
-		label: 'Range dumbbell',
+		id: 'range-bars',
+		label: 'Range bars',
 		accepts: ['deviation'],
-		component: Dumbbell,
+		component: RangeBars,
 		adapt(p, opts = {}) {
 			const d = p as Deviation;
+			// Biggest first: on one shared scale, the order is the ranking.
 			return {
-				rows: d.rows.map((r) => ({ ...r, color: keyColor(r.label, opts.colorBy) })),
+				rows: [...d.rows]
+					.sort((a, b) => b.value - a.value)
+					.map((r) => ({ ...r, color: keyColor(r.label, opts.colorBy) })),
 				unit: d.unit
 			};
 		}
@@ -297,7 +329,10 @@ export const CHARTS: ChartDef[] = [
 				labels: m.labels,
 				series: toPlainSeries(m.series, opts),
 				unit: m.unit,
-				altUnit: altUnitOf(m.series)
+				altUnit: altUnitOf(m.series),
+				marked: markedIndices(m.labels, m.periods, opts.mark),
+				periods: m.periods,
+				picks: pickKeys(m.labels, m.periods, opts.pickBy)
 			};
 		}
 	}),
@@ -306,9 +341,14 @@ export const CHARTS: ChartDef[] = [
 		label: 'Bullet',
 		accepts: ['bullet'],
 		component: BulletChart,
-		adapt(p) {
-			return { rows: (p as Bullet).rows };
-		}
+		adapt: bulletRows
+	}),
+	def({
+		id: 'rings',
+		label: 'Rings',
+		accepts: ['bullet'],
+		component: RingChart,
+		adapt: bulletRows
 	}),
 	def({
 		id: 'sankey',
@@ -330,20 +370,23 @@ export const CHARTS: ChartDef[] = [
 	def({
 		id: 'heatmap',
 		label: 'Heatmap',
-		accepts: ['matrix'],
+		// A table draws as one too: its tinted columns shade their tiles as they would its cells.
+		accepts: ['matrix', 'table'],
 		component: Heatmap,
 		adapt(p, opts = {}) {
+			if (p.kind === 'table') {
+				const grid = tableGrid(p);
+				return { grid, marked: markedIndices(grid.rows, p.periods, opts.mark) };
+			}
 			const m = p as Matrix;
 			const normalize = opts.normalize ?? 'row';
 			// Band members carry the hue, whichever axis they sit on. `global` has no bands to colour by.
 			const band = normalize === 'row' ? m.rows : m.cols;
+			const colors =
+				normalize === 'global' ? undefined : band.map((key) => keyColor(key, opts.colorBy));
 			return {
-				rows: m.rows,
-				cols: m.cols,
-				values: m.values,
-				unit: m.unit,
-				normalize,
-				colors: normalize === 'global' ? undefined : band.map((key) => keyColor(key, opts.colorBy))
+				grid: matrixGrid(m, normalize, colors),
+				marked: markedIndices(m.rows, undefined, opts.mark)
 			};
 		}
 	}),
@@ -363,7 +406,7 @@ export const CHARTS_BY_ID: Record<string, ChartDef> = Object.fromEntries(
 );
 
 /** Charts that can render a given primitive kind. */
-export function chartsForKind(kind: PrimitiveKind): ChartDef[] {
+function chartsForKind(kind: PrimitiveKind): ChartDef[] {
 	return CHARTS.filter((c) => c.accepts.includes(kind));
 }
 

@@ -1,9 +1,5 @@
-"""Transfers domain: money moved between the owner's own accounts.
-
-A transfer is a two-leg transaction whose postings are all ``Assets:*`` / ``Liabilities:*`` — no
-``Income``/``Expenses`` (those are paychecks and spending) and no ``Equity`` (the synthetic ``pad``
-legs). The spending and income domains ignore them, so a transfer never double-counts as either.
-"""
+"""Two-leg transactions between ``Assets:*`` and ``Liabilities:*`` only, so a transfer never
+double-counts as spending or income."""
 
 from __future__ import annotations
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { categoryByMonth } from '$lib/data/matrix';
+import { categoryByMonth, categoryByYear } from '$lib/data/matrix';
 import { makeData } from '$lib/data/__fixtures__/dashboard';
 
 describe('categoryByMonth', () => {
@@ -68,5 +68,17 @@ describe('categoryByMonth', () => {
 		expect(m.rows).toEqual([]);
 		expect(m.cols).toEqual([]);
 		expect(m.values).toEqual([]);
+	});
+});
+
+describe('categoryByYear', () => {
+	it('is a year per row and a category per column, biggest lifetime spender first', () => {
+		const m = categoryByYear(makeData());
+		expect(m.rows).toEqual(['2024', '2025']);
+		expect(m.cols).toEqual(['Grocery', 'Takeouts']);
+		expect(m.values).toEqual([
+			[70, 50],
+			[30, 15.5]
+		]);
 	});
 });

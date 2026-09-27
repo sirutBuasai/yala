@@ -1,7 +1,5 @@
 <script lang="ts">
-	// The one money figure. `sign` is the interesting prop: money out and money in are the same
-	// number with opposite meaning, and which reads as "good" depends on the column, so the caller
-	// says which.
+	// Money in and out are the same number with opposite meaning, so the caller's `sign` says which reads good.
 	import { money } from '$lib/utils/format';
 
 	interface Props {

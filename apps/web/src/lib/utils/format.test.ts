@@ -13,8 +13,7 @@ import {
 	moneyK,
 	monthDay,
 	monthLabel,
-	monthName,
-	pct
+	monthName
 } from '$lib/utils/format';
 
 describe('money', () => {
@@ -70,7 +69,15 @@ describe('moneyK', () => {
 		expect(moneyK(1_000_000)).toBe('$1.0M');
 		expect(moneyK(9_900_000)).toBe('$9.9M');
 		expect(moneyK(50_000_000)).toBe('$50M');
-		expect(moneyK(999_999)).toBe('$1000k');
+		expect(moneyK(999_999)).toBe('$1.0M');
+	});
+
+	it('steps up to billions past a thousand million', () => {
+		expect(moneyK(999_000_000)).toBe('$999M');
+		expect(moneyK(999_600_000)).toBe('$1.0B');
+		expect(moneyK(1_000_000_000)).toBe('$1.0B');
+		expect(moneyK(12_300_000_000)).toBe('$12B');
+		expect(moneyK(-2_500_000_000)).toBe('-$2.5B');
 	});
 
 	it('handles negatives and nullish', () => {
@@ -91,17 +98,6 @@ describe('moneyCompact', () => {
 	it('handles negatives and nullish', () => {
 		expect(moneyCompact(-1675)).toBe('-$1.7k');
 		expect(moneyCompact(null)).toBe('$0');
-	});
-});
-
-describe('pct', () => {
-	it('returns an integer percentage', () => {
-		expect(pct(25, 100)).toBe('25%');
-		expect(pct(1, 3)).toBe('33%');
-	});
-
-	it('guards divide-by-zero with an em dash', () => {
-		expect(pct(5, 0)).toBe('—');
 	});
 });
 

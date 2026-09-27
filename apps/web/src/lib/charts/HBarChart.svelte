@@ -1,13 +1,14 @@
 <script lang="ts">
-	import { fitFontSize } from '$lib/charts/axis';
-	import { ChartBox } from '$lib/charts/box.svelte';
+	// Parts of a whole ranked largest first, each a bar against the largest, with its figure beside it. Rows
+	// are HTML on one grid, like RangeBars, so the names and figures line up and a row picks the same way.
 	import { esc } from '$lib/utils/format';
 	import { chartFormat } from '$lib/charts/format';
 	import { type Unit } from '$lib/data/primitives';
-	import { clamp, sumBy } from '$lib/utils/num';
+	import { sumBy } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import Empty from '$lib/ui/Empty.svelte';
-	import { chartLabel } from '$lib/charts/aria';
+	import Bands from '$lib/charts/marks/Bands.svelte';
+	import PickRow from '$lib/charts/marks/PickRow.svelte';
 
 	interface Item {
 		label: string;
@@ -20,82 +21,71 @@
 		unit: Unit;
 		/** Total for tooltip percentages; defaults to the sum of values. */
 		total?: number;
+		/** Makes each row a button choosing its label. */
+		onpick?: (label: string) => void;
 	}
-	let { items, unit, total }: Props = $props();
+	let { items, unit, total, onpick }: Props = $props();
 
 	const f = $derived(chartFormat(unit));
 
 	const rows = $derived([...items].sort((a, b) => b.value - a.value));
 	const sum = $derived(total ?? sumBy(rows, (r) => r.value));
-
-	// Measured on both axes so labels keep a constant on-screen size; a fixed viewBox made them
-	// unreadable in a narrow card.
-	const box = new ChartBox();
-	const W = $derived(box.w);
-	/** Rows share the pane's height so a tall pane has no empty band under the last bar, down to a
-	    floor where a row stops being a readable bar with a label beside it. */
-	const rowH = $derived(
-		box.measuredH ? Math.max(24, (box.clientHeight - 4) / Math.max(1, rows.length)) : 29
-	);
-	// Between a readable floor and a ceiling that stops them eating the bars: a constant gutter either
-	// clipped names in a narrow card or wasted space in a wide one.
-	const m = $derived({
-		t: 4,
-		l: clamp(W * 0.26, 72, 168),
-		r: clamp(W * 0.12, 44, 72)
-	});
-	const iw = $derived(Math.max(40, W - m.l - m.r));
-	const H = $derived(m.t + rows.length * rowH);
 	const max = $derived(Math.max(1, ...rows.map((r) => Math.abs(r.value))));
-
-	const label = $derived(
-		chartLabel(
-			'Ranked bars',
-			rows.map((r) => r.label)
-		)
-	);
-	// Shrink rather than truncate: an SVG text node has no ellipsis, so a long name runs under the bars.
-	const labelFont = $derived(
-		fitFontSize(
-			m.l - 10,
-			rows.map((r) => r.label)
-		)
-	);
+	const tip = (d: Item) =>
+		`<b>${esc(d.label)}</b><br>${f.exact(d.value)} · ${sum ? Math.round((d.value / sum) * 100) : 0}%`;
 </script>
 
-<div class="figurebox" bind:clientWidth={box.clientWidth} bind:clientHeight={box.clientHeight}>
-	{#if rows.length}
-		<svg class="chart" viewBox="0 0 {W} {H}" role="img" aria-label={label}>
-			{#each rows as d, i (d.label)}
-				{@const yy = m.t + i * rowH}
-				{@const bw = Math.max(2, (iw * Math.abs(d.value)) / max)}
-				<text
-					class="glabel"
-					x={m.l - 10}
-					y={yy + rowH / 2 + 4}
-					text-anchor="end"
-					style:font-size={`${labelFont}px`}>{d.label}</text
-				>
-				<rect x={m.l} y={yy + 5} width={iw} height={rowH - 13} rx="4" fill="var(--inset)" />
-				<rect
-					x={m.l}
-					y={yy + 5}
-					width={bw}
-					height={rowH - 13}
-					rx="4"
-					fill={d.color}
+{#if rows.length}
+	<div class="bars">
+		{#each rows as d (d.label)}
+			<PickRow label={d.label} {onpick}>
+				<span class="name">{d.label}</span>
+				<span
+					class="lane"
 					role="presentation"
-					onmousemove={(e) =>
-						showTip(
-							`<b>${esc(d.label)}</b><br>${f.exact(d.value)} · ${sum ? Math.round((d.value / sum) * 100) : 0}%`,
-							e
-						)}
+					onmousemove={(e) => showTip(tip(d), e)}
 					onmouseleave={hideTip}
-				/>
-				<text class="vlabel" x={m.l + bw + 8} y={yy + rowH / 2 + 4}>{f.compact(d.value)}</text>
-			{/each}
-		</svg>
-	{:else}
-		<Empty>No data.</Empty>
-	{/if}
-</div>
+				>
+					<Bands
+						radius={4}
+						bands={[
+							{ from: 0, to: 100, fill: 'color-mix(in srgb, var(--ink-3) 14%, transparent)' },
+							{ from: 0, to: (Math.abs(d.value) / max) * 100, fill: d.color }
+						]}
+					/>
+				</span>
+				<span class="num">{f.compact(d.value)}</span>
+			</PickRow>
+		{/each}
+	</div>
+{:else}
+	<Empty>No data.</Empty>
+{/if}
+
+<style>
+	/* One grid for every row, each row a subgrid of it, so names and figures line up; rows spread through
+	   the pane's height rather than stacking at the top. */
+	.bars {
+		display: grid;
+		flex: 1 1 auto;
+		grid-template-columns: minmax(2.5rem, max-content) minmax(2rem, 1fr) max-content;
+		align-content: space-evenly;
+		gap: var(--gap-row) var(--gap-field);
+	}
+	.name {
+		color: var(--ink-2);
+		text-align: right;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.lane {
+		display: block;
+		height: 16px;
+	}
+	.num {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+		color: var(--ink-2);
+	}
+</style>

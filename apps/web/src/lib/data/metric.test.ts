@@ -202,3 +202,22 @@ describe('change', () => {
 		expect(c.delta?.tone).toBe('good');
 	});
 });
+
+describe('a windowed lifetime', () => {
+	const window = { level: 'all' as const, since: 2025 };
+
+	it('totals only the years from `since`', () => {
+		const data = makeData();
+		expect(amount(data, window, 'spending').value).toBe(45.5);
+		expect(amount(data, { level: 'all' }, 'spending').value).toBe(165.5);
+	});
+
+	it('reads its categories from those years alone', () => {
+		expect(categoryAmount(makeData(), window, 'Grocery').value).toBe(30);
+	});
+
+	it('averages a year over the years it covers', () => {
+		const avg = average(makeData(), 'spending', 'year', window);
+		expect(avg.value).toBe(45.5);
+	});
+});

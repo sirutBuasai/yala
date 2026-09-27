@@ -1,7 +1,6 @@
 <script lang="ts">
-	// Every loggable account on one screen, so a month's snapshot is one pass down the Balance column.
-	// A row that can't be saved blocks (see `blockReason`); "Save" commits the rest and says what it
-	// skipped.
+	// Every loggable account on one screen. A row that can't be saved blocks (see `blockReason`); Save
+	// commits the rest and says what it skipped.
 	import type { DashboardData } from '$lib/data/types';
 	import { NO_VALUE } from '$lib/copy';
 	import {
@@ -14,7 +13,7 @@
 	} from '$lib/data/load';
 	import { amountExact, formatAccount, money, moneyExact, monthLabel } from '$lib/utils/format';
 	import { accountVar } from '$lib/utils/theme';
-	import { addDays, addMonths, todayIso } from '$lib/utils/period';
+	import { addDays, todayIso } from '$lib/utils/period';
 	import {
 		agrees,
 		asTyped,
@@ -41,12 +40,14 @@
 		data: DashboardData;
 		accounts: AccountsInfo | null;
 		onsaved: () => void;
-		/** Selected month, "YYYY-MM". */
+		/** The page's month, "YYYY-MM": the reading date defaults to it, and moves when it does. */
 		monthKey: string;
+		/** An account to open at, by ledger path: its row is marked, scrolled to and its field focused. */
+		account?: string | null;
 	}
-	let { id, data, accounts, onsaved, monthKey }: Props = $props();
+	let { id, data, accounts, onsaved, monthKey, account }: Props = $props();
 
-	/** Which accounts the shown month had, once the dated read lands. The props are today's lists, so
+	/** Which accounts the reading's month had, once the dated read lands. The props are today's lists, so
 	    they stand in only until then, and on their own would offer a card opened months later. */
 	let monthRoster = $state<{ assets: string[]; liabilities: string[] } | null>(null);
 	const rows = $derived(
@@ -57,12 +58,8 @@
 		)
 	);
 
-	/** Empty until the parent has resolved a month, so the fetch below can skip that first render. */
-	const firstDayOf = (key: string) => (key ? `${key}-01` : '');
-	const shownDate = $derived(firstDayOf(monthKey));
-	const prevDate = $derived(monthKey ? firstDayOf(addMonths(monthKey, -1)) : '');
-
-	/** The day every balance was read off its app, in one sitting. */
+	/** The day every balance was read off its app, in one sitting. Everything the pane shows is as of
+	    this reading, so picking a date reads that date's snapshot. */
 	let readOn = $state('');
 	$effect(() => {
 		readOn = defaultReadOn(monthKey, todayIso());
@@ -70,78 +67,90 @@
 	// An assertion is checked at the start of its day, so a figure read at the end of `readOn`
 	// asserts on the day after.
 	const snapshotDate = $derived(readOn ? addDays(readOn, 1) : '');
+	/** The month the reading's snapshot lands in, "YYYY-MM". */
+	const readingMonth = $derived(snapshotDate.slice(0, 7));
 
-	// Four dated reads: the shown month, for its roster and what it has logged; the end of the reading
-	// day and of the day before it, whose adjustment difference isolates a snapshot already standing on
-	// the reading; and the previous month, for the Previous column.
+	// The reading's month gives the roster, the reading day's end gives standing and previous, and the day
+	// before isolates a snapshot already standing on the reading.
 	let atRead = $state<Map<string, number>>(new Map());
 	let adjRead = $state<Map<string, number>>(new Map());
 	let adjBefore = $state<Map<string, number>>(new Map());
-	let prevVals = $state<Map<string, number>>(new Map());
 	let cardChecks = $state<Map<string, NetWorthAt['cards'][string]>>(new Map());
-	/** What this month already holds per account: the figure to ghost, and where a correction goes. */
-	let logged = $state<Map<string, NetWorthAt['logged'][string]>>(new Map());
+	/** Each account's snapshot as of the reading, and where a correction to it goes. */
+	let standingAt = $state<Map<string, NetWorthAt['standing'][string]>>(new Map());
+	/** Each account's snapshot before that one, for the Previous column. */
+	let previousAt = $state<Map<string, NetWorthAt['previous'][string]>>(new Map());
 	let loading = $state(false);
 
 	const toMap = (list: { account: string; value: number }[]) =>
 		new Map(list.map((a) => [a.account, a.value]));
 
 	async function refresh() {
-		if (!shownDate || !prevDate || !readOn) return;
+		if (!readOn) return;
 		// Without the API nothing can serve the dated reads, so the dated columns read as unavailable
 		// rather than as wrong.
 		if (!$live) {
 			atRead = toMap((data.networth?.accounts ?? []).map((a) => ({ ...a })));
 			adjRead = toMap(data.networth?.adjustments ?? []);
 			adjBefore = new Map();
-			prevVals = new Map();
 			cardChecks = new Map();
-			logged = new Map();
+			standingAt = new Map();
+			previousAt = new Map();
 			monthRoster = null;
 			return;
 		}
 		loading = true;
-		const [month, read, before, prev] = await Promise.all([
-			networthAt(shownDate),
+		const [month, read, before] = await Promise.all([
+			networthAt(`${readingMonth}-01`),
 			networthAt(readOn),
-			networthAt(addDays(readOn, -1)),
-			networthAt(prevDate)
+			networthAt(addDays(readOn, -1))
 		]);
 		if (month) {
-			logged = new Map(Object.entries(month.logged ?? {}));
 			monthRoster = { assets: month.balance_accounts, liabilities: month.liability_accounts };
 		}
 		if (read) {
 			atRead = toMap(read.accounts);
 			adjRead = toMap(read.adjustments);
 			cardChecks = new Map(Object.entries(read.cards ?? {}));
+			standingAt = new Map(Object.entries(read.standing ?? {}));
+			previousAt = new Map(Object.entries(read.previous ?? {}));
 		}
 		if (before) adjBefore = toMap(before.adjustments);
-		if (prev) prevVals = toMap(prev.accounts);
 		loading = false;
 	}
 	$effect(() => {
-		shownDate;
 		readOn;
 		$live;
 		void refresh();
 	});
 
-	const loggedOnReading = (account: string) => logged.get(account)?.date === snapshotDate;
+	const loggedOnReading = (account: string) => standingAt.get(account)?.date === snapshotDate;
 	const expected = (row: Row) =>
 		row.card
 			? (cardChecks.get(row.account)?.expected ?? null)
 			: expectedAt(row.account, atRead, adjRead, adjBefore, loggedOnReading(row.account));
 	const mustAgree = (row: Row) => row.card && (cardChecks.get(row.account)?.must_agree ?? false);
-	const previous = (account: string) => prevVals.get(account) ?? null;
-	/** What this month's latest snapshot puts the account at, in the ledger's sign. Zero is a figure,
-	    so this is null only when the month holds nothing for the account. */
-	const onRecord = (account: string) => logged.get(account)?.amount ?? null;
+	const previous = (account: string) => previousAt.get(account)?.amount ?? null;
+	/** What the account stands at as of the reading, in the ledger's sign. Zero is a figure, so this is
+	    null only when the reading's month holds nothing for the account. */
+	const onRecord = (account: string) => standingAt.get(account)?.amount ?? null;
 
-	// Keyed by month so switching months never carries an entry across. Liabilities are typed as the
-	// amount owed and stored negative.
+	/** Rows by account, for opening at one. Plain, not state: only the effect below reads it. */
+	const rowEls: Record<string, HTMLTableRowElement> = {};
+	/** The account last opened at, so a refresh of the rows does not pull focus back to it. */
+	let opened = '';
+	$effect(() => {
+		const el = account ? rowEls[account] : undefined;
+		if (!account || !el || opened === account) return;
+		opened = account;
+		el.scrollIntoView({ block: 'center' });
+		el.querySelector('input')?.focus({ preventScroll: true });
+	});
+
+	// Keyed by reading so picking another date never carries an entry across. Liabilities are typed as
+	// the amount owed and stored negative.
 	let typed = $state<Record<string, number | null>>({});
-	const cellKey = (account: string) => `${monthKey}|${account}`;
+	const cellKey = (account: string) => `${snapshotDate}|${account}`;
 
 	function parsed(row: Row): number | null {
 		const n = typed[cellKey(row.account)];
@@ -149,22 +158,13 @@
 		return signedForLedger(row, n);
 	}
 
-	/**
-	 * The figure a row stands at: what was typed, else what the month already asserts. This is what
-	 * makes a logged month read as done — the field is empty, but the balance is not unknown.
-	 */
+	/** What was typed, else what the month already asserts, so a logged month reads as done. */
 	const standing = (row: Row) => parsed(row) ?? onRecord(row.account);
 
-	// The figure COLUMNS stay in the ledger's sign; only the entry field and its ghost invert (see
-	// `asTyped`). The two conventions differ on purpose: a row is read across, but typed into once.
-
-	/**
-	 * Where a typed figure goes: over the snapshot already standing on the reading, else a new one.
-	 * Null when that snapshot is share-based, which is refused rather than rewritten.
-	 */
+	/** Over the snapshot standing on the reading, else a new one. Null when that snapshot is share-based. */
 	function target(row: Row): { locator: string } | { date: string } | null {
 		if (!loggedOnReading(row.account)) return { date: snapshotDate };
-		const locator = logged.get(row.account)?.locator;
+		const locator = standingAt.get(row.account)?.locator;
 
 		return locator ? { locator } : null;
 	}
@@ -177,15 +177,11 @@
 		blockReason(row, parsed(row), expected(row), target(row) != null, mustAgree(row));
 	const blockedRow = (row: Row) => whyBlocked(row) !== null;
 
-	/**
-	 * Why a row can't be saved, phrased to FOLLOW the account name: the footer note puts the name in
-	 * bold ahead of it, the row's own badge repeats the name inline. One source for the wording, so the
-	 * two can't drift apart.
-	 */
+	/** Phrased to follow the account name, since both the footer note and the row badge lead with it. */
 	function blockedPredicate(row: Row): string {
 		const why = whyBlocked(row);
 		if (why === 'share-snapshot') {
-			return `was snapshotted in shares in ${monthLabel(monthKey)}. Only backfilling shares is allowed.`;
+			return `was snapshotted in shares in ${monthLabel(readingMonth)}. Only backfilling shares is allowed.`;
 		}
 		if (why === 'unreconciled') {
 			return `is off by ${gapWords(row)}. Please log the missing ${missingEntryKind(check(row) ?? 0)} first.`;
@@ -269,6 +265,9 @@
 <Pane {id} title={words('Log balances')} caption={words("snapshot of each account's balance on")}>
 	{#snippet captionAfter()}
 		<DatePicker inline ariaLabel="Logging date" bind:value={readOn} />
+		<button type="button" class="btn-ghost today" onclick={() => (readOn = todayIso())}
+			>Default to today</button
+		>
 	{/snippet}
 	{#snippet actions()}
 		{#if rows.length}
@@ -324,7 +323,12 @@
 								{@const prev = previous(row.account)}
 								{@const exp = expected(row)}
 								{@const chk = check(row)}
-								<tr class:done={value != null && !blockedRow(row)} class:bad={blockedRow(row)}>
+								<tr
+									bind:this={rowEls[row.account]}
+									class:done={value != null && !blockedRow(row)}
+									class:bad={blockedRow(row)}
+									class:opened={row.account === account}
+								>
 									<td class="nm">
 										<span class="who">
 											<i class="dot" style:background={accountVar(row.account)}></i>
@@ -334,8 +338,8 @@
 									<td class="num muted">{prev == null ? NO_VALUE : moneyExact(prev)}</td>
 									<td class="num muted">{exp == null ? NO_VALUE : moneyExact(exp)}</td>
 									<td class="entrycell">
-										<!-- A logged month ghosts its own figure, so stepping back to one shows what it
-										     holds without prefilling a field that would then look edited. -->
+										<!-- A past reading ghosts what it stood at, so stepping back to one shows it without
+										     prefilling a field that would then look edited. -->
 										<AmountInput
 											prefix="$"
 											placeholder={rec == null ? NO_VALUE : amountExact(asTyped(row, rec))}
@@ -420,6 +424,11 @@
 </Pane>
 
 <style>
+	.today {
+		margin-left: var(--space-3);
+		padding: var(--space-1) var(--space-4);
+		font-size: var(--text-caption);
+	}
 	/* Bug: bleed plus sideways scroll on the table itself scrolled the whole page when narrow, so the
 	   bleed lives on the wrapper that scrolls. */
 	.balbox {
@@ -457,14 +466,13 @@
 		color: var(--ink-3);
 		font-weight: var(--fw-semibold);
 	}
-	/* A column title sits over its own figures, so only the text columns are left-aligned and `.num`
-	   governs the rest. Stated as `:not(.num)` because a bare `th` rule outranks `.num` and silently
-	   left-aligned every numeric header. */
+	/* `:not(.num)`: a bare `th` rule outranks `.num` and left-aligned every numeric header. */
 	.bal thead th:not(.num) {
 		text-align: left;
 	}
-	.bal tbody tr:not(.glabel):hover td {
-		background: color-mix(in srgb, var(--lav) 7%, transparent);
+	.bal tbody tr:not(.glabel):hover td,
+	.bal tbody tr.opened td {
+		background: color-mix(in srgb, var(--lav-wash) calc(7% * var(--wash-scale)), transparent);
 	}
 	.glabel th,
 	.glabel td {
@@ -496,15 +504,12 @@
 	.pos {
 		color: var(--good-text);
 	}
-	/* Bug: `display: flex` on the CELL takes it out of the table's row-height alignment, so its
-	   background hugged the name while the taller entry cell beside it filled the row and the hover
-	   highlight stepped mid-row. The cell stays a table-cell; the wrapper does the laying out. */
+	/* Bug: `display: flex` on the cell broke row-height alignment and the hover stepped mid-row, so the
+	   wrapper lays out instead. */
 	.nm {
 		font-size: var(--text-control);
 	}
-	/* `min-width: 0` is what lets the label ellipsis: it drops the wrapper's min-content width to
-	   zero, which is the cell's contribution to the column and so the only thing the table would
-	   otherwise refuse to shrink past. */
+	/* Lets the label ellipsis: the wrapper's min-content width is what the table refuses to shrink past. */
 	.who {
 		display: flex;
 		align-items: center;
@@ -536,13 +541,8 @@
 		flex-direction: column;
 		gap: var(--gap-row);
 	}
-	/* The sheet's own header, not a box above it: the figures sit on one bled row that ends on the
-	   same hairline the group rows use, so the tally joins the table's rhythm instead of starting a
-	   second one. Boxed cells read as a spreadsheet header, which is the one thing this pane must not
-	   look like. Flex, not a track grid — a `1fr` track can't go below its content's min-width, so the
-	   figures overflowed the card when narrow, and wrapping reflows them instead.
-	   `margin-block`, not the `margin` shorthand: the inline halves belong to `.bleed-x`, and the
-	   shorthand outranks it from inside a component and would undo the bleed. */
+	/* Flex, not a track grid: a `1fr` track can't go below its content, so the figures overflowed when narrow.
+	   `margin-block`, since the shorthand would outrank `.bleed-x` and undo the bleed. */
 	.agg {
 		display: flex;
 		flex-wrap: wrap;
@@ -577,9 +577,7 @@
 		line-height: normal;
 		color: var(--ink-2);
 	}
-	/* The figure the other two exist to produce: pushed to the far edge and the only one at full
-	   weight. `margin-inline-start: auto` rather than `space-between`, which floated Liabilities out
-	   into the empty middle of the account column. */
+	/* `margin-inline-start: auto`, not `space-between`, which floated Liabilities into the middle. */
 	.agg .sum {
 		margin-inline-start: auto;
 	}

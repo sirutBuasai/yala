@@ -1,8 +1,4 @@
-"""Writing a transfer: money moved between the owner's own accounts.
-
-No ``Expenses`` or ``Income`` leg, which is what makes the read domains classify it as neither
-spending nor income.
-"""
+"""No ``Expenses`` or ``Income`` leg, so the read domains count it as neither."""
 
 from __future__ import annotations
 

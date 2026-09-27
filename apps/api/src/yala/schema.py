@@ -1,7 +1,5 @@
-"""The versioned ``data.json`` contract, validated by pydantic v2 with ``extra="forbid"``.
-
-Additive changes keep ``SCHEMA_VERSION`` stable; breaking changes bump it.
-"""
+"""The versioned ``data.json`` contract, ``extra="forbid"``. Additive changes keep
+``SCHEMA_VERSION``; breaking ones bump it."""
 
 from __future__ import annotations
 
@@ -25,11 +23,6 @@ class _Base(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class DateRange(_Base):
-    start: str
-    end: str
-
-
 class Domains(_Base):
     """Which domains carry data."""
 
@@ -39,9 +32,7 @@ class Domains(_Base):
 
 
 class AccountInfo(_Base):
-    """One account's whole record: what it is called, what it is, and what it carries. Every field
-    is resolved from ledger metadata by the backend, so the naming rule has one implementation
-    rather than one per language."""
+    """Resolved by the backend, so the naming rule has one implementation."""
 
     name: str  # display name, already shortened if the composed name overran the cap
     # The name in the parts it was typed in, and the short form of each. Null where the kind has no
@@ -66,7 +57,6 @@ class Meta(_Base):
     years: list[int]
     month_keys: list[str]  # "YYYY-MM"
     transaction_count: int
-    date_range: DateRange | None
     categories: list[str]
     accounts: dict[str, AccountInfo]  # every declared account, keyed by full path
     domains: Domains
@@ -164,6 +154,7 @@ class NetWorthSnapshot(_Base):
     liabilities: float  # positive = owed
     net_worth: float  # assets - liabilities
     breakdown: dict[str, float]  # allocation bucket -> asset USD
+    owed: dict[str, float] = {}  # liability label -> USD owed (a credit is negative); zero omitted
 
 
 class NetWorthAccount(_Base):
@@ -198,16 +189,14 @@ class PayrollOption(_Base):
 
 
 class AccountKind(_Base):
-    """What one kind of account is allowed to carry, so a form offers exactly the controls that
-    apply. Copied off :data:`yala.ledger.accounts.KINDS`, which the routes enforce and which
-    documents each flag, so the form and the API cannot disagree."""
+    """Copied off :data:`yala.ledger.accounts.KINDS`, so forms offer exactly the controls the API
+    allows."""
 
     name: KindName
     #: Account-path prefix, so the frontend can resolve a leaf-keyed list to full paths instead of
     #: restating the ledger's taxonomy.
     prefix: str
     tiered: bool
-    plugged: bool
     named: bool
     product: bool
     scopable: bool
@@ -220,12 +209,8 @@ class AccountKind(_Base):
 
 
 class AccountLists(_Base):
-    """The pickable account sets the entry forms and the Manage panels choose from.
-
-    Snapshotted into ``data.json`` as well as served live from ``/api/accounts`` so the forms still
-    render when the local API is down. Writes are then refused by the frontend's write guard rather
-    than by an absent list, since a form that vanishes reads as a missing feature.
-    """
+    """Snapshotted as well as served live, so forms render without the API; the write guard refuses
+    writes instead of the forms vanishing."""
 
     kinds: list[AccountKind]
     spending_categories: list[str]  # leaf-relative, as a transaction names one
@@ -262,6 +247,7 @@ class SettingsSection(_Base):
     swr: float  # withdrawal rate, percent
     nominal_return: float  # expected return before inflation, percent
     inflation: float  # long-run inflation the return is discounted by, percent
+    volatility: float  # yearly spread of returns around the expected one, percent
     retire_age: float  # target retirement age
     runway_target: float  # months of spending to hold in cash
     horizon_age: float  # age the projection runs to, and so the age the balance must last until
