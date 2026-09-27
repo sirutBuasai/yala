@@ -114,7 +114,6 @@ export type Help = string;
 export type Name1 = 'category' | 'bank' | 'card' | 'investment' | 'employer' | 'deduction';
 export type Prefix = string;
 export type Tiered = boolean;
-export type Plugged = boolean;
 export type Named = boolean;
 export type Product = boolean;
 export type Scopable = boolean;
@@ -166,9 +165,7 @@ export interface Accounts {
 	[k: string]: AccountInfo;
 }
 /**
- * One account's whole record: what it is called, what it is, and what it carries. Every field
- * is resolved from ledger metadata by the backend, so the naming rule has one implementation
- * rather than one per language.
+ * Resolved by the backend, so the naming rule has one implementation.
  */
 export interface AccountInfo {
 	name: Name;
@@ -349,11 +346,8 @@ export interface SettingField {
 	help: Help;
 }
 /**
- * The pickable account sets the entry forms and the Manage panels choose from.
- *
- * Snapshotted into ``data.json`` as well as served live from ``/api/accounts`` so the forms still
- * render when the local API is down. Writes are then refused by the frontend's write guard rather
- * than by an absent list, since a form that vanishes reads as a missing feature.
+ * Snapshotted as well as served live, so forms render without the API; the write guard refuses
+ * writes instead of the forms vanishing.
  */
 export interface AccountLists {
 	kinds: Kinds;
@@ -370,15 +364,13 @@ export interface AccountLists {
 	sweeps: Sweeps1;
 }
 /**
- * What one kind of account is allowed to carry, so a form offers exactly the controls that
- * apply. Copied off :data:`yala.ledger.accounts.KINDS`, which the routes enforce and which
- * documents each flag, so the form and the API cannot disagree.
+ * Copied off :data:`yala.ledger.accounts.KINDS`, so forms offer exactly the controls the API
+ * allows.
  */
 export interface AccountKind {
 	name: Name1;
 	prefix: Prefix;
 	tiered: Tiered;
-	plugged: Plugged;
 	named: Named;
 	product: Product;
 	scopable: Scopable;

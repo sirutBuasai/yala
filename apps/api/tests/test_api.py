@@ -75,12 +75,12 @@ def test_get_accounts_describes_what_each_kind_can_carry(client: TestClient):
 
     assert set(kinds) == {"category", "bank", "card", "investment", "employer", "deduction"}
     assert kinds["investment"]["tiered"] and kinds["investment"]["splits"]
-    assert kinds["bank"]["plugged"] and kinds["bank"]["drains"]
+    assert kinds["bank"]["drains"]
     # a cash account is named by institution alone; a card has a product half too
     assert not kinds["bank"]["product"] and kinds["card"]["product"]
-    assert not kinds["card"]["plugged"] and not kinds["card"]["drains"]
+    assert not kinds["card"]["drains"]
     assert kinds["deduction"]["scopable"] and not kinds["deduction"]["labelled"]
-    assert not any(kinds["category"][f] for f in ("tiered", "named", "scopable", "plugged"))
+    assert not any(kinds["category"][f] for f in ("tiered", "named", "scopable"))
 
 
 def test_accounts_payroll_options_scoped_and_split(client: TestClient):

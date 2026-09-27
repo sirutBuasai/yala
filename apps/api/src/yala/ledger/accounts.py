@@ -73,9 +73,10 @@ class Kind:
     reconciled: bool = False
 
 
-#: The fields the wire contract ships for each kind. Everything but ``currency``, which is a detail
-#: of writing the ``open`` directive and tells a form nothing.
-KIND_FIELDS: tuple[str, ...] = tuple(f.name for f in fields(Kind) if f.name != "currency")
+#: The fields the wire contract ships for each kind: all but those only writing the ``open`` needs.
+KIND_FIELDS: tuple[str, ...] = tuple(
+    f.name for f in fields(Kind) if f.name not in ("currency", "plugged")
+)
 
 #: Every manageable kind, longest prefix first so a deduction is never read as a spending category.
 KINDS: tuple[Kind, ...] = (

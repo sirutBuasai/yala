@@ -16,7 +16,6 @@ const KIND_FLAGS = [
 	'product',
 	'scopable',
 	'labelled',
-	'plugged',
 	'drains',
 	'splits',
 	'sweeps',
@@ -31,12 +30,12 @@ const KIND_TABLE: Record<KindName, { prefix: string; on: (typeof KIND_FLAGS)[num
 	category: { prefix: 'Expenses:', on: [] },
 	bank: {
 		prefix: 'Assets:Cash:',
-		on: ['named', 'plugged', 'drains', 'splits', 'sweeps', 'sweep_target']
+		on: ['named', 'drains', 'splits', 'sweeps', 'sweep_target']
 	},
 	card: { prefix: 'Liabilities:CC:', on: ['named', 'product', 'reconciled'] },
 	investment: {
 		prefix: 'Assets:Investments:',
-		on: ['tiered', 'named', 'product', 'scopable', 'labelled', 'plugged', 'splits', 'sweep_target']
+		on: ['tiered', 'named', 'product', 'scopable', 'labelled', 'splits', 'sweep_target']
 	},
 	employer: { prefix: 'Income:Salary:', on: [] },
 	deduction: { prefix: 'Expenses:Deductions:', on: ['scopable'] }

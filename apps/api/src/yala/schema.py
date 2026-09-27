@@ -197,7 +197,6 @@ class AccountKind(_Base):
     #: restating the ledger's taxonomy.
     prefix: str
     tiered: bool
-    plugged: bool
     named: bool
     product: bool
     scopable: bool
