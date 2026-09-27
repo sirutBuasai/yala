@@ -85,5 +85,5 @@ PYTHONPATH=$PWD/.worktrees/redesign-<topic>/apps/api/src YALA_API_PORT=8800 \
 | Analytics (was Cash flow) | [done](specs/analytics.md) | merged | started on 8800; keep reading real months |
 | Accounts | [done](specs/accounts.md) | merged | started on 8800; keep logging real month ends |
 | Dashboard | [done](specs/dashboard.md) | merged | started on 8800 |
-| Planning (moved) | [done](specs/planning.md) | built on `redesign/planning` | started on 8800 |
+| Planning (moved) | [done](specs/planning.md) | merged | started on 8800 |
 | Manage (moved) | not needed | moved in with the shell | not started |
