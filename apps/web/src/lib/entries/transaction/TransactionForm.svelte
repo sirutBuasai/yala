@@ -28,7 +28,11 @@
 	let awaiting = $state(false);
 	let credits = $state<Credit[]>([]);
 
-	const form = new EntryForm('transaction', () => onsaved());
+	const form = new EntryForm(
+		'transaction',
+		() => onsaved(),
+		() => body
+	);
 
 	$effect(() => {
 		if (locator == null) {
@@ -56,9 +60,24 @@
 		});
 	});
 
-	// Your share = total bill − everything reimbursed on the credits.
+	// Your share = total bill - everything reimbursed on the credits.
 	const paybacks = $derived(credits.reduce((a, s) => a + (s.amount || 0), 0));
 	const yourShare = $derived((total || 0) - paybacks);
+
+	/** What a save sends, and what an edit compares against the entry as it loaded. */
+	const body = $derived({
+		locator,
+		date: date || undefined,
+		payee: payee.trim(),
+		amount: total,
+		category,
+		funding_account,
+		pending,
+		awaiting_reimbursement: pending && awaiting,
+		credits: credits
+			.filter((s) => s.value && s.amount != null)
+			.map((s) => ({ account: s.value, amount: s.amount as number }))
+	});
 
 	function submit() {
 		// A net share below zero is a valid net refund, not an error; the summary flags it anyway.
@@ -69,20 +88,7 @@
 			.require(funding_account, 'Account')
 			.add(validateRows(credits, 'reimbursement'))
 			.message();
-		const body = {
-			locator,
-			date: date || undefined,
-			payee: payee.trim(),
-			amount: total,
-			category,
-			funding_account,
-			pending,
-			awaiting_reimbursement: pending && awaiting,
-			credits: credits
-				.filter((s) => s.value && s.amount != null)
-				.map((s) => ({ account: s.value, amount: s.amount as number }))
-		};
-		void form.save(problem, body, () => {
+		void form.save(problem, () => {
 			lastCategory.set(category);
 			lastFundingAccount.set(funding_account);
 			lastEntryDate.set(date);
@@ -151,7 +157,7 @@
 
 <EntryFooter
 	{editing}
-	message={form}
+	{form}
 	addLabel="+ Add"
 	deleteLabel="Delete transaction"
 	deleteQuestion="Delete this transaction?"

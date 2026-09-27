@@ -1,10 +1,10 @@
 // No DOM: spilling and settling arrive as functions, so a test can script the content.
 
-import { EDGES, holdFloor, lowest, moveRect, resizeRect, type Edge, type Floor } from './resize';
+import { EDGES, holdFloor, lowest, moveRect, resizeRect, type Edge } from './resize';
 import { clampRect } from './resolve';
 import { COLS, UNIT } from './units';
 import type { DragOrigin } from './lift';
-import type { AuthoredPane, HeightMode, Rect } from './types';
+import type { AuthoredPane, Floor, HeightMode, Rect } from './types';
 
 /** Structural rather than an `Arrangement` import, so a test can hand in a fake. */
 export interface GestureTarget {
@@ -160,17 +160,18 @@ export class PaneGesture {
 		this.#floor = null;
 	}
 
-	/** One keypress worth of gesture: pressed, travelled a unit and released at once. Does nothing if this
-	    height mode does not put the edge the arrow points at in the user's hands. */
-	step(dx: number, dy: number, resize: boolean): void {
+	/** One keypress worth of gesture: pressed, travelled a unit and released at once. False, doing nothing,
+	    where this height mode does not put the edge the arrow points at in the user's hands. */
+	async step(dx: number, dy: number, resize: boolean): Promise<boolean> {
 		if (resize) {
 			const edge: Edge = dx ? 'e' : 's';
-			if (!EDGES[this.#arrangement.mode(this.#id)].includes(edge)) return;
+			if (!EDGES[this.#arrangement.mode(this.#id)].includes(edge)) return false;
 			this.beginResize();
-			void this.endResize(edge, dx * UNIT, dy * UNIT);
-			return;
+			await this.endResize(edge, dx * UNIT, dy * UNIT);
+			return true;
 		}
 		this.beginMove();
 		this.endMove(dx * UNIT, dy * UNIT);
+		return true;
 	}
 }

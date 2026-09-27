@@ -23,7 +23,11 @@
 	let amount = $state<number | null>(null);
 	let pending = $state(false);
 
-	const form = new EntryForm('transfer', () => onsaved());
+	const form = new EntryForm(
+		'transfer',
+		() => onsaved(),
+		() => body
+	);
 
 	// A bill pay can target any money-in account except the one being paid from.
 	const toAccounts = $derived(accounts.funding_accounts.filter((a) => a !== from_account));
@@ -45,6 +49,17 @@
 		});
 	});
 
+	/** What a save sends, and what an edit compares against the entry as it loaded. */
+	const body = $derived({
+		locator,
+		date: date || undefined,
+		payee: payee.trim() || 'payment',
+		from_account,
+		to_account,
+		amount,
+		pending
+	});
+
 	function submit() {
 		const problem = problems()
 			.positive(amount, 'Amount')
@@ -52,16 +67,7 @@
 			.require(to_account, 'Pay-toward account')
 			.add(from_account === to_account ? 'Pick two different accounts.' : null)
 			.message();
-		const body = {
-			locator,
-			date: date || undefined,
-			payee: payee.trim() || 'payment',
-			from_account,
-			to_account,
-			amount,
-			pending
-		};
-		void form.save(problem, body, () => {
+		void form.save(problem, () => {
 			lastTransferFrom.set(from_account);
 			lastTransferTo.set(to_account);
 			lastEntryDate.set(date);
@@ -122,7 +128,7 @@
 
 <EntryFooter
 	{editing}
-	message={form}
+	{form}
 	addLabel="+ Add"
 	deleteLabel="Delete bill pay"
 	deleteQuestion="Delete this bill payment?"

@@ -1,13 +1,7 @@
 // The one place the sizings differ: a chart scales to its height, a list's modes differ in who owns it.
 
 import { COLS, rowsForPx } from './units';
-import type { AuthoredPane, HeightMode, PaneContent, PaneSpec, SizedPane } from './types';
-
-/** The spans a pane's content turned out to need, in units. 0 on an axis never measured. */
-export interface ContentFloor {
-	w: number;
-	h: number;
-}
+import type { AuthoredPane, Floor, HeightMode, PaneContent, PaneSpec, SizedPane } from './types';
 
 /** A `scale` pane is always `fixed`: with no content height, fitting would collapse it to its floor. */
 export function effectiveMode(content: PaneContent, mode: HeightMode): HeightMode {
@@ -50,7 +44,7 @@ export function sizePanes(
 	authored: AuthoredPane[],
 	specs: Record<string, PaneSpec>,
 	measured: Record<string, number>,
-	floors: Record<string, ContentFloor>
+	floors: Record<string, Floor>
 ): SizedPane[] {
 	return authored.map((pane) => {
 		const content = specs[pane.id]?.content ?? 'flow';

@@ -15,6 +15,7 @@
 	import Banner from '$lib/ui/Banner.svelte';
 	import { GridEnv } from '$lib/layout/grid/env.svelte';
 	import { setGridEnv } from '$lib/layout/grid/context';
+	import { CONTENT, WRAP_PAD } from '$lib/layout/grid/units';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -52,7 +53,12 @@
 		<Sidebar rail={mode === 'rail'} />
 	{/if}
 
-	<div class="wrap" bind:clientWidth={env.width}>
+	<div
+		class="wrap"
+		style:--board-w="{CONTENT}px"
+		style:--wrap-pad="{WRAP_PAD}px"
+		bind:clientWidth={env.width}
+	>
 		{#if mode === 'sheet'}
 			<header class="top">
 				<NavMenu />

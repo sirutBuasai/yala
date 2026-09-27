@@ -1,6 +1,9 @@
 // The page writes `width` and everything about folding derives from it, so no two components disagree.
 
-import { foldMode, foldColumns, WRAP_PAD, type FoldMode } from './units';
+import { CONTENT, foldMode, foldColumns, folds, WRAP_PAD, type FoldMode } from './units';
+
+/** The keyboard instructions every movable pane is described by, rendered once beside the Edit toggle. */
+export const ARRANGE_HINT_ID = 'arrange-hint';
 
 export class GridEnv {
 	/** `.wrap`'s client width in px, written by the page. */
@@ -15,7 +18,9 @@ export class GridEnv {
 
 	readonly content = $derived(Math.max(0, this.width - 2 * WRAP_PAD));
 	readonly foldMode = $derived<FoldMode>(foldMode(this.content));
-	readonly folded = $derived(this.foldMode !== 'full');
+	readonly folded = $derived(folds(this.foldMode));
+	/** What a full board is drawn at to fit the content column: 1 unless `scaled`. */
+	readonly scale = $derived(this.foldMode === 'scaled' ? this.content / CONTENT : 1);
 	readonly columns = $derived(foldColumns(this.foldMode));
 
 	/** Arranging is only offered for a board on screen, and only when the full content column fits (see

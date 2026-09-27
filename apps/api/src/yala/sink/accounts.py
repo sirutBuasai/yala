@@ -103,14 +103,16 @@ class AccountWrites(LedgerWriter):
 
         self.rewrite_files(changes)
 
-    def set_setting(self, key: str, value: object, date: dt.date | None = None) -> Decimal:
-        """Rewrites a directive already dated ``date``, else appends, so changes supersede. Raises
-        ``KeyError`` or ``ValueError``."""
+    def set_setting(
+        self, key: str, value: object | None, date: dt.date | None = None
+    ) -> Decimal | None:
+        """Rewrites a directive already dated ``date``, else appends, so changes supersede. ``None``
+        puts the setting back on its default. Raises ``KeyError`` or ``ValueError``."""
         spec = SETTINGS_BY_KEY.get(key)
         if spec is None:
             raise KeyError(key)
 
-        stored = coerce(key, value)
+        stored = None if value is None else coerce(key, value)
         on = date or dt.date.today()
         directive = f'{on} custom "{SETTING_TYPE}" "{key}" {format_value(spec, stored)}'
 

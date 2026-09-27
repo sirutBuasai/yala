@@ -2,9 +2,9 @@
 
 ### Punctuation
 
-- No em dashes or en dashes in prose. Use a comma, colon, semicolon, or a new sentence. `NO_VALUE` is an exception via using the `—` glyph. 
+- No em dashes or en dashes in prose. Use a comma, colon, semicolon, or a new sentence. Two exceptions use the em dash `—`: `NO_VALUE`, and a range between two numbers, written without spaces (`$1,685—$4,660`, `2021—2026`).
 - No ellipsis character, instead use `...`.
-- A negative figure uses the minus sign `−` (U+2212).
+- A negative figure uses the plain hyphen-minus `-` (`-$100`) and a signed positive one uses `+` (`+$5,707`). No typographic minus or plus characters, in code or in text.
 - `&` is fine in a title (`Bill pay & transfers`); spell out `and` in sentences.
 
 ### Case and endings by kind of string

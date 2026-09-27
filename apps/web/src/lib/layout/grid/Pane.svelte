@@ -16,17 +16,20 @@
 	import Card from '$lib/ui/Card.svelte';
 	import { labelText, type Label } from '$lib/ui/label';
 	import { DEV_TOOLS } from '$lib/nav/devtools';
+	import { announce } from '$lib/utils/announce';
 	import SizeMode from '$lib/icons/SizeMode.svelte';
 	import { getArrangement, getGridEnv, getLabels } from './context';
+	import { ARRANGE_HINT_ID } from './env.svelte';
 	import { drag, type DragParams } from './drag';
-	import { overrun, spillReport } from './spill';
+	import { contentHeight, fits, spillReport } from './spill';
 	import { foldSpan } from './fold';
 	import { EDGES, type Edge } from './resize';
 	import { PaneGesture } from './gesture.svelte';
-	import { COLS, pxForRows, UNIT } from './units';
+	import { isLabelField, LabelDraft } from './labelDraft';
+	import { pxForRows } from './units';
 
 	interface Props {
-		/** Pane id — a key of the board's layout. */
+		/** Pane id, a key of the board's layout. */
 		id: string;
 		title?: Label;
 		count?: number;
@@ -36,7 +39,7 @@
 		tone?: 'default' | 'attention';
 		density?: 'figure' | 'panel';
 		/** Drawn over the card, which is `inert` while arranging. Anything over an edge must carry `data-no-drag`,
-		    or the strip beneath reads a press as a resize. */
+			or the strip beneath reads a press as a resize. */
 		affordances?: Snippet;
 		/** Where the title opens; see `Card`. */
 		open?: string;
@@ -66,128 +69,57 @@
 	const arranging = $derived(env.arranging);
 	const capped = $derived(mode === 'cap');
 	/** How far a capped pane's ceiling reaches below the room it takes, in px: drawn while arranging, where
-	    its bottom edge is dragged, but never reserved (see `reservedRows`). */
+		its bottom edge is dragged, but never reserved (see `reservedRows`). */
 	const ceilingBelow = $derived(
 		capped ? Math.max(0, arrangement.capPx(id) - pxForRows(placed.h)) : 0
 	);
 	const span = $derived(foldSpan(placed.w, env.columns));
+	const stack = $derived(arrangement.stacked(id));
 	// Only a declared title gets a stored rename. A KPI pane id is also its leader section's id, so looking it
 	// up regardless put a section's rename on the card around it.
 	const shownTitle = $derived(title && labels.label(id, 'title', title));
 	const shownCaption = $derived(title ? labels.label(id, 'caption', caption) : caption);
-	// What the arrange controls announce: the card's rendered heading, so a pane the user renamed is
-	// named the same way in both places.
+	// The card's rendered heading, so a pane the user renamed is announced by its new name.
 	const name = $derived(labelText(shownTitle) || id);
 	let cardEl = $state<HTMLElement>();
 	let bodyEl = $state<HTMLElement>();
+	let grabEl = $state<HTMLElement>();
 
-	// Fitted panes report their CARD's height — never the cell's — so the pure layer can turn it into
-	// rows. Only while unfolded: a folded pane hugs its content and reserves nothing.
+	// The CARD's height, never the cell's, so the pure layer can turn it into rows. Stacked, a card may be
+	// stretched level with its column, so it reports its content's height, or the stretch would ratchet.
+	const measured = $derived(arrangement.measures(id));
+	const stacks = $derived(arrangement.stacks);
 	$effect(() => {
-		const el = cardEl;
-		if (!hug || !el) return;
+		const [card, body] = [cardEl, bodyEl];
+		if (!measured || !card || !body) return;
 
-		const report = () => arrangement.setMeasured(id, el.offsetHeight);
+		const height = stacks ? () => contentHeight(card, body) : () => card.offsetHeight;
+		const report = () => arrangement.setMeasured(id, height());
 		report();
 		const observer = new ResizeObserver(report);
-		observer.observe(el);
+		observer.observe(card);
+		observer.observe(body);
 		return () => observer.disconnect();
 	});
 
 	// One rule for gestures and the label editor, labels included: a resize that clipped a caption left it
-	// unrecoverable by rename.
+	// unrecoverable by rename. Nothing grows a pane to fit its content otherwise: that stored whichever
+	// period's figures ran longest for every period.
 	const gesture = new PaneGesture(() => id, arrangement, {
 		spills: () => {
-			if (!cardEl) return false;
-			const fits = everythingFits(cardEl);
-			if (!fits && DEV_TOOLS) {
-				console.debug(`[grid] ${id} refused:`, [
-					...spillReport(cardEl, bodyEl),
-					...clippedLabels(cardEl)
-				]);
-			}
-			return !fits;
+			if (!cardEl || fits(cardEl, bodyEl)) return false;
+			if (DEV_TOOLS) console.debug(`[grid] ${id} refused:`, spillReport(cardEl, bodyEl));
+			return true;
 		},
 		settle: tick
 	});
 
-	/** Repeats until the content fits or the pane can't grow: room changes wrapping, and a merged section gets
-	    only its weighted share. Bounded by the grid, since a pass budget left some sections short. */
-	async function growUntilItFits(apply: (w: number, h: number) => void): Promise<void> {
-		for (let pass = 0; pass < COLS; pass++) {
-			if (!cardEl) return;
-			const over = overrun(cardEl, bodyEl);
-			if (!over.x && !over.y) return;
-			const [was, wasTall] = [placed.w, placed.h];
-			apply(was + Math.ceil(over.x / UNIT), wasTall + Math.ceil(over.y / UNIT));
-			await tick();
-			if (placed.w === was && placed.h === wasTall) return;
-		}
-	}
-
-	// Nothing here grows a pane to fit its content: that stored whichever period's figures ran longest for
-	// every period. Only an arrange gesture or a rename changes the rectangle.
-
-	/** The field a label edit opens (see `ui/LabelLine`), whose own events say when one is in progress. */
-	const isLabelField = (t: EventTarget | null) =>
-		t instanceof HTMLElement && t.isContentEditable && t.classList.contains('name');
-
-	/** A label past its line budget, or a figure (`data-clip`) its box cuts off. Asked separately because their
-	    own `overflow: hidden` hides them from the spill probe. */
-	const clippedLabels = (el: HTMLElement) =>
-		[...el.querySelectorAll('[data-label-line], [data-clip]')]
-			.filter((l) => l.scrollHeight > l.clientHeight + 1 || l.scrollWidth > l.clientWidth + 1)
-			.map((l) => `label "${l.textContent?.trim().slice(0, 20)}"`);
-
-	const labelClipped = (el: HTMLElement) => clippedLabels(el).length > 0;
-
-	/** Everything this pane holds fits the room it is allowed. */
-	function everythingFits(el: HTMLElement): boolean {
-		const over = overrun(el, bodyEl);
-		return !over.x && !over.y && !labelClipped(el);
-	}
-
-	/** The last words this label held that the card could fit, and a guard against the revert below being
-	    read as one more edit. */
-	let fitting = '';
-	let reverting = false;
-	/** Which run of `trackLabel` owns the measurement: keystrokes can arrive inside the frames a previous
-	    run is awaiting, and only the latest may decide what fitted. */
-	let tracking = 0;
-
-	function caretToEnd(el: HTMLElement): void {
-		const range = document.createRange();
-		range.selectNodeContents(el);
-		range.collapse(false);
-		const selection = getSelection();
-		selection?.removeAllRanges();
-		selection?.addRange(range);
-	}
-
-	/** Grows as a label is typed and gives room back down to the size the edit opened at, which it drops to
-	    first, or it never learns it could shrink. Words that can't fit are put back. */
-	async function trackLabel(field: HTMLElement): Promise<void> {
-		if (!cardEl || reverting) return;
-		const run = ++tracking;
-		arrangement.relaxDraft(id);
-		await tick();
-		await growUntilItFits((w, h) => arrangement.setDraft(id, w, h));
-		if (!cardEl || run !== tracking) return;
-
-		if (everythingFits(cardEl)) {
-			fitting = field.textContent ?? '';
-			return;
-		}
-		// Not a loop: a loop here spun forever when the restored words didn't fit either.
-		reverting = true;
-		field.textContent = fitting;
-		field.dispatchEvent(new Event('input', { bubbles: true }));
-		caretToEnd(field);
-		arrangement.relaxDraft(id);
-		await tick();
-		await growUntilItFits((w, h) => arrangement.setDraft(id, w, h));
-		reverting = false;
-	}
+	const draft = new LabelDraft(
+		() => id,
+		arrangement,
+		() => ({ card: cardEl, body: bodyEl }),
+		tick
+	);
 
 	/** One edge's resize wiring. Shared by the strips and by anything the view lays over them. */
 	function resizeOn(edge: Edge): DragParams {
@@ -206,12 +138,17 @@
 		ArrowDown: [0, 1]
 	};
 
-	/** Keyboard equivalents on the card: arrows move by a unit, Shift+arrows resize by one. */
-	function onArrangeKey(e: KeyboardEvent): void {
+	/** Keyboard equivalents on the card: arrows move by a unit, Shift+arrows resize by one. The pane is kept
+		in view and where it landed is announced, since nothing else tells a keyboard user it moved. */
+	async function onArrangeKey(e: KeyboardEvent): Promise<void> {
 		const delta = STEPS[e.key];
 		if (!delta) return;
 		e.preventDefault();
-		gesture.step(delta[0], delta[1], e.shiftKey);
+		if (!(await gesture.step(delta[0], delta[1], e.shiftKey))) return;
+		await tick();
+		grabEl?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+		const at = arrangement.placed(id);
+		announce(`${name}: column ${at.x + 1}, row ${at.y + 1}, ${at.w} wide by ${at.h} tall.`);
 	}
 </script>
 
@@ -219,24 +156,27 @@
 	class="cell"
 	data-pane={id}
 	class:folded={env.folded}
+	class:stacked={!!stack}
 	class:arranging
 	class:hug
 	class:capped
 	class:invalid={gesture.invalid}
-	style:grid-column={env.folded ? `span ${span}` : `${placed.x + 1} / span ${placed.w}`}
-	style:grid-row={env.folded ? null : `${placed.y + 1} / span ${placed.h}`}
-	style:order={env.folded ? arrangement.order[id] : null}
+	style:grid-column={stack
+		? `${stack.col + 1} / span ${stack.span}`
+		: env.folded
+			? `span ${span}`
+			: `${placed.x + 1} / span ${placed.w}`}
+	style:grid-row={stack
+		? `${stack.row + 1} / span ${stack.rows}`
+		: env.folded
+			? null
+			: `${placed.y + 1} / span ${placed.h}`}
+	style:order={env.folded && !stack ? arrangement.order[id] : null}
 	style:--cap-h={capped ? `${arrangement.capPx(id)}px` : null}
 	style:--ceiling-below={`${ceilingBelow}px`}
-	onfocusin={(e) => {
-		if (!isLabelField(e.target)) return;
-		fitting = (e.target as HTMLElement).textContent ?? '';
-		arrangement.startDraft(id, placed.w, placed.h);
-	}}
-	oninput={(e) => isLabelField(e.target) && void trackLabel(e.target as HTMLElement)}
-	onfocusout={(e) =>
-		isLabelField(e.target) &&
-		void trackLabel(e.target as HTMLElement).then(() => arrangement.endDraft(id))}
+	onfocusin={(e) => isLabelField(e.target) && draft.begin(e.target)}
+	oninput={(e) => isLabelField(e.target) && void draft.track(e.target)}
+	onfocusout={(e) => isLabelField(e.target) && void draft.end(e.target)}
 >
 	<Card
 		bind:card={cardEl}
@@ -259,10 +199,14 @@
 
 	{#if arranging}
 		<div
+			bind:this={grabEl}
 			class="grab"
 			role="button"
 			tabindex="0"
-			aria-label={`Move ${name}. Arrows move it; shift and arrows resize it.`}
+			aria-roledescription="Movable pane"
+			aria-label={name}
+			aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight"
+			aria-describedby={ARRANGE_HINT_ID}
 			onkeydown={onArrangeKey}
 			use:drag={{
 				autoscroll: true,
@@ -345,6 +289,19 @@
 	.cell.folded > :global(.card) {
 		flex: 0 0 auto;
 		max-height: none;
+	}
+	/* The line budget stops a label growing its pane on the grid. Folded, the card hugs whatever the label
+	   takes, and a font that wraps a caption once more than another clipped it. */
+	.cell.folded :global([data-label-line]) {
+		max-height: none;
+	}
+	/* Stacked into columns, a card fills its cell, which may be stretched level with the next column; its
+	   body keeps its own height, which is what the card reports (see `contentHeight`). */
+	.cell.stacked > :global(.card) {
+		flex: 1 1 auto;
+	}
+	.cell.stacked > :global(.card > .body) {
+		flex: 0 0 auto;
 	}
 
 	/* On the grid the pane's height aligns neighbours, so the figure box's own clamps are lifted. */

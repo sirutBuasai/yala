@@ -32,6 +32,9 @@
 	import AmountInput from '$lib/ui/AmountInput.svelte';
 	import DatePicker from '$lib/forms/fields/DatePicker.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
+	import SaveButton from '$lib/forms/SaveButton.svelte';
+	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
+	import { SaveState } from '$lib/forms/saveState.svelte';
 	import { sumBy } from '$lib/utils/num';
 	import { words } from '$lib/ui/label';
 
@@ -230,33 +233,28 @@
 			effective
 		);
 
-	let busy = $state(false);
-	let err = $state('');
-	let note = $state('');
+	const save = new SaveState();
 
 	async function saveAll() {
 		if (!savable.length) return;
-		busy = true;
-		err = '';
-		note = '';
-		const failures: string[] = [];
-		for (const row of savable) {
-			const value = parsed(row);
-			if (value == null) continue;
-			// Sent in the convention it was typed in; the API applies the ledger's sign.
-			const amount = asTyped(row, value);
-			const where = target(row);
-			if (where == null) continue; // blocked, so never in `savable`
-			const { error } =
-				'locator' in where
-					? await updateBalance(where.locator, amount)
-					: await logBalance(row.account, amount, where.date);
-			if (error) failures.push(`${formatAccount(row.account)}: ${error}`);
-			else delete typed[cellKey(row.account)];
-		}
-		busy = false;
-		if (failures.length) err = failures.join(' · ');
-		else note = `Saved ${savable.length}.`;
+		await save.run(async () => {
+			const failures: string[] = [];
+			for (const row of savable) {
+				const value = parsed(row);
+				if (value == null) continue;
+				// Sent in the convention it was typed in; the API applies the ledger's sign.
+				const amount = asTyped(row, value);
+				const where = target(row);
+				if (where == null) continue; // blocked, so never in `savable`
+				const { error } =
+					'locator' in where
+						? await updateBalance(where.locator, amount)
+						: await logBalance(row.account, amount, where.date);
+				if (error) failures.push(`${formatAccount(row.account)}: ${error}`);
+				else delete typed[cellKey(row.account)];
+			}
+			return failures.join(' · ') || null;
+		});
 		onsaved();
 		await refresh();
 	}
@@ -285,7 +283,7 @@
 			</div>
 			<div>
 				<dt>Liabilities</dt>
-				<dd>−{money(liabilities)}</dd>
+				<dd>-{money(liabilities)}</dd>
 			</div>
 			<div class="sum">
 				<dt>Net worth</dt>
@@ -344,7 +342,7 @@
 											prefix="$"
 											placeholder={rec == null ? NO_VALUE : amountExact(asTyped(row, rec))}
 											signed
-											disabled={busy}
+											disabled={save.busy}
 											ariaLabel={`Balance for ${formatAccount(row.account)}`}
 											bind:value={typed[cellKey(row.account)]}
 										/>
@@ -411,13 +409,10 @@
 				</p>
 			{/if}
 
-			{#if err}<p class="err" role="alert">{err}</p>{/if}
-			{#if note}<p class="note" role="status">{note}</p>{/if}
+			<SaveFeedback {save} />
 
 			<div class="actions">
-				<button class="btn-primary" onclick={saveAll} disabled={busy || !savable.length}>
-					{busy ? 'Saving...' : 'Save'}
-				</button>
+				<SaveButton dirty={savable.length > 0} busy={save.busy} onclick={saveAll} />
 			</div>
 		</div>
 	{/if}
@@ -609,8 +604,7 @@
 	.bl b {
 		color: var(--ink);
 	}
-	.cap,
-	.note {
+	.cap {
 		color: var(--ink-3);
 		font-size: var(--text-subtitle);
 		margin: 0;

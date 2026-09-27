@@ -10,14 +10,24 @@ const ENV = Symbol('grid-env');
 const ARRANGEMENT = Symbol('grid-arrangement');
 const LABELS = Symbol('grid-labels');
 
+/** Throws naming who should have provided it, so a misplaced component fails where it is mounted. */
+function required<T>(key: symbol, missing: string): T {
+	const value = getContext<T | undefined>(key);
+	if (!value) throw new Error(`grid: ${missing}`);
+	return value;
+}
+
 export function setGridEnv(env: GridEnv): void {
 	setContext(ENV, env);
 }
 
 export function getGridEnv(): GridEnv {
-	const env = getContext<GridEnv | undefined>(ENV);
-	if (!env) throw new Error('grid: no GridEnv in context; the page must call setGridEnv()');
-	return env;
+	return required(ENV, 'no GridEnv in context; the page must call setGridEnv()');
+}
+
+/** For content drawn on a board or off one, such as a chart in the component gallery. */
+export function tryGridEnv(): GridEnv | undefined {
+	return getContext<GridEnv | undefined>(ENV);
 }
 
 export function setArrangement(arrangement: Arrangement): void {
@@ -25,10 +35,7 @@ export function setArrangement(arrangement: Arrangement): void {
 }
 
 export function getArrangement(): Arrangement {
-	const arrangement = getContext<Arrangement | undefined>(ARRANGEMENT);
-	if (!arrangement)
-		throw new Error('grid: no arrangement in context; a Pane must be inside a Board');
-	return arrangement;
+	return required(ARRANGEMENT, 'no arrangement in context; a Pane must be inside a Board');
 }
 
 export function setLabels(labels: BoardLabels): void {
@@ -36,13 +43,10 @@ export function setLabels(labels: BoardLabels): void {
 }
 
 export function getLabels(): BoardLabels {
-	const labels = getContext<BoardLabels | undefined>(LABELS);
-	if (!labels) throw new Error('grid: no labels in context; a Pane must be inside a Board');
-	return labels;
+	return required(LABELS, 'no labels in context; a Pane must be inside a Board');
 }
 
-/** For a card that renders on a board OR on its own — a KPI in the component gallery, say. Renaming is
-    board state, so off a board there is nothing to rename into. */
+/** Renaming is board state, so off a board there is nothing to rename into. */
 export function tryLabels(): BoardLabels | undefined {
 	return getContext<BoardLabels | undefined>(LABELS);
 }

@@ -5,6 +5,8 @@
 	import { showTip, hideTip } from '$lib/utils/tooltip';
 	import { sumBy } from '$lib/utils/num';
 	import { chartLabel } from '$lib/charts/aria';
+	import { declutter } from '$lib/charts/declutter';
+	import { textWidth, type LabelType } from '$lib/charts/textWidth';
 	// The registry adapts a Flow primitive into these, adding a colour per node role.
 	interface SankeyNode {
 		id: string;
@@ -42,35 +44,36 @@
 	const GAP = 20; // minimum vertical gap between nodes within a column
 	/** Second line of a right label, below its first. */
 	const LABEL_LINE = 12;
-	/** A right label is two lines, so its anchors must clear the whole block: at 15 the smallest
+	/** A right label is two lines, so its anchors must clear the whole block: at one line's gap the smallest
 	    categories' labels sat on top of one another. */
 	const LABEL_MIN_GAP = LABEL_LINE + 16;
-	// The top margin holds the middle columns' above-labels, the right margin the last column's
-	// de-collided labels and their leader lines.
-	const M = { t: 28, b: 12, l: 92, r: 150 };
-	const iw = W - M.l - M.r;
-	const ih = H - M.t - M.b;
+	/** The type `.lbl` and `.val` below are drawn in. */
+	const LABEL_TYPE: LabelType = { size: '--text-caption', weight: 500 };
+	const FIGURE_TYPE: LabelType = { size: '--text-micro', weight: 600 };
+	/** Where a right label starts past its node, clearing the leader line. */
+	const LEADER = 24;
 
-	/** Push overlapping label anchors apart in one pass down then clamp up from the bottom. */
-	function declutter(items: { cy: number }[], minGap: number, top: number, bottom: number) {
-		const order = items.map((it, i) => ({ i, cy: it.cy, ly: it.cy })).sort((a, b) => a.cy - b.cy);
-		let last = -Infinity;
-		for (const o of order) {
-			o.ly = Math.max(o.cy, last + minGap, top);
-			last = o.ly;
-		}
-		const bottommost = order[order.length - 1];
-		if (bottommost && bottommost.ly > bottom) {
-			last = bottom;
-			for (let k = order.length - 1; k >= 0; k--) {
-				order[k]!.ly = Math.min(order[k]!.ly, last);
-				last = order[k]!.ly - minGap;
-			}
-		}
-		const out = new Array<number>(items.length);
-		for (const o of order) out[o.i] = o.ly;
-		return out;
-	}
+	// The top margin holds the middle columns' above-labels. The side margins are measured from the first and
+	// last columns' labels: a fixed margin cut the left label off wherever the font ran wider.
+	const M = $derived.by(() => {
+		const ends = nodes.map((n) => n.col);
+		const widest = (col: number, width: (n: SankeyNode) => number) =>
+			Math.max(0, ...nodes.filter((n) => n.col === col).map(width));
+		const name = (n: SankeyNode) => textWidth(n.label, LABEL_TYPE);
+		const figure = (text: string) => textWidth(text, FIGURE_TYPE);
+		const left = widest(Math.min(...ends), (n) => name(n) + 6 + figure(f.plain(n.value)));
+		const right = widest(Math.max(...ends), (n) =>
+			Math.max(name(n), figure(`${f.plain(n.value)} 100%`))
+		);
+		return {
+			t: 28,
+			b: 12,
+			l: Math.max(92, Math.ceil(left) + 12),
+			r: Math.max(150, Math.ceil(right) + LEADER + 8)
+		};
+	});
+	const iw = $derived(W - M.l - M.r);
+	const ih = $derived(H - M.t - M.b);
 
 	const layout = $derived.by(() => {
 		const cols = [...new Set(nodes.map((n) => n.col))].sort((a, b) => a - b);
@@ -146,7 +149,7 @@
 		// Spread the last column's anchors apart; a leader line reconnects each to its node.
 		const rightViews = nodeViews.filter((v) => v.side === 'right');
 		const lys = declutter(
-			rightViews.map((v) => ({ cy: v.cy })),
+			rightViews.map((v) => v.cy),
 			LABEL_MIN_GAP,
 			M.t + 6,
 			H - M.b - LABEL_LINE
@@ -212,12 +215,12 @@
 			{@const ly = layout.labelY.get(nv.node.id) ?? nv.cy}
 			<path
 				class="leader"
-				d={leaderPath(nv.x + NODE_W, nv.cy, nv.x + NODE_W + 20, ly)}
+				d={leaderPath(nv.x + NODE_W, nv.cy, nv.x + NODE_W + LEADER - 4, ly)}
 				fill="none"
 			/>
-			<text class="lbl" x={nv.x + NODE_W + 24} y={ly} text-anchor="start">
-				<tspan x={nv.x + NODE_W + 24} dy="-1">{nv.node.label}</tspan>
-				<tspan class="val" x={nv.x + NODE_W + 24} dy={LABEL_LINE}
+			<text class="lbl" x={nv.x + NODE_W + LEADER} y={ly} text-anchor="start">
+				<tspan x={nv.x + NODE_W + LEADER} dy="-1">{nv.node.label}</tspan>
+				<tspan class="val" x={nv.x + NODE_W + LEADER} dy={LABEL_LINE}
 					>{f.plain(nv.node.value)}{#if nv.pct != null}<tspan class="pct" dx="5">{nv.pct}%</tspan
 						>{/if}</tspan
 				>
@@ -227,10 +230,12 @@
 </svg>
 
 <style>
+	/* Drawn to a fixed viewBox, so the type is scaled; hinted, Firefox scaled it wider than its measured size. */
 	svg {
 		display: block;
 		width: 100%;
 		overflow: visible;
+		text-rendering: geometricPrecision;
 	}
 	.lbl {
 		fill: var(--ink);

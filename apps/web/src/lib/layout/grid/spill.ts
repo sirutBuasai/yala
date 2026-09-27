@@ -45,8 +45,34 @@ export function overrun(card: HTMLElement, body?: HTMLElement): Overrun {
 	return { x, y };
 }
 
-/** Which boxes are overrunning, and by how much — for a dev-mode log when a resize is refused, since the
-    refusal is otherwise indistinguishable from a gesture that never ran. */
+/** The card's height down to the end of its body, which is its own whatever it has been stretched to. */
+export function contentHeight(card: HTMLElement, body: HTMLElement): number {
+	const style = getComputedStyle(card);
+	return (
+		body.offsetTop -
+		card.offsetTop +
+		body.offsetHeight +
+		parseFloat(style.paddingBottom) +
+		parseFloat(style.borderBottomWidth)
+	);
+}
+
+/** Labels past their line budget and figures (`data-clip`) their box cuts off: their own `overflow: hidden`
+    hides them from `overrun`. */
+function clipped(card: HTMLElement): Element[] {
+	return [...card.querySelectorAll('[data-label-line], [data-clip]')].filter(
+		(l) => l.scrollHeight > l.clientHeight + 1 || l.scrollWidth > l.clientWidth + 1
+	);
+}
+
+/** Everything the card holds fits the room it is given. */
+export function fits(card: HTMLElement, body?: HTMLElement): boolean {
+	const over = overrun(card, body);
+	return !over.x && !over.y && !clipped(card).length;
+}
+
+/** Which boxes are overrunning or clipped, and by how much, for a dev-mode log when a resize is refused,
+    since the refusal is otherwise indistinguishable from a gesture that never ran. */
 export function spillReport(card: HTMLElement, body?: HTMLElement): string[] {
 	const boxes: [Element, 'x' | 'y'][] = [
 		[card, 'x'],
@@ -59,8 +85,11 @@ export function spillReport(card: HTMLElement, body?: HTMLElement): string[] {
 		])
 	];
 
-	return boxes
-		.map(([el, axis]) => ({ el, axis, px: overflowPx(el, axis) }))
-		.filter(({ px }) => px > 0)
-		.map(({ el, axis, px }) => `${el.tagName.toLowerCase()}.${el.className} ${axis}+${px}`);
+	return [
+		...boxes
+			.map(([el, axis]) => ({ el, axis, px: overflowPx(el, axis) }))
+			.filter(({ px }) => px > 0)
+			.map(({ el, axis, px }) => `${el.tagName.toLowerCase()}.${el.className} ${axis}+${px}`),
+		...clipped(card).map((l) => `clipped "${l.textContent?.trim().slice(0, 20)}"`)
+	];
 }

@@ -2,7 +2,7 @@
 // rectangle. Pure — no DOM, no Svelte.
 
 import { UNIT } from './units';
-import type { HeightMode, Rect } from './types';
+import type { Floor, HeightMode, Rect } from './types';
 
 /** Which edges of a pane a gesture is dragging: any of `n s e w`. */
 export type Edge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
@@ -40,12 +40,6 @@ export function resizeRect(base: Rect, edge: Edge, dx: number, dy: number): Rect
 /** The same, for a move: the press-time rectangle translated by the snapped travel. */
 export function moveRect(base: Rect, dx: number, dy: number): Rect {
 	return { ...base, x: base.x + snapUnits(dx), y: base.y + snapUnits(dy) };
-}
-
-/** The least a pane's content fits in, in units: any rectangle at least this on both axes fits. */
-export interface Floor {
-	w: number;
-	h: number;
 }
 
 /** The dragged edge stops at the floor, so the opposite edge stays where the press left it. */

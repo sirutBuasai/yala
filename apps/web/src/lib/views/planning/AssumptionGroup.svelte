@@ -59,13 +59,13 @@
 	function footnoteOf(spec: SettingSpec): string | undefined {
 		if (spec.key === 'swr') return standing;
 		if (spec.key === 'nominal-return' || spec.key === 'inflation') return adjusted;
-		if (spec.key !== 'out-of-pocket') return undefined;
-
-		const extra = draft.values[spec.key] ?? rates.residual;
-		return `${money(rates.contributions)}/yr contributions + ${money(extra)} = ${money(
-			rates.contributions + extra
-		)}/yr`;
+		return undefined;
 	}
+
+	/** What the plan invests a year, worked through. */
+	const investing = $derived(
+		`${money(rates.contributions)}/yr contributions + ${money(rates.investing - rates.contributions)} = ${money(rates.investing)}/yr`
+	);
 
 	const depletion = $derived(depletionYear(data, preview));
 
@@ -109,7 +109,7 @@
 					disabled={busy}
 					optional={spec.kind === 'year'}
 					track={spec.kind !== 'year'}
-					bind:value={() => draft.values[spec.key] ?? seedOf(spec), (v) => draft.set(spec.key, v)}
+					bind:value={() => draft.value(spec.key) ?? seedOf(spec), (v) => draft.set(spec.key, v)}
 				>
 					{#snippet hint()}
 						<Hint label={spec.label}>{@render explains(spec)}</Hint>
@@ -117,8 +117,8 @@
 						{#if spec.kind !== 'year'}<button
 								type="button"
 								class="btn-mini reset"
-								disabled={busy || draft.values[spec.key] === spec.default}
-								onclick={() => draft.set(spec.key, spec.default)}>Default</button
+								disabled={busy || draft.atDefault(spec.key)}
+								onclick={() => draft.set(spec.key, null)}>Default</button
 							>{/if}
 					{/snippet}
 				</NumberField>
@@ -136,7 +136,7 @@
 
 {#snippet fisher()}
 	<b
-		>({plainRate(1 + preview.nominalReturn / 100)} / {plainRate(1 + preview.inflation / 100)}) − 1 = {real.toFixed(
+		>({plainRate(1 + preview.nominalReturn / 100)} / {plainRate(1 + preview.inflation / 100)}) - 1 = {real.toFixed(
 			2
 		)}% adjusted</b
 	>
@@ -177,7 +177,7 @@
 		>
 	{:else if spec.key === 'horizon-age'}
 		<span class="legend"
-			>spending × (1 − (1+r)^−n) / r, where r = {real.toFixed(2)}% adjusted return and n = {worked.drawnYears}
+			>spending × (1 - (1+r)^-n) / r, where r = {real.toFixed(2)}% adjusted return and n = {worked.drawnYears}
 			yr of withdrawals</span
 		>
 		<b
@@ -192,12 +192,8 @@
 		<b>trailing spending based on your activity: {money(worked.loggedSpend)}/yr</b>
 		Average saved and spent metrics from your logged activity or custom spending rate.
 	{:else if spec.key === 'out-of-pocket'}
-		<b>trailing savings based on your activity: {money(rates.residual)}/yr</b>
-		<b
-			>{money(rates.contributions)}/yr contributions + {money(
-				draft.values[spec.key] ?? rates.residual
-			)} = {money(rates.investing)}/yr</b
-		>
+		<b>trailing take-home after spending: {money(rates.residual)}/yr</b>
+		<b>{investing}</b>
 	{/if}
 {/snippet}
 

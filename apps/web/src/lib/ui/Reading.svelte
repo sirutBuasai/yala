@@ -44,15 +44,7 @@
 		white-space: nowrap;
 		text-align: inherit;
 	}
-	/* Laid out but unpainted and zero-sized, as every probe here: a sized one reads as a spill. */
 	.probe {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 0;
-		height: 0;
-		overflow: hidden;
-		visibility: hidden;
 		white-space: nowrap;
 	}
 	.probe span {

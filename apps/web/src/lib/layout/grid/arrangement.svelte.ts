@@ -4,11 +4,19 @@ import { DEV_TOOLS } from '$lib/nav/devtools';
 import { Pref, listOf, number, type Revive } from '$lib/utils/persist.svelte';
 import { assertNoOverlap, clampRect, resolve, boardRows } from './resolve';
 import { lift, type DragOrigin } from './lift';
-import { readingOrder } from './fold';
-import { effectiveMode, hugs, scrolls, sizePanes, type ContentFloor } from './sizing';
-import { COLS, MIN_H, MIN_W, pxForRows, rowsForPx } from './units';
+import { foldSpan, readingOrder, stackColumns, type Stack } from './fold';
+import { effectiveMode, hugs, scrolls, sizePanes } from './sizing';
+import { COLS, GAP, MIN_H, MIN_W, pxForRows, rowsForPx, STACK_ROW } from './units';
 import type { GridEnv } from './env.svelte';
-import type { AuthoredPane, BoardLayout, HeightMode, PaneSpec, PlacedPane, Rect } from './types';
+import type {
+	AuthoredPane,
+	BoardLayout,
+	Floor,
+	HeightMode,
+	PaneSpec,
+	PlacedPane,
+	Rect
+} from './types';
 
 const MODES: HeightMode[] = ['fixed', 'fit', 'cap'];
 
@@ -57,11 +65,11 @@ export class Arrangement {
 	readonly #pref: Pref<AuthoredPane[]>;
 	readonly #env: GridEnv;
 
-	/** Card heights in px, reported by fitted panes. */
+	/** Card heights in px, reported by fitted panes and, folded into columns, by every pane. */
 	#measured = $state<Record<string, number>>({});
 	/** While a label is typed, that pane's floor follows the text both ways but never below `base`, so an edit
 	    typed long then shortened leaves the pane where it started. */
-	#draft = $state<{ id: string; base: ContentFloor; floor: ContentFloor } | null>(null);
+	#draft = $state<{ id: string; base: Floor; floor: Floor } | null>(null);
 	/** Authored panes in priority order. Mutated live during a gesture; flushed on release. */
 	#panes = $state<AuthoredPane[]>([]);
 
@@ -84,7 +92,7 @@ export class Arrangement {
 	}
 
 	/** The only floor the resolver is given: the size an open label edit is holding its pane at. */
-	readonly #effectiveFloors = $derived.by<Record<string, ContentFloor>>(() => {
+	readonly #effectiveFloors = $derived.by<Record<string, Floor>>(() => {
 		const d = this.#draft;
 		return d ? { [d.id]: d.floor } : {};
 	});
@@ -101,6 +109,31 @@ export class Arrangement {
 
 	readonly rows = $derived(boardRows(this.#placed));
 	readonly order = $derived(readingOrder(this.#placed));
+
+	/** Folded into more than one column, where panes are packed by the heights their cards report. */
+	get stacks(): boolean {
+		return this.#env.folded && this.#env.columns > 1;
+	}
+
+	/** Until a card reports, its authored height stands in. The gap is the cell's inset around its card. */
+	readonly #stacked = $derived.by<Record<string, Stack> | null>(() => {
+		if (!this.stacks) return null;
+		const cols = this.#env.columns;
+		const inReadingOrder = [...this.#placed].sort((a, b) => this.order[a.id]! - this.order[b.id]!);
+		return stackColumns(
+			inReadingOrder.map((p) => ({
+				id: p.id,
+				span: foldSpan(p.w, cols),
+				rows: Math.ceil(((this.#measured[p.id] ?? pxForRows(p.h)) + GAP) / STACK_ROW)
+			})),
+			cols
+		);
+	});
+
+	/** Where a pane is drawn on a board folded into columns; null on any other board. */
+	stacked(id: string): Stack | null {
+		return this.#stacked?.[id] ?? null;
+	}
 
 	spec(id: string): PaneSpec {
 		const spec = this.#specs[id];
@@ -131,6 +164,11 @@ export class Arrangement {
 	/** The card hugs its content, and so must be measured. Never when folded. */
 	hugs(id: string): boolean {
 		return !this.#env.folded && hugs(this.mode(id));
+	}
+
+	/** Whether the card's height decides where the board puts things. */
+	measures(id: string): boolean {
+		return this.stacks || this.hugs(id);
 	}
 
 	/** The body scrolls once the content overruns. Never when folded: a folded pane hugs its content. */

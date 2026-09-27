@@ -91,7 +91,8 @@ test('a click on a chart leaves no caret and selects no text', async ({ page }) 
 	await page
 		.locator('rect.band')
 		.first()
-		.click({ position: { x: 2, y: 2 } });
+		// Clear of the band's rounded corner, which Firefox hit-tests exactly.
+		.click({ position: { x: 10, y: 2 } });
 	await page.locator('.card h2').first().click();
 	const caret = await page.evaluate(() => {
 		const at = getSelection()?.anchorNode?.parentElement;

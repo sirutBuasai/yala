@@ -30,8 +30,8 @@ import RingChart from '$lib/charts/RingChart.svelte';
 import Heatmap from './Heatmap.svelte';
 import DataTable from './Table.svelte';
 
-/** Extra rendering options for `adapt`. */
-interface AdaptOpts {
+/** How a figure is drawn beyond its data: what a board declares and `adapt` reads. */
+export interface ChartOptions {
 	/** Draw a gradient area under a single line. */
 	area?: boolean;
 	/** Fill colour for a single-series chart (columns, line, area). */
@@ -63,7 +63,9 @@ export interface ChartDef<P extends Record<string, unknown> = Record<string, unk
 	label: string;
 	accepts: PrimitiveKind[];
 	component: Component<P>;
-	adapt(primitive: Primitive, opts?: AdaptOpts): P;
+	adapt(primitive: Primitive, opts?: ChartOptions): P;
+	/** The least width in px its type stays readable at, for a chart drawn to a fixed geometry. */
+	legible?(props: P): number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,7 +79,8 @@ function def<C extends Component<any, any, any>>(d: {
 	label: string;
 	accepts: PrimitiveKind[];
 	component: C;
-	adapt(primitive: Primitive, opts?: AdaptOpts): PropsOf<C>;
+	adapt(primitive: Primitive, opts?: ChartOptions): PropsOf<C>;
+	legible?(props: PropsOf<C>): number;
 }): ChartDef {
 	return d as unknown as ChartDef;
 }
@@ -181,13 +184,13 @@ function seriesOf(p: Series | MultiSeries): {
 }
 
 /** A lone series may be given an explicit fill; an override can't speak for a set of them. */
-function fillOf(list: Series[], s: Series, i: number, opts: AdaptOpts): string {
+function fillOf(list: Series[], s: Series, i: number, opts: ChartOptions): string {
 	return list.length === 1 && opts.color ? opts.color : seriesColor(s.name, i);
 }
 
 /** Name, values and colour — what every multi-series chart takes. Nulls become 0, since only a line
     can leave a gap. An alternate reading rides along where the data carries one. */
-function toPlainSeries(list: Series[], opts: AdaptOpts) {
+function toPlainSeries(list: Series[], opts: ChartOptions) {
 	return list.map((s, i) => ({
 		name: s.name,
 		values: s.points.map((pt) => pt.value ?? 0),
@@ -204,7 +207,7 @@ function altUnitOf(list: Series[]): Series['altUnit'] {
 }
 
 /** The above plus the line-only treatments, which keep nulls as gaps. */
-function toLineSeries(list: Series[], opts: AdaptOpts) {
+function toLineSeries(list: Series[], opts: ChartOptions) {
 	return list.map((s, i) => ({
 		name: s.name,
 		values: s.points.map((pt) => pt.value),
@@ -219,6 +222,11 @@ function toLineSeries(list: Series[], opts: AdaptOpts) {
 const bulletRows = (p: Primitive) => ({ rows: (p as Bullet).rows });
 
 // --- the registry ---
+
+/** A flow's labels are drawn in its fixed viewBox, so they shrink with its width. */
+const SANKEY_LEGIBLE = 720;
+/** Row labels and totals, then one compact figure per column. */
+const HEAT_LEGIBLE = { base: 120, perCol: 44 };
 
 const CHARTS: ChartDef[] = [
 	def({
@@ -365,7 +373,8 @@ const CHARTS: ChartDef[] = [
 				links: f.links,
 				unit: f.unit
 			};
-		}
+		},
+		legible: () => SANKEY_LEGIBLE
 	}),
 	def({
 		id: 'heatmap',
@@ -388,7 +397,8 @@ const CHARTS: ChartDef[] = [
 				grid: matrixGrid(m, normalize, colors),
 				marked: markedIndices(m.rows, undefined, opts.mark)
 			};
-		}
+		},
+		legible: ({ grid }) => HEAT_LEGIBLE.base + HEAT_LEGIBLE.perCol * grid.cols.length
 	}),
 	def({
 		id: 'table',

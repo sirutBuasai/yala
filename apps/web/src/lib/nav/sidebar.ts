@@ -4,7 +4,7 @@ import { CONTENT, ONE_COLUMN, WRAP_PAD } from '$lib/layout/grid/units';
 
 /** Sidebar width in px when shown in full, and the width it expands to from the rail. */
 export const SIDEBAR_W = 264;
-/** Icon rail width in px. Narrow enough that a 1440px window still fits a full board beside it. */
+/** Icon rail width in px. Narrow enough that a common desktop window still fits a full board beside it. */
 export const RAIL_W = 48;
 
 export type SidebarMode = 'full' | 'rail' | 'sheet';

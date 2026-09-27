@@ -327,6 +327,39 @@ a {
 	outline-offset: var(--ring-offset);
 }
 
+/* A card title that opens the page owning what the card shows. */
+.title-link {
+	cursor: pointer;
+}
+.title-link:hover,
+.title-link:focus-visible {
+	text-decoration: underline;
+	text-underline-offset: 0.2em;
+}
+
+/* Laid out for measuring, but unpainted, zero-sized and clipped: an absolute descendant still counts toward
+   scrollable overflow, and a sized probe read as content spilling its pane. */
+.probe {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 0;
+	height: 0;
+	overflow: hidden;
+	visibility: hidden;
+	pointer-events: none;
+}
+
+/* Read by a screen reader, drawn nowhere. */
+.vh {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
 /* Skip link: the first tab stop, visible only while focused. */
 .skip {
 	position: fixed;
@@ -345,12 +378,12 @@ a {
 	transform: none;
 }
 
-/* Locked to the grid's ruler: one unit derives from the content width, so a different max-width, padding
-   step, or asymmetric padding puts the snap lines off the dots. */
+/* Its width and side padding come from the grid's ruler (see `grid/units`), set by the app shell, so the
+   snap lines stay on the dots. */
 .wrap {
-	max-width: 1392px;
+	max-width: calc(var(--board-w) + 2 * var(--wrap-pad));
 	margin: 0 auto;
-	padding: var(--space-11) var(--space-11) 90px;
+	padding: var(--wrap-pad) var(--wrap-pad) 90px;
 }
 
 .card {
@@ -442,7 +475,19 @@ a {
 	/* stable, so content doesn't shift sideways when the bar appears */
 	scrollbar-gutter: stable;
 }
+/* Edge shadows say there is more to either side, where a touch screen shows no scrollbar: the `local`
+   covers scroll with the content and hide the `scroll` shadows once an end is reached. */
 .scroller-x {
+	--shade: color-mix(in srgb, var(--ink) 16%, transparent);
+	background:
+		linear-gradient(to right, var(--surface) 40%, transparent) left / var(--space-11) 100% no-repeat
+			local,
+		linear-gradient(to left, var(--surface) 40%, transparent) right / var(--space-11) 100% no-repeat
+			local,
+		radial-gradient(farthest-side at 0 50%, var(--shade), transparent) left / var(--space-5) 100%
+			no-repeat scroll,
+		radial-gradient(farthest-side at 100% 50%, var(--shade), transparent) right / var(--space-5)
+			100% no-repeat scroll;
 	overflow-x: auto;
 	/* Bug: `overflow-x: auto` makes y `auto` too, and the box became its own vertical scroller clipping rows.
 	   Held at content height, the card scrolls. */
@@ -745,14 +790,6 @@ input[type='checkbox']:checked {
 	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 	gap: var(--gap-field);
 	align-items: end;
-}
-.edit-msg {
-	font-size: var(--text-secondary);
-	color: var(--good-text);
-	white-space: pre-line; /* render each collected problem on its own line */
-}
-.edit-msg.err {
-	color: var(--crit-text);
 }
 
 /* Select/DatePicker trigger button — replaces the native control's OS chrome. */

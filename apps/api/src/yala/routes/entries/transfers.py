@@ -13,13 +13,10 @@ from yala.routes.common import (
     dec,
     ledger,
     ok,
-    parse_date,
-    parse_date_opt,
-    reconcile_sweeps,
     sink,
     valid_money_account,
 )
-from yala.routes.entries.shared import reject_if_sweep
+from yala.routes.entries.shared import appended, reject_if_sweep, replaced
 from yala.routes.errors import api_errors
 
 router = APIRouter()
@@ -46,6 +43,17 @@ class TransferUpdateIn(TransferIn):
     locator: str
 
 
+def _state(body: TransferIn) -> dict:
+    """The validated fields a transfer write takes, beyond its date."""
+    return {
+        "from_account": valid_money_account(body.from_account),
+        "to_account": valid_money_account(body.to_account),
+        "amount": dec(body.amount),
+        "payee": body.payee,
+        "pending": body.pending,
+    }
+
+
 @router.get("/api/transfer")
 def get_transfer(locator: str) -> dict:
     with api_errors():
@@ -55,19 +63,8 @@ def get_transfer(locator: str) -> dict:
 @router.post("/api/transfer")
 def post_transfer(body: TransferIn) -> dict:
     with api_errors():
-        valid_money_account(body.from_account)
-        valid_money_account(body.to_account)
-
-        date = parse_date(body.date)
-        entry_id = sink().append_transfer(
-            date=date,
-            from_account=body.from_account,
-            to_account=body.to_account,
-            amount=dec(body.amount),
-            payee=body.payee,
-            pending=body.pending,
-        )
-        reconcile_sweeps(date)
+        state = _state(body)
+        entry_id = appended(body.date, lambda on: sink().append_transfer(date=on, **state))
 
     return ok(f"appended transfer {body.from_account} -> {body.to_account}", id=entry_id)
 
@@ -75,23 +72,14 @@ def post_transfer(body: TransferIn) -> dict:
 @router.post("/api/transfer/update")
 def post_transfer_update(body: TransferUpdateIn) -> dict:
     with api_errors():
-        valid_money_account(body.from_account)
-        valid_money_account(body.to_account)
-
-        old = find_entry(ledger().entries, body.locator)
-        reject_if_sweep(old)
-        old_date = old.date
-
-        new_date = parse_date_opt(body.date)
-        entry_id = sink().update_transfer(
+        state = _state(body)
+        led = ledger()
+        reject_if_sweep(find_entry(led.entries, body.locator), led)
+        entry_id = replaced(
             body.locator,
-            date=new_date,
-            from_account=body.from_account,
-            to_account=body.to_account,
-            amount=dec(body.amount),
-            payee=body.payee,
-            pending=body.pending,
+            body.date,
+            led,
+            lambda on: sink().update_transfer(body.locator, date=on, **state),
         )
-        reconcile_sweeps(old_date, new_date or old_date)
 
     return ok("updated transfer", id=entry_id)

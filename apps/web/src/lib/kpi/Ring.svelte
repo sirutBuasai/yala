@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Inline before the stat, not behind it: a ring behind a figure reads as a badge.
 	interface Props {
-		/** 0–100. Over 100 fills the ring; `null` draws the track alone. */
+		/** 0—100. Over 100 fills the ring; `null` draws the track alone. */
 		percent: number | null;
 		color: string;
 	}

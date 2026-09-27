@@ -66,6 +66,11 @@ export function matching(pattern: RegExp): Revive<string> {
 	return (v) => (typeof v === 'string' && pattern.test(v) ? v : undefined);
 }
 
+/** `null` kept as a stored choice of nothing, anything else revived by `value`. */
+export function orNull<T>(value: Revive<T>): Revive<T | null> {
+	return (v) => (v === null ? null : value(v));
+}
+
 /** Free text up to `max` characters. */
 export function text(max: number): Revive<string> {
 	return (v) => (typeof v === 'string' && v.length <= max ? v : undefined);

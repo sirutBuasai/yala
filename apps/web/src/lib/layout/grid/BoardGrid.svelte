@@ -5,7 +5,7 @@
 	import { Arrangement } from './arrangement.svelte';
 	import { BoardLabels } from './labels';
 	import { getGridEnv, setArrangement, setLabels } from './context';
-	import { UNIT } from './units';
+	import { CONTENT, GAP, STACK_ROW, UNIT } from './units';
 	import type { BoardLayout } from './types';
 
 	interface Props {
@@ -32,6 +32,8 @@
 	const labels = new BoardLabels(key, [...Object.keys(layout), ...(names ?? [])]);
 	setLabels(labels);
 
+	const scaled = $derived(env.scale < 1);
+
 	function reset() {
 		arrangement.reset();
 		labels.reset();
@@ -46,14 +48,24 @@
 	</div>
 {/if}
 
-<div
-	class="board"
-	class:folded={env.folded}
-	class:arranging={env.arranging}
-	style:--cols={arrangement.columns}
-	style:--unit="{UNIT}px"
->
-	{@render children()}
+<!-- A scaled board keeps its full-size layout and is drawn smaller, so the frame reserves the height it is
+     drawn at rather than the height it is laid out at. -->
+<div class="frame" style:height={scaled ? `${arrangement.rows * UNIT * env.scale}px` : null}>
+	<div
+		class="board"
+		class:folded={env.folded}
+		class:stacked={arrangement.stacks}
+		class:arranging={env.arranging}
+		class:scaled
+		style:--cols={arrangement.columns}
+		style:--unit="{UNIT}px"
+		style:--stack-row="{STACK_ROW}px"
+		style:--gap-grid="{GAP}px"
+		style:--scale={env.scale}
+		style:--board-w="{CONTENT}px"
+	>
+		{@render children()}
+	</div>
 </div>
 
 <style>
@@ -63,13 +75,22 @@
 		margin-bottom: var(--gap-row);
 		padding: var(--space-3) calc(var(--gap-grid) / 2);
 	}
+	.frame {
+		margin-bottom: var(--space-9);
+	}
 	.board {
 		display: grid;
 		/* Zero gap, deliberately — panes inset themselves. */
 		gap: 0;
 		grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
 		grid-auto-rows: var(--unit);
-		margin-bottom: var(--space-9);
+	}
+	/* A transform, not `zoom`: layout and every measurement stay at full size, so the floors the panes were
+	   arranged against still hold. */
+	.board.scaled {
+		width: var(--board-w);
+		transform: scale(var(--scale));
+		transform-origin: 0 0;
 	}
 	/* Dots on the snap lines, not in the middle of cells: the tile is one unit square with the dot at
 	   its centre, so the background is shifted back by half a unit to land it on the intersections. */
@@ -83,5 +104,11 @@
 	.board.folded {
 		grid-auto-rows: auto;
 		align-items: start;
+	}
+	/* Folded into columns: each pane is placed by `stackColumns` on fine rows, so none waits for a taller
+	   neighbour's row to end. */
+	.board.stacked {
+		grid-auto-rows: var(--stack-row);
+		align-items: stretch;
 	}
 </style>

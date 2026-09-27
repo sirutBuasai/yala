@@ -142,7 +142,7 @@ describe('TransactionForm (add)', () => {
 		const amounts = screen.getAllByPlaceholderText('0');
 		await fireEvent.input(amounts[amounts.length - 1]!, { target: { value: '200' } });
 
-		// 300 total − 200 payback = $100 your share
+		// 300 total - 200 payback = $100 your share
 		expect(screen.getByText('$100')).toBeInTheDocument();
 	});
 
@@ -158,7 +158,7 @@ describe('TransactionForm (add)', () => {
 		const amounts = screen.getAllByPlaceholderText('0');
 		await fireEvent.input(amounts[amounts.length - 1]!, { target: { value: '20' } });
 
-		// net share is −$10: a non-blocking warning, not a validation error
+		// net share is -$10: a non-blocking warning, not a validation error
 		expect(
 			screen.getByText('Reimbursements exceed the bill, so this records a net refund.')
 		).toBeInTheDocument();

@@ -33,7 +33,11 @@
 	let deductions = $state<AmountRow[]>([]);
 	let contributions = $state<AmountRow[]>([]);
 
-	const form = new EntryForm('paycheck', () => onsaved());
+	const form = new EntryForm(
+		'paycheck',
+		() => onsaved(),
+		() => body
+	);
 
 	// Labels the selected employer offers, plus generic ones (employer === null).
 	const scoped = (kind: 'deduction' | 'contribution'): string[] =>
@@ -93,6 +97,18 @@
 	const sum = (rows: AmountRow[]) => rows.reduce((a, r) => a + (r.amount || 0), 0);
 	const takeHome = $derived((gross || 0) - sum(deductions) - sum(contributions));
 
+	/** What a save sends, and what an edit compares against the entry as it loaded. */
+	const body = $derived({
+		locator,
+		date: date || undefined,
+		employer,
+		gross,
+		deductions: toMap(deductions),
+		contributions: toMap(contributions),
+		deposit_account,
+		payee: payee.trim() || 'Paycheck'
+	});
+
 	function submit() {
 		const problem = problems()
 			.positive(gross, 'Gross')
@@ -102,17 +118,7 @@
 			.add(validateRows(contributions, 'contribution'))
 			.add(takeHome < 0 ? 'Deductions and contributions exceed gross pay.' : null)
 			.message();
-		const body = {
-			locator,
-			date: date || undefined,
-			employer,
-			gross,
-			deductions: toMap(deductions),
-			contributions: toMap(contributions),
-			deposit_account,
-			payee: payee.trim() || 'Paycheck'
-		};
-		void form.save(problem, body, () => {
+		void form.save(problem, () => {
 			lastDepositAccount.set(deposit_account);
 			lastEntryDate.set(date);
 			lastEmployer.set(employer);
@@ -184,7 +190,7 @@
 
 <EntryFooter
 	{editing}
-	message={form}
+	{form}
 	addLabel="+ Add"
 	deleteLabel="Delete paycheck"
 	deleteQuestion="Delete this paycheck?"

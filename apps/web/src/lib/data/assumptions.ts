@@ -73,15 +73,15 @@ export function settingField(settingKey: string): string {
 }
 
 /** `data` as if the ledger stated `values` (keyed as the ledger keys them), so every figure built from it
-    previews them. A null is a setting left at what the ledger states. */
+    previews them. A null is a setting on its default. */
 export function withSettings(
 	data: DashboardData,
 	values: Record<string, number | null>
 ): DashboardData {
-	const stated = Object.entries(values).filter(([, v]) => v != null);
-	if (!stated.length || !data.settings) return data;
+	const entries = Object.entries(values);
+	if (!entries.length || !data.settings) return data;
 
-	const overrides = Object.fromEntries(stated.map(([key, v]) => [settingField(key), v]));
+	const overrides = Object.fromEntries(entries.map(([key, v]) => [settingField(key), v]));
 	return { ...data, settings: { ...data.settings, ...overrides } };
 }
 

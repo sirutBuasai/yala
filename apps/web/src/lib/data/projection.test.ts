@@ -117,7 +117,7 @@ describe('projection', () => {
 	it('compounds and contributes, year by year, up to the retirement year', () => {
 		const data = makeNetWorthData();
 		const a = assume({ realReturn: 6 });
-		const contribution = trailingAnnual(data, 'saved');
+		const contribution = plannedRates(data, a).investing;
 		const investing = valuesOf(investedProjection(data, a), 'Investing');
 
 		expect(investing[1]).toBeCloseTo(INVESTED * 1.06 + contribution, 5);
@@ -175,19 +175,18 @@ describe('projection', () => {
 });
 
 describe('planned rates', () => {
-	// Saved is a residual; only payroll contributions are a measured flow, and investing all of it overstated
-	// the rate.
-	it('splits saved into contributions, which always invest, and a leftover that need not', () => {
+	// Only payroll contributions are a measured flow into investments; the rest is take-home left after
+	// spending, which need not be invested.
+	it('invests contributions, plus by default the take-home left after spending', () => {
 		const data = makeNetWorthData();
 		const contributions = trailingAnnual(data, 'contributions');
-		const saved = trailingAnnual(data, 'saved');
+		const leftover = trailingAnnual(data, 'takehome') - trailingAnnual(data, 'spending');
 		expect(contributions).toBeGreaterThan(0);
 
 		const all = plannedRates(data, assume());
 		expect(all.contributions).toBeCloseTo(contributions, 5);
-		expect(all.residual).toBeCloseTo(saved - contributions, 5);
-		// Unset invests the whole leftover, which is what the projection did before there was a control.
-		expect(all.investing).toBeCloseTo(saved, 5);
+		expect(all.residual).toBeCloseTo(Math.max(0, leftover), 5);
+		expect(all.investing).toBeCloseTo(contributions + all.residual, 5);
 
 		const none = plannedRates(data, assume({ outOfPocket: 0 }));
 		expect(none.investing).toBeCloseTo(contributions, 5);

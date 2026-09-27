@@ -14,7 +14,7 @@
 	import { esc } from '$lib/utils/format';
 	import { sumBy } from '$lib/utils/num';
 	import { showTip, hideTip } from '$lib/utils/tooltip';
-	import { watchWidth } from '$lib/ui/fit';
+	import { drawnScale, watchWidth } from '$lib/ui/fit';
 	import Swatch from '$lib/charts/marks/Swatch.svelte';
 
 	interface Props {
@@ -57,9 +57,10 @@
 	});
 	$effect(() => {
 		const el = probeEl;
-		if (!el) return;
+		if (!el || !keyEl) return;
 		void all;
-		widths = [...el.children].map((c) => c.getBoundingClientRect().width);
+		const scale = drawnScale(keyEl);
+		widths = [...el.children].map((c) => c.getBoundingClientRect().width / scale);
 		gap = parseFloat(getComputedStyle(el).columnGap) || 0;
 	});
 
@@ -187,17 +188,7 @@
 		color: var(--ink-3);
 		font-variant-numeric: tabular-nums;
 	}
-	/* Laid out but unpainted, zero-sized and clipped, as the KPI's probe: a sized one would read as content
-	   spilling the pane. */
 	.probe {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 0;
-		height: 0;
-		overflow: hidden;
-		visibility: hidden;
-		pointer-events: none;
 		flex-wrap: nowrap;
 	}
 	.probe li {

@@ -1,7 +1,7 @@
 // Accounts: Month logs a month's balances under a year of net worth; Year reads the record, read-only.
 
 import { expect, type Page } from '@playwright/test';
-import { openApp, settle, test } from './app';
+import { openApp, settle, spanTab, test } from './app';
 
 test.beforeEach(async ({ page }) => openApp(page));
 
@@ -86,12 +86,20 @@ test("a year's bars narrow the Year view's KPI cards to its close and mark it ev
 	await expect(page).not.toHaveURL(/scope=/);
 });
 
-test('the span scopes the Year view to its years', async ({ page }) => {
+test('the span is kept per page, through leaving and coming back', async ({ page }) => {
 	await page.goto('/accounts/year');
 	await settle(page);
-	await page.getByRole('tab', { name: '5Y', exact: true }).click();
+	await expect(spanTab(page, '5Y')).toHaveAttribute('aria-selected', 'true');
+	await spanTab(page, 'All').click();
 	await settle(page);
-	await expect(page).toHaveURL(/span=5/);
+
+	await page.goto('/analytics/year');
+	await settle(page);
+	await expect(spanTab(page, '5Y')).toHaveAttribute('aria-selected', 'true');
+
+	await page.goto('/accounts/year');
+	await settle(page);
+	await expect(spanTab(page, 'All')).toHaveAttribute('aria-selected', 'true');
 });
 
 test('Year is a path a reload keeps, and it logs nothing', async ({ page }) => {

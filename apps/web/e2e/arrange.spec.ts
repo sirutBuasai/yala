@@ -216,3 +216,21 @@ test.describe("a merged card's sections", () => {
 		expect(await page.locator('.kpi h2').nth(1).innerText()).toBe(title);
 	});
 });
+
+test('an arrow key moves a focused pane a step and says where it landed', async ({ page }) => {
+	await showPage(page, 'Dashboard');
+	await startArranging(page);
+	const grab = page.locator('.cell > .grab').first();
+	const pane = page.locator('.cell').first();
+	await grab.focus();
+	const before = await pane.boundingBox();
+
+	await page.keyboard.press('ArrowDown');
+	await settle(page);
+
+	expect((await pane.boundingBox())!.y).toBeGreaterThan(before!.y);
+	await expect(grab).toBeFocused();
+	await expect(page.locator('[aria-live="polite"].vh')).toHaveText(/column \d+, row \d+/);
+	await expect(grab).toHaveAttribute('aria-describedby', 'arrange-hint');
+	await expect(page.locator('#arrange-hint')).toHaveCount(1);
+});

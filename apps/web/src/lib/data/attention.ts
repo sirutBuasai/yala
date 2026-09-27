@@ -73,7 +73,7 @@ export function attentionItems(
 		items.push({
 			kind: 'category',
 			title: `${r.label} is above its usual range`,
-			detail: `${f(r.value)} so far, usual ${f(r.base)} (${f(r.lo)}–${f(r.hi)})`,
+			detail: `${f(r.value)} so far, usual ${f(r.base)} (${f(r.lo)}—${f(r.hi)})`,
 			href: at('/transactions', { month: monthKey, category: r.label }),
 			pane: 'history',
 			category: r.label

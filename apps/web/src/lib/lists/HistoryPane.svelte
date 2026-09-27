@@ -93,7 +93,9 @@
 
 <Pane {id} title={words('Transaction history')} {caption}>
 	{#snippet actions()}
-		<button class="btn-ghost" onclick={onadd}>+ Add</button>
+		<button class="btn-ghost" onclick={onadd} title="Add entry (N)" aria-keyshortcuts="N"
+			>+ Add</button
+		>
 	{/snippet}
 
 	<!-- Pinned while the list scrolls, bled to the card's edges so rows don't show through, then padded back. -->

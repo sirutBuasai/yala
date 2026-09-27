@@ -99,6 +99,26 @@ def test_a_later_directive_supersedes_an_earlier_one(ledger_dir: Path):
     assert _load(ledger_dir).settings.values()["swr"] == Decimal("3.0")
 
 
+def test_resetting_puts_a_setting_back_on_its_default_and_keeps_the_history(ledger_dir: Path):
+    sink = FileLedgerSink(ledger_dir)
+    sink.set_setting("planned-spending", 60000, JAN)
+    sink.set_setting("swr", 3.0, JAN)
+    sink.set_setting("planned-spending", None, dt.date(2026, 6, 1))
+    sink.set_setting("swr", None, dt.date(2026, 6, 1))
+
+    values = _load(ledger_dir).settings.values()
+    assert values["planned-spending"] is None
+    assert values["swr"] == SETTINGS_BY_KEY["swr"].default
+    assert (ledger_dir / SETTINGS_FILE).read_text().count('"planned-spending"') == 2
+
+
+def test_a_value_stated_after_a_reset_wins_again(ledger_dir: Path):
+    sink = FileLedgerSink(ledger_dir)
+    sink.set_setting("out-of-pocket", None, JAN)
+    sink.set_setting("out-of-pocket", 12000, dt.date(2026, 6, 1))
+    assert _load(ledger_dir).settings.values()["out-of-pocket"] == Decimal(12000)
+
+
 def test_a_malformed_directive_is_skipped_rather_than_fatal(ledger_dir: Path):
     """The ledger is hand-editable, so one bad settings line must not blank the dashboard."""
     path = ledger_dir / SETTINGS_FILE
@@ -179,6 +199,15 @@ def test_post_setting_persists_and_shows_in_data(client: TestClient):
 
     assert client.get("/api/settings").json()["values"]["swr"] == 3.5
     assert client.get("/api/data").json()["settings"]["swr"] == 3.5
+
+
+def test_post_setting_with_no_value_resets_to_the_default(client: TestClient):
+    client.post("/api/settings", json={"key": "planned-spending", "value": 50000})
+    r = client.post("/api/settings", json={"key": "planned-spending", "value": None})
+    assert r.status_code == 200, r.text
+
+    assert client.get("/api/settings").json()["values"]["planned-spending"] is None
+    assert client.get("/api/data").json()["settings"]["planned_spending"] is None
 
 
 def test_post_setting_rejects_an_out_of_range_value(client: TestClient):

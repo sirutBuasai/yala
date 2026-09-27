@@ -89,7 +89,7 @@
 				{#if heading || nameable}
 					<h2
 						class:serif={density !== 'panel'}
-						class:link={!!open && !naming}
+						class:title-link={!!open && !naming}
 						data-label-line
 						{...titleLink}
 					>
@@ -130,14 +130,6 @@
 </section>
 
 <style>
-	.link {
-		cursor: pointer;
-	}
-	.link:hover,
-	.link:focus-visible {
-		text-decoration: underline;
-		text-underline-offset: 0.2em;
-	}
 	/* Flex column so a chart in the body can grow to fill a stretched pane's height. */
 	.card {
 		display: flex;

@@ -22,9 +22,8 @@ export default defineConfig({
 	use: {
 		...devices['Desktop Chrome'],
 		baseURL: `http://localhost:${PORT}`,
-		// AFTER the device preset, which carries its own 1280px viewport: the board only offers arranging at
-		// the full 48-column content width (see grid/units), and 1280 folds it, so the Edit toggle — which is
-		// absent rather than disabled when folded — never rendered.
+		// After the device preset, whose own viewport folds the board: arranging is offered only at the full
+		// content width (see grid/units), so the Edit toggle never rendered.
 		viewport: { width: 1440, height: 1000 },
 		trace: 'retain-on-failure'
 	},
