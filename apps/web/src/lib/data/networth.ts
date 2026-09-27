@@ -486,7 +486,7 @@ export function netWorthAccounts(data: DashboardData): Categorical {
 
 // --- growth decomposition ---
 //
-//     ΔNetWorth = saved + everything-else,  saved = logged income − logged spending
+//     ΔNetWorth = saved + everything-else,  saved = logged income - logged spending
 //
 // One remainder term: a snapshot's pad absorbs market growth and unlogged flow alike.
 
@@ -603,7 +603,7 @@ export function netWorthSaved(data: DashboardData, scope: Scope): Scalar {
 
 	return scalar(MONEY(data.currency), words('Saved'), saved, {
 		tone: bySign(saved),
-		note: shareNote(saved, change, 'income − spending')
+		note: shareNote(saved, change, 'income - spending')
 	});
 }
 

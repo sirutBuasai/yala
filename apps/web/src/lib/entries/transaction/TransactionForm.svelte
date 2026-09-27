@@ -56,7 +56,7 @@
 		});
 	});
 
-	// Your share = total bill − everything reimbursed on the credits.
+	// Your share = total bill - everything reimbursed on the credits.
 	const paybacks = $derived(credits.reduce((a, s) => a + (s.amount || 0), 0));
 	const yourShare = $derived((total || 0) - paybacks);
 

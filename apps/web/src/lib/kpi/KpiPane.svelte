@@ -67,7 +67,7 @@
 		return rectOf(arrangement.authored(pane));
 	}
 
-	/** Each section's floor, then its share of the rest. With `minmax(0, …)` a section got less than its floor
+	/** Each section's floor, then its share of the rest. With `minmax(0, ...)` a section got less than its floor
 	    and the card refused to narrow. */
 	const tracks = $derived(group.weights.map((w) => `minmax(min-content, ${w}fr)`).join(' '));
 	const stacked = $derived(group.axis === 'column' || env.folded);

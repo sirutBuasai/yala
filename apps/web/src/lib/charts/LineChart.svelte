@@ -201,7 +201,7 @@
 			.map((s) => `${esc(s.name)}: ${f.exact(s.values[i] as number)}`)
 			.join('<br>');
 		const range = band
-			? `<br>${esc(band.name)}: ${f.exact(band.lo[i]!)} to ${f.exact(band.hi[i]!)}`
+			? `<br>${esc(band.name)}: ${f.exact(band.lo[i]!)}—${f.exact(band.hi[i]!)}`
 			: '';
 		const note = notes?.[i] ? ` · ${esc(notes[i])}` : '';
 		showTip(`<b>${esc(labels[i])}</b>${note}<br>${lines}${range}`, e);

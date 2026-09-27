@@ -285,7 +285,7 @@
 			</div>
 			<div>
 				<dt>Liabilities</dt>
-				<dd>−{money(liabilities)}</dd>
+				<dd>-{money(liabilities)}</dd>
 			</div>
 			<div class="sum">
 				<dt>Net worth</dt>

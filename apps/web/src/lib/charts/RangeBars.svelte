@@ -36,7 +36,7 @@
 	const fmt = (v: number) => formatUnitExact(v, unit);
 	const tip = (r: Row) =>
 		`<b>${esc(r.label)}</b><br>${fmt(r.value)} this month` +
-		`<br>usual ${fmt(r.base)} (${fmt(r.lo)}–${fmt(r.hi)})`;
+		`<br>usual ${fmt(r.base)} (${fmt(r.lo)}—${fmt(r.hi)})`;
 </script>
 
 <!-- The markers are SVG circles rather than CSS rings: a box-shadow ring snaps each edge to the pixel

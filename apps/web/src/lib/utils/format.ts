@@ -139,7 +139,7 @@ export function monthName(key: string): string {
 
 /** An inclusive year range, or `empty` when there are no years. */
 export function yearSpan(years: number[], empty = ''): string {
-	return years.length ? `${years[0]}–${years[years.length - 1]}` : empty;
+	return years.length ? `${years[0]}—${years[years.length - 1]}` : empty;
 }
 
 /** An ISO date as it reads in prose. Unparseable input is returned as it came: a date the app cannot read

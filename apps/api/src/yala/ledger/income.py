@@ -1,5 +1,5 @@
 """Paychecks: any transaction with an ``Income:*`` posting. Legs are classified by prefix, so
-**net** = gross − deductions and **take-home** = net − investments."""
+**net** = gross - deductions and **take-home** = net - investments."""
 
 from __future__ import annotations
 
@@ -38,12 +38,12 @@ class Paycheck:
 
     @property
     def net(self) -> Decimal:
-        """gross − direct out — money that stayed yours (cash + investments)."""
+        """gross - direct out — money that stayed yours (cash + investments)."""
         return self.gross - self.direct_out
 
     @property
     def take_home(self) -> Decimal:
-        """gross − all out — the cash actually deposited."""
+        """gross - all out — the cash actually deposited."""
         return self.net - self.indirect_out
 
 

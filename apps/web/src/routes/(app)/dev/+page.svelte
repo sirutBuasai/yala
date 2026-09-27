@@ -110,7 +110,7 @@
 					name: 'text-subtitle',
 					px: 12,
 					primitive: 'fs-300',
-					role: 'View subtitle (“Lifetime · 2020–2025”)',
+					role: 'View subtitle (“Lifetime · 2020—2025”)',
 					font: 'sans'
 				},
 				{

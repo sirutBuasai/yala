@@ -136,7 +136,7 @@
 
 {#snippet fisher()}
 	<b
-		>({plainRate(1 + preview.nominalReturn / 100)} / {plainRate(1 + preview.inflation / 100)}) − 1 = {real.toFixed(
+		>({plainRate(1 + preview.nominalReturn / 100)} / {plainRate(1 + preview.inflation / 100)}) - 1 = {real.toFixed(
 			2
 		)}% adjusted</b
 	>
@@ -177,7 +177,7 @@
 		>
 	{:else if spec.key === 'horizon-age'}
 		<span class="legend"
-			>spending × (1 − (1+r)^−n) / r, where r = {real.toFixed(2)}% adjusted return and n = {worked.drawnYears}
+			>spending × (1 - (1+r)^-n) / r, where r = {real.toFixed(2)}% adjusted return and n = {worked.drawnYears}
 			yr of withdrawals</span
 		>
 		<b
