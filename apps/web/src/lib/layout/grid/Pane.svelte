@@ -21,7 +21,7 @@
 	import { getArrangement, getGridEnv, getLabels } from './context';
 	import { ARRANGE_HINT_ID } from './env.svelte';
 	import { drag, type DragParams } from './drag';
-	import { fits, spillReport } from './spill';
+	import { contentHeight, fits, spillReport } from './spill';
 	import { foldSpan } from './fold';
 	import { EDGES, type Edge } from './resize';
 	import { PaneGesture } from './gesture.svelte';
@@ -74,6 +74,7 @@
 		capped ? Math.max(0, arrangement.capPx(id) - pxForRows(placed.h)) : 0
 	);
 	const span = $derived(foldSpan(placed.w, env.columns));
+	const stack = $derived(arrangement.stacked(id));
 	// Only a declared title gets a stored rename. A KPI pane id is also its leader section's id, so looking it
 	// up regardless put a section's rename on the card around it.
 	const shownTitle = $derived(title && labels.label(id, 'title', title));
@@ -84,15 +85,20 @@
 	let bodyEl = $state<HTMLElement>();
 	let grabEl = $state<HTMLElement>();
 
-	// Fitted panes report their CARD's height, never the cell's, so the pure layer can turn it into rows.
+	// The CARD's height, never the cell's, so the pure layer can turn it into rows. Stacked, a card may be
+	// stretched level with its column, so it reports its content's height, or the stretch would ratchet.
+	const measured = $derived(arrangement.measures(id));
+	const stacks = $derived(arrangement.stacks);
 	$effect(() => {
-		const el = cardEl;
-		if (!hug || !el) return;
+		const [card, body] = [cardEl, bodyEl];
+		if (!measured || !card || !body) return;
 
-		const report = () => arrangement.setMeasured(id, el.offsetHeight);
+		const height = stacks ? () => contentHeight(card, body) : () => card.offsetHeight;
+		const report = () => arrangement.setMeasured(id, height());
 		report();
 		const observer = new ResizeObserver(report);
-		observer.observe(el);
+		observer.observe(card);
+		observer.observe(body);
 		return () => observer.disconnect();
 	});
 
@@ -150,13 +156,22 @@
 	class="cell"
 	data-pane={id}
 	class:folded={env.folded}
+	class:stacked={!!stack}
 	class:arranging
 	class:hug
 	class:capped
 	class:invalid={gesture.invalid}
-	style:grid-column={env.folded ? `span ${span}` : `${placed.x + 1} / span ${placed.w}`}
-	style:grid-row={env.folded ? null : `${placed.y + 1} / span ${placed.h}`}
-	style:order={env.folded ? arrangement.order[id] : null}
+	style:grid-column={stack
+		? `${stack.col + 1} / span ${stack.span}`
+		: env.folded
+			? `span ${span}`
+			: `${placed.x + 1} / span ${placed.w}`}
+	style:grid-row={stack
+		? `${stack.row + 1} / span ${stack.rows}`
+		: env.folded
+			? null
+			: `${placed.y + 1} / span ${placed.h}`}
+	style:order={env.folded && !stack ? arrangement.order[id] : null}
 	style:--cap-h={capped ? `${arrangement.capPx(id)}px` : null}
 	style:--ceiling-below={`${ceilingBelow}px`}
 	onfocusin={(e) => isLabelField(e.target) && draft.begin(e.target)}
@@ -274,6 +289,14 @@
 	.cell.folded > :global(.card) {
 		flex: 0 0 auto;
 		max-height: none;
+	}
+	/* Stacked into columns, a card fills its cell, which may be stretched level with the next column; its
+	   body keeps its own height, which is what the card reports (see `contentHeight`). */
+	.cell.stacked > :global(.card) {
+		flex: 1 1 auto;
+	}
+	.cell.stacked > :global(.card > .body) {
+		flex: 0 0 auto;
 	}
 
 	/* On the grid the pane's height aligns neighbours, so the figure box's own clamps are lifted. */

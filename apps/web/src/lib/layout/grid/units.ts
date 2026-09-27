@@ -46,6 +46,10 @@ export function foldColumns(fold: FoldMode): number {
 	return fold === 'two' ? 2 : fold === 'one' ? 1 : COLS;
 }
 
+/** The row a board folded into columns is laid out on, in px: fine enough that a card's height rounds up by
+    less than anyone would see. */
+export const STACK_ROW = 4;
+
 /** Whole rows a measured pixel height occupies, floored at one row. */
 export function rowsForPx(px: number): number {
 	return Math.max(1, Math.ceil((px + GAP) / UNIT));

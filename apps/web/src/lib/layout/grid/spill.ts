@@ -45,6 +45,18 @@ export function overrun(card: HTMLElement, body?: HTMLElement): Overrun {
 	return { x, y };
 }
 
+/** The card's height down to the end of its body, which is its own whatever it has been stretched to. */
+export function contentHeight(card: HTMLElement, body: HTMLElement): number {
+	const style = getComputedStyle(card);
+	return (
+		body.offsetTop -
+		card.offsetTop +
+		body.offsetHeight +
+		parseFloat(style.paddingBottom) +
+		parseFloat(style.borderBottomWidth)
+	);
+}
+
 /** Labels past their line budget and figures (`data-clip`) their box cuts off: their own `overflow: hidden`
     hides them from `overrun`. */
 function clipped(card: HTMLElement): Element[] {

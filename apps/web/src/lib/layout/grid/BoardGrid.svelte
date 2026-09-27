@@ -5,7 +5,7 @@
 	import { Arrangement } from './arrangement.svelte';
 	import { BoardLabels } from './labels';
 	import { getGridEnv, setArrangement, setLabels } from './context';
-	import { CONTENT, GAP, UNIT } from './units';
+	import { CONTENT, GAP, STACK_ROW, UNIT } from './units';
 	import type { BoardLayout } from './types';
 
 	interface Props {
@@ -54,10 +54,12 @@
 	<div
 		class="board"
 		class:folded={env.folded}
+		class:stacked={arrangement.stacks}
 		class:arranging={env.arranging}
 		class:scaled
 		style:--cols={arrangement.columns}
 		style:--unit="{UNIT}px"
+		style:--stack-row="{STACK_ROW}px"
 		style:--gap-grid="{GAP}px"
 		style:--scale={env.scale}
 		style:--board-w="{CONTENT}px"
@@ -102,5 +104,11 @@
 	.board.folded {
 		grid-auto-rows: auto;
 		align-items: start;
+	}
+	/* Folded into columns: each pane is placed by `stackColumns` on fine rows, so none waits for a taller
+	   neighbour's row to end. */
+	.board.stacked {
+		grid-auto-rows: var(--stack-row);
+		align-items: stretch;
 	}
 </style>
