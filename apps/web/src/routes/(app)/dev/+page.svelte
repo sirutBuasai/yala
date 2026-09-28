@@ -9,6 +9,7 @@
 	import { makeData } from '$lib/data/__fixtures__/dashboard';
 	import { build } from '$lib/data/catalog';
 	import { words } from '$lib/ui/label';
+	import Chevron from '$lib/icons/Chevron.svelte';
 
 	const data = makeData();
 	const all = { level: 'all' } as const;
@@ -469,7 +470,9 @@
 		</div>
 		<div class="field">
 			<label for="d3">Account</label>
-			<button class="trigger" type="button"><span class="val">Checking</span><span>▾</span></button>
+			<button class="trigger" type="button"
+				><span class="val">Checking</span><Chevron dir="down" size={12} /></button
+			>
 		</div>
 	</div>
 	<div class="demorow btns">

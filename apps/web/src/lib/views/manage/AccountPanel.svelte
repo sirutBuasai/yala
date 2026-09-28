@@ -6,11 +6,12 @@
 		renameAccount,
 		reopenAccount,
 		setAccountMeta,
+		setColor,
 		setSweep,
 		type AccountMeta,
 		type AccountTier
 	} from '$lib/data/load';
-	import { accountDirectory, accountInfo } from '$lib/data/directory.svelte';
+	import { accountDirectory, accountInfo, colorKey } from '$lib/data/directory.svelte';
 	import type { AccountKind } from '$lib/data/types';
 	import { DISCARD, NONE } from '$lib/copy';
 	import { SaveState } from '$lib/forms/saveState.svelte';
@@ -23,9 +24,11 @@
 	import TextRows, { rowValues, textRows, type TextRow } from '$lib/forms/fields/TextRows.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import CloseAccount from '$lib/views/manage/CloseAccount.svelte';
+	import ColorSection from '$lib/views/manage/ColorSection.svelte';
 	import NamingFields from '$lib/views/manage/NamingFields.svelte';
 	import {
 		CLOSE,
+		COLOR,
 		EMPLOYER,
 		EVERY_EMPLOYER,
 		INSTITUTION,
@@ -97,7 +100,10 @@
 	let sweepSel = $state('');
 	let options = $state<TextRow[]>([]);
 	let includesPending = $state(false);
+	let color = $state<string | null>(null);
 	let closing = $state(false);
+
+	const colorOf = $derived(colorKey(account, info));
 
 	/** Every box back to what the ledger says. Also the discard. */
 	function seed() {
@@ -111,6 +117,7 @@
 		sweepSel = info?.sweep_to ?? '';
 		options = textRows(info?.labels ?? []);
 		includesPending = info?.includes_pending ?? false;
+		color = null;
 		save.reset();
 	}
 
@@ -180,11 +187,13 @@
 	});
 
 	const sweepMoved = $derived((kind?.sweeps ?? false) && sweepSel !== (info?.sweep_to ?? ''));
+	const recolored = $derived(colorOf != null && color != null && color !== (info?.color ?? null));
 	const dirty = $derived(
 		Object.keys(renames).length > 0 ||
 			Object.keys(meta).length > 0 ||
 			relabels.length > 0 ||
-			sweepMoved
+			sweepMoved ||
+			recolored
 	);
 
 	function problem(): string | null {
@@ -206,14 +215,18 @@
 		return checks.message() || null;
 	}
 
-	/** The rename goes last, since the relabel and meta edits address the current path. Stops at the first
-	    failure. */
+	/** The rename goes last, since the relabel, colour and meta edits address the current names; a renamed
+	    institution or category carries its colour along. Stops at the first failure. */
 	async function submit() {
 		const invalid = problem();
 		if (invalid) return save.fail(invalid);
 
 		let moved: string | null = null;
 		const ok = await save.run(async () => {
+			if (recolored && colorOf) {
+				const failed = await setColor(colorOf.family, colorOf.name, color);
+				if (failed) return failed;
+			}
 			for (const { from, to } of relabels) {
 				const failed = await relabelAccount(account, from, to);
 				if (failed) return failed;
@@ -280,6 +293,19 @@
 					{/if}
 					<p class="hint">{RENAME_HINT}</p>
 				</section>
+
+				{#if colorOf}
+					<section class="block">
+						<h3>{COLOR.heading}</h3>
+						<ColorSection
+							key={colorOf}
+							saved={info?.color ?? null}
+							bind:draft={color}
+							accounts={alsoHeld.length + 1}
+							disabled={save.busy}
+						/>
+					</section>
+				{/if}
 
 				{#if !closed && (kind.tiered || kind.scopable || kind.sweeps)}
 					<section class="block">

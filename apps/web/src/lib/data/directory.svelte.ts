@@ -16,6 +16,33 @@ export function setAccountDirectory(accounts: Record<string, AccountInfo> | unde
 	);
 }
 
+/** Which settings a colour is kept under, as the API keys it. */
+export type ColorFamily = 'institutions' | 'categories';
+export interface ColorKey {
+	family: ColorFamily;
+	name: string;
+}
+
+/** An account's colour belongs to its institution, else to its category, else to nothing (an employer,
+    a deduction). */
+export function colorKey(account: string, info: AccountInfo | undefined): ColorKey | null {
+	if (info?.institution_name) return { family: 'institutions', name: info.institution_name };
+	if (info?.kind === 'category') {
+		return { family: 'categories', name: account.slice(account.indexOf(':') + 1) };
+	}
+	return null;
+}
+
+/** Every name in `family` with the colour it has, from the accounts that carry one. */
+export function familyColors(family: ColorFamily): Map<string, string> {
+	const out = new Map<string, string>();
+	for (const [account, info] of Object.entries(directory)) {
+		const key = colorKey(account, info);
+		if (key?.family === family && info.color) out.set(key.name, info.color);
+	}
+	return out;
+}
+
 /** What the ledger says about a spending category, by name, or undefined when there is none. */
 export function categoryInfo(category: string): AccountInfo | undefined {
 	return categories[category];

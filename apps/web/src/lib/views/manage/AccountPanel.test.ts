@@ -446,3 +446,75 @@ describe('AccountPanel — the end of a life', () => {
 		expect(bodyOf(fetchSpy, '/api/account/reopen')).toEqual({ account: BANK });
 	});
 });
+
+describe('AccountPanel — colour', () => {
+	const COLORED = {
+		[BANK]: { kind: 'bank', institution_name: 'Bank of A', color: '#7dcfff' },
+		'Assets:Cash:BankB': { kind: 'bank', institution_name: 'Bank of B', color: '#f7768e' },
+		'Expenses:Grocery': { kind: 'category', color: '#f295c5' }
+	} as const;
+	it('saves a suggested colour under the institution, before any rename', async () => {
+		setDirectory(COLORED);
+		const fetchSpy = stubFetch();
+		panel(BANK);
+
+		const first = screen.getByRole('group', { name: 'Suggested' }).querySelector('button')!;
+		await fireEvent.click(first);
+		await type('Institution', 'Bank of C');
+		await save();
+
+		await waitFor(() => expect(postsTo(fetchSpy, '/api/account/rename')).toHaveLength(1));
+		expect(bodyOf(fetchSpy, '/api/color')).toEqual({
+			family: 'institutions',
+			name: 'Bank of A',
+			color: first.getAttribute('aria-label')
+		});
+		const calls = fetchSpy.mock.calls.map(([url]) => String(url));
+		expect(calls.indexOf('/api/color')).toBeLessThan(calls.indexOf('/api/account/rename'));
+	});
+
+	it('never suggests a colour the family already uses', () => {
+		setDirectory(COLORED);
+		panel(BANK);
+
+		const offered = [
+			...screen.getByRole('group', { name: 'Suggested' }).querySelectorAll('.sw')
+		].map((b) => b.getAttribute('aria-label'));
+		expect(offered).toHaveLength(5);
+		expect(offered).not.toContain('#7dcfff');
+		expect(offered).not.toContain('#f7768e');
+	});
+
+	it('says who else uses a colour picked from Other', async () => {
+		setDirectory(COLORED);
+		panel(BANK);
+
+		await fireEvent.click(screen.getByRole('combobox', { name: 'Used by other institutions' }));
+		await fireEvent.click(screen.getByRole('option', { name: /Bank of B/ }));
+
+		expect(screen.getByText('Also used by Bank of B.')).toBeInTheDocument();
+	});
+
+	it('refuses a typed colour that is not a hex, and saves nothing', async () => {
+		setDirectory(COLORED);
+		panel('Expenses:Grocery');
+
+		const hex = screen.getAllByLabelText('Hex')[0]!;
+		await fireEvent.input(hex, { target: { value: 'pink' } });
+		await fireEvent.change(hex);
+
+		expect(screen.getByText('Hex must be a color like #6f8fe8.')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: /Save/ })).toBeDisabled();
+	});
+
+	it('picking the saved colour again leaves nothing to save', async () => {
+		setDirectory(COLORED);
+		panel('Expenses:Grocery');
+
+		const hex = screen.getAllByLabelText('Hex')[0]!;
+		await fireEvent.input(hex, { target: { value: '#F295C5' } });
+		await fireEvent.change(hex);
+
+		expect(screen.getByRole('button', { name: /Save/ })).toBeDisabled();
+	});
+});

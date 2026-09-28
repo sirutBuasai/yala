@@ -101,3 +101,24 @@ export const CLOSE = {
 	toMany: 'Transfer balance to multiple accounts',
 	addDestination: '+ Destination'
 } as const;
+
+/** The colour section. A bank, card or investment is coloured by its institution, a category by itself. */
+export const COLOR = {
+	heading: 'Color',
+	current: 'Current',
+	next: 'New',
+	none: 'None',
+	suggested: 'Suggested',
+	other: 'Other',
+	hex: 'Hex',
+	placeholder: 'e.g. #6f8fe8',
+	invalid: 'Hex must be a color like #6f8fe8.',
+	otherCaption: {
+		institutions: 'Used by other institutions',
+		categories: 'Used by other categories'
+	},
+	categoryHint: (name: string) => `Used for ${name} in every chart and list.`,
+	institutionHint: (name: string, accounts: number) =>
+		`Shared by every ${name} account${accounts > 1 ? ` (${accounts})` : ''}.`,
+	alsoUsedBy: (names: string[]) => `Also used by ${names.join(', ')}.`
+} as const;
