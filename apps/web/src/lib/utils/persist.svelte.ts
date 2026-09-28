@@ -66,6 +66,12 @@ export class Pref<T> {
 		this.#fallback = fallback;
 		this.#store = store;
 		this.#value = $state(read(store, key, fallback, revive));
+		// Written before a default stopped being stored, or adopted from this browser: drop it here too.
+		if (this.#isDefault(this.#value) && store.read(key) !== undefined) store.remove(key);
+	}
+
+	#isDefault(v: T): boolean {
+		return JSON.stringify(v) === JSON.stringify(this.#fallback);
 	}
 
 	get value(): T {
@@ -76,7 +82,7 @@ export class Pref<T> {
 	    reaches it. */
 	set value(v: T) {
 		this.#value = v;
-		if (JSON.stringify(v) === JSON.stringify(this.#fallback)) this.#store.remove(this.#key);
+		if (this.#isDefault(v)) this.#store.remove(this.#key);
 		else this.#store.write(this.#key, v);
 	}
 }

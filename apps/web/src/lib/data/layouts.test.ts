@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { live } from '$lib/data/load';
 import { layoutStore, seedLayouts } from '$lib/data/layouts';
+import { Pref, listOf, number } from '$lib/utils/persist.svelte';
 
 function posted(spy: ReturnType<typeof vi.fn>): unknown[] {
 	return spy.mock.calls
@@ -55,6 +56,17 @@ describe('layoutStore', () => {
 
 		expect(layoutStore.read('board-home-2')).toBeUndefined();
 		await vi.runAllTimersAsync();
+		expect(posted(fetchSpy)).toEqual([{ key: 'board-home-2', value: null }]);
+	});
+
+	it('drops a browser layout that is only the default instead of adopting it', async () => {
+		localStorage.setItem('yala-board-home-2', '[]');
+
+		expect(new Pref<unknown[]>('board-home-2', [], listOf(number()), layoutStore).value).toEqual(
+			[]
+		);
+		await vi.runAllTimersAsync();
+
 		expect(posted(fetchSpy)).toEqual([{ key: 'board-home-2', value: null }]);
 	});
 
