@@ -106,6 +106,7 @@
 	bind:triggerEl
 	{ariaLabel}
 	popupRole="dialog"
+	{disabled}
 	triggerClass="swatch-trigger"
 	onopen={() => adopt(value)}
 	onkeynav={panelKey}
@@ -203,6 +204,11 @@
 		background: none;
 		border-radius: var(--radius-sm);
 		cursor: pointer;
+	}
+	:global(.swatch-trigger:disabled),
+	:global(.other:disabled) {
+		opacity: 0.5;
+		cursor: default;
 	}
 	.swatch {
 		display: block;

@@ -109,6 +109,7 @@
 					bind:open={otherOpen}
 					bind:triggerEl={otherTrigger}
 					ariaLabel={COLOR.otherCaption[key.family]}
+					{disabled}
 					triggerClass="other"
 					onkeynav={otherKey}
 				>

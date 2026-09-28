@@ -507,6 +507,23 @@ describe('AccountPanel — colour', () => {
 		expect(screen.getByRole('button', { name: /Save/ })).toBeDisabled();
 	});
 
+	it('keeps the picker and Other shut while a save is in flight', async () => {
+		setDirectory(COLORED);
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(() => new Promise(() => {}))
+		);
+		panel(BANK);
+
+		await fireEvent.click(
+			screen.getByRole('group', { name: 'Suggested' }).querySelector('button')!
+		);
+		await save();
+
+		expect(screen.getByRole('combobox', { name: 'Open color picker' })).toBeDisabled();
+		expect(screen.getByRole('combobox', { name: 'Used by other institutions' })).toBeDisabled();
+	});
+
 	it('picking the saved colour again leaves nothing to save', async () => {
 		setDirectory(COLORED);
 		panel('Expenses:Grocery');
