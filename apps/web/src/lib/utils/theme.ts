@@ -1,32 +1,19 @@
-// Theme state + the per-category accent map. Charts reference the CSS custom properties directly, so
-// light/dark theming happens entirely in the `:root[data-theme]` swap and needs no JS palette.
+// Theme state + the account and category colour lookups. Charts reference the CSS custom properties
+// directly, so light/dark theming happens entirely in the `:root[data-theme]` swap and needs no JS palette.
 
 import { writable } from 'svelte/store';
-import { accountInfo } from '$lib/data/directory.svelte';
+import { accountInfo, categoryInfo } from '$lib/data/directory.svelte';
 
 type ThemeMode = 'dark' | 'light';
 
-/** Values are CSS token suffixes, consumed as `--<token>` custom properties. */
-export const CATEGORY_TOKEN: Record<string, string> = {
-	Housing: 'cat-housing',
-	Grocery: 'cat-grocery',
-	Takeouts: 'cat-takeouts',
-	Travel: 'cat-travel',
-	Utilities: 'cat-utilities',
-	Transport: 'cat-transport',
-	Personal: 'cat-personal',
-	Health: 'cat-health',
-	Recreation: 'cat-recreation',
-	Subscription: 'cat-subscription',
-	Misc: 'cat-misc'
-};
-
+/** The colour for a spending category, from the user's settings. A category the API gave no colour to
+    reads as lavender. Used as-is in BOTH themes. */
 export function categoryVar(category: string): string {
-	return `var(--${CATEGORY_TOKEN[category] ?? 'lav'})`;
+	return categoryInfo(category)?.color ?? 'var(--lav)';
 }
 
-/** The colour for an account's dot: a lookup, not a palette. The ledger declares the hex and the API
-    resolves it per account, so recolouring is a ledger edit. Used as-is in BOTH themes. */
+/** The colour for an account's dot: a lookup, not a palette. The user's settings declare the hex and
+    the API resolves it per account. Used as-is in BOTH themes. */
 export function accountVar(account: string | null | undefined): string {
 	return accountInfo(account)?.color ?? 'var(--inst-neutral)';
 }

@@ -14,7 +14,8 @@ import type {
 	Series,
 	Table
 } from '$lib/data/primitives';
-import { accountVar, CATEGORY_TOKEN, categoryVar } from '$lib/utils/theme';
+import { categoryInfo } from '$lib/data/directory.svelte';
+import { accountVar, categoryVar } from '$lib/utils/theme';
 import { markedIndices, pickKeys, type PickGrain } from '$lib/charts/axis';
 import { matrixGrid, tableGrid } from '$lib/charts/heat';
 
@@ -139,7 +140,7 @@ const PALETTE = [
 export function seriesColor(name: string, index = 0): string {
 	return (
 		SERIES_ROLE[name] ??
-		(CATEGORY_TOKEN[name] ? categoryVar(name) : null) ??
+		(categoryInfo(name)?.color ? categoryVar(name) : null) ??
 		PALETTE[index % PALETTE.length]!
 	);
 }

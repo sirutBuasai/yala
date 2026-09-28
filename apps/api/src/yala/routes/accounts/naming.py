@@ -6,6 +6,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from yala.catalog import color_key
 from yala.ledger import Ledger, cards
 from yala.ledger.accounts import Kind, account_path, labels_of, named_path, stem_of, tier_of
 from yala.ledger.constants import EMPLOYER_META, INCLUDES_PENDING_META, LABELS_META
@@ -49,6 +50,9 @@ from yala.routes.common import (
     valid_typed_name,
 )
 from yala.routes.errors import api_errors, invalid
+from yala.user_settings import editing
+from yala.user_settings import read as read_settings
+from yala.user_settings.colors import CATEGORIES, INSTITUTIONS
 
 router = APIRouter()
 
@@ -180,6 +184,9 @@ def _renamed(led: Ledger, old: str, new: str, *, meta: dict[str, str | None] | N
     with api_errors():
         files = ledger_files(sink().ledger_dir)
         sink().rewrite_files(rename_plan(led, files, old, new, meta=meta))
+        before, after = color_key(old, led.account_meta().get(old)), color_key(new, meta)
+        if before and before[0] == CATEGORIES and after:
+            _carry_color(CATEGORIES, before[1], after[1])
 
     return ok(
         f"renamed {old} to {new}",
@@ -187,6 +194,12 @@ def _renamed(led: Ledger, old: str, new: str, *, meta: dict[str, str | None] | N
         previous=old,
         name=account_name(new, ledger().account_meta().get(new, {})),
     )
+
+
+def _carry_color(family: str, old: str, new: str) -> None:
+    """A colour is keyed by name, so it follows the rename or it strands on a dead name."""
+    with editing() as settings:
+        settings.rename(family, old, new)
 
 
 def _rename_institution(led: Ledger, account: str, kind: Kind, typed: str) -> dict:
@@ -203,7 +216,7 @@ def _rename_institution(led: Ledger, account: str, kind: Kind, typed: str) -> di
             "institution_name": new
         }
 
-    problem = institution_rename_problem(led, old, new)
+    problem = institution_rename_problem(led, old, new, read_settings().colors[INSTITUTIONS])
     if problem:
         raise invalid(problem)
 
@@ -211,6 +224,7 @@ def _rename_institution(led: Ledger, account: str, kind: Kind, typed: str) -> di
         files = ledger_files(sink().ledger_dir)
         changes, renames = institution_rename_plan(led, files, old, new)
         sink().rewrite_files(changes)
+        _carry_color(INSTITUTIONS, old, new)
 
     now = renames.get(account, account)
     return ok(

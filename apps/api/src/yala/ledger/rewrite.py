@@ -60,21 +60,6 @@ def rename_meta_value(text: str, key: str, old: str, new: str) -> str:
     return _quoted_value_pattern(key).sub(swap, text)
 
 
-def rename_custom_value(text: str, custom_type: str, old: str, new: str) -> str:
-    """A ``custom`` keys its subject positionally, so skipping it strands the directive on a dead
-    name."""
-    pattern = re.compile(
-        rf'^(?P<head>\d{{4}}-\d{{2}}-\d{{2}}\s+custom\s+"{re.escape(custom_type)}"\s+")'
-        r'(?P<value>[^"]*)(?P<tail>".*)$',
-        re.M,
-    )
-
-    def swap(m: re.Match[str]) -> str:
-        return m["head"] + new + m["tail"] if m["value"] == old else m.group(0)
-
-    return pattern.sub(swap, text)
-
-
 def rename_meta_in_scope(
     text: str, account: str, key: str, old: str, new: str, *, listed: bool = False
 ) -> str:

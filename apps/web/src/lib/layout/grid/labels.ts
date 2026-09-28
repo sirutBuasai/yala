@@ -1,5 +1,6 @@
 // Only the `text` half is stored; `context` is rebuilt each render, so a renamed pane still names its period.
 
+import { layoutStore } from '$lib/data/layouts';
 import { Pref, record, shape, text } from '$lib/utils/persist.svelte';
 import { LABEL_MAX, type Label, type Slot } from '$lib/ui/label';
 
@@ -18,7 +19,8 @@ export class BoardLabels {
 		this.#pref = new Pref<Record<string, Renamed>>(
 			`labels-${key}-${VERSION}`,
 			{},
-			record(shape<Renamed>({ title: text(LABEL_MAX), caption: text(LABEL_MAX) }))
+			record(shape<Renamed>({ title: text(LABEL_MAX), caption: text(LABEL_MAX) })),
+			layoutStore
 		);
 
 		// A rename for a card this board no longer has is dropped rather than left to sit in storage for

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { layoutStore } from '$lib/data/layouts';
 import { BoardLabels } from '$lib/layout/grid/labels';
 import { LABEL_MAX } from '$lib/ui/label';
 import { DOT, labelText } from '$lib/ui/label';
@@ -103,7 +104,7 @@ describe('BoardLabels', () => {
 		new BoardLabels('home', IDS).set('pending', 'title', 'Owed to me');
 		new BoardLabels('home', ['cashflow']);
 
-		expect(localStorage.getItem('yala-labels-home-1')).toBe('{}');
+		expect(layoutStore.read('labels-home-1')).toBeUndefined();
 		expect(new BoardLabels('home', IDS).textOf('pending', 'title')).toBeUndefined();
 	});
 

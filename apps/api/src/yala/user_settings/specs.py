@@ -1,24 +1,9 @@
-"""Figures the ledger can't derive, as dated, superseding directives that version with the data::
-
-<date> custom "yala-setting" "<key>" <value>
-"""
+"""The planning figures the ledger can't derive: how each is named, bounded and defaulted."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from typing import TYPE_CHECKING
-
-from beancount.core import data
-
-if TYPE_CHECKING:
-    from yala.ledger.core import Ledger
-
-#: ``custom`` directive type that marks one of our settings.
-SETTING_TYPE = "yala-setting"
-#: The value a directive states to put a setting back on its default. A directive, not a deletion,
-#: so the history of what was stated survives and the latest line still wins.
-DEFAULT_TOKEN = "default"
 
 
 @dataclass(frozen=True)
@@ -149,8 +134,8 @@ SETTINGS_BY_KEY: dict[str, SettingSpec] = {s.key: s for s in SETTINGS}
 
 
 def coerce(key: str, value: object) -> Decimal:
-    """Shared by reader, sink and API, so a figure a form rejects is rejected in the ledger too.
-    Raises ``KeyError`` for an unknown key, else ``ValueError`` with a user-facing message."""
+    """Shared by the store and the API, so a figure a form rejects is never stored either. Raises
+    ``KeyError`` for an unknown key, else ``ValueError`` with a user-facing message."""
     spec = SETTINGS_BY_KEY.get(key)
     if spec is None:
         raise KeyError(key)
@@ -177,55 +162,3 @@ def coerce(key: str, value: object) -> Decimal:
 def _plain(number: Decimal) -> str:
     """Render a bound for an error message, without a trailing ``.0``."""
     return str(int(number)) if number == number.to_integral_value() else str(number)
-
-
-def format_value(spec: SettingSpec, value: Decimal | None) -> str:
-    """The value as it should appear in the ledger: whole for ages and years, decimal for rates, and
-    the default token for ``None``."""
-    if value is None:
-        return f'"{DEFAULT_TOKEN}"'
-    return str(int(value)) if spec.is_integer else str(value)
-
-
-class Settings:
-    """Query namespace for user settings. Constructed as ``ledger.settings``."""
-
-    def __init__(self, ledger: "Ledger"):
-        self._led = ledger
-
-    def _directives(self) -> list[data.Custom]:
-        return [
-            e for e in self._led.entries if isinstance(e, data.Custom) and e.type == SETTING_TYPE
-        ]
-
-    def stored(self) -> dict[str, Decimal]:
-        """The latest directive wins, and a default token drops what came before it. Bad entries are
-        skipped, so one hand-edited line can't blank the dashboard."""
-        out: dict[str, Decimal] = {}
-
-        for entry in self._directives():
-            key, value = _pair(entry)
-            if key is None:
-                continue
-            if value == DEFAULT_TOKEN:
-                out.pop(key, None)
-                continue
-            try:
-                out[key] = coerce(key, value)
-            except (KeyError, ValueError):
-                continue
-
-        return out
-
-    def values(self) -> dict[str, Decimal | None]:
-        """Effective value of each setting: what's stored, else the spec default (possibly None)."""
-        stored = self.stored()
-        return {s.key: stored.get(s.key, s.default) for s in SETTINGS}
-
-
-def _pair(entry: data.Custom) -> tuple[str | None, object]:
-    """The ``(key, value)`` a settings directive carries, or ``(None, None)`` if malformed."""
-    values = [v.value for v in (entry.values or [])]
-    if len(values) != 2 or not isinstance(values[0], str):
-        return None, None
-    return values[0], values[1]

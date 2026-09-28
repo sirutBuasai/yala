@@ -323,18 +323,29 @@ def test_renaming_an_institution_carries_the_metadata_with_it(client: TestClient
     assert "Bank of Example" not in _text(client)
 
 
-def test_renaming_an_institution_carries_its_colour_swatch(client: TestClient):
-    """The swatch keys the colour by the institution's name, so leaving it behind would strand the
-    colour on a name no account carries."""
+def test_renaming_an_institution_carries_its_colour(client: TestClient):
+    """The colour is keyed by the institution's name, so leaving it behind would strand it on a
+    name no account carries."""
     bank, _ = _held_at(client, "Bank of Example")
-    append_accounts(
-        client.ledger_dir,  # type: ignore[attr-defined]
-        '\n2026-01-01 custom "yala-institution" "Bank of Example" "#abcdef"\n',
+    client.post(
+        "/api/color",
+        json={"family": "institutions", "name": "Bank of Example", "color": "#abcdef"},
     )
 
     _rename(client, bank, institution_name="BoE")
 
     assert client.get("/api/data").json()["meta"]["accounts"]["Assets:Cash:BoE"]["color"] == (
+        "#abcdef"
+    )
+
+
+def test_renaming_a_category_carries_its_colour(client: TestClient):
+    client.post("/api/color", json={"family": "categories", "name": "Grocery", "color": "#abcdef"})
+
+    r = client.post("/api/account/rename", json={"account": "Expenses:Grocery", "name": "Food"})
+    assert r.status_code == 200, r.text
+
+    assert client.get("/api/data").json()["meta"]["accounts"]["Expenses:Food"]["color"] == (
         "#abcdef"
     )
 

@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, get_args
+from typing import Any, Literal, get_args
 
 from pydantic import BaseModel, ConfigDict
 
@@ -241,7 +241,7 @@ class SettingField(_Base):
 
 
 class SettingsSection(_Base):
-    """Effective user settings: what the ledger states, else the built-in default. A null means
+    """Effective planning settings: what the user set, else the built-in default. A null means
     unset with no default, and features depending on it stay hidden rather than guessing."""
 
     swr: float  # withdrawal rate, percent
@@ -271,6 +271,8 @@ class DashboardData(_Base):
     settings: SettingsSection | None = None
     setting_specs: list[SettingField] | None = None
     account_lists: AccountLists | None = None
+    # Board layouts by key, opaque here: the frontend owns their shape and revives what it reads.
+    layouts: dict[str, Any] | None = None
 
 
 def json_schema() -> dict:
