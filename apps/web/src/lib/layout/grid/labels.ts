@@ -1,12 +1,12 @@
 // Only the `text` half is stored; `context` is rebuilt each render, so a renamed pane still names its period.
 
-import { layoutStore } from '$lib/data/layouts';
-import { Pref, record, shape, text } from '$lib/utils/persist.svelte';
+import { layoutPref } from '$lib/data/layouts';
+import { record, shape, text, type Pref } from '$lib/utils/persist.svelte';
 import { LABEL_MAX, type Label, type Slot } from '$lib/ui/label';
 
 /** Bump when a board id starts naming something else, or its old rename sits on the new card. Not needed for
     a new card: unknown ids drop on read. */
-const VERSION = 1;
+export const LABELS_VERSION = 1;
 
 type Renamed = Partial<Record<Slot, string>>;
 
@@ -16,11 +16,12 @@ export class BoardLabels {
 	/** `ids` is everything on this board that can be renamed: its panes, plus each KPI section, whose id
 	    is its own and not the card's. */
 	constructor(key: string, ids: string[]) {
-		this.#pref = new Pref<Record<string, Renamed>>(
-			`labels-${key}-${VERSION}`,
+		this.#pref = layoutPref<Record<string, Renamed>>(
+			'labels',
+			key,
+			LABELS_VERSION,
 			{},
-			record(shape<Renamed>({ title: text(LABEL_MAX), caption: text(LABEL_MAX) })),
-			layoutStore
+			record(shape<Renamed>({ title: text(LABEL_MAX), caption: text(LABEL_MAX) }))
 		);
 
 		// A rename for a card this board no longer has is dropped rather than left to sit in storage for

@@ -1,7 +1,7 @@
 // Persisted apart from the arrangement: which panes the board has, not where they sit.
 
-import { layoutStore } from '$lib/data/layouts';
-import { listOf, number, oneOf, Pref, type Revive } from '$lib/utils/persist.svelte';
+import { layoutPref } from '$lib/data/layouts';
+import { listOf, number, oneOf, type Pref, type Revive } from '$lib/utils/persist.svelte';
 import type { BoardLayout, PaneSpec, Rect } from '$lib/layout/grid/types';
 import {
 	boundsOf,
@@ -35,6 +35,9 @@ function storedGroups(): Revive<KpiGroup[]> {
 	});
 }
 
+/** Bump when a stored grouping stops meaning what it did, so an older one is dropped. */
+export const KPI_VERSION = 1;
+
 export class KpiBoard {
 	/** A getter: a KPI's scope follows the period the view is showing, so the defs are live. */
 	readonly #defs: () => KpiBoardDefs;
@@ -52,7 +55,7 @@ export class KpiBoard {
 			axis,
 			weights: weights ?? ids.map((id) => spanOf(rects[id]!.rect, axis))
 		}));
-		this.#pref = new Pref<KpiGroup[]>(`kpi-${key}`, this.#opening, storedGroups(), layoutStore);
+		this.#pref = layoutPref<KpiGroup[]>('kpi', key, KPI_VERSION, this.#opening, storedGroups());
 	}
 
 	// `$derived.by` throughout: a field initialiser runs before the constructor body, so reading a

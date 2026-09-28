@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { live } from '$lib/data/load';
 import { layoutStore, seedLayouts } from '$lib/data/layouts';
-import { Pref, listOf, number } from '$lib/utils/persist.svelte';
+import { Pref, listOf, number, versioned } from '$lib/utils/persist.svelte';
 
 function posted(spy: ReturnType<typeof vi.fn>): unknown[] {
 	return spy.mock.calls
@@ -25,49 +25,61 @@ describe('layoutStore', () => {
 	});
 
 	it('reads what the settings file held at load', () => {
-		seedLayouts({ 'board-home-2': [{ id: 'a' }] });
-		expect(layoutStore.read('board-home-2')).toEqual([{ id: 'a' }]);
+		seedLayouts({ 'board-home': [{ id: 'a' }] });
+		expect(layoutStore.read('board-home')).toEqual([{ id: 'a' }]);
 	});
 
 	it('shows a change at once and sends only the last of a burst to the file', async () => {
-		layoutStore.write('labels-home-1', { a: { title: 'x' } });
-		layoutStore.write('labels-home-1', { a: { title: 'xy' } });
+		layoutStore.write('labels-home', { a: { title: 'x' } });
+		layoutStore.write('labels-home', { a: { title: 'xy' } });
 
-		expect(layoutStore.read('labels-home-1')).toEqual({ a: { title: 'xy' } });
+		expect(layoutStore.read('labels-home')).toEqual({ a: { title: 'xy' } });
 		expect(posted(fetchSpy)).toEqual([]);
 
 		await vi.runAllTimersAsync();
-		expect(posted(fetchSpy)).toEqual([{ key: 'labels-home-1', value: { a: { title: 'xy' } } }]);
+		expect(posted(fetchSpy)).toEqual([{ key: 'labels-home', value: { a: { title: 'xy' } } }]);
 	});
 
 	it("adopts a layout arranged in this browser before layouts moved, then drops the browser's copy", async () => {
-		localStorage.setItem('yala-board-home-2', JSON.stringify([{ id: 'b' }]));
+		localStorage.setItem('yala-board-home', JSON.stringify([{ id: 'b' }]));
 
-		expect(layoutStore.read('board-home-2')).toEqual([{ id: 'b' }]);
+		expect(layoutStore.read('board-home')).toEqual([{ id: 'b' }]);
 		await vi.runAllTimersAsync();
 
-		expect(posted(fetchSpy)).toEqual([{ key: 'board-home-2', value: [{ id: 'b' }] }]);
-		expect(localStorage.getItem('yala-board-home-2')).toBeNull();
+		expect(posted(fetchSpy)).toEqual([{ key: 'board-home', value: [{ id: 'b' }] }]);
+		expect(localStorage.getItem('yala-board-home')).toBeNull();
 	});
 
 	it('removes a layout from the file when it goes back to its default', async () => {
-		seedLayouts({ 'board-home-2': [{ id: 'a' }] });
-		layoutStore.remove('board-home-2');
+		seedLayouts({ 'board-home': [{ id: 'a' }] });
+		layoutStore.remove('board-home');
 
-		expect(layoutStore.read('board-home-2')).toBeUndefined();
+		expect(layoutStore.read('board-home')).toBeUndefined();
 		await vi.runAllTimersAsync();
-		expect(posted(fetchSpy)).toEqual([{ key: 'board-home-2', value: null }]);
+		expect(posted(fetchSpy)).toEqual([{ key: 'board-home', value: null }]);
 	});
 
 	it('drops a browser layout that is only the default instead of adopting it', async () => {
-		localStorage.setItem('yala-board-home-2', '[]');
+		localStorage.setItem('yala-board-home', '[]');
 
-		expect(new Pref<unknown[]>('board-home-2', [], listOf(number()), layoutStore).value).toEqual(
-			[]
-		);
+		expect(
+			new Pref<unknown[]>('board-home', [], listOf(number()), { store: layoutStore }).value
+		).toEqual([]);
 		await vi.runAllTimersAsync();
 
-		expect(posted(fetchSpy)).toEqual([{ key: 'board-home-2', value: null }]);
+		expect(posted(fetchSpy)).toEqual([{ key: 'board-home', value: null }]);
+	});
+
+	it('drops a layout an older shape wrote instead of reading it', async () => {
+		seedLayouts({ 'board-home': versioned([1], 1) });
+
+		expect(
+			new Pref<number[]>('board-home', [], listOf(number()), { store: layoutStore, version: 2 })
+				.value
+		).toEqual([]);
+		await vi.runAllTimersAsync();
+
+		expect(posted(fetchSpy)).toEqual([{ key: 'board-home', value: null }]);
 	});
 
 	it('keeps a change in this browser when there is no API to send it to', async () => {
