@@ -23,7 +23,7 @@ const MODES: HeightMode[] = ['fixed', 'fit', 'cap'];
 
 /** Bumped whenever a board's DEFAULT set of panes changes: new ids land at the back of the priority
     order, so an arrangement saved against the old set would bury them below everything else. */
-export const LAYOUT_VERSION = 2;
+export const LAYOUT_VERSION = 1;
 
 function whole(v: unknown, min: number): number | undefined {
 	const n = number(min)(v);
