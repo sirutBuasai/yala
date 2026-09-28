@@ -2,6 +2,9 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Arrangement, LAYOUT_VERSION } from '$lib/layout/grid/arrangement.svelte';
+import { versioned } from '$lib/utils/persist.svelte';
+
+const storedAs = (panes: unknown) => JSON.stringify(versioned(panes, LAYOUT_VERSION));
 import { GridEnv } from '$lib/layout/grid/env.svelte';
 import { CONTENT, GAP, UNIT, WRAP_PAD } from '$lib/layout/grid/units';
 import type { BoardLayout } from '$lib/layout/grid/types';
@@ -268,8 +271,8 @@ describe('persistence', () => {
 		const env = wideEnv();
 		const key = `test-ghost-${seq++}`;
 		localStorage.setItem(
-			`yala-board-${key}-${LAYOUT_VERSION}`,
-			JSON.stringify([{ id: 'retired', x: 0, y: 0, w: 24, h: 6, mode: 'fixed', cap: 6 }])
+			`yala-board-${key}`,
+			storedAs([{ id: 'retired', x: 0, y: 0, w: 24, h: 6, mode: 'fixed', cap: 6 }])
 		);
 
 		const b = new Arrangement(key, LAYOUT, env);
@@ -281,8 +284,8 @@ describe('persistence', () => {
 		const env = wideEnv();
 		const key = `test-corrupt-${seq++}`;
 		localStorage.setItem(
-			`yala-board-${key}-${LAYOUT_VERSION}`,
-			JSON.stringify([{ id: 'tall', x: 0, w: 24, h: 6, mode: 'fixed', cap: 6 }]) // no `y`
+			`yala-board-${key}`,
+			storedAs([{ id: 'tall', x: 0, w: 24, h: 6, mode: 'fixed', cap: 6 }]) // no `y`
 		);
 
 		expect(new Arrangement(key, LAYOUT, env).placed('tall')).toMatchObject({ y: 0, h: 12 });
@@ -292,8 +295,8 @@ describe('persistence', () => {
 		const env = wideEnv();
 		const key = `test-badsize-${seq++}`;
 		localStorage.setItem(
-			`yala-board-${key}-${LAYOUT_VERSION}`,
-			JSON.stringify([
+			`yala-board-${key}`,
+			storedAs([
 				{ id: 'tall', x: 0, y: 0, w: '24', h: 6, mode: 'fixed', cap: 6 },
 				{ id: 'wide', x: 0, y: 0, w: 0, h: 6, mode: 'fixed', cap: 6 }
 			])
@@ -308,8 +311,8 @@ describe('persistence', () => {
 		const env = wideEnv();
 		const key = `test-fraction-${seq++}`;
 		localStorage.setItem(
-			`yala-board-${key}-${LAYOUT_VERSION}`,
-			JSON.stringify([{ id: 'tall', x: 0.4, y: 0, w: 23.6, h: 12, mode: 'fixed', cap: 12 }])
+			`yala-board-${key}`,
+			storedAs([{ id: 'tall', x: 0.4, y: 0, w: 23.6, h: 12, mode: 'fixed', cap: 12 }])
 		);
 
 		expect(new Arrangement(key, LAYOUT, env).authored('tall')).toMatchObject({ x: 0, w: 24 });

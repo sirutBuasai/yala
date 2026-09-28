@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { layoutStore } from '$lib/data/layouts';
-import { BoardLabels } from '$lib/layout/grid/labels';
+import { BoardLabels, LABELS_VERSION } from '$lib/layout/grid/labels';
+import { versioned } from '$lib/utils/persist.svelte';
 import { LABEL_MAX } from '$lib/ui/label';
 import { DOT, labelText } from '$lib/ui/label';
 
@@ -104,7 +105,7 @@ describe('BoardLabels', () => {
 		new BoardLabels('home', IDS).set('pending', 'title', 'Owed to me');
 		new BoardLabels('home', ['cashflow']);
 
-		expect(layoutStore.read('labels-home-1')).toBeUndefined();
+		expect(layoutStore.read('labels-home')).toBeUndefined();
 		expect(new BoardLabels('home', IDS).textOf('pending', 'title')).toBeUndefined();
 	});
 
@@ -117,7 +118,10 @@ describe('BoardLabels', () => {
 	});
 
 	it('drops a stored rename that is no longer a string', () => {
-		localStorage.setItem('yala-labels-home-1', JSON.stringify({ pending: { title: 42 } }));
+		localStorage.setItem(
+			'yala-labels-home',
+			JSON.stringify(versioned({ pending: { title: 42 } }, LABELS_VERSION))
+		);
 		expect(new BoardLabels('home', IDS).textOf('pending', 'title')).toBeUndefined();
 	});
 });

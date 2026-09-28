@@ -111,12 +111,12 @@ def test_changing_then_resetting_leaves_nothing_stored(client: TestClient):
     """A reset removes the value, so the file only ever holds what differs from the default."""
     client.post("/api/settings", json={"key": "swr", "value": 3.5})
     client.post("/api/color", json={"family": "categories", "name": "Grocery", "color": "#abcdef"})
-    client.post("/api/layout", json={"key": "board-home-2", "value": [1]})
+    client.post("/api/layout", json={"key": "board-home", "value": [1]})
     assert _stored(client.ledger_dir)["planning"] == {"swr": 3.5}  # type: ignore[attr-defined]
 
     client.post("/api/settings", json={"key": "swr", "value": None})
     client.post("/api/color", json={"family": "categories", "name": "Grocery", "color": None})
-    client.post("/api/layout", json={"key": "board-home-2", "value": None})
+    client.post("/api/layout", json={"key": "board-home", "value": None})
 
     doc = _stored(client.ledger_dir)  # type: ignore[attr-defined]
     assert doc["planning"] == {} and doc["colors"]["categories"] == {} and doc["layouts"] == {}
@@ -182,13 +182,13 @@ def test_a_category_starts_on_its_default_colour_and_an_institution_on_none(ledg
 
 
 def test_builder_emits_effective_settings_and_layouts(ledger_dir: Path):
-    _write(ledger_dir, {"planning": {"birth-year": 1996}, "layouts": {"board-home-2": []}})
+    _write(ledger_dir, {"planning": {"birth-year": 1996}, "layouts": {"board-home": []}})
     doc = build(Ledger(_main(ledger_dir)).load())
 
     assert doc.settings is not None
     assert doc.settings.birth_year == 1996
     assert doc.settings.swr == float(SETTINGS_BY_KEY["swr"].default)
-    assert doc.layouts == {"board-home-2": []}
+    assert doc.layouts == {"board-home": []}
 
 
 def test_the_directory_carries_category_and_institution_colours(client: TestClient):
@@ -272,11 +272,11 @@ def test_post_color_refuses_anything_but_a_hex_literal(client: TestClient):
 def test_post_layout_stores_and_drops_a_board(client: TestClient):
     panes = [{"id": "a", "x": 0, "y": 0, "w": 4, "h": 4, "mode": "fixed", "cap": 4}]
     assert (
-        client.post("/api/layout", json={"key": "board-home-2", "value": panes}).status_code == 200
+        client.post("/api/layout", json={"key": "board-home", "value": panes}).status_code == 200
     )
-    assert client.get("/api/data").json()["layouts"] == {"board-home-2": panes}
+    assert client.get("/api/data").json()["layouts"] == {"board-home": panes}
 
-    client.post("/api/layout", json={"key": "board-home-2", "value": None})
+    client.post("/api/layout", json={"key": "board-home", "value": None})
     assert client.get("/api/data").json()["layouts"] == {}
 
 

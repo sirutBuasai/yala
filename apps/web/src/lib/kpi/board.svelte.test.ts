@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { KpiBoard } from './board.svelte';
+import { KPI_VERSION, KpiBoard } from './board.svelte';
+import { versioned } from '$lib/utils/persist.svelte';
 import type { KpiBoardDefs, KpiSpec } from './spec';
 
 const spec = { figure: 'x' } as KpiSpec;
@@ -13,7 +14,7 @@ let seq = 0;
 /** A board whose stored grouping is `stored`, as a reload would find it. */
 function boardWith(stored: unknown): KpiBoard {
 	const key = `test-${seq++}`;
-	localStorage.setItem(`yala-kpi-${key}`, JSON.stringify(stored));
+	localStorage.setItem(`yala-kpi-${key}`, JSON.stringify(versioned(stored, KPI_VERSION)));
 	return new KpiBoard(key, () => DEFS);
 }
 

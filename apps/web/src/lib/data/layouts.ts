@@ -4,7 +4,7 @@
 
 import { get } from 'svelte/store';
 import { live, postJson } from '$lib/data/load';
-import { browserStore, type PrefStore } from '$lib/utils/persist.svelte';
+import { Pref, browserStore, type PrefStore, type Revive } from '$lib/utils/persist.svelte';
 
 /** Typing a label writes on every key, so a layout waits this long for the edits to settle. */
 const SETTLE_MS = 500;
@@ -66,4 +66,19 @@ if (typeof window !== 'undefined') {
 			send(key, saved.get(key), true);
 		}
 	});
+}
+
+/** What a board keeps: where its panes sit, what they are renamed, how its KPI cards are grouped. */
+export type LayoutKind = 'board' | 'labels' | 'kpi';
+
+/** One board's layout of one kind, keyed plainly by the board. `version` names the stored shape, so
+    bumping it drops what an older shape wrote rather than leaving it under a key nothing reads. */
+export function layoutPref<T>(
+	kind: LayoutKind,
+	board: string,
+	version: number,
+	fallback: T,
+	revive: Revive<T>
+): Pref<T> {
+	return new Pref(`${kind}-${board}`, fallback, revive, { store: layoutStore, version });
 }

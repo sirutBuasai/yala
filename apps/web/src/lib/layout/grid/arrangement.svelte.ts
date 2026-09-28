@@ -1,8 +1,8 @@
 // Runes only, no DOM. Only authored panes persist, in priority order; displacement is never written.
 
 import { DEV_TOOLS } from '$lib/nav/devtools';
-import { layoutStore } from '$lib/data/layouts';
-import { Pref, listOf, number, type Revive } from '$lib/utils/persist.svelte';
+import { layoutPref } from '$lib/data/layouts';
+import { listOf, number, type Pref, type Revive } from '$lib/utils/persist.svelte';
 import { assertNoOverlap, clampRect, resolve, boardRows } from './resolve';
 import { lift, type DragOrigin } from './lift';
 import { foldSpan, readingOrder, stackColumns, type Stack } from './fold';
@@ -78,12 +78,7 @@ export class Arrangement {
 		this.#specs = specs;
 		this.#ids = Object.keys(specs);
 		this.#env = env;
-		this.#pref = new Pref<AuthoredPane[]>(
-			`board-${key}-${LAYOUT_VERSION}`,
-			[],
-			storedPanes(),
-			layoutStore
-		);
+		this.#pref = layoutPref<AuthoredPane[]>('board', key, LAYOUT_VERSION, [], storedPanes());
 		this.#panes = this.#merge(this.#pref.value);
 	}
 

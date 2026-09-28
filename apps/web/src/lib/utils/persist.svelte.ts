@@ -54,19 +54,52 @@ export function persisted<T>(key: string, fallback: T, revive: Revive<T>): Writa
 	return store;
 }
 
+/** A value stored with the version of the shape that wrote it, so a later shape can tell it apart. */
+export interface Versioned {
+	version: number;
+	value: unknown;
+}
+
+export function versioned(value: unknown, version: number): Versioned {
+	return { version, value };
+}
+
+/** The value written under `version`; anything else, an older shape included, reads as nothing. */
+function unwrap(version: number): Revive<unknown> {
+	return (raw) => {
+		const o = raw as Partial<Versioned> | null;
+		return typeof o === 'object' && o !== null && o.version === version ? o.value : undefined;
+	};
+}
+
+export interface PrefOptions {
+	store?: PrefStore;
+	/** Bump when the stored shape stops meaning what it did: an older value is then dropped. */
+	version?: number;
+}
+
 /** The same for a component's own `$state`: `pref.value` reads like a rune and every write persists. */
 export class Pref<T> {
 	#value: T;
 	readonly #key: string;
 	readonly #fallback: T;
 	readonly #store: PrefStore;
+	readonly #version: number | undefined;
 
-	constructor(key: string, fallback: T, revive: Revive<T>, store: PrefStore = browserStore) {
+	constructor(
+		key: string,
+		fallback: T,
+		revive: Revive<T>,
+		{ store = browserStore, version }: PrefOptions = {}
+	) {
 		this.#key = key;
 		this.#fallback = fallback;
 		this.#store = store;
-		this.#value = $state(read(store, key, fallback, revive));
-		// Written before a default stopped being stored, or adopted from this browser: drop it here too.
+		this.#version = version;
+		const inner: Revive<T> = version === undefined ? revive : (raw) => revive(unwrap(version)(raw));
+		this.#value = $state(read(store, key, fallback, inner));
+		// A default written before defaults stopped being stored, a value from an older shape, or one
+		// adopted from this browser: drop it here too.
 		if (this.#isDefault(this.#value) && store.read(key) !== undefined) store.remove(key);
 	}
 
@@ -83,7 +116,10 @@ export class Pref<T> {
 	set value(v: T) {
 		this.#value = v;
 		if (this.#isDefault(v)) this.#store.remove(this.#key);
-		else this.#store.write(this.#key, v);
+		else {
+			const version = this.#version;
+			this.#store.write(this.#key, version === undefined ? v : versioned(v, version));
+		}
 	}
 }
 
