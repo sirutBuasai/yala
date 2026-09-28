@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { attentionItems } from '$lib/data/attention';
-import { makeData } from '$lib/data/__fixtures__/dashboard';
+import { makeBillPay, makeData } from '$lib/data/__fixtures__/dashboard';
 
 const name = (a: string) => a.split(':').at(-1)!;
 
@@ -29,6 +29,13 @@ describe('attentionItems', () => {
 				focus: 'Liabilities:CC:CardB'
 			}
 		]);
+	});
+
+	it('counts a pending bill pay as pending', () => {
+		const data = makeData();
+		data.months['2025-01']!.transfers = [makeBillPay()];
+		const items = attentionItems(data, data.meta.month_keys.at(-1)!, null, name);
+		expect(items[0]).toMatchObject({ kind: 'pending', title: '1 pending transaction' });
 	});
 
 	it('lists nothing for balances where the API could not say', () => {

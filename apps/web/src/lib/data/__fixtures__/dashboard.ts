@@ -5,7 +5,8 @@ import type {
 	AccountLists,
 	DashboardData,
 	MonthMatrixRow,
-	NetWorthSnapshot
+	NetWorthSnapshot,
+	Transfer
 } from '$lib/data/types';
 import { setAccountDirectory } from '$lib/data/directory.svelte';
 
@@ -90,6 +91,20 @@ function matrix(byMonth: Record<number, { spent: Record<string, number>; income:
 		rows.push({ month: m, spent: cell?.spent ?? {}, income: cell?.income ?? 0 });
 	}
 	return rows;
+}
+
+/** A pending bill pay from a bank to a card, in the fixture's January. */
+export function makeBillPay(over: Partial<Transfer> = {}): Transfer {
+	return {
+		date: '2025-01-20',
+		payee: 'card autopay',
+		amount: 250,
+		from_account: 'Assets:Cash:BankA',
+		to_account: 'Liabilities:CC:CardA',
+		pending: true,
+		locator: 'id:xf-1',
+		...over
+	};
 }
 
 export function makeData(): DashboardData {

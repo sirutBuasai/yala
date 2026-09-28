@@ -6,7 +6,7 @@
 	import type { Scope } from '$lib/data/scope';
 	import type { KpiBoardDefs } from '$lib/kpi/spec';
 	import { latestMonthKey } from '$lib/data/scope';
-	import { pendingRows } from '$lib/data/pending';
+	import { pendingEntries } from '$lib/data/pending';
 	import { build } from '$lib/data/catalog';
 	import { dateShort, monthLabel, MONTHS } from '$lib/utils/format';
 	import { monthOf, yearOf } from '$lib/utils/period';
@@ -172,8 +172,7 @@
 		return d.kind === 'deviation' ? Object.fromEntries(d.rows.map((r) => [r.label, r.base])) : {};
 	});
 
-	// Every outstanding row, not just this month's: a pending charge waits whichever month it was logged in.
-	const pending = $derived(pendingRows(data));
+	const pending = $derived(pendingEntries(data));
 
 	let modals: ReturnType<typeof EditModals>;
 	let addDate = $state('');
@@ -231,9 +230,9 @@
 
 	<PendingPane
 		id="pending"
-		transactions={pending}
+		entries={pending}
 		caption={words('waiting for posting, refunds, or credits')}
-		onedit={(l) => modals.editTransaction(l)}
+		onedit={edit}
 	/>
 
 	<HistoryPane
