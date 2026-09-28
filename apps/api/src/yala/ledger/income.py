@@ -48,8 +48,6 @@ class Paycheck:
 
 
 class Income:
-    """Query namespace for income. Constructed as ``ledger.income``."""
-
     def __init__(self, ledger: "Ledger"):
         self._led = ledger
 

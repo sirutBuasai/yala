@@ -41,7 +41,6 @@ def _valid_sweep_dest(led: Ledger, dest: str, account: str) -> str:
 
 @router.post("/api/account/sweep")
 def post_account_sweep(body: SweepIn) -> dict:
-    """Set or clear ``account``'s ``sweep_to`` destination; rejects a cycle."""
     account = _valid_sweep_source(body.account)
 
     if not body.dest:

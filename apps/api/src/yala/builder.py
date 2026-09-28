@@ -50,12 +50,10 @@ def _now_rfc3339() -> str:
 
 
 def year_key(year: int) -> str:
-    """The ``"YYYY"`` key the contract uses for a year page."""
     return f"{year:04d}"
 
 
 def month_key(year: int, month: int) -> str:
-    """The ``"YYYY-MM"`` key the contract uses for a month page."""
     return f"{year:04d}-{month:02d}"
 
 
@@ -228,7 +226,6 @@ def _networth(networth) -> NetWorthSection:
                     account=a.account,
                     label=a.label,
                     group=a.group,
-                    bucket=a.bucket,
                     value=money(a.value),
                 )
                 for a in networth.accounts()
@@ -256,7 +253,6 @@ def _settings(settings: UserSettings) -> SettingsSection:
 
 
 def build(ledger: Ledger) -> DashboardData:
-    """Query the ledger and validate / construct the dashboard contract."""
     spending = ledger.spending
     income = ledger.income
     transfers = ledger.transfers
@@ -309,7 +305,6 @@ def build(ledger: Ledger) -> DashboardData:
 
 
 def build_dict() -> dict:
-    """Live rebuild from the configured ledger, as a JSON-serializable dict (for the API)."""
     return build(Ledger().load()).model_dump(mode="json")
 
 

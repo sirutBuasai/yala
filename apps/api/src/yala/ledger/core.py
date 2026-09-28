@@ -28,8 +28,6 @@ class LedgerError(Exception):
 
 
 class Ledger:
-    """In-memory beancount ledger: load once, then query via domain namespaces."""
-
     def __init__(self, path: Path | None = None, *, strict: bool = True):
         self.path = Path(path) if path else config.MAIN_LEDGER
         self.strict = strict
@@ -255,8 +253,6 @@ class Ledger:
             }
 
         return self._meta_cache
-
-    # --- domain query namespaces ---
 
     @property
     def spending(self) -> "Spending":

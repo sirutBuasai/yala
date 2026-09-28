@@ -22,8 +22,6 @@ from yala.sink.writer import Carried, LedgerWriter, flag_for
 
 
 class SpendingWrites(LedgerWriter):
-    """Spending writes, mixed into :class:`~yala.sink.FileLedgerSink`."""
-
     def _spending_entry(
         self,
         *,

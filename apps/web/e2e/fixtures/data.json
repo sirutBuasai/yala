@@ -868,70 +868,60 @@
 				"account": "Assets:Investments:TaxAdvantaged:Employer401k",
 				"label": "Employer 401k",
 				"group": "investment",
-				"bucket": "Tax-advantaged",
 				"value": 61900.0
 			},
 			{
 				"account": "Assets:Cash:Savings",
 				"label": "Savings",
 				"group": "cash",
-				"bucket": "Liquid",
 				"value": 29000.0
 			},
 			{
 				"account": "Assets:Cash:BankA",
 				"label": "Bank A",
 				"group": "cash",
-				"bucket": "Liquid",
 				"value": 10400.0
 			},
 			{
 				"account": "Assets:Cash:BankB",
 				"label": "Bank B",
 				"group": "cash",
-				"bucket": "Liquid",
 				"value": 4550.0
 			},
 			{
 				"account": "Assets:Investments:TaxAdvantaged:Broker1HSA",
 				"label": "Broker 1 HSA",
 				"group": "investment",
-				"bucket": "Tax-advantaged",
 				"value": 4300.0
 			},
 			{
 				"account": "Assets:Cash:Passthrough",
 				"label": "Passthrough",
 				"group": "cash",
-				"bucket": "Liquid",
 				"value": 0.0
 			},
 			{
 				"account": "Assets:Cash:Wallet",
 				"label": "Wallet",
 				"group": "cash",
-				"bucket": "Liquid",
 				"value": 0.0
 			},
 			{
 				"account": "Liabilities:CC:CardC",
 				"label": "Card C",
 				"group": "liability",
-				"bucket": "liability",
 				"value": 0.0
 			},
 			{
 				"account": "Liabilities:CC:CardA",
 				"label": "Card A",
 				"group": "liability",
-				"bucket": "liability",
 				"value": -83.2
 			},
 			{
 				"account": "Liabilities:CC:CardB",
 				"label": "Card B",
 				"group": "liability",
-				"bucket": "liability",
 				"value": -99.95
 			}
 		],

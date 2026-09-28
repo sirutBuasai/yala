@@ -36,7 +36,6 @@ def employer_of(account: str) -> str | None:
 
 
 def employers(ledger: "Ledger") -> list[str]:
-    """Active employers: leaf of open, non-closed ``Income:Salary:*`` accounts."""
     return [leaf(a) for a in ledger.active_accounts(SALARY)]
 
 

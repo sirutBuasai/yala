@@ -280,7 +280,6 @@
 	separate names, so either can move without disturbing the other.
 </p>
 
-<!-- ── Font family ────────────────────────────────────────────────────── -->
 <h2 class="sec">Font family</h2>
 <section class="card grp">
 	<div class="grphead">
@@ -301,7 +300,6 @@
 	</div>
 </section>
 
-<!-- ── Typography ─────────────────────────────────────────────────────── -->
 <h2 class="sec">Type scale</h2>
 {#each typeGroups as g (g.title)}
 	<section class="card grp">
@@ -324,7 +322,6 @@
 	</section>
 {/each}
 
-<!-- ── Weight + tracking ──────────────────────────────────────────────── -->
 <div class="cols2">
 	<section class="card grp">
 		<div class="grphead"><h3>Font weight</h3></div>
@@ -354,7 +351,6 @@
 	</section>
 </div>
 
-<!-- ── Spacing ────────────────────────────────────────────────────────── -->
 <h2 class="sec">Spacing</h2>
 <div class="cols2">
 	<section class="card grp">
@@ -407,7 +403,6 @@
 	</div>
 </section>
 
-<!-- ── Radius ─────────────────────────────────────────────────────────── -->
 <h2 class="sec">Radius</h2>
 <section class="card grp">
 	<div class="radgrid">
@@ -422,7 +417,6 @@
 	</div>
 </section>
 
-<!-- ── In context ─────────────────────────────────────────────────────── -->
 <h2 class="sec">In context</h2>
 
 <div class="board">

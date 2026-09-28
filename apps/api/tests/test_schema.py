@@ -196,9 +196,6 @@ def test_account_kind_rejects_an_unknown_kind():
         AccountKind(**{f: False for f in KIND_FIELDS} | {"name": "mystery", "prefix": "X:"})
 
 
-# --- the contract cannot drift from the kind table it describes ---
-
-
 def test_the_kind_names_match_the_ledgers_own():
     assert set(get_args(KindName)) == {k.name for k in KINDS}
 

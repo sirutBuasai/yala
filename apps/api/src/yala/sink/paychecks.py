@@ -15,8 +15,6 @@ from yala.sink.writer import Carried, LedgerWriter
 
 
 class PaycheckWrites(LedgerWriter):
-    """Paycheck writes, mixed into :class:`~yala.sink.FileLedgerSink`."""
-
     def _paycheck_entry(
         self,
         *,

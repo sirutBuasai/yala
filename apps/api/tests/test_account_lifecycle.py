@@ -23,6 +23,8 @@ from tests.conftest import (
     SAVINGS,
     SCOPED_DEDUCTION,
     load_ledger,
+    log_reading,
+    refusal,
 )
 from yala.catalog import account_directory
 
@@ -49,9 +51,6 @@ def _open_entry(client: TestClient, account: str) -> data.Open:
     return next(
         e for e in _led(client).entries if isinstance(e, data.Open) and e.account == account
     )
-
-
-# --- opening the new kinds ---
 
 
 def test_open_an_employer(client: TestClient):
@@ -118,12 +117,7 @@ def test_a_new_bank_accounts_balance_can_be_logged(client: TestClient):
     pads the day before the date it asserts."""
     _open(client, "bank", name="BankZ", date="2026-03-01")
 
-    r = client.post(
-        "/api/balance",
-        json={"account": "Assets:Cash:BankZ", "amount": 250.0, "date": "2026-03-02"},
-    )
-
-    assert r.status_code == 200, r.text
+    assert refusal(log_reading(client, "Assets:Cash:BankZ", 250.0, "2026-03-02")) is None
 
 
 @pytest.mark.parametrize(
@@ -223,9 +217,6 @@ def test_a_new_account_may_override_the_inherited_short_form(client: TestClient)
 
     accounts = client.get("/api/data").json()["meta"]["accounts"]
     assert accounts[r.json()["account"]]["institution_alias"] == "BZ"
-
-
-# --- descriptive metadata ---
 
 
 def _meta(client: TestClient, account: str, **body):
@@ -410,9 +401,6 @@ def test_the_institution_cannot_be_edited_as_metadata(client: TestClient):
     assert "rename" in r.json()["detail"]
 
 
-# --- closing: guards ---
-
-
 def test_closing_an_account_others_sweep_into_is_refused_and_names_them(client: TestClient):
     r = _close(client, SAVINGS)
 
@@ -468,9 +456,6 @@ def test_closing_an_already_closed_account_is_refused(client: TestClient):
 
     assert r.status_code == 422
     assert "closed" in r.json()["detail"]
-
-
-# --- closing: what goes with an employer ---
 
 
 def test_closing_an_employer_says_what_it_has_to_decide_about(client: TestClient):
@@ -571,9 +556,6 @@ def test_a_closed_employer_offers_no_payroll_options(client: TestClient):
     assert not any(o["employer"] == "Employer1" for o in body["payroll_options"])
 
 
-# --- reopening ---
-
-
 def test_reopening_a_category_brings_it_back_to_the_pickers(client: TestClient):
     _open(client, "category", name="Gifts")
     _close(client, "Expenses:Gifts")
@@ -613,9 +595,7 @@ def test_a_reopened_account_can_be_logged_again(client: TestClient):
     _close(client, BANK_A)
     _reopen(client, BANK_A)
 
-    r = client.post("/api/balance", json={"account": BANK_A, "amount": 100.0, "date": "2026-09-01"})
-
-    assert r.status_code == 200, r.text
+    assert refusal(log_reading(client, BANK_A, 100.0, "2026-09-01")) is None
 
 
 def test_rehiring_an_employer_brings_back_what_closed_with_it(client: TestClient):
@@ -677,9 +657,6 @@ def test_reopening_an_unmanaged_account_is_refused(client: TestClient):
     assert "manageable" in r.json()["detail"]
 
 
-# --- sweep rules ---
-
-
 def _sweep(client: TestClient, account: str, dest: str | None):
     return client.post("/api/account/sweep", json={"account": account, "dest": dest})
 
@@ -709,9 +686,6 @@ def test_a_category_is_not_a_sweep_destination(client: TestClient):
     r = _sweep(client, BANK_B, "Expenses:Grocery")
 
     assert r.status_code == 422
-
-
-# --- multi-file atomicity ---
 
 
 def test_a_rename_that_would_break_the_ledger_rolls_every_file_back(
@@ -799,7 +773,7 @@ def test_opening_a_bank_with_an_account_half_is_refused(client: TestClient):
 def test_a_bank_balance_can_be_split_across_destinations(client: TestClient):
     """The same division an investment gets: one leg is the single-destination case, several are
     not."""
-    client.post("/api/balance", json={"account": BANK_A, "amount": 300.0, "date": "2026-02-10"})
+    log_reading(client, BANK_A, 300.0, "2026-02-10")
 
     r = _close(
         client,
@@ -819,7 +793,7 @@ def test_a_bank_balance_can_be_split_across_destinations(client: TestClient):
 
 
 def test_a_split_that_misses_the_bank_balance_is_refused(client: TestClient):
-    client.post("/api/balance", json={"account": BANK_A, "amount": 300.0, "date": "2026-02-10"})
+    log_reading(client, BANK_A, 300.0, "2026-02-10")
 
     r = _close(client, BANK_A, date="2026-02-11", legs=[{"destination": BANK_B, "amount": 250.0}])
 

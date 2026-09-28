@@ -160,9 +160,6 @@ def post_account_relabel(body: RelabelIn) -> dict:
     return ok(f"renamed {old} to {new}", account=account, old=old, new=new)
 
 
-# --- rename / move ---
-
-
 class AccountRenameIn(BaseModel):
     """Every part composes into the path, so any change rewrites it. ``institution_name`` renames
     every account held there."""

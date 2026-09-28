@@ -96,9 +96,6 @@ def rename_plan(
     return rewrite.changed_only(files, after)
 
 
-# --- renaming an institution ---
-
-
 def institution_accounts(ledger: "Ledger", institution: str) -> list[str]:
     """Closed ones included, or the old name would remain in history."""
     meta = ledger.account_meta()
@@ -181,9 +178,6 @@ def label_rename_plan(
         after[path] = rewrite.rename_meta_in_scope(offered, account, LABEL_META, old, new)
 
     return rewrite.changed_only(files, after)
-
-
-# --- reopen ---
 
 
 def reopen_targets(ledger: "Ledger", account: str) -> list[data.Close]:

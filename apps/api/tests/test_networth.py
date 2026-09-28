@@ -1,4 +1,4 @@
-"""Net-worth domain, the ``log_balance`` sink write, and the ``/api/balance`` endpoint."""
+"""Net-worth domain, the ``log_balance`` sink write, and the ``/api/balances`` endpoint."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import pytest
 from beancount.core import data
 from fastapi.testclient import TestClient
 
-from tests.conftest import PASSTHROUGH, SAVINGS, append_accounts
+from tests.conftest import PASSTHROUGH, SAVINGS, append_accounts, log_reading, refusal
 from tests.conftest import load_ledger as _load
 from yala.dates import month_bounds
 from yala.ledger import Ledger
@@ -42,18 +42,7 @@ def _networth_at(client: TestClient, date: dt.date = SEP) -> dict:
 
 
 def _value_of(at: dict, account: str) -> float:
-    """One account's figure out of a ``/api/networth`` body."""
     return {a["account"]: a["value"] for a in at["accounts"]}[account]
-
-
-def _post_balance(client: TestClient, account: str, amount: float, date: dt.date = SEP):
-    """Snapshot ``account`` through the endpoint, the way a balance pane does."""
-    return client.post(
-        "/api/balance", json={"account": account, "amount": amount, "date": date.isoformat()}
-    )
-
-
-# --- plug_account mapping (pure) ---
 
 
 def test_plug_account_keeps_the_tax_tier():
@@ -87,9 +76,6 @@ def test_snapshot_plug_pads_a_card_into_opening_balances():
     assert snapshot_plug("Liabilities:CC:CardA") == "Equity:Opening-Balances"
     assert snapshot_plug("Liabilities:TaxesOwed") == "Equity:Adjustments:TaxesOwed"
     assert snapshot_plug("Assets:Cash:BankA") == "Equity:Adjustments:BankA"
-
-
-# --- log_balance: USD account (no conversion) ---
 
 
 def test_log_balance_usd_account_pads_to_asserted_value(ledger_dir: Path):
@@ -205,7 +191,7 @@ def test_previous_at_reads_the_last_snapshot_before_a_month_not_yet_logged(ledge
 
 def test_networth_at_reports_where_each_account_stood(client: TestClient):
     account = "Assets:Cash:BankA"
-    _post_balance(client, account, 500.0, dt.date(2026, 8, 1))
+    log_reading(client, account, 500.0, dt.date(2026, 8, 1))
 
     at = _networth_at(client, dt.date(2026, 8, 12))
     assert at["standing"][account]["date"] == "2026-08-01"
@@ -488,9 +474,6 @@ def test_update_balance_rejects_a_stale_locator(ledger_dir: Path):
         )
 
 
-# --- log_balance: share account (reclassify to USD, then assert) ---
-
-
 def _write_share_ledger(root: Path) -> Path:
     root.mkdir(parents=True, exist_ok=True)
     (root / "main.beancount").write_text(
@@ -523,9 +506,6 @@ def test_log_balance_reclassifies_shares_to_usd(tmp_path: Path):
     assert led.balance("Equity:Adjustments:Investments:Taxable:Brokerage", SEP) == Decimal(
         "-200.00"
     )
-
-
-# --- NetWorth domain ---
 
 
 def test_networth_series_and_adjustments(ledger_dir: Path):
@@ -563,13 +543,8 @@ def test_loggable_accounts_excludes_swept(ledger_dir: Path):
     assert "Assets:Cash:Passthrough" not in loggable
 
 
-# --- /api/balance endpoint ---
-
-
 def test_post_balance_logs_and_shows_in_data(client: TestClient):
-    r = _post_balance(client, "Assets:Cash:BankA", 1000.0)
-    assert r.status_code == 200, r.text
-    assert r.json()["ok"] is True
+    assert refusal(log_reading(client, "Assets:Cash:BankA", 1000.0, SEP)) is None
 
     nw = client.get("/api/data").json()["networth"]
     assert nw["current"] is not None
@@ -577,39 +552,33 @@ def test_post_balance_logs_and_shows_in_data(client: TestClient):
 
 
 def test_post_balance_rejects_non_balance_sheet_account(client: TestClient):
-    r = client.post("/api/balance", json={"account": "Expenses:Grocery", "amount": 100.0})
-    assert r.status_code == 422
+    assert log_reading(client, "Expenses:Grocery", 100.0).status_code == 422
 
 
 def test_patch_balance_edits_the_locator_from_networth_at(client: TestClient):
     """The pane's round trip: read a month's locator, update it, see the new figure."""
     account = "Assets:Cash:BankA"
-    assert _post_balance(client, account, 1000.0).status_code == 200
+    assert refusal(log_reading(client, account, 1000.0, SEP)) is None
 
     at = _networth_at(client)
     locator = at["standing"][account]["locator"]
 
-    r = client.post("/api/balance/update", json={"locator": locator, "amount": 1234.56})
-    assert r.status_code == 200, r.text
-    assert r.json()["date"] == "2026-09-01"
+    assert refusal(log_reading(client, account, 1234.56, locator=locator)) is None
 
     after = _networth_at(client)
+    assert after["standing"][account]["date"] == SEP.isoformat()
     assert _value_of(after, account) == 1234.56
 
 
 def test_patch_balance_rejects_an_unknown_locator(client: TestClient):
-    r = client.post(
-        "/api/balance/update", json={"locator": "line:assets/2026.beancount:99999", "amount": 10.0}
-    )
-    assert r.status_code == 404
+    stale = "line:assets/2026.beancount:99999"
+    assert refusal(log_reading(client, "Assets:Cash:BankA", 10.0, locator=stale))
 
 
 def test_balance_accounts_listed_in_accounts(client: TestClient):
     body = client.get("/api/accounts").json()
     assert "Assets:Cash:BankA" in body["balance_accounts"]
 
-
-# --- liability balances: verify-only, no plug ---
 
 CARD = "Liabilities:CC:CardA"
 CARD_LEDGER = 83.20  # what the fixture's entries leave standing on 2026-09-01
@@ -655,8 +624,7 @@ def test_liability_accounts_listed_in_accounts(client: TestClient):
 def test_post_liability_balance_stores_the_owed_figure_negative(client: TestClient):
     """Owed goes in positive, the way a bank app shows it, and lands negative in the ledger with the
     pending charge the app leaves out added back."""
-    r = _post_balance(client, CARD, CARD_OWED)
-    assert r.status_code == 200, r.text
+    assert refusal(log_reading(client, CARD, CARD_OWED, SEP)) is None
 
     at = _networth_at(client)
     assert _value_of(at, CARD) == -CARD_LEDGER
@@ -666,7 +634,7 @@ def test_post_liability_balance_stores_the_owed_figure_negative(client: TestClie
 def test_post_liability_balance_that_agrees_writes_no_pad(client: TestClient):
     """The figure the entries already add up to needs nothing absorbed, and beancount rejects a pad
     it does not need."""
-    assert _post_balance(client, CARD, CARD_OWED).status_code == 200
+    assert refusal(log_reading(client, CARD, CARD_OWED, SEP)) is None
     text = _liability_text(client)
     assert f"balance {CARD}" in text
     assert "pad" not in text
@@ -677,8 +645,7 @@ def test_first_card_snapshot_pads_into_opening_balances_and_sets_the_baseline(
 ):
     """The first reading is the starting point: whatever history leaves unexplained is opening
     balance, and the card is reconciled from that date on."""
-    r = _post_balance(client, CARD, 500.0)
-    assert r.status_code == 200, r.text
+    assert refusal(log_reading(client, CARD, 500.0, SEP)) is None
 
     at = _networth_at(client)
     assert at["cards"][CARD]["expected"] == -500.0
@@ -692,27 +659,25 @@ def test_first_card_snapshot_pads_into_opening_balances_and_sets_the_baseline(
 
 def test_card_snapshot_after_the_baseline_must_agree(client: TestClient):
     """Past the baseline there is nothing to pad into, so a gap names the missing entry instead."""
-    assert _post_balance(client, CARD, CARD_OWED).status_code == 200
+    assert refusal(log_reading(client, CARD, CARD_OWED, SEP)) is None
 
     owed = _app_owed(client, LATER)
-    refused = _post_balance(client, CARD, owed + 10, LATER)
-    assert refused.status_code == 422
-    assert "off by 10.00" in refused.text and "spending" in refused.text
+    refused = refusal(log_reading(client, CARD, owed + 10, LATER))
+    assert refused and "off by 10.00" in refused and "spending" in refused
 
-    assert _post_balance(client, CARD, owed, LATER).status_code == 200
+    assert refusal(log_reading(client, CARD, owed, LATER)) is None
     assert "pad" not in _liability_text(client)
 
 
 def test_card_edit_after_the_baseline_must_agree(client: TestClient):
-    assert _post_balance(client, CARD, CARD_OWED).status_code == 200
+    assert refusal(log_reading(client, CARD, CARD_OWED, SEP)) is None
     owed = _app_owed(client, LATER)
-    assert _post_balance(client, CARD, owed, LATER).status_code == 200
+    assert refusal(log_reading(client, CARD, owed, LATER)) is None
     locator = _networth_at(client, LATER)["standing"][CARD]["locator"]
     before = _liability_text(client)
 
-    edit = client.post("/api/balance/update", json={"locator": locator, "amount": owed - 5})
-    assert edit.status_code == 422
-    assert "bill pay" in edit.text
+    refused = refusal(log_reading(client, CARD, owed - 5, locator=locator))
+    assert refused and "bill pay" in refused
     assert _liability_text(client) == before
 
 
@@ -721,24 +686,23 @@ def test_card_edit_before_the_baseline_never_pads_past_it(client: TestClient):
     be padded back into place, since that is exactly the drift reconciling rules out."""
     aug = dt.date(2026, 8, 1)
     owed_aug = _app_owed(client, aug)
-    assert _post_balance(client, CARD, owed_aug, aug).status_code == 200
-    assert _post_balance(client, CARD, CARD_OWED, SEP).status_code == 200
+    assert refusal(log_reading(client, CARD, owed_aug, aug)) is None
+    assert refusal(log_reading(client, CARD, CARD_OWED, SEP)) is None
     locator = _networth_at(client, aug)["standing"][CARD]["locator"]
     before = _liability_text(client)
 
-    edit = client.post("/api/balance/update", json={"locator": locator, "amount": owed_aug + 50})
-    assert edit.status_code == 422
+    assert refusal(log_reading(client, CARD, owed_aug + 50, locator=locator))
     assert _liability_text(client) == before
 
 
 def test_card_backfill_that_would_shift_a_later_reading_is_refused(client: TestClient):
     """A reading is only re-synced after an entry edit; a backfilled reading padding history under a
     later one would silently rewrite what the app showed then."""
-    assert _post_balance(client, CARD, CARD_OWED, SEP).status_code == 200
+    assert refusal(log_reading(client, CARD, CARD_OWED, SEP)) is None
     before = _liability_text(client)
 
     aug = dt.date(2026, 8, 1)
-    assert _post_balance(client, CARD, _app_owed(client, aug) + 50, aug).status_code == 422
+    assert refusal(log_reading(client, CARD, _app_owed(client, aug) + 50, aug))
     assert _liability_text(client) == before
 
 
@@ -746,17 +710,16 @@ def test_a_card_never_padded_holds_every_snapshot_after_its_first(client: TestCl
     """A first reading the entries already explain writes no pad, and is still where the card
     started agreeing."""
     assert _networth_at(client, SEP - dt.timedelta(days=1))["cards"][CARD]["must_agree"] is False
-    assert _post_balance(client, CARD, CARD_OWED).status_code == 200
+    assert refusal(log_reading(client, CARD, CARD_OWED, SEP)) is None
     assert baseline(_load(client.ledger_dir), CARD) == SEP  # type: ignore[attr-defined]
 
-    refused = _post_balance(client, CARD, _app_owed(client, LATER) + 1, LATER)
-    assert refused.status_code == 422
+    assert refusal(log_reading(client, CARD, _app_owed(client, LATER) + 1, LATER))
 
 
 def test_card_reading_is_resynced_when_an_earlier_entry_is_edited(client: TestClient):
     """Deleting a charge dated before a reading leaves that reading true and only its recorded
     figure stale, so the write goes through and the figure follows the entries."""
-    assert _post_balance(client, CARD, CARD_OWED).status_code == 200
+    assert refusal(log_reading(client, CARD, CARD_OWED, SEP)) is None
     ledger_dir = client.ledger_dir  # type: ignore[attr-defined]
     charge = next(
         t
@@ -779,7 +742,7 @@ def test_card_whose_bank_hides_pending_is_read_without_it(client: TestClient):
     _append_pending(client, 20)
 
     assert _app_owed(client, SEP) == shown
-    assert _post_balance(client, CARD, shown).status_code == 200
+    assert refusal(log_reading(client, CARD, shown, SEP)) is None
     assert "pad" not in _liability_text(client)
     assert _value_of(_networth_at(client), CARD) == -(CARD_LEDGER + 20)
 
@@ -811,12 +774,11 @@ def test_card_whose_bank_counts_pending_is_read_with_it(client: TestClient):
 
 
 def test_patch_liability_balance_keeps_the_owed_sign(client: TestClient):
-    assert _post_balance(client, CARD, CARD_OWED).status_code == 200
+    assert refusal(log_reading(client, CARD, CARD_OWED, SEP)) is None
     locator = _networth_at(client)["standing"][CARD]["locator"]
 
     # An edit before the baseline pads what it cannot explain, as the first log does.
-    edit = client.post("/api/balance/update", json={"locator": locator, "amount": 999.0})
-    assert edit.status_code == 200, edit.text
+    assert refusal(log_reading(client, CARD, 999.0, locator=locator)) is None
     assert _app_owed(client, SEP) == 999.0
 
 
@@ -869,8 +831,7 @@ def test_post_liability_balance_accepts_a_credit(client: TestClient):
         """,
     )
 
-    r = _post_balance(client, credit, -898.0)
-    assert r.status_code == 200, r.text
+    assert refusal(log_reading(client, credit, -898.0, SEP)) is None
 
     at = _networth_at(client)
     assert at["standing"][credit]["amount"] == 898.0  # stored as a credit, not as owed
@@ -879,5 +840,4 @@ def test_post_liability_balance_accepts_a_credit(client: TestClient):
 
 def test_post_asset_balance_still_refuses_a_negative(client: TestClient):
     """Only a liability may go below zero. An account cannot hold less than nothing."""
-    r = _post_balance(client, "Assets:Cash:BankA", -5.0)
-    assert r.status_code == 422, r.text
+    assert refusal(log_reading(client, "Assets:Cash:BankA", -5.0, SEP))

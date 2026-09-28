@@ -13,8 +13,6 @@ from yala.sink.writer import Carried, LedgerWriter, flag_for
 
 
 class TransferWrites(LedgerWriter):
-    """Transfer writes, mixed into :class:`~yala.sink.FileLedgerSink`."""
-
     def _transfer_entry(
         self,
         *,

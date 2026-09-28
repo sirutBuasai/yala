@@ -1,5 +1,4 @@
 <script lang="ts">
-	// Columns on a baseline. Marks Analytics.
 	import Icon from './Icon.svelte';
 
 	let { size = 16 }: { size?: number } = $props();

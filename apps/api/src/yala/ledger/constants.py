@@ -19,10 +19,8 @@ ADJUSTMENTS = EQUITY + "Adjustments:"
 OPENING_BALANCES = EQUITY + "Opening-Balances"
 INVEST_ADJUSTMENTS = ADJUSTMENTS + "Investments:"
 
-# Currency written onto new account directives.
 DEFAULT_CURRENCY = "USD"
 
-# Beancount directive keywords.
 OPEN = "open"
 CLOSE = "close"
 BALANCE = "balance"

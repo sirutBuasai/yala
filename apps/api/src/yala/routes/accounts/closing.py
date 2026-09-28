@@ -283,9 +283,6 @@ def post_account_close(body: AccountCloseIn) -> dict:
     )
 
 
-# --- reopen ---
-
-
 class AccountReopenIn(BaseModel):
     account: str
 

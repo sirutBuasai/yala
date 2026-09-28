@@ -79,8 +79,6 @@ class UserSettings:
             "layouts": dict(sorted(self.layouts.items())),
         }
 
-    # --- planning ---
-
     def planning_values(self) -> dict[str, Decimal | None]:
         """What's stored, else the spec default, which may be None."""
         return {s.key: self.planning.get(s.key, s.default) for s in SETTINGS}
@@ -97,8 +95,6 @@ class UserSettings:
             return None
         self.planning[key] = stored
         return stored
-
-    # --- colors ---
 
     def color(self, family: str, name: str) -> str | None:
         """The user's pick, else a category's starting colour. An institution has none."""
@@ -122,8 +118,6 @@ class UserSettings:
         """The pick follows a rename, since it is keyed by name."""
         if old in self.colors[family]:
             self.colors[family][new] = self.colors[family].pop(old)
-
-    # --- layouts ---
 
     def set_layout(self, key: str, value: object | None) -> None:
         """``None`` drops the layout, putting the board back on its default."""

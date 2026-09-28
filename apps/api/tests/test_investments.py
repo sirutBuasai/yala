@@ -43,9 +43,6 @@ def _seed_shares(client: TestClient, price: str = "500.00") -> None:
     )
 
 
-# --- add ---
-
-
 def test_add_investment_is_unconstrained_with_seed_and_plug(client: TestClient):
     """One kind of investment account, opened unconstrained, so the same account can be snapshotted
     in dollars some months and in share quantities others."""
@@ -114,9 +111,6 @@ def test_a_spaced_lowercase_name_still_lands_as_a_legal_account(client: TestClie
     assert r.status_code == 200, r.text
     assert r.json()["account"] == "Assets:Investments:TaxAdvantaged:GroupAAcctB"
     assert "Assets:Investments:TaxAdvantaged:GroupAAcctB" in _ledger(client).active_accounts()
-
-
-# --- close ---
 
 
 def test_close_share_account_values_and_splits(client: TestClient):

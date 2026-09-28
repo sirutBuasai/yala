@@ -4,7 +4,6 @@ import { YEAR } from '$lib/data/primitives';
 import type { Assumptions } from '$lib/data/assumptions';
 import {
 	balanceAtRetirement,
-	breakEven,
 	depletionYear,
 	fiDate,
 	investedProjection,
@@ -226,27 +225,14 @@ describe('planned rates', () => {
 	});
 });
 
-describe('break-even', () => {
-	// Rate against return only describes a portfolio exactly at the FI number, and once claimed a rising balance
-	// couldn't last.
-	it('is the balance whose return alone covers planned spending', () => {
-		const data = makeNetWorthData();
-		const a = assume({ realReturn: 5, plannedSpending: 50000 });
-
-		expect(breakEven(data, a)).toBeCloseTo(50000 / 0.05, 5);
-	});
-
-	it('has no answer with no return to live off', () => {
-		expect(breakEven(makeNetWorthData(), assume({ realReturn: 0 }))).toBeNull();
-	});
-
-	// A balance past break-even earns more than it pays out, so it grows through retirement however high
-	// the stated withdrawal rate is — which is exactly what the chart shows.
-	it('a balance above it never depletes, whatever the withdrawal rate says', () => {
+describe('balanceAtRetirement', () => {
+	// A balance whose return covers its spending grows through retirement however high the stated
+	// withdrawal rate is — which is exactly what the chart shows.
+	it('never depletes once its return covers spending, whatever the withdrawal rate says', () => {
 		const data = makeNetWorthData();
 		const a = assume({ realReturn: 5, swr: 20, plannedSpending: 1 });
 
-		expect(balanceAtRetirement(data, a)!).toBeGreaterThan(breakEven(data, a)!);
+		expect(balanceAtRetirement(data, a)!).toBeGreaterThan(1 / 0.05);
 		expect(depletionYear(data, a).value).toBeNull();
 	});
 

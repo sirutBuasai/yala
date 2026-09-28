@@ -71,10 +71,8 @@ beforeEach(() => {
 	seedLayouts({});
 });
 
-// Node ≥22 exposes an experimental `localStorage` global that warns unless `--localstorage-file`
-// is passed. App code (theme, view-mode persistence) reads localStorage during tests, so install
-// a simple in-memory store up front — this both satisfies that code and stops the access from
-// falling through to the noisy Node global.
+// Node's experimental `localStorage` global warns without `--localstorage-file`, and app code reads
+// storage under test, so an in-memory store stands in for it.
 class MemoryStorage implements Storage {
 	#m = new Map<string, string>();
 	get length() {

@@ -254,28 +254,24 @@ export function makeNetWorthData(): DashboardData {
 				account: 'Assets:Investments:Taxable:BrokerageA',
 				label: 'BrokerageA',
 				group: 'investment',
-				bucket: 'Taxable',
 				value: 3000
 			},
 			{
 				account: 'Assets:Cash:BankA',
 				label: 'BankA',
 				group: 'cash',
-				bucket: 'Liquid',
 				value: 2000
 			},
 			{
 				account: 'Assets:Investments:TaxAdvantaged:PlanA',
 				label: 'PlanA',
 				group: 'investment',
-				bucket: 'Tax-advantaged',
 				value: 1500
 			},
 			{
 				account: 'Liabilities:CC:CardA',
 				label: 'CardA',
 				group: 'liability',
-				bucket: 'liability',
 				value: -500
 			}
 		],

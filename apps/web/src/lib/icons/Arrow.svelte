@@ -1,5 +1,4 @@
 <script lang="ts">
-	// A directional arrow: shaft plus head.
 	import Icon from './Icon.svelte';
 
 	interface Props {

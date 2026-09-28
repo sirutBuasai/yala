@@ -430,7 +430,6 @@ def test_open_account_declares_the_account(ledger_dir: Path):
 
 
 def _open_file(ledger_dir: Path, account: str) -> Path:
-    """The source file declaring ``account``'s ``open`` directive."""
     for e in _loads_clean(ledger_dir).entries:
         if isinstance(e, data.Open) and e.account == account:
             return Path(e.meta["filename"])
@@ -526,9 +525,6 @@ def test_close_account_can_record_what_triggered_it(ledger_dir: Path):
     assert close.meta["closed_with"] == "Income:Salary:Employer1"
 
 
-# --- multi-file writes ---
-
-
 def test_rewrite_files_commits_several_files_as_one_unit(ledger_dir: Path):
     touched = [p for p in ledger_dir.glob("**/*.beancount") if "Expenses:Takeouts" in p.read_text()]
     assert len(touched) > 1  # the point of the primitive
@@ -583,9 +579,6 @@ def test_close_account_deactivates_category(ledger_dir: Path):
     led = _loads_clean(ledger_dir)
     assert "Expenses:Gifts" in led.declared_accounts("Expenses:")
     assert "Expenses:Gifts" not in led.active_accounts("Expenses:")
-
-
-# --- transfers (bill pay) ---
 
 
 def test_append_transfer_lists_as_transfer_only(ledger_dir: Path):
@@ -665,9 +658,6 @@ def test_delete_transfer(ledger_dir: Path):
     assert _loads_clean(ledger_dir).transfers.transactions() == []
 
 
-# --- delete ---
-
-
 def test_delete_spending_transaction_by_id(ledger_dir: Path):
     sink = FileLedgerSink(ledger_dir)
     entry_id = sink.append_transaction(
@@ -708,9 +698,6 @@ def test_delete_unknown_locator_raises_and_leaves_files_intact(ledger_dir: Path)
 
     assert target.read_bytes() == before
     _loads_clean(ledger_dir)
-
-
-# --- regressions: each of these was a real bug ---
 
 
 def test_update_preserves_narration_tag_and_custom_meta(ledger_dir: Path):
@@ -906,9 +893,6 @@ def test_update_does_not_swallow_next_entry_across_whitespace_line(ledger_dir: P
     assert second[0].amount == Decimal("6.00")
 
 
-# --- date-edit that crosses a year boundary relocates the entry ---
-
-
 def test_update_across_year_moves_entry_to_new_year_file(ledger_dir: Path):
     """A date edit into another year relocates the entry, creating that year's file and its
     include when needed."""
@@ -971,9 +955,6 @@ def test_update_across_year_with_bad_account_leaves_old_file_intact(ledger_dir: 
 
     assert src_file.read_bytes() == before
     _loads_clean(ledger_dir)
-
-
-# --- pre-write active-account validation ---
 
 
 def test_append_before_funding_open_date_raises_clear_error(ledger_dir: Path):

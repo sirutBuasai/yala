@@ -90,7 +90,6 @@ def institution_of(meta: Mapping[str, object] | None) -> str | None:
 
 
 def name_parts(meta: Mapping[str, object] | None) -> tuple[str | None, str | None]:
-    """The institution half and the product half of a name, as the ``open`` declares them."""
     return meta_str(meta, INSTITUTION_NAME_META), meta_str(meta, ACCOUNT_NAME_META)
 
 

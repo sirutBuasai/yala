@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { build, CATALOG_BY_ID, dataOfKind } from '$lib/data/catalog';
+import { build, CATALOG_BY_ID } from '$lib/data/catalog';
 import type { Scalar } from '$lib/data/primitives';
-import { formatUnit, MONTHS, PERCENT, YEARS } from '$lib/data/primitives';
+import { formatUnit, MONTHS, PERCENT } from '$lib/data/primitives';
 import { makeData, makeNetWorthData } from '$lib/data/__fixtures__/dashboard';
 import { coastYear, netWorthParts } from '$lib/data/networth';
 import type { Scope, ScopeLevel } from '$lib/data/scope';
@@ -15,8 +15,6 @@ const scopeFor = (level: ScopeLevel): Scope =>
 
 const scalar = (id: string, scope: Scope = { level: 'all' }) =>
 	build(makeNetWorthData(), id, scope) as Scalar;
-
-// --- the registry itself ---
 
 describe('catalog integrity', () => {
 	it('every entry builds at every scope it declares, with and without net-worth data', () => {
@@ -60,8 +58,6 @@ describe('catalog integrity', () => {
 		}
 	});
 });
-
-// --- growth decomposition ---
 
 describe('growth decomposition', () => {
 	it('splits a year’s change into what was saved and what was not', () => {
@@ -111,8 +107,6 @@ describe('growth decomposition', () => {
 		expect((build(makeData(), 'networth.other', { level: 'all' }) as Scalar).value).toBeNull();
 	});
 });
-
-// --- targets derived from spending ---
 
 // The fixture's logged spending, annualized and per month, plus the balances the targets divide it
 // into. Named so a fixture edit lands in one place rather than across every expectation.
@@ -194,8 +188,6 @@ describe('targets', () => {
 	});
 });
 
-// --- rates and risk ---
-
 describe('rates and risk', () => {
 	it('labels compound growth as a rate, not an average', () => {
 		const s = scalar('networth.balance_growth');
@@ -214,8 +206,6 @@ describe('rates and risk', () => {
 	});
 });
 
-// --- what a bar is coloured by ---
-
 describe('account colours', () => {
 	// Labelled by display name, coloured by ledger path: the colour map is keyed by path, so keying both
 	// off the label left every bar on the fallback hue.
@@ -231,8 +221,6 @@ describe('account colours', () => {
 		]);
 	});
 });
-
-// --- the lifetime matrix ---
 
 describe('lifetime growth', () => {
 	it('reads the same three terms over a lifetime, with no badge to compare against', () => {
@@ -323,8 +311,6 @@ describe('the year table', () => {
 	});
 });
 
-// --- allocation and accounts ---
-
 describe('allocation and accounts', () => {
 	it('reports each bucket as a share of assets, not a dollar level', () => {
 		const p = build(makeNetWorthData(), 'networth.allocation_share', { level: 'all' });
@@ -352,21 +338,11 @@ describe('allocation and accounts', () => {
 	});
 });
 
-// --- the duration unit ---
-
 describe('duration formatting', () => {
-	it('renders months and years with one decimal', () => {
+	it('renders months with one decimal', () => {
 		expect(formatUnit(14.62, MONTHS)).toBe('14.6 mo');
-		expect(formatUnit(9.3, YEARS)).toBe('9.3 yr');
-	});
-
-	it('keeps durations of different periods incompatible', () => {
-		expect(dataOfKind('scalar').length).toBeGreaterThan(0);
-		expect(formatUnit(1, MONTHS)).not.toBe(formatUnit(1, YEARS));
 	});
 });
-
-// --- the chart treatments the page relies on ---
 
 describe('thresholds bullet', () => {
 	it('measures runway against the target from settings, not a constant', () => {
@@ -469,8 +445,6 @@ describe('year-end levels behind a KPI', () => {
 	});
 });
 
-// --- how a snapshot's date reads on an axis ---
-
 /** Balances on the 1st of consecutive months: a month opens on its own snapshot, closes on the next's. */
 function loggedOnTheFirst() {
 	const data = makeNetWorthData();
@@ -554,8 +528,6 @@ describe('snapshot date labels', () => {
 		expect(p.rows.map((r) => r[0])).toEqual(['Jul 1', 'Aug 1', 'Aug 26']);
 	});
 });
-
-// --- month-over-month movement ---
 
 describe('the monthly table', () => {
 	it('follows every level with its own change and percentage', () => {
@@ -693,8 +665,6 @@ describe('change by month', () => {
 	});
 });
 
-// --- allocation as dollars rather than shares ---
-
 describe('allocation by value', () => {
 	it('reports each bucket’s balance, where the share view normalizes it away', () => {
 		const p = build(makeNetWorthData(), 'networth.allocation_value', { level: 'all' });
@@ -735,8 +705,6 @@ describe('allocation by value', () => {
 		expect(value.labels).toEqual(share.labels);
 	});
 });
-
-// --- the decomposition, month by month and against last year ---
 
 describe('monthly attribution', () => {
 	it('plots one point per month a balance was logged in', () => {

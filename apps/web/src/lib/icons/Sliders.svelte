@@ -1,5 +1,4 @@
 <script lang="ts">
-	// Two sliders. Marks Manage.
 	import Icon from './Icon.svelte';
 
 	let { size = 16 }: { size?: number } = $props();

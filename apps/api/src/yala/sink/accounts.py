@@ -16,8 +16,6 @@ from yala.sink.writer import LedgerWriter
 
 
 class AccountWrites(LedgerWriter):
-    """Account directives, mixed into :class:`~yala.sink.FileLedgerSink`."""
-
     def open_account(
         self,
         account: str,
@@ -65,7 +63,6 @@ class AccountWrites(LedgerWriter):
         self.set_account_metas(account, {key: value})
 
     def set_account_metas(self, account: str, values: Mapping[str, str | None]) -> None:
-        """Set or remove several meta keys on one account's ``open`` directive at once."""
         self.set_metas({account: values})
 
     def set_metas(self, edits: Mapping[str, Mapping[str, str | None]]) -> None:

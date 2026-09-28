@@ -4,21 +4,18 @@
 import { money, moneyCompact, moneyExact, numCompact } from '$lib/utils/format';
 import type { Label } from '$lib/ui/label';
 
-// --- units ---
-
 export type Unit =
 	| { kind: 'money'; currency: string }
 	| { kind: 'percent' }
 	| { kind: 'count' }
-	| { kind: 'duration'; period: 'month' | 'year' }
+	| { kind: 'duration'; period: 'month' }
 	| { kind: 'year' };
 
 export const MONEY = (currency = 'USD'): Unit => ({ kind: 'money', currency });
 export const PERCENT: Unit = { kind: 'percent' };
 export const COUNT: Unit = { kind: 'count' };
 export const MONTHS: Unit = { kind: 'duration', period: 'month' };
-export const YEARS: Unit = { kind: 'duration', period: 'year' };
-/** A point on the calendar. Distinct from `YEARS`, which is a span of them. */
+/** A point on the calendar, as opposed to a span of months. */
 export const YEAR: Unit = { kind: 'year' };
 
 /** Render a raw value in its unit. Shared so every visual formats the same figure the same way. */
@@ -35,7 +32,7 @@ export function formatUnit(value: number, unit: Unit): string {
 			return String(Math.round(value));
 		// A decimal, because a duration is small enough that rounding changes the answer.
 		case 'duration':
-			return `${value.toFixed(1)} ${unit.period === 'month' ? 'mo' : 'yr'}`;
+			return `${value.toFixed(1)} mo`;
 	}
 }
 
@@ -84,8 +81,6 @@ export function deltaLabel(
 
 	return formatDelta(capped(delta.value, digits), delta.unit) + tail;
 }
-
-// --- primitive kinds ---
 
 export type PrimitiveKind =
 	| 'scalar'

@@ -86,12 +86,9 @@ function def<C extends Component<any, any, any>>(d: {
 	return d as unknown as ChartDef;
 }
 
-// --- colour assignment ---
-
 /** Role token per well-known series, keyed by the label the data layer gives it, so the data stays
     colour-blind. Anything unnamed cycles the fallback palette. */
 const SERIES_ROLE: Record<string, string> = {
-	// Flows.
 	Income: 'var(--role-income)',
 	Spent: 'var(--role-spending)',
 	Spending: 'var(--role-spending)',
@@ -106,11 +103,9 @@ const SERIES_ROLE: Record<string, string> = {
 	Contributions: 'var(--role-saving)',
 	'Net income': 'var(--role-net)',
 	'Take-home': 'var(--role-takehome)',
-	// Stocks.
 	'Net worth': 'var(--role-balance)',
 	Assets: 'var(--role-asset)',
 	Liabilities: 'var(--role-liability)',
-	// Allocation buckets.
 	Liquid: 'var(--role-liquid)',
 	Taxable: 'var(--role-taxable)',
 	'Tax-advantaged': 'var(--role-taxadv)',
@@ -167,8 +162,6 @@ const FLOW_ROLE_SERIES = {
 	saving: 'Contributions'
 } as const;
 
-// --- series collection ---
-
 /** Flatten a series/multiseries into its series list and the labels and periods they share. */
 function seriesOf(p: Series | MultiSeries): {
 	labels: string[];
@@ -221,8 +214,6 @@ function toLineSeries(list: Series[], opts: ChartOptions) {
 
 /** A bullet set draws the same rows as bars or as rings. */
 const bulletRows = (p: Primitive) => ({ rows: (p as Bullet).rows });
-
-// --- the registry ---
 
 /** A flow's labels are drawn in its fixed viewBox, so they shrink with its width. */
 const SANKEY_LEGIBLE = 720;
@@ -416,7 +407,6 @@ export const CHARTS_BY_ID: Record<string, ChartDef> = Object.fromEntries(
 	CHARTS.map((c) => [c.id, c])
 );
 
-/** Charts that can render a given primitive kind. */
 function chartsForKind(kind: PrimitiveKind): ChartDef[] {
 	return CHARTS.filter((c) => c.accepts.includes(kind));
 }

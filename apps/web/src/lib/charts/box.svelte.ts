@@ -1,5 +1,4 @@
-// The measured `.figurebox` a chart draws into. Four charts bound the same two dimensions and fell back
-// to the same placeholder, so the fallback lived in four places and could drift.
+// The measured `.figurebox` a chart draws into, with the one fallback every chart shares.
 
 import { UNMEASURED } from '$lib/charts/axis';
 

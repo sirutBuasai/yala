@@ -33,7 +33,6 @@ export class SaveState {
 		return false;
 	}
 
-	/** Drop any error/confirmation. */
 	reset(): void {
 		this.error = '';
 		this.note = '';

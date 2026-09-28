@@ -19,11 +19,7 @@ if TYPE_CHECKING:
     from yala.sink import FileLedgerSink
 
 
-# --- sweep configuration ---
-
-
 def sweep_payee(source: str) -> str:
-    """Payee stamped on a passthrough's sweep."""
     return f"{leaf(source).lower()} sweep"
 
 
@@ -57,9 +53,6 @@ def is_sweep(accounts: list[str], ledger: Ledger) -> bool:
     """Whether the accounts match a passthrough↔terminal sweep slot."""
     pairs = {frozenset((s, t)) for s, t in sweep_targets(ledger).items()}
     return len(accounts) == 2 and frozenset(accounts) in pairs
-
-
-# --- reconciliation ---
 
 
 def _sweeps_in(
@@ -119,7 +112,6 @@ def _reconcile_one(
     month: int,
     date: dt.date,
 ) -> None:
-    """Reconcile a single passthrough's sweep for the month."""
     # A closed source or terminal is skipped; retiring a passthrough clears its sweep_to first.
     if source not in active or terminal not in active:
         return
@@ -185,7 +177,6 @@ def reconcile_month(sink: "FileLedgerSink", year: int, month: int) -> None:
 
 
 def reconcile_months(sink: "FileLedgerSink", months: set[Month]) -> None:
-    """Reconcile every passthrough's sweep for each affected month (months are independent)."""
     for year, month in months:
         reconcile_month(sink, year, month)
 

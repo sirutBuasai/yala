@@ -13,7 +13,6 @@ export function along<T>(axis: MergeAxis, row: T, column: T): T {
 	return axis === 'row' ? row : column;
 }
 
-/** A rectangle's span along the axis. */
 export function spanOf(rect: Rect, axis: MergeAxis): number {
 	return along(axis, rect.w, rect.h);
 }
@@ -27,7 +26,6 @@ export function flowOf(axis: MergeAxis): 'x' | 'y' {
 	return along(axis, 'x', 'y');
 }
 
-/** The board's own floor along the axis. */
 function floorOf(axis: MergeAxis): number {
 	return along(axis, MIN_W, MIN_H);
 }
@@ -193,7 +191,6 @@ export function splitRects(
 	);
 }
 
-/** Fraction of the axis each divider sits at. */
 export function dividerFractions(weights: number[]): number[] {
 	const total = sum(weights) || 1;
 	const out: number[] = [];

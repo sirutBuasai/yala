@@ -9,7 +9,6 @@ from pathlib import Path
 
 from yala import schema
 
-# The shared contract lives in packages/contract at the repo root (scripts/ is a repo-root child).
 OUT = Path(__file__).resolve().parents[1] / "packages" / "contract"
 
 

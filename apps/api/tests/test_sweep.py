@@ -16,9 +16,6 @@ PASSTHROUGH_DEST = "Assets:Cash:Savings"
 SWEEP_PAYEE = sweep_payee(PASSTHROUGH)
 
 
-# --- helpers ---
-
-
 def _sweeps(client: TestClient, ym: str) -> list[dict]:
     transfers = client.get("/api/data").json()["months"].get(ym, {}).get("transfers", [])
     return [t for t in transfers if t["payee"] == SWEEP_PAYEE]
@@ -59,9 +56,6 @@ def _fund_passthrough(client: TestClient, date: str, amount: float):
             "amount": amount,
         },
     )
-
-
-# --- tests ---
 
 
 def test_no_passthrough_activity_means_no_sweep(client: TestClient):

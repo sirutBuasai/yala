@@ -19,8 +19,6 @@ from tests.conftest import (
 from yala.ledger import accounts
 from yala.ledger.constants import DEDUCTIONS
 
-# --- classification ---
-
 
 @pytest.mark.parametrize(
     "account,kind",
@@ -80,9 +78,6 @@ def test_sweep_capabilities_are_stated_per_kind():
     assert not accounts.KINDS_BY_NAME["card"].sweep_target
 
 
-# --- metadata reads ---
-
-
 def test_employer_scope_reads_the_meta_and_treats_blank_as_unscoped():
     assert accounts.employer_scope({"employer": "Employer1"}) == "Employer1"
     assert accounts.employer_scope({"employer": ""}) is None
@@ -99,9 +94,6 @@ def test_sweep_destination_reads_the_passthrough_target(ledger_dir: Path):
     meta = load_ledger(ledger_dir).account_meta()
     assert accounts.sweep_destination(meta[PASSTHROUGH]) == SAVINGS
     assert accounts.sweep_destination(meta[BANK_A]) is None
-
-
-# --- lifecycle facts ---
 
 
 def test_declared_family_is_the_account_and_its_descendants(ledger_dir: Path):

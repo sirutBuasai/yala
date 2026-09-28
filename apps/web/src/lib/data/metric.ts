@@ -10,8 +10,6 @@ import { addMonths } from '$lib/utils/period';
 import { type Scope, inWindow, latestYear, priorMonths, scopeYear, scopeKey } from './scope';
 import { labelText, live, words, type Label } from '$lib/ui/label';
 
-// --- measures ---
-
 /** An aggregate figure available at any scope. */
 export type Field =
 	'income' | 'spending' | 'saved' | 'gross' | 'deductions' | 'contributions' | 'net' | 'takehome';
@@ -62,8 +60,6 @@ function toneOf(m: Measure, delta: number): Tone | undefined {
 	return delta > 0 === goodUp(m) ? 'good' : 'bad';
 }
 
-// --- per-document, per-scope memoization ---
-
 const CACHE = new WeakMap<DashboardData, Map<string, unknown>>();
 
 function memo<T>(data: DashboardData, key: string, compute: () => T): T {
@@ -77,8 +73,6 @@ function memo<T>(data: DashboardData, key: string, compute: () => T): T {
 	m.set(key, value);
 	return value;
 }
-
-// --- scope collections ---
 
 /** The month pages a scope covers: one month, a year's months, or all of them. */
 function monthsInScope(data: DashboardData, scope: Scope): [string, MonthPage][] {
@@ -101,8 +95,6 @@ function scopePaychecks(data: DashboardData, scope: Scope): PaycheckOut[] {
 function scopeTxns(data: DashboardData, scope: Scope): Txn[] {
 	return monthsInScope(data, scope).flatMap(([, md]) => md.transactions);
 }
-
-// --- aggregate totals ---
 
 type Totals = Record<Field, number>;
 
@@ -235,8 +227,6 @@ export function signed(s: Scalar): Scalar {
 	return { ...s, tone: v === 0 ? undefined : v > 0 ? 'good' : 'bad' };
 }
 
-// --- builders ---
-
 export function amount(data: DashboardData, scope: Scope, m: Measure, opts: Opts = {}): Scalar {
 	return scalar(
 		MONEY(data.currency),
@@ -339,40 +329,6 @@ export function ratio(
 		d ? (n / d) * 100 : null,
 		{
 			note: opts.note
-		}
-	);
-}
-
-export function categoryAmount(
-	data: DashboardData,
-	scope: Scope,
-	category: string,
-	opts: Opts = {}
-): Scalar {
-	return scalar(
-		MONEY(data.currency),
-		opts.label ?? words(category),
-		categorySpend(data, scope, category),
-		{
-			note: opts.note
-		}
-	);
-}
-
-export function categoryShare(
-	data: DashboardData,
-	scope: Scope,
-	category: string,
-	of: 'spending' | 'income',
-	opts: Opts = {}
-): Scalar {
-	const whole = totals(data, scope)[of];
-	return scalar(
-		PERCENT,
-		opts.label ?? words(`${category} share`),
-		whole ? (categorySpend(data, scope, category) / whole) * 100 : null,
-		{
-			note: opts.note ?? words(`of ${of}`)
 		}
 	);
 }

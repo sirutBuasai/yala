@@ -43,18 +43,16 @@ _TIER_BUCKETS = {"Taxable": "Taxable", "TaxAdvantaged": "Tax-advantaged"}
 
 
 def bucket(account: str) -> str:
-    """The allocation bucket an asset account falls into (``BUCKETS``)."""
     return _TIER_BUCKETS.get(tier_of(account) or "", "Liquid")
 
 
 @dataclass
 class AccountValue:
-    """One account's USD value at a point in time, tagged with its group and allocation bucket."""
+    """One account's USD value at a point in time, tagged with its group."""
 
     account: str
     label: str
     group: str  # "cash" | "investment" | "liability"
-    bucket: str  # allocation bucket (assets only; liabilities repeat their group)
     value: Decimal
 
 
@@ -103,8 +101,6 @@ class Adjustment:
 
 
 class NetWorth:
-    """Query namespace for net worth. Constructed as ``ledger.net_worth``."""
-
     def __init__(self, ledger: "Ledger"):
         self._led = ledger
 
@@ -143,13 +139,13 @@ class NetWorth:
 
         for a in self._led.active_accounts(CASH):
             label = account_name(a, meta.get(a))
-            out.append(AccountValue(a, label, "cash", bucket(a), self._led.value(a, as_of)))
+            out.append(AccountValue(a, label, "cash", self._led.value(a, as_of)))
         for a in self._led.active_accounts(INVESTMENTS):
             label = account_name(a, meta.get(a))
-            out.append(AccountValue(a, label, "investment", bucket(a), self._led.value(a, as_of)))
+            out.append(AccountValue(a, label, "investment", self._led.value(a, as_of)))
         for a in self._led.active_accounts(LIABILITIES):
             bal = self._led.balance(a, as_of)
-            out.append(AccountValue(a, account_name(a, meta.get(a)), "liability", "liability", bal))
+            out.append(AccountValue(a, account_name(a, meta.get(a)), "liability", bal))
 
         return out
 

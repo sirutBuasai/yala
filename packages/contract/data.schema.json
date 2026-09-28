@@ -389,7 +389,6 @@
     },
     "Domains": {
       "additionalProperties": false,
-      "description": "Which domains carry data.",
       "properties": {
         "spending": {
           "title": "Spending",
@@ -630,10 +629,6 @@
           "title": "Group",
           "type": "string"
         },
-        "bucket": {
-          "title": "Bucket",
-          "type": "string"
-        },
         "value": {
           "title": "Value",
           "type": "number"
@@ -643,7 +638,6 @@
         "account",
         "label",
         "group",
-        "bucket",
         "value"
       ],
       "title": "NetWorthAccount",

@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeData } from '$lib/data/__fixtures__/dashboard';
-import {
-	amount,
-	average,
-	categoryAmount,
-	categoryShare,
-	change,
-	count,
-	extremum,
-	ratio
-} from './metric';
+import { amount, average, categoryTotals, change, count, extremum, ratio } from './metric';
 
 describe('amount', () => {
 	it('sums aggregate fields across the lifetime', () => {
@@ -121,19 +112,12 @@ describe('ratio', () => {
 	});
 });
 
-describe('categoryAmount / categoryShare', () => {
+describe('categoryTotals', () => {
 	it('reads a category at each scope', () => {
 		const d = makeData();
-		expect(categoryAmount(d, { level: 'all' }, 'Grocery').value).toBe(100);
-		expect(categoryAmount(d, { level: 'year', year: 2024 }, 'Grocery').value).toBe(70);
-		expect(categoryAmount(d, { level: 'month', monthKey: '2025-01' }, 'Grocery').value).toBe(30);
-	});
-
-	it('computes a category share of spending', () => {
-		const d = makeData();
-		const s = categoryShare(d, { level: 'all' }, 'Grocery', 'spending');
-		expect(s.value).toBeCloseTo((100 / 165.5) * 100, 6);
-		expect(s.note).toEqual({ text: 'of spending' });
+		expect(categoryTotals(d, { level: 'all' }).Grocery).toBe(100);
+		expect(categoryTotals(d, { level: 'year', year: 2024 }).Grocery).toBe(70);
+		expect(categoryTotals(d, { level: 'month', monthKey: '2025-01' }).Grocery).toBe(30);
 	});
 });
 
@@ -213,7 +197,7 @@ describe('a windowed lifetime', () => {
 	});
 
 	it('reads its categories from those years alone', () => {
-		expect(categoryAmount(makeData(), window, 'Grocery').value).toBe(30);
+		expect(categoryTotals(makeData(), window).Grocery).toBe(30);
 	});
 
 	it('averages a year over the years it covers', () => {

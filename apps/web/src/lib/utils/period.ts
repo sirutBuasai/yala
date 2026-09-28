@@ -39,12 +39,12 @@ export function addDays(iso: string, delta: number): string {
 	return isoOf(new Date(y, m - 1, d + delta));
 }
 
-/** Numeric Date args, so year rollover works and the string form's UTC parse pitfall is avoided. */
 /** Whether ISO `key` falls within ISO `period`: a day in its month, a month in its year, or itself. */
 export function inPeriod(key: string, period: string): boolean {
 	return key === period || key.startsWith(`${period}-`);
 }
 
+/** Numeric Date args, so year rollover works and the string form's UTC parse pitfall is avoided. */
 export function addMonths(key: string, delta: number): string {
 	const [y = 0, m = 1] = key.split('-').map(Number);
 	const d = new Date(y, m - 1 + delta, 1);

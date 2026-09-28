@@ -199,8 +199,6 @@ export function netWorthLiabilities(data: DashboardData, year?: number, since?: 
 	return snapshotSeries(data, 'liabilities', year, since);
 }
 
-// --- a period's move, read the same way wherever it is drawn ---
-
 interface Window {
 	open: NetWorthSnapshot | null;
 	close: NetWorthSnapshot | null;
@@ -484,7 +482,6 @@ export function netWorthAccounts(data: DashboardData): Categorical {
 	);
 }
 
-// --- growth decomposition ---
 //
 //     ΔNetWorth = saved + everything-else,  saved = logged income - logged spending
 //
@@ -778,8 +775,6 @@ export function netWorthYearTable(data: DashboardData, since?: number): Table {
 	};
 }
 
-// --- targets, derived from your own spending and the settings you state ---
-
 /** Annualized `measure` over the trailing year of months with data. Exported so a projection preview
     reads the same rates the targets are built from. */
 export function trailingAnnual(
@@ -919,8 +914,6 @@ export function coastYear(
 	if (current <= 0 || growth <= 1) return null;
 	return now + Math.ceil(Math.log(target / current) / Math.log(growth));
 }
-
-// --- rates and risk ---
 
 /** Compound annual growth of the balance, as a percentage. Not a return: contributions are included, so
     it overstates investment performance. Null under half a year of history. */

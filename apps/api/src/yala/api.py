@@ -50,9 +50,6 @@ for router in ROUTERS:
     app.include_router(router)
 
 
-# --- static frontend + entrypoint ---
-
-
 class SPAStaticFiles(StaticFiles):
     """Serves prerendered ``<path>.html`` pages, which ``StaticFiles`` misses, then the SPA shell.
     ``/api`` stays a hard 404 rather than an HTML shell."""
@@ -76,8 +73,7 @@ class SPAStaticFiles(StaticFiles):
             return await super().get_response("200.html", scope)
 
 
-# Static frontend (the SvelteKit static-adapter build output, at config.WEB_DIR) is mounted LAST so
-# /api/* routes always win. Absence is tolerated (e.g. before `npm run build` in apps/web/).
+# Mounted last so /api routes always win. Absence is tolerated so the API runs without a web build.
 if config.WEB_DIR.is_dir():
     app.mount("/", SPAStaticFiles(directory=config.WEB_DIR, html=True), name="web")
 
@@ -87,6 +83,6 @@ if __name__ == "__main__":
 
     import uvicorn
 
-    # Port is overridable (env var, set by scripts/serve.py) so it can dodge a busy 8000.
+    # Overridable so serve.py can dodge a busy port.
     port = int(os.environ.get("YALA_API_PORT", "8000"))
     uvicorn.run(app, host="127.0.0.1", port=port)

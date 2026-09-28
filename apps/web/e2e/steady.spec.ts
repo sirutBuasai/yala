@@ -111,8 +111,7 @@ test('a reload, a popup and a narrower window leave every pane where it was', as
 	await settle(page);
 	const base = await cells(page);
 
-	// The harness clears storage on every navigation, so this reopens the board from its declared defaults —
-	// which is the comparison worth making: a reload must not land on a different arrangement.
+	// A reload must not land on a different arrangement.
 	await page.reload();
 	await showPage(page, 'Transactions');
 	await settle(page);

@@ -40,8 +40,6 @@ def scrub_paths(text: str) -> str:
 
 
 def locator_of(meta: dict | None) -> str:
-    """Stable edit handle from an entry's meta: ``id:<uuid>`` if present, else
-    ``line:<ledger-relative-path>:<lineno>``."""
     meta = meta or {}
     uid = meta.get("id")
 
@@ -86,12 +84,10 @@ def _find(entries: list, locator: str, directive: type, label: str):
 
 
 def find_entry(entries: list, locator: str) -> data.Transaction:
-    """Resolve a locator (``id:<uuid>`` or ``line:<path>:<lineno>``) to a beancount transaction."""
     return _find(entries, locator, data.Transaction, "transaction")
 
 
 def find_balance(entries: list, locator: str) -> data.Balance:
-    """Resolve a locator to a beancount ``balance`` assertion."""
     return _find(entries, locator, data.Balance, "balance assertion")
 
 

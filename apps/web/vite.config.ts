@@ -4,11 +4,8 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig(({ mode }) => ({
 	plugins: [sveltekit()],
-	// Svelte 5's client component runtime is published under the "browser" export
-	// condition; resolve it during tests so @testing-library/svelte can mount
-	// components in jsdom. Vitest resolves this config with mode "test".
-	//
-	// Floating UI is aliased to a stub in the same breath; that file says why.
+	// Svelte 5's client runtime ships under the "browser" condition, which @testing-library/svelte needs to
+	// mount in jsdom. Floating UI is stubbed here too; the stub says why.
 	resolve:
 		mode === 'test'
 			? {

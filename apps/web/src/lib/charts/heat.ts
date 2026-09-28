@@ -102,7 +102,6 @@ export function tableShades(table: Table): ({ good: boolean; a: number } | null)
 	);
 }
 
-/** The hue a shade takes. */
 export const shadeHue = (good: boolean): string => `var(--${good ? 'good' : 'crit'})`;
 
 /** A Table as tiles: its first column labels the rows, and only its tinted columns are shaded. Its levels

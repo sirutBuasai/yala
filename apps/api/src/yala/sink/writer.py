@@ -41,8 +41,6 @@ def flag_for(pending: bool) -> str:
 
 
 class LedgerWriter:
-    """File-level write machinery, mixed into :class:`~yala.sink.FileLedgerSink`."""
-
     def __init__(self, ledger_dir: Path | None = None):
         self.ledger_dir = Path(ledger_dir) if ledger_dir else config.LEDGER_DIR
         self.main_ledger = self.ledger_dir / "main.beancount"

@@ -16,6 +16,7 @@ from tests.conftest import (
     SAVINGS,
     append_accounts,
     load_ledger,
+    log_reading,
 )
 
 
@@ -27,9 +28,6 @@ def _text(client: TestClient) -> str:
     """Every ledger file's text at once, for asserting that no stale reference is left anywhere."""
     root: Path = client.ledger_dir  # type: ignore[attr-defined]
     return "".join(p.read_text() for p in sorted(root.glob("**/*.beancount")))
-
-
-# --- rename ---
 
 
 def test_rename_a_category_rewrites_its_history(client: TestClient):
@@ -56,7 +54,7 @@ def test_rename_a_category_rewrites_its_history(client: TestClient):
 def test_rename_a_bank_account_carries_its_plug(client: TestClient):
     """The plug is derived from the account's path, so leaving it behind would strand every future
     snapshot with nowhere to pad."""
-    client.post("/api/balance", json={"account": BANK_A, "amount": 500.0, "date": "2026-02-10"})
+    log_reading(client, BANK_A, 500.0, "2026-02-10")
 
     r = _rename(client, BANK_A, name="BankZ")
 
@@ -102,11 +100,6 @@ def test_moving_an_investment_between_tiers_repoints_its_plug(client: TestClient
     assert (
         "Equity:Adjustments:Investments:TaxAdvantaged:Employer401k" not in led.declared_accounts()
     )
-    # the account keeps its allocation bucket honest
-    buckets = {
-        a["account"]: a["bucket"] for a in client.get("/api/data").json()["networth"]["accounts"]
-    }
-    assert buckets["Assets:Investments:Taxable:Employer401k"] == "Taxable"
 
 
 def test_moving_an_investment_can_rename_and_retier_at_once(client: TestClient):
@@ -209,9 +202,6 @@ def test_rename_of_a_closed_account_still_works(client: TestClient):
     assert "Liabilities:CC:CardD" not in _text(client)
 
 
-# --- label rename ---
-
-
 def _relabel(client: TestClient, account: str, old: str, new: str):
     return client.post("/api/account/relabel", json={"account": account, "old": old, "new": new})
 
@@ -279,9 +269,6 @@ def test_relabel_on_an_account_that_offers_no_labels_is_refused(client: TestClie
 
     assert r.status_code == 422
     assert "contribution labels" in r.json()["detail"]
-
-
-# --- renaming the institution ---
 
 
 def _held_at(client: TestClient, institution: str) -> tuple[str, str]:
@@ -484,9 +471,6 @@ def test_the_four_parts_are_stored_and_shown_back_as_typed(client: TestClient):
     assert entry["account_alias"] == "Cash"
     # the full name overruns the cap, and the institution's short form is enough on its own
     assert entry["name"] == "BoE Cash Rewards"
-
-
-# --- one definition of which path segment a name owns ---
 
 
 def test_both_rename_paths_agree_on_the_segment_a_name_owns(client: TestClient):

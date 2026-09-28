@@ -1,12 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Browser-level tests, which is the only place the layout rules can be checked at all: every defect they
- * cover — a card its content bleeds out of, a label clipped mid-glyph, a dropdown off the bottom of the
- * viewport — needs real measurement, and jsdom has none, so `vitest` structurally cannot see them.
- *
- * Runs against the PRODUCTION build rather than the dev server: that is the artifact `make serve` puts in
- * front of the user, and a stale build was once mistaken for code that had not changed.
+ * The only place layout rules can be checked, since jsdom measures nothing. Runs against the production
+ * build: a stale build was once mistaken for code that had not changed.
  */
 const PORT = 4183;
 

@@ -29,7 +29,7 @@
 
 {#if open}
 	<!-- Esc, the scrim, focus restoration and making the page behind inert are all the dialog's own (see
-	     overlay/modal), so this no longer listens on the window or renders a backdrop element. -->
+	     overlay/modal). -->
 	<dialog class="sheet" aria-label={CLOSE_MENU} use:modal={{ onclose: close, closeMs: dur(220) }}>
 		<div class="sidebar" style:width="{SIDEBAR_W}px">
 			<div class="head">

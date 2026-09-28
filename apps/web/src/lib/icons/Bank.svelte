@@ -1,5 +1,4 @@
 <script lang="ts">
-	// A columned building. Marks Accounts.
 	import Icon from './Icon.svelte';
 
 	let { size = 16 }: { size?: number } = $props();

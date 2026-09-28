@@ -80,7 +80,6 @@ export async function showPage(page: Page, label: string): Promise<void> {
 	await settle(page);
 }
 
-/** One of a Year view's span tabs. */
 export function spanTab(page: Page, name: string): Locator {
 	return page.getByRole('tablist', { name: 'Years shown' }).getByRole('tab', { name, exact: true });
 }
@@ -200,7 +199,7 @@ export async function doGesture(
 }
 
 /** Everything the audit found, as one message a failure can be read from. */
-export function report(where: string, found: Audit): string {
+function report(where: string, found: Audit): string {
 	const lines = [
 		...found.bleed.map((b) => `bleed ${b.by}px out of "${b.card}": ${b.el}`),
 		...found.clipped.map((c) => `clipped label (dx ${c.dx}, dy ${c.dy}): ${c.el}`),

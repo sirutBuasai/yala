@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.conftest import log_reading
 from yala import config
 
 
@@ -62,7 +63,6 @@ def test_get_accounts_keys(client: TestClient):
         "liability_accounts",
         "sweeps",
     }
-    # closed account is excluded from active funding accounts
     assert "Liabilities:CC:CardD" not in body["funding_accounts"]
     # only open employers surface; Employer2 was closed
     assert body["employers"] == ["Employer1"]
@@ -97,7 +97,6 @@ def test_accounts_payroll_options_scoped_and_split(client: TestClient):
     assert {o["account"] for o in splits} == {k401}
     assert all(o["employer"] == "Employer1" for o in splits)
 
-    # generic deductions carry no employer scope
     tax = next(o for o in opts if o["label"] == "Tax")
     assert tax["kind"] == "deduction" and tax["employer"] is None
 
@@ -113,7 +112,6 @@ def test_accounts_funding_pool_mixes_cash_and_cards(client: TestClient):
 
     assert "Assets:Cash:Wallet" in funding
     assert "Liabilities:CC:CardA" in funding
-    # the abandoned friends/receivable model is no longer a payback source
     assert not any(a.startswith("Assets:Receivable:") for a in funding)
 
     assert body["card_accounts"] == [
@@ -142,7 +140,6 @@ def test_post_transaction_is_visible_on_next_get(client: TestClient):
     data = client.get("/api/data").json()
     txns = data["months"]["2026-02"]["transactions"]
     coffee = [t for t in txns if t["payee"] == "api coffee"][0]
-    # source is the funding account (no src label), and a locator is emitted
     assert coffee["source"] == "Liabilities:CC:CardA"
     assert coffee["locator"]
 
@@ -328,7 +325,7 @@ def test_post_account_composes_the_leaf_from_institution_and_name(client: TestCl
 
     assert r.status_code == 200
     assert r.json()["account"] == "Liabilities:CC:BankOfExampleCashRewards"
-    # Over the display cap with no alias on file, so it comes back in full (step 5).
+    # Over the display cap with no alias on file, so it comes back in full.
     assert r.json()["name"] == "Bank of Example Cash Rewards"
 
 
@@ -501,10 +498,7 @@ def test_close_passthrough_account_succeeds(client: TestClient):
 def test_bare_close_of_a_money_account_holding_a_balance_is_422(client: TestClient):
     """Closing is not a write-off. Beancount accepts `close` whatever the account holds, and the
     account then leaves the balance sheet carrying its value away unrecorded."""
-    client.post(
-        "/api/balance",
-        json={"account": "Assets:Cash:BankA", "amount": 500.00, "date": "2026-02-10"},
-    )
+    log_reading(client, "Assets:Cash:BankA", 500.00, "2026-02-10")
 
     r = client.post("/api/account/close", json={"account": "Assets:Cash:BankA"})
     assert r.status_code == 422
@@ -513,10 +507,7 @@ def test_bare_close_of_a_money_account_holding_a_balance_is_422(client: TestClie
 
 
 def test_closing_a_money_account_to_a_destination_moves_its_balance(client: TestClient):
-    client.post(
-        "/api/balance",
-        json={"account": "Assets:Cash:BankA", "amount": 500.00, "date": "2026-02-10"},
-    )
+    log_reading(client, "Assets:Cash:BankA", 500.00, "2026-02-10")
 
     r = client.post(
         "/api/account/close",
@@ -682,9 +673,6 @@ def test_update_unknown_locator_is_404(client: TestClient):
     assert "no transaction found" in r.json()["detail"]
 
 
-# --- paycheck endpoint ---
-
-
 def test_post_paycheck_is_visible_on_next_get(client: TestClient):
     r = client.post(
         "/api/paycheck",
@@ -848,9 +836,6 @@ def test_post_paycheck_unopened_account_is_422_with_clear_detail(client: TestCli
     assert "does not exist" in detail
 
 
-# --- delete endpoint ---
-
-
 def test_delete_transaction_flow(client: TestClient):
     r = client.post(
         "/api/transaction",
@@ -965,9 +950,6 @@ def test_transfer_update_and_delete(client: TestClient):
     d = client.post("/api/entry/delete", json={"locator": locator})
     assert d.status_code == 200
     assert client.get("/api/data").json()["months"].get("2026-03", {}).get("transfers", []) == []
-
-
-# --- request-body validation (pydantic → 422) ---
 
 
 def _txn_body(**overrides) -> dict:

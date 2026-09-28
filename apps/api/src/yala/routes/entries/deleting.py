@@ -19,7 +19,6 @@ class EntryDeleteIn(BaseModel):
 
 @router.post("/api/entry/delete")
 def post_entry_delete(body: EntryDeleteIn) -> dict:
-    """Delete a located entry (spending transaction, paycheck, or transfer) from the ledger."""
     with api_errors():
         led = ledger()
         entry = find_entry(led.entries, body.locator)

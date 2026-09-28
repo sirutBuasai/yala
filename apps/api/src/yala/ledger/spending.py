@@ -35,8 +35,6 @@ class SpendingTransaction:
 
 
 class Spending:
-    """Query namespace for spending. Constructed as ``ledger.spending``."""
-
     def __init__(self, ledger: "Ledger"):
         self._led = ledger
 

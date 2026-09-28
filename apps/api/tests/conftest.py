@@ -3,6 +3,7 @@ needs."""
 
 from __future__ import annotations
 
+import datetime as dt
 import shutil
 import textwrap
 from pathlib import Path
@@ -60,7 +61,29 @@ def load_ledger(ledger_dir: Path) -> Ledger:
     return led
 
 
+def log_reading(
+    client: TestClient,
+    account: str,
+    amount: float,
+    date: dt.date | str | None = None,
+    locator: str | None = None,
+):
+    """One reading through ``/api/balances``, the route a balance pane saves through. ``locator``
+    corrects that snapshot in place rather than logging a new one."""
+    reading: dict = {"account": account, "amount": amount}
+    if locator:
+        reading["locator"] = locator
+    date = None if date is None else str(date)
+    return client.post("/api/balances", json={"date": date, "readings": [reading]})
+
+
+def refusal(response) -> str | None:
+    """Why the sitting's one reading was refused, or ``None`` when it saved. The batch reports a
+    refused reading under ``failed`` rather than failing the request."""
+    assert response.status_code == 200, response.text
+    return next(iter(response.json()["failed"].values()), None)
+
+
 def append_accounts(ledger_dir: Path, text: str) -> None:
-    """Append dedented text to the fixture's account declarations."""
     path = Path(ledger_dir) / "accounts.beancount"
     path.write_text(path.read_text() + textwrap.dedent(text))
