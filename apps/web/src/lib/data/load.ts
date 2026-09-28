@@ -342,35 +342,31 @@ export async function investmentValue(
 	return ok ? { value: data.value ?? 0, error: null } : { value: null, error: error ?? 'failed' };
 }
 
-/** Log a USD balance snapshot (pad + balance). Share lots are reclassified to USD first. */
-export async function logBalance(
-	account: string,
-	amount: number,
-	date?: string
-): Promise<{ locator: string | null; error: string | null }> {
-	const { ok, data, error } = await postJson<{ locator?: string }>('/api/balance', {
-		account,
-		amount,
-		date: date || undefined
-	});
-	return ok
-		? { locator: data.locator ?? null, error: null }
-		: { locator: null, error: error ?? 'log failed' };
+/** One account's figure in a sitting: typed as the statement reads, with the snapshot standing on
+    the reading's date to correct in place, if there is one. */
+export interface Reading {
+	account: string;
+	amount: number;
+	locator?: string;
 }
 
-/** Edit a balance snapshot in place. The returned locator may differ: editing a migrated assertion
-    stamps an id on it, replacing its line handle. */
-export async function updateBalance(
-	locator: string,
-	amount: number
-): Promise<{ locator: string | null; error: string | null }> {
-	const { ok, data, error } = await postJson<{ locator?: string }>('/api/balance/update', {
-		locator,
-		amount
-	});
+/** Save a whole sitting in one request. Share lots are reclassified to USD first. Each saved account
+    maps to the locator of its snapshot, each refused one to why. */
+export async function logBalances(
+	date: string,
+	readings: Reading[]
+): Promise<{
+	saved: Record<string, string>;
+	failed: Record<string, string>;
+	error: string | null;
+}> {
+	const { ok, data, error } = await postJson<{
+		saved?: Record<string, string>;
+		failed?: Record<string, string>;
+	}>('/api/balances', { date, readings });
 	return ok
-		? { locator: data.locator ?? locator, error: null }
-		: { locator: null, error: error ?? 'edit failed' };
+		? { saved: data.saved ?? {}, failed: data.failed ?? {}, error: null }
+		: { saved: {}, failed: {}, error: error ?? 'save failed' };
 }
 
 /** Per-account USD values and adjustment plugs as of a date. */
