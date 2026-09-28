@@ -197,6 +197,8 @@ def test_the_directory_carries_category_and_institution_colours(client: TestClie
     accounts = client.get("/api/data").json()["meta"]["accounts"]
     assert accounts["Expenses:Grocery"]["color"] == "#123456"
     assert accounts["Expenses:Takeouts"]["color"] == "#bb9af7"
+    assert accounts["Expenses:Grocery"]["default_color"] == "#f295c5"
+    assert accounts["Assets:Cash:BankA"]["default_color"] is None
 
 
 # --- the endpoint ---

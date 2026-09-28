@@ -3,7 +3,7 @@
 
 import { get, writable } from 'svelte/store';
 import { asset } from '$app/paths';
-import { setAccountDirectory } from '$lib/data/directory.svelte';
+import { setAccountDirectory, type ColorFamily } from '$lib/data/directory.svelte';
 import type { AccountLists, DashboardData, SchemaVersion, SettingField } from '$lib/data/types';
 import { settingField } from '$lib/data/assumptions';
 import { seedLayouts } from '$lib/data/layouts';
@@ -345,6 +345,15 @@ export async function investmentValue(
 		`/api/investment/value?account=${encodeURIComponent(account)}`
 	);
 	return ok ? { value: data.value ?? 0, error: null } : { value: null, error: error ?? 'failed' };
+}
+
+/** Set the colour an institution or category is drawn in; `null` drops the pick. */
+export async function setColor(
+	family: ColorFamily,
+	name: string,
+	color: string | null
+): Promise<string | null> {
+	return (await postJson('/api/color', { family, name, color })).error;
 }
 
 /** One account's figure in a sitting: typed as the statement reads, with the snapshot standing on

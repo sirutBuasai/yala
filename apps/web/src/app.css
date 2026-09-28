@@ -35,6 +35,8 @@
 	--control-line: var(--lav-text);
 	/* Fallback for an account with no institution colour; the user's settings state the rest. */
 	--inst-neutral: #8f86a8;
+	/* Edges a colour swatch, so a pale pick still reads as a shape against the page. */
+	--swatch-ring: inset 0 0 0 1px color-mix(in srgb, var(--ink) 18%, transparent);
 	/* ── Role palette ─────────────────────────────────────────────────────────
 	   Financial roles, not hues: a role keeps its hue across every chart. Categories and institutions are the
 	   exceptions, since their members have identity. */

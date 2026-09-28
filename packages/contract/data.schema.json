@@ -68,6 +68,18 @@
           "default": null,
           "title": "Color"
         },
+        "default_color": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Color"
+        },
         "kind": {
           "anyOf": [
             {

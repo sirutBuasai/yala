@@ -10,6 +10,7 @@
 	import { onKey } from '$lib/utils/keys';
 	import { isTypeKey, Typeahead } from '$lib/utils/typeahead';
 	import Popup from '$lib/overlay/Popup.svelte';
+	import Chevron from '$lib/icons/Chevron.svelte';
 
 	interface Props {
 		/** Selected value (bindable). */
@@ -119,16 +120,7 @@
 			{@render customTrigger()}
 		{:else}
 			<span class="val" class:placeholder={!value}>{value ? optionLabel(value) : placeholder}</span>
-			<svg class="chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-				<path
-					d="M2.5 4.5 6 8l3.5-3.5"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.6"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				/>
-			</svg>
+			<span class="chev"><Chevron dir="down" size={12} /></span>
 		{/if}
 	{/snippet}
 
@@ -158,6 +150,7 @@
 
 <style>
 	.chev {
+		display: flex;
 		flex: 0 0 auto;
 		color: var(--ink-2);
 	}

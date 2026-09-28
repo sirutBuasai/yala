@@ -7,6 +7,7 @@
 	import { accountVar } from '$lib/utils/theme';
 	import { kindPlural, kindSingular } from '$lib/views/manage/kinds';
 	import Chevron from '$lib/icons/Chevron.svelte';
+	import Search from '$lib/icons/Search.svelte';
 
 	interface Props {
 		/** The kind names the API declares, in the order the groups should read. */
@@ -80,7 +81,7 @@
 
 <div class="index">
 	<div class="finder">
-		<span class="glyph" aria-hidden="true">⌕</span>
+		<span class="glyph"><Search size={13} /></span>
 		<input
 			type="search"
 			aria-label="Search accounts"
@@ -206,6 +207,7 @@
 		border-color: var(--lav);
 	}
 	.finder .glyph {
+		display: flex;
 		color: var(--ink-3);
 	}
 	.finder input {

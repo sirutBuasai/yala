@@ -15,6 +15,7 @@
 		matchWidth?: boolean;
 		/** Anchor the panel's left or right edge to the trigger (right avoids clipping a right-aligned trigger). */
 		align?: 'left' | 'right';
+		disabled?: boolean;
 		/** Class on the trigger button; defaults to the boxed Select/DatePicker chrome. */
 		triggerClass?: string;
 		/** The trigger element, exposed so consumers can refocus it after choosing. */
@@ -39,6 +40,7 @@
 		popupRole = 'listbox',
 		matchWidth = false,
 		align = 'left',
+		disabled = false,
 		triggerClass = 'trigger',
 		triggerEl = $bindable(),
 		controls,
@@ -130,6 +132,7 @@
 	aria-controls={open ? controls : undefined}
 	aria-activedescendant={open ? activeDescendant : undefined}
 	aria-label={ariaLabel}
+	{disabled}
 	onclick={() => (open ? (open = false) : openPopup())}
 	onkeydown={onKey}
 >
