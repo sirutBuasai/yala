@@ -14,7 +14,7 @@ from pathlib import Path
 
 from yala import config
 from yala.ledger.files import atomic_write
-from yala.user_settings.colors import CATEGORIES, DEFAULT_CATEGORY_COLORS, FAMILIES, parse_color
+from yala.user_settings.colors import FAMILIES, parse_color, starting_color
 from yala.user_settings.specs import SETTINGS, SETTINGS_BY_KEY, coerce
 
 FILE_NAME = "settings.json"
@@ -102,10 +102,7 @@ class UserSettings:
 
     def color(self, family: str, name: str) -> str | None:
         """The user's pick, else a category's starting colour. An institution has none."""
-        own = self.colors[family].get(name)
-        if own is None and family == CATEGORIES:
-            return DEFAULT_CATEGORY_COLORS.get(name)
-        return own
+        return self.colors[family].get(name) or starting_color(family, name)
 
     def set_color(self, family: str, name: str, value: str | None) -> str | None:
         """``None``, or a category's starting colour itself, drops the pick. Raises ``ValueError``
@@ -115,8 +112,7 @@ class UserSettings:
         color = None if value is None else parse_color(value)
         if value is not None and color is None:
             raise ValueError(f"colour must be a hex like #rrggbb: {value!r}")
-        starting = DEFAULT_CATEGORY_COLORS.get(name) if family == CATEGORIES else None
-        if color is None or color == starting:
+        if color is None or color == starting_color(family, name):
             self.colors[family].pop(name, None)
             return None
         self.colors[family][name] = color

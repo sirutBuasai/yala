@@ -9,14 +9,17 @@
 	interface Props {
 		/** `#rrggbb` (bindable). Follows the thumbs as they move. */
 		value: string;
-		/** What "Back to current" returns to: the colour as saved. */
+		/** What Current returns to: the colour as saved. */
 		current: string;
+		/** What Default returns to; null offers no Default, as for an institution. */
+		fallback?: string | null;
 		ariaLabel?: string;
 		disabled?: boolean;
 	}
 	let {
 		value = $bindable(),
 		current,
+		fallback = null,
 		ariaLabel = 'Open color picker',
 		disabled = false
 	}: Props = $props();
@@ -190,7 +193,12 @@
 		</div>
 
 		<div class="foot">
-			<button type="button" class="btn-mini" onclick={() => adopt(current)}>Back to current</button>
+			<div class="back">
+				{#if fallback}
+					<button type="button" class="btn-mini" onclick={() => adopt(fallback)}>Default</button>
+				{/if}
+				<button type="button" class="btn-mini" onclick={() => adopt(current)}>Current</button>
+			</div>
 			<button type="button" class="btn-mini" onclick={close}>Done</button>
 		</div>
 	</div>
@@ -332,5 +340,9 @@
 	.foot {
 		display: flex;
 		justify-content: space-between;
+	}
+	.back {
+		display: flex;
+		gap: var(--space-3);
 	}
 </style>

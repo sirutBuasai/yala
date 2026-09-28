@@ -18,6 +18,7 @@ export type AccountName = string | null;
 export type InstitutionAlias = string | null;
 export type AccountAlias = string | null;
 export type Color = string | null;
+export type DefaultColor = string | null;
 export type Kind = ('category' | 'bank' | 'card' | 'investment' | 'employer' | 'deduction') | null;
 export type Tier = ('Taxable' | 'TaxAdvantaged') | null;
 export type Closed = boolean;
@@ -178,6 +179,7 @@ export interface AccountInfo {
 	institution_alias?: InstitutionAlias;
 	account_alias?: AccountAlias;
 	color?: Color;
+	default_color?: DefaultColor;
 	kind?: Kind;
 	tier?: Tier;
 	closed?: Closed;

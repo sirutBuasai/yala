@@ -31,6 +31,11 @@ DEFAULT_CATEGORY_COLORS = {
 }
 
 
+def starting_color(family: str, name: str) -> str | None:
+    """What ``name`` is drawn in until the user picks: a category's default, an institution none."""
+    return DEFAULT_CATEGORY_COLORS.get(name) if family == CATEGORIES else None
+
+
 def parse_color(value: object) -> str | None:
     """A declared colour as a normalized ``#rrggbb``, or ``None`` if it isn't a hex literal."""
     if not isinstance(value, str) or not HEX_RE.match(value.strip()):

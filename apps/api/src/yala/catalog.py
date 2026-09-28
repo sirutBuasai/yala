@@ -11,7 +11,7 @@ from yala.ledger.naming import NAME_PARTS, account_name, institution_of
 from yala.ledger.sweep import sweep_edges
 from yala.schema import AccountInfo, AccountKind, AccountLists, PayrollOption, SettingField
 from yala.user_settings import read as read_settings
-from yala.user_settings.colors import CATEGORIES, INSTITUTIONS
+from yala.user_settings.colors import CATEGORIES, INSTITUTIONS, starting_color
 from yala.user_settings.specs import SETTINGS
 
 
@@ -38,6 +38,7 @@ def account_directory(ledger: Ledger) -> dict[str, AccountInfo]:
         return AccountInfo(
             name=account_name(account, meta),
             color=settings.color(*key) if (key := color_key(account, meta)) else None,
+            default_color=starting_color(*key) if key else None,
             kind=kind.name if kind else None,
             tier=accounts.tier_of(account),
             closed=account not in active,

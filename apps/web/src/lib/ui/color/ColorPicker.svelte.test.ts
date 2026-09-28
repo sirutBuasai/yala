@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/svelte';
 import { fireEvent } from '@testing-library/dom';
 import ColorPicker from '$lib/ui/color/ColorPicker.svelte';
 
-function open(value = '#ff0000', current = '#00ff00') {
-	const props = $state({ value, current });
+function open(value = '#ff0000', current = '#00ff00', fallback: string | null = null) {
+	const props = $state({ value, current, fallback });
 	render(ColorPicker, { props });
 	return { props, trigger: screen.getByRole('combobox', { name: 'Open color picker' }) };
 }
@@ -27,8 +27,21 @@ describe('ColorPicker', () => {
 		await fireEvent.click(screen.getByRole('button', { name: '#bb9af7' }));
 		expect(props.value).toBe('#bb9af7');
 
-		await fireEvent.click(screen.getByRole('button', { name: 'Back to current' }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Current' }));
 		expect(props.value).toBe('#00ff00');
+	});
+
+	it('offers Default only where there is one to return to', async () => {
+		const withDefault = open('#ff0000', '#00ff00', '#f295c5');
+		await fireEvent.click(withDefault.trigger);
+		await fireEvent.click(screen.getByRole('button', { name: 'Default' }));
+		expect(withDefault.props.value).toBe('#f295c5');
+	});
+
+	it('has no Default for a colour that starts as none', async () => {
+		const { trigger } = open();
+		await fireEvent.click(trigger);
+		expect(screen.queryByRole('button', { name: 'Default' })).toBeNull();
 	});
 
 	it('closes on Esc, returning focus to the swatch', async () => {

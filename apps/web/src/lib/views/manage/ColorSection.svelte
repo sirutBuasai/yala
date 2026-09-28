@@ -12,13 +12,22 @@
 		key: ColorKey;
 		/** The colour as saved, or null for an institution nobody has coloured. */
 		saved: string | null;
+		/** What the colour returns to on Default, or null where there is none. */
+		fallback?: string | null;
 		/** The unsaved pick, or null when there is none (bindable). */
 		draft: string | null;
 		/** Accounts at this institution, for the hint; unused for a category. */
 		accounts?: number;
 		disabled?: boolean;
 	}
-	let { key, saved, draft = $bindable(), accounts = 1, disabled = false }: Props = $props();
+	let {
+		key,
+		saved,
+		fallback = null,
+		draft = $bindable(),
+		accounts = 1,
+		disabled = false
+	}: Props = $props();
 
 	const shown = $derived(draft ?? saved);
 
@@ -151,6 +160,7 @@
 			<ColorPicker
 				bind:value={() => shown ?? THEME_COLORS[0]!, (v) => pick(v)}
 				current={saved ?? shown ?? THEME_COLORS[0]!}
+				{fallback}
 				{disabled}
 			/>
 			<input

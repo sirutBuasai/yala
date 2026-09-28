@@ -300,6 +300,7 @@
 						<ColorSection
 							key={colorOf}
 							saved={info?.color ?? null}
+							fallback={info?.default_color ?? null}
 							bind:draft={color}
 							accounts={alsoHeld.length + 1}
 							disabled={save.busy}

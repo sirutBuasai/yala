@@ -41,7 +41,8 @@ class AccountInfo(_Base):
     account_name: str | None = None
     institution_alias: str | None = None
     account_alias: str | None = None
-    color: str | None = None  # the institution's `#rrggbb`, used as-is in both themes
+    color: str | None = None  # the institution's or category's `#rrggbb`, used as-is in both themes
+    default_color: str | None = None  # what `color` returns to on reset; null = no colour
     kind: KindName | None = None  # null for an account this app does not manage
     tier: TierName | None = None  # investments only
     closed: bool = False
