@@ -87,7 +87,6 @@ export type Series = NetWorthSnapshot[];
 export type Account = string;
 export type Label = string;
 export type Group = string;
-export type Bucket = string;
 export type Value = number;
 export type Accounts1 = NetWorthAccount[];
 export type Account1 = string;
@@ -189,9 +188,6 @@ export interface AccountInfo {
 	sweep_to?: SweepTo;
 	includes_pending?: IncludesPending;
 }
-/**
- * Which domains carry data.
- */
 export interface Domains {
 	spending: Spending;
 	income: Income;
@@ -314,7 +310,6 @@ export interface NetWorthAccount {
 	account: Account;
 	label: Label;
 	group: Group;
-	bucket: Bucket;
 	value: Value;
 }
 export interface NetWorthAdjustment {

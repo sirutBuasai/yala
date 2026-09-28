@@ -12,7 +12,6 @@ export interface ChartFormat {
 	compact(v: number): string;
 	/** What a tooltip states, money to the cent. */
 	exact(v: number): string;
-	/** An axis tick. */
 	tick(v: number): string;
 }
 

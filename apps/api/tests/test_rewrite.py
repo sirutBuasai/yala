@@ -19,9 +19,6 @@ OLD = "Assets:Cash:BankA"
 NEW = "Assets:Cash:BankZ"
 
 
-# --- rename_accounts ---
-
-
 def test_rename_rewrites_directives_and_postings():
     text = textwrap.dedent(f"""\
         2020-01-01 open {OLD} USD
@@ -95,9 +92,6 @@ def test_rename_with_nothing_to_do_returns_the_text_unchanged():
     assert rename_accounts("anything", {}) == "anything"
 
 
-# --- rename_meta_value: deliberately unscoped ---
-
-
 def test_rename_meta_value_matches_the_whole_value_only():
     """An employer's name scopes accounts all over the ledger, so every one of them is rewritten."""
     text = '  employer: "Employer1"\n  employer: "Employer10"\n  labels: "Employer1"\n'
@@ -106,8 +100,6 @@ def test_rename_meta_value_matches_the_whole_value_only():
 
     assert out == '  employer: "Employer2"\n  employer: "Employer10"\n  labels: "Employer1"\n'
 
-
-# --- rename_meta_in_scope ---
 
 PLAN_A = "Assets:Investments:TaxAdvantaged:PlanA"
 PLAN_B = "Assets:Investments:TaxAdvantaged:PlanB"
@@ -163,9 +155,6 @@ def test_rename_meta_in_scope_leaves_a_value_that_lacks_the_item():
     assert rename_meta_in_scope(text, PLAN_A, "labels", "OptionB", "OptionZ", listed=True) == text
 
 
-# --- block removal ---
-
-
 def test_block_end_stops_at_a_blank_or_unindented_line():
     lines = ["a\n", "  m: 1\n", "\n", "b\n"]
 
@@ -183,9 +172,6 @@ def test_remove_blocks_removes_several_bottom_up():
     text = "one\ntwo\nthree\n"
 
     assert remove_blocks(text, [1, 3]) == "two\n"
-
-
-# --- file helpers ---
 
 
 def test_ledger_files_reads_every_beancount_file_under_the_directory(tmp_path: Path):

@@ -123,8 +123,6 @@ export class Pref<T> {
 	}
 }
 
-// --- revivers ---
-
 export function oneOf<T extends string>(allowed: readonly T[]): Revive<T> {
 	return (v) =>
 		typeof v === 'string' && (allowed as readonly string[]).includes(v) ? (v as T) : undefined;

@@ -24,9 +24,6 @@ def _write(ledger_dir: Path, doc: object) -> None:
     path_for(_main(ledger_dir)).write_text(json.dumps(doc))
 
 
-# --- the spec is the single source of truth ---
-
-
 def test_contract_fields_match_the_setting_specs():
     """The contract section and the spec table must not drift: every setting is a field, and every
     field is a setting (hyphens in a key become underscores in the field name)."""
@@ -39,9 +36,6 @@ def test_only_defaultless_settings_are_optional_in_the_contract():
     for spec in SETTINGS:
         field = SettingsSection.model_fields[spec.key.replace("-", "_")]
         assert (field.default is None) == (spec.default is None), spec.key
-
-
-# --- coerce (shared by the store and the API) ---
 
 
 def test_coerce_accepts_in_range_values():
@@ -72,9 +66,6 @@ def test_coerce_rejects_bad_values(key: str, value: object, message: str):
 def test_coerce_error_names_the_field_label():
     with pytest.raises(ValueError, match="Target retirement age"):
         coerce("retire-age", 5)
-
-
-# --- the store ---
 
 
 def test_values_fall_back_to_defaults_when_nothing_is_set(ledger_dir: Path):
@@ -178,9 +169,6 @@ def test_a_category_starts_on_its_default_colour_and_an_institution_on_none(ledg
     assert settings.color("institutions", "BankA") is None
 
 
-# --- the contract ---
-
-
 def test_builder_emits_effective_settings_and_layouts(ledger_dir: Path):
     _write(ledger_dir, {"planning": {"birth-year": 1996}, "layouts": {"board-home": []}})
     doc = build(Ledger(_main(ledger_dir)).load())
@@ -199,9 +187,6 @@ def test_the_directory_carries_category_and_institution_colours(client: TestClie
     assert accounts["Expenses:Takeouts"]["color"] == "#bb9af7"
     assert accounts["Expenses:Grocery"]["default_color"] == "#f295c5"
     assert accounts["Assets:Cash:BankA"]["default_color"] is None
-
-
-# --- the endpoint ---
 
 
 def test_get_settings_returns_values_and_specs(client: TestClient):

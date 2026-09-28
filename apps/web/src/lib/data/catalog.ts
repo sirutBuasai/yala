@@ -65,10 +65,7 @@ import { sumBy } from '$lib/utils/num';
 import {
 	amount,
 	average,
-	categoryAmount,
-	categoryShare,
 	change,
-	componentKeys,
 	count,
 	extremum,
 	extremumLabel,
@@ -108,8 +105,6 @@ function scalarDef(
 ): DataDef {
 	return { id, label, kind: 'scalar', scopes, build };
 }
-
-// --- multi-value data (categorical, series, flow, matrix, table) ---
 
 const CHART_DEFS: DataDef[] = [
 	{
@@ -407,7 +402,6 @@ const CHART_DEFS: DataDef[] = [
 	}
 ];
 
-// --- one measure over time ---
 // Generated over the scalars' measures, so a KPI's chart and number agree.
 
 /** Measures with a period-by-period trend, and a month's reading against its average. Month scope
@@ -497,7 +491,6 @@ const NETWORTH_STATS: DataDef[] = [
 		.map(([id, label, build]) => scalarDef(id, label, LIFETIME, (data) => build(data)))
 ];
 
-// --- the decomposition behind a change in net worth ---
 // At year scope each level is badged against last year's; a lifetime has no prior, so its rows are rates.
 
 const GROWTH_PARTS: { slug: GrowthPart; label: string }[] = [
@@ -537,8 +530,6 @@ const NET_WORTH_GROWTH_DEFS: DataDef[] = GROWTH_PARTS.flatMap((part) => [
 		netWorthGrowthPace(data, scope, part.slug, words(part.label))
 	)
 ]);
-
-// --- single-figure data (scalar metrics) ---
 
 // `note` is the figure's caption; it lives with the definition so a view can't answer differently.
 const AMOUNTS: { id: string; label: string; field: Measure; signed?: boolean; note?: string }[] = [
@@ -733,38 +724,9 @@ export function cashFlowChanges(cols: CashFlowColumn[]): string[] {
     the figures under it cannot name the measure differently. */
 export const columnHeading = (c: { total: string }) => CATALOG_BY_ID[c.total]!.label;
 
-/** Catalog entries producing a given primitive kind — powers "pick data for this chart". */
-export function dataOfKind(kind: PrimitiveKind): DataDef[] {
-	return CATALOG.filter((d) => d.kind === kind);
-}
-
 /** Build a primitive by catalog id. Throws on an unknown id. */
 export function build(data: DashboardData, id: string, scope: Scope): Primitive {
 	const def = CATALOG_BY_ID[id];
 	if (!def) throw new Error(`unknown catalog id: ${id}`);
 	return def.build(data, scope);
-}
-
-// --- data-dependent metric defs ---
-// Instances come from the loaded document, so a picker enumerates them per document and scope.
-
-/** Per-category scalar metrics (spend + share of spending) over the tracked categories. */
-export function categoryMetricDefs(data: DashboardData): DataDef[] {
-	return data.meta.categories.flatMap((c) => [
-		scalarDef(`category.${c}.amount`, `${c} spend`, ALL_SCOPES, (d, s) => categoryAmount(d, s, c)),
-		scalarDef(`category.${c}.share`, `${c} share`, ALL_SCOPES, (d, s) =>
-			categoryShare(d, s, c, 'spending')
-		)
-	]);
-}
-
-/** Per-line-item paycheck scalar metrics present in a scope's paychecks. */
-export function componentMetricDefs(data: DashboardData, scope: Scope): DataDef[] {
-	const { deductions, contributions } = componentKeys(data, scope);
-	const mk = (group: 'deductions' | 'contributions', key: string) =>
-		scalarDef(`paycheck.${group}.${key}`, key, ALL_SCOPES, (d, s) => amount(d, s, { group, key }));
-	return [
-		...deductions.map((k) => mk('deductions', k)),
-		...contributions.map((k) => mk('contributions', k))
-	];
 }

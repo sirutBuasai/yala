@@ -31,7 +31,6 @@
 		series: Series[];
 		/** The unit every series is read in, which decides how the axis, labels and tooltips word it. */
 		unit: Unit;
-		/** The unit each series' `alt` is in. */
 		altUnit?: Unit;
 		/** Print each bar's own figure above it. Only a lone series can carry them — over several they
 		    collide — and off by default, since the hover already gives the exact number. */

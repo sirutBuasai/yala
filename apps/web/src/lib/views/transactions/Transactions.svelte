@@ -1,5 +1,4 @@
 <script lang="ts">
-	// A rearrangement is stored under this board's key.
 	import { page } from '$app/stores';
 	import type { DashboardData } from '$lib/data/types';
 	import type { AccountsInfo } from '$lib/data/load';

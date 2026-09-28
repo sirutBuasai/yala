@@ -44,7 +44,6 @@ export function multiseries(
 	return { kind: 'multiseries', unit, axis, labels, series: list, periods };
 }
 
-// --- one measure over time ---
 // All read through `measureValue`, so a chart can't disagree with its figure.
 
 /** The month keys a monthly series spans, with the labels to plot them under. */
@@ -123,8 +122,6 @@ export function accumulate(s: Series): Series {
 	return { ...s, points: s.points.map((p) => ({ ...p, value: (run += p.value ?? 0) })) };
 }
 
-// --- composite ---
-
 /** Per year from `since`, or a `year`'s months. `net`, not `income`, so it reads the paycheck rows take-home
     does. */
 export function cashFlowBars(data: DashboardData, year?: number, since?: number): MultiSeries {
@@ -189,8 +186,6 @@ export function savingsRate(data: DashboardData, since?: number): Series {
 			: undefined
 	};
 }
-
-// --- a month's pace ---
 
 type MonthPage = DashboardData['months'][string];
 

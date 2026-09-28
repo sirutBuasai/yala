@@ -383,13 +383,13 @@ export async function logBalances(
 		: { saved: {}, failed: {}, error: error ?? 'save failed' };
 }
 
-/** Per-account USD values and adjustment plugs as of a date. */
 export interface LoggedSnapshot {
 	date: string;
 	amount: number;
 	locator: string | null;
 }
 
+/** Per-account USD values and adjustment plugs as of a date. */
 export interface NetWorthAt {
 	/** Snapshot-able accounts as the MONTH had them, not as today has them: one opened later or
 	    closed earlier is absent, and the month it opened or closed in still counts. */
@@ -417,8 +417,6 @@ export async function networthAt(date: string): Promise<NetWorthAt | null> {
 
 	return ok ? data : null;
 }
-
-// --- settings ---
 
 /** One settable figure, as the backend describes it — labels, bounds and help text included. */
 export type SettingSpec = SettingField;
@@ -475,8 +473,7 @@ export async function fetchEntry(
 	return ok ? { entry: data } : { error: error ?? 'load failed' };
 }
 
-/** Set one setting; returns an error message, or null on success. */
-/** `null` puts the setting back on its default. */
+/** `null` puts the setting back on its default. Returns an error message, or null on success. */
 export async function setSetting(key: string, value: number | null): Promise<string | null> {
 	const { ok, error } = await postJson('/api/settings', { key, value });
 	return ok ? null : (error ?? 'could not save setting');

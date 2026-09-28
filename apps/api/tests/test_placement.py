@@ -31,9 +31,6 @@ def _spend(sink: FileLedgerSink, date: dt.date, payee: str) -> str:
     )
 
 
-# --- account directives ---
-
-
 def test_an_open_joins_its_siblings_rather_than_the_end_of_the_file(ledger_dir: Path):
     FileLedgerSink(ledger_dir).open_account("Income:Salary:Employer3", dt.date(2026, 9, 1))
 
@@ -85,9 +82,6 @@ def test_an_open_predating_its_whole_group_goes_above_it(ledger_dir: Path):
     _loads_clean(ledger_dir)
 
 
-# --- the genesis assertion ---
-
-
 def test_a_genesis_assertion_goes_to_the_balance_file_not_beside_the_open(ledger_dir: Path):
     """An assertion is a snapshot: it belongs with the other snapshots, under its month."""
     sink = FileLedgerSink(ledger_dir)
@@ -110,9 +104,6 @@ def test_a_new_balance_file_is_wired_into_the_ledger(ledger_dir: Path):
 
     assert 'include "assets.beancount"' in (ledger_dir / "main.beancount").read_text()
     assert 'include "assets/2026.beancount"' in (ledger_dir / "assets.beancount").read_text()
-
-
-# --- balance files, sectioned by month ---
 
 
 def test_each_month_gets_its_own_heading(ledger_dir: Path):
@@ -154,9 +145,6 @@ def test_a_liability_snapshot_lands_in_the_liability_file(ledger_dir: Path):
     text = (ledger_dir / "liabilities" / "2026.beancount").read_text()
     assert text.startswith("; ===== MAR 2026 =====\n")
     _loads_clean(ledger_dir)
-
-
-# --- dated entries ---
 
 
 def test_a_back_dated_entry_lands_in_date_order(ledger_dir: Path):
@@ -228,9 +216,6 @@ def test_a_new_year_file_joins_the_includes_in_order(ledger_dir: Path):
     assert lines == sorted(lines)
     assert 'include "spending/2024.beancount"' == lines[0]
     _loads_clean(ledger_dir)
-
-
-# --- the placement rules themselves ---
 
 
 def test_a_directive_with_no_group_to_join_lands_at_the_end_spaced_off():

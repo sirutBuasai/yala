@@ -15,7 +15,6 @@
 	}
 	interface Props {
 		slices: Slice[];
-		/** The unit every slice is read in. */
 		unit: Unit;
 	}
 	let { slices, unit }: Props = $props();
@@ -139,7 +138,6 @@
 		gap: var(--gap-row);
 		padding: var(--space-2) 0;
 		font-size: var(--text-caption);
-		/* keep a row intact when the legend flows into multiple columns */
 		break-inside: avoid;
 	}
 	/* The name gives way, the figure never does: a long name truncates (full text on hover) rather

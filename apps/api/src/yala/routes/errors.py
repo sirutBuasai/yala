@@ -35,7 +35,6 @@ def invalid(detail: str) -> HTTPException:
 
 
 def not_found(detail: str) -> HTTPException:
-    """The refusal a request naming something the ledger does not have gets."""
     return HTTPException(status_code=404, detail=detail)
 
 
@@ -57,7 +56,6 @@ def api_errors() -> Iterator[None]:
 
 
 def humanize_error(err: dict) -> str:
-    """Turn one pydantic error into a plain, field-labeled sentence."""
     field = next((str(p) for p in err.get("loc", ()) if p not in ("body", "query")), "")
     label = FIELD_LABELS.get(field, field or "value")
     etype, ctx = err.get("type", ""), err.get("ctx") or {}

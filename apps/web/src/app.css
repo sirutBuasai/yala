@@ -37,8 +37,7 @@
 	--inst-neutral: #8f86a8;
 	/* Edges a colour swatch, so a pale pick still reads as a shape against the page. */
 	--swatch-ring: inset 0 0 0 1px color-mix(in srgb, var(--ink) 18%, transparent);
-	/* ── Role palette ─────────────────────────────────────────────────────────
-	   Financial roles, not hues: a role keeps its hue across every chart. Categories and institutions are the
+	/* Financial roles, not hues: a role keeps its hue across every chart. Categories and institutions are the
 	   exceptions, since their members have identity. */
 	--role-balance: var(--lav); /* net worth — the net of everything */
 	--role-asset: var(--teal); /* what you hold */
@@ -59,8 +58,7 @@
 	--role-liquid: var(--teal);
 	--role-taxable: var(--blue);
 	--role-taxadv: var(--aqua);
-	/* ── Mark strength ────────────────────────────────────────────────────────
-	   Per theme: the accents are pitched for the dark surface, and the same mix vanishes over the light one. */
+	/* Per theme: the accents are pitched for the dark surface, and the same mix vanishes over the light one. */
 	--mark-wash: 9%; /* fill behind a KPI figure */
 	--mark-line: 32%; /* hairline over it */
 	/* The OKLCH lightness every wash and a KPI's hairline take their hue at; `l` keeps the accent's own. */
@@ -85,8 +83,7 @@
 	--entry-transaction: var(--salmon);
 	--entry-paycheck: var(--green);
 	--entry-transfer: var(--teal);
-	/* ── Text accents ─────────────────────────────────────────────────────────
-	   Each clears WCAG AA against `--inset` in both themes, as does every `--ink-*`; re-check before changing. */
+	/* Each clears WCAG AA against `--inset` in both themes, as does every `--ink-*`; re-check before changing. */
 	--good-text: #9ece6a;
 	--crit-text: #e56c7a;
 	--gold-text: #e0af68;
@@ -99,19 +96,14 @@
 	--grid: #2a2a3c;
 	--shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 14px 34px -18px rgba(0, 0, 0, 0.7);
 
-	/* ══════════════════════════════════════════════════════════════════════════
-	   DESIGN TOKENS
-	   Components reference only semantic aliases, and roles sharing a size keep separate aliases so either can
-	   move.
-	   ══════════════════════════════════════════════════════════════════════════ */
+	/* Components reference only semantic aliases, and roles sharing a size keep separate aliases so either can
+	   move. */
 
-	/* ── Font family ──────────────────────────────────────────────────────────*/
 	--font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
 	--font-sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
 	--font-display: var(--font-serif); /* titles, brand, panel titles, stat value */
 	--font-body: var(--font-sans); /* body, controls, labels, lists, tables, meta */
 
-	/* ── Font-size primitives ─────────────────────────────────────────────────*/
 	--fs-100: 10px;
 	--fs-200: 11px;
 	--fs-300: 12px;
@@ -123,8 +115,7 @@
 	--fs-900: 26px;
 	--fs-1000: 28px;
 
-	/* ── Font-size semantic aliases (by data importance) ──────────────────────
-	   HERO / TITLES — the loudest type. */
+	/* HERO / TITLES — the loudest type. */
 	--text-display: var(--fs-1000); /* hero stat number (a KPI's value) */
 	--text-figure: var(--fs-800); /* secondary stat (a matrix cell) */
 	--text-brand: var(--fs-900); /* app wordmark "Yala" */
@@ -147,25 +138,21 @@
 	--text-badge: var(--fs-100); /* pending badge, tiny category tag */
 	--text-micro: var(--fs-100); /* in-chart value labels, calendar day amounts, "+N" */
 
-	/* ── Font weight ──────────────────────────────────────────────────────────*/
 	--fw-regular: 400;
 	--fw-medium: 500; /* tab labels, nav items, row payee, sankey node label */
 	--fw-semibold: 600; /* titles, values, table headers */
 	--fw-bold: 700; /* primary/danger buttons, selected states */
 
-	/* ── Letter spacing ──────────────────────────────────────────────────────*/
 	--ls-tighter: -0.5px; /* hero stat number */
 	--ls-tight: -0.3px; /* large headings (brand, sidebar title) */
 	--ls-snug: -0.2px; /* card / panel titles */
 	--ls-wide: 0.6px; /* uppercase field labels + table headers */
 	--ls-wider: 0.9px; /* small-caps section labels */
 
-	/* ── Line height ──────────────────────────────────────────────────────────*/
 	--lh-tight: 1.2; /* headings / numbers */
 	--lh-body: 1.45; /* body copy */
 	--lh-relaxed: 1.5; /* tooltips */
 
-	/* ── Spacing primitives ───────────────────────────────────────────────────*/
 	--space-1: 2px;
 	--space-2: 4px;
 	--space-3: 6px;
@@ -178,14 +165,12 @@
 	--space-10: 20px;
 	--space-11: 24px;
 
-	/* ── Spacing semantic aliases (gaps) ──────────────────────────────────────*/
 	--gap-inline: var(--space-3); /* chips, dots, button pairs, inline clusters */
 	--gap-row: var(--space-4); /* row internals, selectors, toggle groups */
 	--gap-field: var(--space-6); /* form field rows */
 	--gap-grid: var(--space-7); /* pane / board / dashboard grid, view header */
 
-	/* ── Padding semantic aliases (compound) ──────────────────────────────────
-	   `--pad-card-x` is both the card's padding and the offset `.bleed-x` pulls out by, so they can't drift. */
+	/* `--pad-card-x` is both the card's padding and the offset `.bleed-x` pulls out by, so they can't drift. */
 	--pad-card-y: var(--space-9); /* card v-padding */
 	--pad-card-x: var(--space-10); /* card h-padding + edge-to-edge bleed offset */
 	--pad-card: var(--pad-card-y) var(--pad-card-x); /* cards / panels */
@@ -197,7 +182,6 @@
 	--pad-listrow: var(--space-4) var(--pad-card-x); /* compact list rows, inset to card edge */
 	--pad-listrow-comfortable: var(--space-6) var(--pad-card-x); /* roomier row density */
 
-	/* ── Radius ───────────────────────────────────────────────────────────────*/
 	--radius-xs: 3px; /* color swatches */
 	--radius-sm: 6px; /* chips, tags, mini buttons */
 	--radius-md: 9px; /* inputs, buttons, triggers */
@@ -205,19 +189,16 @@
 	--radius-xl: 16px; /* cards / panes */
 	--radius-pill: 999px; /* pills, round nav buttons, dots */
 
-	/* ── Elevation ────────────────────────────────────────────────────────────
-	   Every raised surface takes its shadow from here, so a theme can retint all of them at once. */
+	/* Every raised surface takes its shadow from here, so a theme can retint all of them at once. */
 	--shadow-pop: 0 10px 30px -10px rgba(0, 0, 0, 0.75); /* tooltips / popovers */
 	--shadow-modal: 0 24px 60px -20px rgba(0, 0, 0, 0.6);
 
-	/* ── Focus ────────────────────────────────────────────────────────────────
-	   An outline, not a box-shadow, so it follows the radius and can't read as elevation. */
+	/* An outline, not a box-shadow, so it follows the radius and can't read as elevation. */
 	--ring-color: var(--lav);
 	--ring-width: 2px;
 	--ring-offset: 2px;
 
-	/* ── Figure sizing ────────────────────────────────────────────────────────
-	   Bounds so one tall figure can't drag its neighbours out of alignment; the pane grid lifts them. */
+	/* Bounds so one tall figure can't drag its neighbours out of alignment; the pane grid lifts them. */
 	--figure-h-min: 240px;
 	--figure-h-max: 460px;
 
@@ -225,8 +206,7 @@
 	--label-lines-title: 3;
 	--label-lines-caption: 2;
 
-	/* ── List row columns ─────────────────────────────────────────────────────
-	   In `ch`, so they track the font. The amount track is a floor, so a long total isn't clipped. */
+	/* In `ch`, so they track the font. The amount track is a floor, so a long total isn't clipped. */
 	--col-date: 3.5ch;
 	--col-dot: 10px;
 	--col-amount: 6ch;
@@ -508,7 +488,6 @@ a {
 	margin-inline: calc(-1 * var(--pad-card-x));
 }
 
-/* --- form controls: themed to the site, replacing the native OS chrome --- */
 /* `.field-input` is the opt-in for an input outside a `.field` wrapper. */
 .field input,
 .field-input {
@@ -526,7 +505,6 @@ input:focus-visible {
 	border-color: var(--control-line);
 }
 
-/* Strip the up/down spinner arrows on number inputs. */
 input[type='number']::-webkit-outer-spin-button,
 input[type='number']::-webkit-inner-spin-button {
 	-webkit-appearance: none;
@@ -537,7 +515,6 @@ input[type='number'] {
 	appearance: textfield;
 }
 
-/* Custom checkbox: a rounded inset box that fills with the accent + a checkmark when on. */
 input[type='checkbox'] {
 	appearance: none;
 	-webkit-appearance: none;
@@ -562,7 +539,6 @@ input[type='checkbox']:checked {
 	background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='12'%20height='12'%20viewBox='0%200%2012%2012'%20fill='none'%20stroke='%231a1522'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M2.5%206.5%205%209l4.5-5.5'/%3E%3C/svg%3E");
 }
 
-/* --- buttons --- */
 .btn-primary,
 .btn-danger {
 	border: 0;
@@ -826,7 +802,6 @@ input[type='checkbox']:checked {
 	text-decoration-style: solid;
 }
 
-/* --- SVG chart primitives --- */
 svg.chart {
 	display: block;
 	width: 100%;

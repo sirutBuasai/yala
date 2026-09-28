@@ -1,4 +1,4 @@
-"""Net-worth snapshots: logging a balance, correcting one, and reading a past date's figures."""
+"""Net-worth snapshots: logging a sitting of balances, and reading a past date's figures."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
+from yala.ledger import LedgerError
 from yala.ledger.accounts import snapshot_plug
 from yala.ledger.constants import CASH, INVESTMENTS, LIABILITIES
 from yala.ledger.networth import LoggedBalance
@@ -21,15 +22,9 @@ from yala.routes.common import (
     sink,
     valid_name,
 )
-from yala.routes.errors import api_errors, invalid
+from yala.routes.errors import invalid
 
 router = APIRouter()
-
-
-class BalanceIn(BaseModel):
-    account: str
-    amount: SignedAmount
-    date: str | None = None
 
 
 def _loggable(account: str) -> str:
@@ -37,27 +32,6 @@ def _loggable(account: str) -> str:
     if not account.startswith((CASH, INVESTMENTS, LIABILITIES)):
         raise invalid(f"not a balance-loggable account: {account!r}")
     return account
-
-
-@router.post("/api/balance")
-def post_balance(body: BalanceIn) -> dict:
-    """Unexplained differences go to the plug (see :func:`snapshot_plug`). A card past its baseline
-    can't pad, so a disagreeing figure is refused, naming the gap."""
-    account = _loggable(body.account)
-    date = parse_date(body.date)
-
-    with api_errors():
-        # Signed as a statement reads it: on a liability, owed positive and a credit negative.
-        entry_id = sink().log_balance(account, dec(body.amount), date, snapshot_plug(account))
-        reconcile_sweeps(date)
-
-    # the locator lets the client edit what it just logged without refetching the whole month
-    return ok(
-        f"logged balance for {account}",
-        account=account,
-        date=date.isoformat(),
-        locator=f"id:{entry_id}",
-    )
 
 
 class ReadingIn(BaseModel):
@@ -92,33 +66,13 @@ def post_balances(body: BalancesIn) -> dict:
         try:
             _, corrected, saved[r.account] = sink().update_balance(r.locator, dec(r.amount))
             touched.append(corrected)
-        except (KeyError, ValueError) as e:
+        # A correction the strict reload rejects is refused like any other, not a failed request.
+        except (KeyError, ValueError, LedgerError) as e:
             failed[r.account] = str(e)
 
     reconcile_sweeps(*touched)
 
     return ok(f"logged {len(saved)} of {len(accounts)} balances", saved=saved, failed=failed)
-
-
-class BalanceEditIn(BaseModel):
-    locator: str
-    amount: SignedAmount
-
-
-@router.post("/api/balance/update")
-def post_balance_update(body: BalanceEditIn) -> dict:
-    """Rewrites the assertion's own line, since re-logging the date would stack a second one."""
-    with api_errors():
-        account, date, locator = sink().update_balance(body.locator, dec(body.amount))
-        reconcile_sweeps(date)
-
-    # echo the locator: editing a migrated assertion stamps an id, upgrading it from a line handle
-    return ok(
-        f"updated balance for {account}",
-        account=account,
-        date=date.isoformat(),
-        locator=locator,
-    )
 
 
 def _snapshots(by_account: dict[str, LoggedBalance]) -> dict[str, dict]:

@@ -1,5 +1,4 @@
 <script lang="ts">
-	// An arrangement of panes. Marks the "Arrange" toggle.
 	import Icon from './Icon.svelte';
 
 	interface Props {

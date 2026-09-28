@@ -27,19 +27,8 @@ export function secondaryLines(a: Assumptions): string[] {
 	return [COASTING, TARGET, lastsToName(a)];
 }
 
-/** `spending / r`: the withdrawal is a fixed sum, so a balance above this earns more than it pays out. */
-export function breakEven(
-	data: DashboardData,
-	a: Assumptions = assumptionsOf(data)
-): number | null {
-	const r = realRate(a) / 100;
-	if (r <= 0) return null;
-
-	return plannedRates(data, a).spending / r;
-}
-
-/** The invested balance the coasting line reaches by the retirement year, for reading against
-    `breakEven`. Null without a birth year to place that year. */
+/** The invested balance the coasting line reaches by the retirement year. Null without a birth year to
+    place that year. */
 export function balanceAtRetirement(
 	data: DashboardData,
 	a: Assumptions = assumptionsOf(data)

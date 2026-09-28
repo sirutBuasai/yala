@@ -31,7 +31,6 @@ class Span(NamedTuple):
 
 
 def month_header(date: dt.date) -> str:
-    """The section heading a balance file gives ``date``'s month."""
     return f"{SECTION_MARKER} {_MONTHS[date.month - 1]} {date.year} ====="
 
 

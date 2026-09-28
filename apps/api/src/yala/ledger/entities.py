@@ -52,8 +52,6 @@ class Transaction:
 
     @property
     def locator(self) -> str:
-        """Stable handle for edits: ``id:<uuid>`` if the entry has an id, else
-        ``line:<path>:<n>``."""
         return locator_of(self.meta)
 
     @property

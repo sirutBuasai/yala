@@ -129,8 +129,6 @@
 		seed();
 	});
 
-	// --- what differs ---
-
 	const typedName = $derived({
 		name: name.trim(),
 		institution_name: institutionName.trim(),

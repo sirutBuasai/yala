@@ -58,9 +58,6 @@ def get_investment_value(account: str, date: str | None = None) -> dict:
         return {"account": account, "value": float(ledger().value(account, as_of))}
 
 
-# --- open ---
-
-
 class NamedAccountIn(BaseModel):
     """Name parts as typed; the server composes and records them, so display and stored names agree.
     ``name`` is the whole name for a kind not named after where it is held."""
@@ -118,7 +115,6 @@ class _OpenPlan(NamedTuple):
 
 
 def _reject_inapplicable(body: AccountIn, kind: Kind) -> None:
-    """Report a field the named kind of account cannot carry."""
     applies = {
         "tier": kind.tiered,
         "employer": kind.scopable,

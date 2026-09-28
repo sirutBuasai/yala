@@ -24,8 +24,6 @@ class _Base(BaseModel):
 
 
 class Domains(_Base):
-    """Which domains carry data."""
-
     spending: bool
     income: bool
     networth: bool = False
@@ -162,7 +160,6 @@ class NetWorthAccount(_Base):
     account: str
     label: str
     group: str  # "cash" | "investment" | "liability"
-    bucket: str  # allocation bucket: "Liquid" | "Taxable" | "Tax-advantaged" | "liability"
     value: float
 
 

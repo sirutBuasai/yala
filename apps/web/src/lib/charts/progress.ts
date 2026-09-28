@@ -34,7 +34,7 @@ export function fillText(value: number | null, target: number, unit: Unit): stri
 		: `${formatUnit(value, unit)} of ${formatUnit(target, unit)}`;
 }
 
-/** The amounts behind a share, compact: `$455k / $1.58M`. */
+/** The amounts behind a share, compact, as `value / target`. */
 export function amountText({ value, target, unit }: NonNullable<BulletRow['amount']>): string {
 	return `${formatUnitCompact(value, unit)} / ${formatUnitCompact(target, unit)}`;
 }

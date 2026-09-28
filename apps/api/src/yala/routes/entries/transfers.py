@@ -38,8 +38,6 @@ class TransferIn(BaseModel):
 
 
 class TransferUpdateIn(TransferIn):
-    """An add body plus the locator of the transfer to replace."""
-
     locator: str
 
 

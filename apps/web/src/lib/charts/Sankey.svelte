@@ -24,7 +24,6 @@
 	interface Props {
 		nodes: SankeyNode[];
 		links: SankeyLink[];
-		/** The unit every node and link is read in. */
 		unit: Unit;
 	}
 	let { nodes, links, unit }: Props = $props();

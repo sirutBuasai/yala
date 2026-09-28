@@ -42,9 +42,6 @@ def _spend(client: TestClient, funding: str, date: str, amount: float):
     )
 
 
-# --- sweep_to configuration ---
-
-
 def _set_sweep(client: TestClient, account: str, dest: str | None):
     return client.post("/api/account/sweep", json={"account": account, "dest": dest})
 
@@ -105,9 +102,6 @@ def test_setting_sweep_replaces_previous_destination(client: TestClient):
     assert _set_sweep(client, BANK_A, SAVINGS).status_code == 200
     assert _set_sweep(client, BANK_A, BANK_B).status_code == 200
     assert client.get("/api/accounts").json()["sweeps"][BANK_A] == BANK_B
-
-
-# --- drain and close ---
 
 
 def test_drain_close_zeroes_and_closes_the_account(client: TestClient):

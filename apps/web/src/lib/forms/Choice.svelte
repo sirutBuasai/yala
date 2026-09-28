@@ -6,14 +6,13 @@
 		/** Why this one — the half-sentence that saves a hint line under the question. */
 		why?: string;
 		selected?: boolean;
-		disabled?: boolean;
 		onpick: () => void;
 		tile?: boolean;
 	}
-	let { label, why, selected = false, disabled = false, onpick, tile = false }: Props = $props();
+	let { label, why, selected = false, onpick, tile = false }: Props = $props();
 </script>
 
-<button type="button" class="choice" class:tile aria-pressed={selected} {disabled} onclick={onpick}>
+<button type="button" class="choice" class:tile aria-pressed={selected} onclick={onpick}>
 	<b>{label}</b>
 	{#if why}<span class="why">{why}</span>{/if}
 </button>
@@ -34,16 +33,12 @@
 		text-align: left;
 		cursor: pointer;
 	}
-	.choice:hover:not(:disabled) {
+	.choice:hover {
 		border-color: var(--lav);
 	}
 	.choice[aria-pressed='true'] {
 		border-color: var(--lav);
 		background: color-mix(in srgb, var(--lav-wash) calc(16% * var(--wash-scale)), transparent);
-	}
-	.choice:disabled {
-		opacity: 0.5;
-		cursor: default;
 	}
 	b {
 		font-weight: var(--fw-medium);

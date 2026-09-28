@@ -39,9 +39,6 @@ MIN_DATE = dt.date(1900, 1, 1)
 MAX_DATE = dt.date(2100, 12, 31)
 
 
-# --- request field types ---
-
-
 def _normalize(value: str) -> str:
     text = collapse(value)
     if len(text) > MAX_TEXT:
@@ -87,9 +84,6 @@ Text = Annotated[str, AfterValidator(_clean_text)]
 OptionalText = Annotated[str | None, BeforeValidator(_clean_optional_text)]
 
 
-# --- ledger access ---
-
-
 def ledger() -> Ledger:
     return Ledger(config.MAIN_LEDGER).load()
 
@@ -104,7 +98,6 @@ def dec(value: float) -> Decimal:
 
 
 def ok(message: str, **extra) -> dict:
-    """A write endpoint's success body: ``{"ok": True, "message": ...}`` plus any extras."""
     return {"ok": True, "message": message, **extra}
 
 
@@ -113,9 +106,6 @@ def reconcile_sweeps(*dates: dt.date | None) -> None:
     months = {month_of(d) for d in dates if d is not None}
     if months:
         reconcile_months(sink(), months)
-
-
-# --- shared validation ---
 
 
 def valid_name(value: str) -> str:

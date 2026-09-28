@@ -330,7 +330,6 @@
 		height: 100%;
 	}
 
-	/* --- arrange affordances --------------------------------------------------- */
 	.cell.arranging > :global(.card) {
 		user-select: none;
 	}

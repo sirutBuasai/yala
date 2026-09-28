@@ -30,8 +30,6 @@ class Transfer:
 
 
 class Transfers:
-    """Query namespace for transfers. Constructed as ``ledger.transfers``."""
-
     def __init__(self, ledger: "Ledger"):
         self._led = ledger
 

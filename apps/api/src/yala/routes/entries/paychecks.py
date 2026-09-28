@@ -38,8 +38,6 @@ class PaycheckIn(BaseModel):
 
 
 class PaycheckUpdateIn(PaycheckIn):
-    """An add body plus the locator of the paycheck to replace."""
-
     locator: str
 
 

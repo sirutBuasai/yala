@@ -5,22 +5,11 @@ import {
 	cashFlowChain,
 	cashFlowChanges,
 	columnHeading,
-	categoryMetricDefs,
-	componentMetricDefs,
 	CATALOG,
-	CATALOG_BY_ID,
-	dataOfKind
+	CATALOG_BY_ID
 } from '$lib/data/catalog';
 import { seriesColor } from '$lib/charts/registry';
 import { makeData } from '$lib/data/__fixtures__/dashboard';
-
-describe('dataOfKind', () => {
-	it('groups catalog entries by the primitive kind they produce', () => {
-		expect(dataOfKind('categorical').every((d) => d.kind === 'categorical')).toBe(true);
-		expect(dataOfKind('flow').map((d) => d.id)).toContain('money.flow');
-		expect(dataOfKind('multiseries').map((d) => d.id)).toContain('overview.cash_flow_bars');
-	});
-});
 
 describe('spending.by_category', () => {
 	it('all-time uses overview.all_time_by_category (largest first)', () => {
@@ -123,10 +112,8 @@ describe('overview.cash_flow_bars', () => {
 
 describe('scalar metrics', () => {
 	it('registers scalar metric entries alongside chart primitives', () => {
-		const ids = dataOfKind('scalar').map((d) => d.id);
-		expect(ids).toContain('income.total');
-		expect(ids).toContain('ratio.savings_rate');
-		expect(dataOfKind('scalar').every((d) => d.kind === 'scalar')).toBe(true);
+		expect(CATALOG_BY_ID['income.total']!.kind).toBe('scalar');
+		expect(CATALOG_BY_ID['ratio.savings_rate']!.kind).toBe('scalar');
 	});
 
 	it('builds a savings-rate percent scalar', () => {
@@ -141,28 +128,6 @@ describe('scalar metrics', () => {
 		if (p.kind !== 'scalar') throw new Error('expected scalar');
 		expect(p.value).toBe(4434.5);
 		expect(p.tone).toBe('good');
-	});
-});
-
-describe('data-dependent metric defs', () => {
-	it('generates per-category amount + share defs', () => {
-		const d = makeData();
-		const defs = categoryMetricDefs(d);
-		const grocery = defs.find((x) => x.id === 'category.Grocery.amount');
-		if (!grocery) throw new Error('expected a Grocery amount def');
-		const p = grocery.build(d, { level: 'all' });
-		if (p.kind !== 'scalar') throw new Error('expected scalar');
-		expect(p.value).toBe(100);
-	});
-
-	it('enumerates paycheck line-items present in a scope', () => {
-		const d = makeData();
-		const defs = componentMetricDefs(d, { level: 'month', monthKey: '2025-01' });
-		const tax = defs.find((x) => x.id === 'paycheck.deductions.Tax');
-		if (!tax) throw new Error('expected a Tax def');
-		const p = tax.build(d, { level: 'month', monthKey: '2025-01' });
-		if (p.kind !== 'scalar') throw new Error('expected scalar');
-		expect(p.value).toBe(600);
 	});
 });
 
@@ -185,7 +150,7 @@ describe('catalog integrity', () => {
 });
 
 // A view takes its column headings and its cell ids from the same ordered chain, so a heading cannot end
-// up over another measure's figure. These pin what the views used to spell out by hand.
+// up over another measure's figure.
 describe('the cash-flow chain', () => {
 	it('heads each column with the name the catalog gives the measure', () => {
 		expect(CASH_FLOW_COLUMNS.map(columnHeading)).toEqual([

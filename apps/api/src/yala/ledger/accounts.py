@@ -119,15 +119,12 @@ def kind_of(account: str) -> Kind | None:
 
 
 def tier_of(account: str) -> str | None:
-    """The tax tier an investment account sits in, or ``None`` for an account with no tier."""
     if not account.startswith(INVESTMENTS):
         return None
     head = account[len(INVESTMENTS) :].split(":", 1)[0]
     return head if head in TIERS else None
 
 
-# --- paths ---
-#
 # Every path is built through these two functions, so no caller disagrees about which part a name
 # owns.
 
@@ -139,12 +136,10 @@ def stem_of(account: str, kind: Kind) -> str:
 
 
 def account_path(kind: Kind, stem: str, tier: str | None = None) -> str:
-    """The path an account of ``kind`` named ``stem`` sits at."""
     return kind.prefix + (f"{tier}:" if tier else "") + stem
 
 
 def named_path(kind: Kind, institution: str | None, product: str | None, tier: str | None) -> str:
-    """The path a named account's typed parts compose to."""
     return account_path(kind, compose_stem(institution, product if kind.product else None), tier)
 
 
@@ -173,11 +168,7 @@ def snapshot_plug(account: str) -> str:
     return plug
 
 
-# --- metadata reads ---
-
-
 def open_entry(ledger: "Ledger", account: str) -> data.Open | None:
-    """The ``open`` directive declaring ``account``, or ``None`` if it has none."""
     return next(
         (e for e in ledger.entries if isinstance(e, data.Open) and e.account == account), None
     )
@@ -190,16 +181,12 @@ def employer_scope(meta: Mapping[str, object] | None) -> str | None:
 
 
 def labels_of(meta: Mapping[str, object] | None) -> list[str]:
-    """The contribution labels an account offers, from its comma-joined ``labels`` meta."""
     raw = meta_str(meta, LABELS_META) or ""
     return [s.strip() for s in raw.split(",") if s.strip()]
 
 
 def sweep_destination(meta: Mapping[str, object] | None) -> str | None:
     return meta_str(meta, SWEEP_META)
-
-
-# --- lifecycle facts ---
 
 
 def declared_family(ledger: "Ledger", account: str) -> list[str]:
@@ -218,7 +205,6 @@ def sweep_referrers(ledger: "Ledger", account: str) -> list[str]:
 
 
 def scoped_to(ledger: "Ledger", prefix: str, employer: str, *, active: bool = True) -> list[str]:
-    """Accounts under ``prefix`` whose ``employer`` meta names ``employer``."""
     meta = ledger.account_meta()
     pool = ledger.active_accounts(prefix) if active else ledger.declared_accounts(prefix)
     return sorted(a for a in pool if employer_scope(meta.get(a)) == employer)

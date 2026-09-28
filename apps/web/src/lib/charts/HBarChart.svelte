@@ -17,7 +17,6 @@
 	}
 	interface Props {
 		items: Item[];
-		/** The unit every row is read in. */
 		unit: Unit;
 		/** Total for tooltip percentages; defaults to the sum of values. */
 		total?: number;

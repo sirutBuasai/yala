@@ -53,7 +53,6 @@ def meta_line(key: str, value: str) -> str:
 
 
 def meta_lines(meta: dict[str, str] | None) -> str:
-    """Every metadata line for a directive, each on its own line beneath it."""
     return "".join(f"\n{meta_line(k, v)}" for k, v in (meta or {}).items())
 
 

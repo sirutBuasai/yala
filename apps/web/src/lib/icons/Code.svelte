@@ -1,5 +1,4 @@
 <script lang="ts">
-	// Angle brackets. Marks Development.
 	import Icon from './Icon.svelte';
 
 	let { size = 16 }: { size?: number } = $props();

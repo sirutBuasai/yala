@@ -1,5 +1,4 @@
 <script lang="ts">
-	// Four tiles. Marks the Dashboard.
 	import Icon from './Icon.svelte';
 
 	let { size = 16 }: { size?: number } = $props();

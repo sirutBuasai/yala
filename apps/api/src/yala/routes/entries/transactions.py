@@ -43,8 +43,6 @@ class TransactionIn(BaseModel):
 
 
 class TransactionUpdateIn(TransactionIn):
-    """An add body plus the locator of the entry to replace."""
-
     locator: str
 
 

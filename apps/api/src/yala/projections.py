@@ -90,7 +90,6 @@ def paycheck_state(entry: data.Transaction, account_meta: dict[str, dict]) -> di
 
 
 def transfer_state(entry: data.Transaction) -> dict:
-    """Editable state of one transfer: from/to accounts and the amount moved."""
     legs = _entry_legs(entry)
 
     if len(legs) != 2:

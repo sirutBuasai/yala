@@ -62,9 +62,6 @@ def test_find_entry_raises_keyerror_on_unknown_locator():
         find_entry(entries, "id:does-not-exist")
 
 
-# --- where a directive sits ---
-
-
 def test_source_of_returns_the_file_and_line_a_directive_was_parsed_from():
     entries = Ledger(FIXTURE_LEDGER).load().entries
     txn = next(e for e in entries if isinstance(e, data.Transaction))

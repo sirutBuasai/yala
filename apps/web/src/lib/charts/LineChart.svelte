@@ -25,7 +25,6 @@
 		name: string;
 		values: (number | null)[];
 		color: string;
-		/** Draw a gradient area under this series. */
 		area?: boolean;
 		/** Render as a dotted line — a secondary reading against a primary one. */
 		dashed?: boolean;

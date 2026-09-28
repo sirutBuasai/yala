@@ -54,7 +54,6 @@ test('holds every reading to its own bounds, whatever is typed in', async ({ pag
 		await enter(field, '');
 		expect(await field.getAttribute('aria-valuenow'), `${label} emptied`).toBe(unreadable);
 
-		// Not a number at all.
 		await enter(field, 'not a number');
 		expect(await field.getAttribute('aria-valuenow'), `${label} junk`).toBe(unreadable);
 	}

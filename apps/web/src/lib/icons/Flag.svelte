@@ -1,5 +1,4 @@
 <script lang="ts">
-	// A flag on a pole. Marks Planning.
 	import Icon from './Icon.svelte';
 
 	let { size = 16 }: { size?: number } = $props();

@@ -13,7 +13,6 @@ from pathlib import Path
 if isinstance(sys.stdout, io.TextIOWrapper):
     sys.stdout.reconfigure(line_buffering=True)
 
-# scripts/ is a repo-root child; the backend venv (created by bootstrap) lives at the repo root.
 ROOT = Path(__file__).resolve().parents[1]
 VENV_PY = ROOT / ".venv" / "bin" / "python"
 WEB = ROOT / "apps" / "web"
@@ -36,6 +35,5 @@ def run(*cmd: object, cwd: Path | None = None) -> None:
 
 
 def rmtree(*paths: Path) -> None:
-    """Remove directories if present (no error if missing)."""
     for p in paths:
         shutil.rmtree(p, ignore_errors=True)

@@ -7,10 +7,8 @@
 		ondelete: () => void;
 		/** Called when the user backs out of the confirmation, e.g. to clear a prior delete error. */
 		oncancel?: () => void;
-		/** The confirm-button text (default "Yes, delete") for non-delete destructive actions. */
-		confirmLabel?: string;
 	}
-	let { label, question, ondelete, oncancel, confirmLabel = 'Yes, delete' }: Props = $props();
+	let { label, question, ondelete, oncancel }: Props = $props();
 
 	let confirming = $state(false);
 	let confirmEl = $state<HTMLButtonElement>();
@@ -32,7 +30,7 @@
 		     underneath a screen-reader user. -->
 		<span class="confirm-q" role="status">{question}</span>
 		<button type="button" class="btn-danger" bind:this={confirmEl} onclick={ondelete}
-			>{confirmLabel}</button
+			>Yes, delete</button
 		>
 		<button type="button" class="btn-cancel" onclick={cancel}>Cancel</button>
 	</div>
