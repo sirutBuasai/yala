@@ -2,7 +2,7 @@
 // testable apart from the API read the balances item needs.
 
 import type { DashboardData } from '$lib/data/types';
-import { pendingRows } from './pending';
+import { pendingEntries } from './pending';
 import { categoryDeviation } from './deviation';
 import { formatUnit, MONEY } from './primitives';
 import { monthName } from '$lib/utils/format';
@@ -43,7 +43,7 @@ export function attentionItems(
 	const items: AttentionItem[] = [];
 	const unit = MONEY(data.currency);
 
-	const pending = pendingRows(data).length;
+	const pending = pendingEntries(data).length;
 	if (pending) {
 		items.push({
 			kind: 'pending',

@@ -2,7 +2,8 @@
 	// The caller supplies already-scoped rows, so scoping stays where the scope is known.
 	import Pane from '$lib/layout/grid/Pane.svelte';
 	import type { Label } from '$lib/ui/label';
-	import TransactionList, { type TxnRow } from '$lib/lists/TransactionList.svelte';
+	import type { HistoryEntry } from '$lib/lists/history';
+	import HistoryList from '$lib/lists/HistoryList.svelte';
 	import Empty from '$lib/ui/Empty.svelte';
 	import { money } from '$lib/utils/format';
 	import { sumBy } from '$lib/utils/num';
@@ -11,23 +12,23 @@
 	interface Props {
 		/** Pane id in the board's layout. */
 		id: string;
-		transactions: TxnRow[];
-		onedit: (locator: string) => void;
+		entries: HistoryEntry[];
+		onedit: (entry: HistoryEntry) => void;
 		caption?: Label;
 	}
-	let { id, transactions, onedit, caption }: Props = $props();
+	let { id, entries, onedit, caption }: Props = $props();
 
-	const total = $derived(sumBy(transactions, (t) => t.amount));
+	const total = $derived(sumBy(entries, (e) => (e.type === 'pay' ? 0 : e.row.amount)));
 </script>
 
 <Pane {id} title={words('Pending transactions')} {caption} tone="attention">
 	{#snippet actions()}
-		{#if transactions.length}
-			<span class="meta">{transactions.length} · {money(total)} out</span>
+		{#if entries.length}
+			<span class="meta">{entries.length} · {money(total)} out</span>
 		{/if}
 	{/snippet}
-	{#if transactions.length}
-		<TransactionList {transactions} {onedit} fields={['source']} />
+	{#if entries.length}
+		<HistoryList {entries} {onedit} />
 	{:else}
 		<Empty>Nothing pending.</Empty>
 	{/if}
