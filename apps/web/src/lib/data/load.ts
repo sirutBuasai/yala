@@ -6,6 +6,7 @@ import { asset } from '$app/paths';
 import { setAccountDirectory } from '$lib/data/directory.svelte';
 import type { AccountLists, DashboardData, SchemaVersion, SettingField } from '$lib/data/types';
 import { settingField } from '$lib/data/assumptions';
+import { seedLayouts } from '$lib/data/layouts';
 
 // Typed as the contract's own version, so bumping the schema breaks this line at compile time.
 const EXPECTED_SCHEMA: SchemaVersion = 1;
@@ -96,10 +97,12 @@ function getJson<T = Record<string, unknown>>(url: string): Promise<PostResult<T
 	return request<T>(url);
 }
 
-/** POST a JSON body. The one write choke point: the guard below is the only one in the app. */
+/** POST a JSON body. The one write choke point: the guard below is the only one in the app.
+    `keepalive` lets the request outlive a page that is closing. */
 export async function postJson<T = Record<string, unknown>>(
 	url: string,
-	body: unknown
+	body: unknown,
+	{ keepalive = false } = {}
 ): Promise<PostResult<T>> {
 	// `status: 0` is the shape a network failure produces, so callers need no new branch.
 	if (!get(live)) {
@@ -109,7 +112,8 @@ export async function postJson<T = Record<string, unknown>>(
 	const result = await request<T>(url, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(body)
+		body: JSON.stringify(body),
+		keepalive
 	});
 	// Every write can move a derived balance, so the cache is dropped here, not in each caller.
 	if (result.ok) invalidateDerivedCache();
@@ -127,6 +131,7 @@ export function invalidateDerivedCache(): void {
 
 /** Publish a validated document and the account lists that came with it. */
 function publish(doc: DashboardData, fromApi: boolean, lists: AccountsInfo | null): void {
+	seedLayouts(doc.layouts);
 	data.set(doc);
 	accounts.set(lists ?? doc.account_lists ?? null);
 	live.set(fromApi);

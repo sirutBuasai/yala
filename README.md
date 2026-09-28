@@ -35,6 +35,12 @@ make test-web    # frontend only (vitest)
 make clean       # remove build artifacts
 ```
 
+## User settings
+
+Planning figures, institution and category colours, and board layouts live in `settings.json` beside
+`main.beancount`, not in the ledger. Only what you changed is stored: putting a value back on its
+default removes it, and defaults stay in code.
+
 ## Container
 
 `compose.yaml` builds the site and API into one image and serves it on `127.0.0.1:8001`, with the ledger bind-mounted from `YALA_LEDGER_DIR`. The container restarts on exit and reports health at `/api/health`.

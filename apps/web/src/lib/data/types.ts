@@ -138,6 +138,9 @@ export type Account2 = string;
 export type PayrollOptions = PayrollOption[];
 export type BalanceAccounts = string[];
 export type LiabilityAccounts = string[];
+export type Layouts = {
+	[k: string]: unknown;
+} | null;
 
 export interface DashboardData {
 	schema_version: SchemaVersion;
@@ -152,6 +155,7 @@ export interface DashboardData {
 	settings?: SettingsSection | null;
 	setting_specs?: SettingSpecs;
 	account_lists?: AccountLists | null;
+	layouts?: Layouts;
 }
 export interface Meta {
 	years: Years;
@@ -317,7 +321,7 @@ export interface NetWorthAdjustment {
 	value: Value1;
 }
 /**
- * Effective user settings: what the ledger states, else the built-in default. A null means
+ * Effective planning settings: what the user set, else the built-in default. A null means
  * unset with no default, and features depending on it stay hidden rather than guessing.
  */
 export interface SettingsSection {

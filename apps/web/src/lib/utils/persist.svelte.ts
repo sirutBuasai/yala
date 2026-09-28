@@ -1,28 +1,47 @@
 // Preferences only, never ledger data. Every read is revived, since a stored value outlives the shape that
-// wrote it; rejects fall back to the default.
+// wrote it; rejects fall back to the default. Kept in this browser unless a `PrefStore` says otherwise.
 
 import { writable, type Writable } from 'svelte/store';
 
 /** Namespace, so the app's keys are identifiable in devtools and can't collide with a host page. */
 const PREFIX = 'yala-';
 
-function read<T>(key: string, fallback: T, revive: Revive<T>): T {
-	try {
-		const raw = localStorage.getItem(PREFIX + key);
-		if (raw === null) return fallback;
-		return revive(JSON.parse(raw) as unknown) ?? fallback;
-	} catch {
-		// Corrupt JSON, or storage unavailable — preferences are best-effort, so never throw.
-		return fallback;
-	}
+/** Where a preference is kept. `read` gives back what was written, or undefined when nothing is. */
+export interface PrefStore {
+	read(key: string): unknown;
+	write(key: string, value: unknown): void;
+	remove(key: string): void;
 }
 
-function write(key: string, value: unknown): void {
-	try {
-		localStorage.setItem(PREFIX + key, JSON.stringify(value));
-	} catch {
-		/* storage unavailable — persistence is best-effort */
+/** This browser alone. Best-effort: storage can be unavailable, and a preference never throws. */
+export const browserStore: PrefStore = {
+	read(key) {
+		try {
+			const raw = localStorage.getItem(PREFIX + key);
+			return raw === null ? undefined : (JSON.parse(raw) as unknown);
+		} catch {
+			return undefined;
+		}
+	},
+	write(key, value) {
+		try {
+			localStorage.setItem(PREFIX + key, JSON.stringify(value));
+		} catch {
+			/* storage unavailable — persistence is best-effort */
+		}
+	},
+	remove(key) {
+		try {
+			localStorage.removeItem(PREFIX + key);
+		} catch {
+			/* storage unavailable */
+		}
 	}
+};
+
+function read<T>(store: PrefStore, key: string, fallback: T, revive: Revive<T>): T {
+	const raw = store.read(key);
+	return raw === undefined ? fallback : (revive(raw) ?? fallback);
 }
 
 /** Validates a value read back from storage; returns undefined to reject it. */
@@ -30,8 +49,8 @@ export type Revive<T> = (value: unknown) => T | undefined;
 
 /** A store whose every value is mirrored into localStorage. */
 export function persisted<T>(key: string, fallback: T, revive: Revive<T>): Writable<T> {
-	const store = writable(read(key, fallback, revive));
-	store.subscribe((v) => write(key, v));
+	const store = writable(read(browserStore, key, fallback, revive));
+	store.subscribe((v) => browserStore.write(key, v));
 	return store;
 }
 
@@ -39,19 +58,26 @@ export function persisted<T>(key: string, fallback: T, revive: Revive<T>): Writa
 export class Pref<T> {
 	#value: T;
 	readonly #key: string;
+	readonly #fallback: T;
+	readonly #store: PrefStore;
 
-	constructor(key: string, fallback: T, revive: Revive<T>) {
+	constructor(key: string, fallback: T, revive: Revive<T>, store: PrefStore = browserStore) {
 		this.#key = key;
-		this.#value = $state(read(key, fallback, revive));
+		this.#fallback = fallback;
+		this.#store = store;
+		this.#value = $state(read(store, key, fallback, revive));
 	}
 
 	get value(): T {
 		return this.#value;
 	}
 
+	/** A value back on the default is removed rather than stored, so a later change to the default
+	    reaches it. */
 	set value(v: T) {
 		this.#value = v;
-		write(this.#key, v);
+		if (JSON.stringify(v) === JSON.stringify(this.#fallback)) this.#store.remove(this.#key);
+		else this.#store.write(this.#key, v);
 	}
 }
 

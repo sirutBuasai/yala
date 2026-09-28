@@ -138,6 +138,15 @@ describe('persisted', () => {
 });
 
 describe('Pref', () => {
+	it('removes what is stored once the value is back on its default', () => {
+		const pref = new Pref('year', 0, number(0, 9999));
+		pref.value = 2024;
+		expect(localStorage.getItem('yala-year')).toBe('2024');
+
+		pref.value = 0;
+		expect(localStorage.getItem('yala-year')).toBeNull();
+	});
+
 	it('reads back what it wrote', () => {
 		const pref = new Pref('year', 0, number(0, 9999));
 		pref.value = 2026;

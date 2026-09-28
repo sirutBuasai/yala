@@ -1,8 +1,8 @@
-"""User settings: the spec table, the ledger reader, the ``set_setting`` write, and the endpoint."""
+"""User settings: the spec table, the JSON store, and the endpoints."""
 
 from __future__ import annotations
 
-import datetime as dt
+import json
 from decimal import Decimal
 from pathlib import Path
 
@@ -11,17 +11,17 @@ from fastapi.testclient import TestClient
 
 from yala.builder import build
 from yala.ledger import Ledger
-from yala.ledger.settings import SETTINGS, SETTINGS_BY_KEY, coerce
 from yala.schema import SettingsSection
-from yala.sink import SETTINGS_FILE, FileLedgerSink
+from yala.user_settings import editing, path_for, read
+from yala.user_settings.specs import SETTINGS, SETTINGS_BY_KEY, coerce
 
-JAN = dt.date(2026, 1, 1)
+
+def _main(ledger_dir: Path) -> Path:
+    return ledger_dir / "main.beancount"
 
 
-def _load(ledger_dir: Path) -> Ledger:
-    led = Ledger(ledger_dir / "main.beancount", strict=True).load()
-    assert led.errors == []
-    return led
+def _write(ledger_dir: Path, doc: object) -> None:
+    path_for(_main(ledger_dir)).write_text(json.dumps(doc))
 
 
 # --- the spec is the single source of truth ---
@@ -41,7 +41,7 @@ def test_only_defaultless_settings_are_optional_in_the_contract():
         assert (field.default is None) == (spec.default is None), spec.key
 
 
-# --- coerce (shared by reader, sink, and API) ---
+# --- coerce (shared by the store and the API) ---
 
 
 def test_coerce_accepts_in_range_values():
@@ -74,110 +74,129 @@ def test_coerce_error_names_the_field_label():
         coerce("retire-age", 5)
 
 
-# --- reading from the ledger ---
+# --- the store ---
 
 
 def test_values_fall_back_to_defaults_when_nothing_is_set(ledger_dir: Path):
-    values = _load(ledger_dir).settings.values()
+    values = read(_main(ledger_dir)).planning_values()
     assert values["swr"] == SETTINGS_BY_KEY["swr"].default
     assert values["birth-year"] is None  # no default → stays unset
     assert set(values) == {s.key for s in SETTINGS}
 
 
-def test_stored_reads_only_what_the_ledger_states(ledger_dir: Path):
-    FileLedgerSink(ledger_dir).set_setting("swr", 3.5, JAN)
-    assert _load(ledger_dir).settings.stored() == {"swr": Decimal("3.5")}
+def test_only_what_the_user_changed_is_written(ledger_dir: Path):
+    """Defaults stay in code, so a default that later changes reaches anyone who never set it."""
+    with editing(_main(ledger_dir)) as settings:
+        settings.set_planning("retire-age", 55.0)
+
+    doc = json.loads(path_for(_main(ledger_dir)).read_text())
+    assert doc["planning"] == {"retire-age": 55}
+    assert doc["version"] == 1
 
 
-def test_a_later_directive_supersedes_an_earlier_one(ledger_dir: Path):
-    sink = FileLedgerSink(ledger_dir)
-    sink.set_setting("swr", 4.0, JAN)
-    sink.set_setting("swr", 3.0, dt.date(2026, 6, 1))
+def test_setting_none_puts_a_figure_back_on_its_default(ledger_dir: Path):
+    with editing(_main(ledger_dir)) as settings:
+        settings.set_planning("swr", 3.0)
+    with editing(_main(ledger_dir)) as settings:
+        settings.set_planning("swr", None)
 
-    # Both lines survive as history; the latest wins.
-    assert (ledger_dir / SETTINGS_FILE).read_text().count('"swr"') == 2
-    assert _load(ledger_dir).settings.values()["swr"] == Decimal("3.0")
-
-
-def test_resetting_puts_a_setting_back_on_its_default_and_keeps_the_history(ledger_dir: Path):
-    sink = FileLedgerSink(ledger_dir)
-    sink.set_setting("planned-spending", 60000, JAN)
-    sink.set_setting("swr", 3.0, JAN)
-    sink.set_setting("planned-spending", None, dt.date(2026, 6, 1))
-    sink.set_setting("swr", None, dt.date(2026, 6, 1))
-
-    values = _load(ledger_dir).settings.values()
-    assert values["planned-spending"] is None
-    assert values["swr"] == SETTINGS_BY_KEY["swr"].default
-    assert (ledger_dir / SETTINGS_FILE).read_text().count('"planned-spending"') == 2
+    assert read(_main(ledger_dir)).planning_values()["swr"] == SETTINGS_BY_KEY["swr"].default
 
 
-def test_a_value_stated_after_a_reset_wins_again(ledger_dir: Path):
-    sink = FileLedgerSink(ledger_dir)
-    sink.set_setting("out-of-pocket", None, JAN)
-    sink.set_setting("out-of-pocket", 12000, dt.date(2026, 6, 1))
-    assert _load(ledger_dir).settings.values()["out-of-pocket"] == Decimal(12000)
+def _stored(ledger_dir: Path) -> dict:
+    return json.loads(path_for(_main(ledger_dir)).read_text())
 
 
-def test_a_malformed_directive_is_skipped_rather_than_fatal(ledger_dir: Path):
-    """The ledger is hand-editable, so one bad settings line must not blank the dashboard."""
-    path = ledger_dir / SETTINGS_FILE
-    path.write_text(
-        f'{JAN} custom "yala-setting" "swr" 3.5\n'
-        f'{JAN} custom "yala-setting" "swr" 999\n'  # out of range
-        f'{JAN} custom "yala-setting" "bogus-key" 1\n'  # unknown
-        f'{JAN} custom "yala-setting" "swr"\n'  # missing value
+def test_changing_then_resetting_leaves_nothing_stored(client: TestClient):
+    """A reset removes the value, so the file only ever holds what differs from the default."""
+    client.post("/api/settings", json={"key": "swr", "value": 3.5})
+    client.post("/api/color", json={"family": "categories", "name": "Grocery", "color": "#abcdef"})
+    client.post("/api/layout", json={"key": "board-home-2", "value": [1]})
+    assert _stored(client.ledger_dir)["planning"] == {"swr": 3.5}  # type: ignore[attr-defined]
+
+    client.post("/api/settings", json={"key": "swr", "value": None})
+    client.post("/api/color", json={"family": "categories", "name": "Grocery", "color": None})
+    client.post("/api/layout", json={"key": "board-home-2", "value": None})
+
+    doc = _stored(client.ledger_dir)  # type: ignore[attr-defined]
+    assert doc["planning"] == {} and doc["colors"]["categories"] == {} and doc["layouts"] == {}
+
+
+def test_setting_the_default_itself_stores_nothing(client: TestClient):
+    """Typing the default back in is a reset too, so a later default change still reaches it."""
+    client.post("/api/settings", json={"key": "swr", "value": 3.5})
+    r = client.post("/api/settings", json={"key": "swr", "value": 4})
+    client.post("/api/color", json={"family": "categories", "name": "Grocery", "color": "#F295C5"})
+
+    assert r.json()["value"] == 4.0
+    doc = _stored(client.ledger_dir)  # type: ignore[attr-defined]
+    assert doc["planning"] == {} and doc["colors"]["categories"] == {}
+
+
+def test_a_rejected_value_writes_nothing(ledger_dir: Path):
+    with pytest.raises(ValueError), editing(_main(ledger_dir)) as settings:
+        settings.set_planning("swr", 50)
+    assert not path_for(_main(ledger_dir)).exists()
+
+
+def test_a_malformed_entry_is_skipped_rather_than_fatal(ledger_dir: Path):
+    """The file is hand-editable, so one bad entry must not blank the rest."""
+    _write(
+        ledger_dir,
+        {
+            "planning": {"swr": 3.5, "retire-age": 999, "bogus": 1},
+            "colors": {"institutions": {"BankA": "#ABC", "BankB": "red"}, "categories": []},
+            "layouts": {"board-x": [1], "Bad Key": [2]},
+        },
     )
-    (ledger_dir / "main.beancount").write_text(
-        (ledger_dir / "main.beancount").read_text() + f'\ninclude "{SETTINGS_FILE}"\n'
-    )
 
-    assert _load(ledger_dir).settings.values()["swr"] == Decimal("3.5")
-
-
-# --- writing ---
+    settings = read(_main(ledger_dir))
+    assert settings.planning == {"swr": Decimal("3.5")}
+    assert settings.colors["institutions"] == {"BankA": "#aabbcc"}
+    assert settings.layouts == {"board-x": [1]}
 
 
-def test_set_setting_wires_the_include_and_writes_the_directive(ledger_dir: Path):
-    FileLedgerSink(ledger_dir).set_setting("retire-age", 55, JAN)
+def test_an_unreadable_file_reads_as_defaults_but_is_never_overwritten(ledger_dir: Path):
+    path = path_for(_main(ledger_dir))
+    path.write_text("{ not json")
 
-    assert (ledger_dir / SETTINGS_FILE).read_text().strip() == (
-        f'{JAN} custom "yala-setting" "retire-age" 55'
-    )
-    assert f'include "{SETTINGS_FILE}"' in (ledger_dir / "main.beancount").read_text()
-
-
-def test_set_setting_rewrites_a_same_date_directive_in_place(ledger_dir: Path):
-    sink = FileLedgerSink(ledger_dir)
-    sink.set_setting("swr", 4.0, JAN)
-    sink.set_setting("swr", 3.25, JAN)
-
-    text = (ledger_dir / SETTINGS_FILE).read_text()
-    assert text.count('"swr"') == 1  # same-day fiddling doesn't pile up
-    assert "3.25" in text
+    assert read(_main(ledger_dir)).planning == {}
+    with pytest.raises(ValueError, match="not valid JSON"), editing(_main(ledger_dir)):
+        pass
+    assert path.read_text() == "{ not json"
 
 
-def test_set_setting_writes_an_age_without_a_decimal_point(ledger_dir: Path):
-    FileLedgerSink(ledger_dir).set_setting("retire-age", 60.0, JAN)
-    assert '"retire-age" 60' in (ledger_dir / SETTINGS_FILE).read_text()
+def test_a_file_from_a_newer_version_is_never_overwritten(ledger_dir: Path):
+    _write(ledger_dir, {"version": 99})
+    with pytest.raises(ValueError, match="newer version"), editing(_main(ledger_dir)):
+        pass
 
 
-def test_set_setting_rejects_a_bad_value_without_touching_the_ledger(ledger_dir: Path):
-    with pytest.raises(ValueError):
-        FileLedgerSink(ledger_dir).set_setting("swr", 50, JAN)
-    assert not (ledger_dir / SETTINGS_FILE).exists()
+def test_a_category_starts_on_its_default_colour_and_an_institution_on_none(ledger_dir: Path):
+    settings = read(_main(ledger_dir))
+    assert settings.color("categories", "Grocery") == "#f295c5"
+    assert settings.color("institutions", "BankA") is None
 
 
 # --- the contract ---
 
 
-def test_builder_emits_effective_settings(ledger_dir: Path):
-    FileLedgerSink(ledger_dir).set_setting("birth-year", 1996, JAN)
-    section = build(_load(ledger_dir)).settings
+def test_builder_emits_effective_settings_and_layouts(ledger_dir: Path):
+    _write(ledger_dir, {"planning": {"birth-year": 1996}, "layouts": {"board-home-2": []}})
+    doc = build(Ledger(_main(ledger_dir)).load())
 
-    assert section is not None
-    assert section.birth_year == 1996
-    assert section.swr == float(SETTINGS_BY_KEY["swr"].default)
+    assert doc.settings is not None
+    assert doc.settings.birth_year == 1996
+    assert doc.settings.swr == float(SETTINGS_BY_KEY["swr"].default)
+    assert doc.layouts == {"board-home-2": []}
+
+
+def test_the_directory_carries_category_and_institution_colours(client: TestClient):
+    _write(client.ledger_dir, {"colors": {"categories": {"Grocery": "#123456"}}})  # type: ignore[attr-defined]
+
+    accounts = client.get("/api/data").json()["meta"]["accounts"]
+    assert accounts["Expenses:Grocery"]["color"] == "#123456"
+    assert accounts["Expenses:Takeouts"]["color"] == "#bb9af7"
 
 
 # --- the endpoint ---
@@ -221,3 +240,44 @@ def test_post_setting_rejects_an_unknown_key(client: TestClient):
     r = client.post("/api/settings", json={"key": "nope", "value": 1})
     assert r.status_code == 422
     assert r.json()["detail"] == "unknown setting: 'nope'"
+
+
+def test_post_color_sets_and_resets_a_category(client: TestClient):
+    r = client.post(
+        "/api/color", json={"family": "categories", "name": "Grocery", "color": "#ABCDEF"}
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["color"] == "#abcdef"
+    accounts = client.get("/api/data").json()["meta"]["accounts"]
+    assert accounts["Expenses:Grocery"]["color"] == "#abcdef"
+
+    r = client.post("/api/color", json={"family": "categories", "name": "Grocery", "color": None})
+    assert r.json()["color"] == "#f295c5"
+
+
+def test_post_color_refuses_a_name_the_ledger_does_not_have(client: TestClient):
+    r = client.post("/api/color", json={"family": "categories", "name": "Nope", "color": "#abcdef"})
+    assert r.status_code == 422
+
+
+def test_post_color_refuses_anything_but_a_hex_literal(client: TestClient):
+    r = client.post(
+        "/api/color", json={"family": "categories", "name": "Grocery", "color": "red; x: y"}
+    )
+    assert r.status_code == 422
+
+
+def test_post_layout_stores_and_drops_a_board(client: TestClient):
+    panes = [{"id": "a", "x": 0, "y": 0, "w": 4, "h": 4, "mode": "fixed", "cap": 4}]
+    assert (
+        client.post("/api/layout", json={"key": "board-home-2", "value": panes}).status_code == 200
+    )
+    assert client.get("/api/data").json()["layouts"] == {"board-home-2": panes}
+
+    client.post("/api/layout", json={"key": "board-home-2", "value": None})
+    assert client.get("/api/data").json()["layouts"] == {}
+
+
+def test_post_layout_refuses_a_bad_key(client: TestClient):
+    r = client.post("/api/layout", json={"key": "../x", "value": []})
+    assert r.status_code == 422

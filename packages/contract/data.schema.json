@@ -944,7 +944,7 @@
     },
     "SettingsSection": {
       "additionalProperties": false,
-      "description": "Effective user settings: what the ledger states, else the built-in default. A null means\nunset with no default, and features depending on it stay hidden rather than guessing.",
+      "description": "Effective planning settings: what the user set, else the built-in default. A null means\nunset with no default, and features depending on it stay hidden rather than guessing.",
       "properties": {
         "swr": {
           "title": "Swr",
@@ -1272,6 +1272,19 @@
         }
       ],
       "default": null
+    },
+    "layouts": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Layouts"
     }
   },
   "required": [

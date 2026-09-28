@@ -6,28 +6,38 @@ from __future__ import annotations
 from beancount.core import data
 
 from yala.ledger import Ledger, accounts, cards, payroll
-from yala.ledger.constants import CASH, CREDIT_CARDS, DEDUCTIONS, INVESTMENTS
-from yala.ledger.institutions import colors as institution_colors
+from yala.ledger.constants import CASH, CREDIT_CARDS, DEDUCTIONS, EXPENSES, INVESTMENTS
 from yala.ledger.naming import NAME_PARTS, account_name, institution_of
-from yala.ledger.settings import SETTINGS
 from yala.ledger.sweep import sweep_edges
 from yala.schema import AccountInfo, AccountKind, AccountLists, PayrollOption, SettingField
+from yala.user_settings import read as read_settings
+from yala.user_settings.colors import CATEGORIES, INSTITUTIONS
+from yala.user_settings.specs import SETTINGS
+
+
+def color_key(account: str, meta: dict | None) -> tuple[str, str] | None:
+    """``(family, name)`` an account's colour is kept under: its institution's, else a category's
+    own, else none, as for an employer or a deduction."""
+    if institution := institution_of(meta):
+        return INSTITUTIONS, institution
+    if accounts.kind_of(account) is accounts.KINDS_BY_NAME["category"]:
+        return CATEGORIES, account.removeprefix(EXPENSES)
+    return None
 
 
 def account_directory(ledger: Ledger) -> dict[str, AccountInfo]:
     """Closed accounts included: they appear in historical rows and are what a reopen offers."""
     account_meta = ledger.account_meta()
-    palette = institution_colors(ledger.entries)
+    settings = read_settings(ledger.path)
     active = set(ledger.active_accounts())
     opened = {e.account: e.date.isoformat() for e in ledger.entries if isinstance(e, data.Open)}
 
     def info(account: str, meta: dict) -> AccountInfo:
-        institution = institution_of(meta)
         kind = accounts.kind_of(account)
 
         return AccountInfo(
             name=account_name(account, meta),
-            color=palette.get(institution) if institution else None,
+            color=settings.color(*key) if (key := color_key(account, meta)) else None,
             kind=kind.name if kind else None,
             tier=accounts.tier_of(account),
             closed=account not in active,
@@ -73,7 +83,7 @@ def account_lists(ledger: Ledger) -> AccountLists:
 
 def setting_fields() -> list[SettingField]:
     """The spec behind every setting, as the form needs it, from
-    :data:`yala.ledger.settings.SETTINGS`."""
+    :data:`yala.user_settings.specs.SETTINGS`."""
     return [
         SettingField(
             key=s.key,

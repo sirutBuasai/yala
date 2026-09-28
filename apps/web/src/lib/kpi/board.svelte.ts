@@ -1,5 +1,6 @@
 // Persisted apart from the arrangement: which panes the board has, not where they sit.
 
+import { layoutStore } from '$lib/data/layouts';
 import { listOf, number, oneOf, Pref, type Revive } from '$lib/utils/persist.svelte';
 import type { BoardLayout, PaneSpec, Rect } from '$lib/layout/grid/types';
 import {
@@ -51,7 +52,7 @@ export class KpiBoard {
 			axis,
 			weights: weights ?? ids.map((id) => spanOf(rects[id]!.rect, axis))
 		}));
-		this.#pref = new Pref<KpiGroup[]>(`kpi-${key}`, this.#opening, storedGroups());
+		this.#pref = new Pref<KpiGroup[]>(`kpi-${key}`, this.#opening, storedGroups(), layoutStore);
 	}
 
 	// `$derived.by` throughout: a field initialiser runs before the constructor body, so reading a

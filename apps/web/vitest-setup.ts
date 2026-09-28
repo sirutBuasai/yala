@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, beforeEach } from 'vitest';
 import { cleanup } from '@testing-library/svelte';
 import { live } from './src/lib/data/load';
+import { seedLayouts } from './src/lib/data/layouts';
 
 // jsdom has no ResizeObserver, which `bind:clientWidth` and the grid's fitted-pane measurement both
 // need. A no-op stub: nothing in jsdom has a layout to observe anyway, so the grid renders folded —
@@ -66,6 +67,8 @@ Element.prototype.animate ??= () =>
 // before it is made, and any test that asserts on a request body sees no request at all.
 beforeEach(() => {
 	live.set(true);
+	// Layouts load once per page in the app, so each test starts from an empty settings file.
+	seedLayouts({});
 });
 
 // Node ≥22 exposes an experimental `localStorage` global that warns unless `--localstorage-file`

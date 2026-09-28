@@ -33,19 +33,7 @@
 	/* `-fill` paints an area, `-line` a hairline or glyph, where the bright accent vanishes on the pale page. */
 	--control-fill: var(--lav);
 	--control-line: var(--lav-text);
-	/* Category palette. */
-	--cat-housing: #f7768e;
-	--cat-grocery: #f295c5;
-	--cat-takeouts: #bb9af7;
-	--cat-travel: #6f8fe8;
-	--cat-utilities: #ff9e64;
-	--cat-transport: #ffd27f;
-	--cat-personal: #7dcfff;
-	--cat-health: #2bb673;
-	--cat-recreation: #4cc9b0;
-	--cat-subscription: #ffd5d2;
-	--cat-misc: #c0794f;
-	/* Fallback for an account with no institution colour declared; the ledger states the rest. */
+	/* Fallback for an account with no institution colour; the user's settings state the rest. */
 	--inst-neutral: #8f86a8;
 	/* ── Role palette ─────────────────────────────────────────────────────────
 	   Financial roles, not hues: a role keeps its hue across every chart. Categories and institutions are the

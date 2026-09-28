@@ -1,27 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { get } from 'svelte/store';
 import { setAccountDirectory } from '$lib/data/directory.svelte';
-import {
-	CATEGORY_TOKEN,
-	accountVar,
-	categoryVar,
-	setTheme,
-	theme,
-	toggleTheme
-} from '$lib/utils/theme';
+import { accountVar, categoryVar, setTheme, theme, toggleTheme } from '$lib/utils/theme';
 
 describe('categoryVar', () => {
-	it('maps known categories to their token', () => {
-		expect(categoryVar('Grocery')).toBe('var(--cat-grocery)');
-		expect(categoryVar('Takeouts')).toBe('var(--cat-takeouts)');
+	afterEach(() => setAccountDirectory({}));
+
+	it('uses the colour the settings give the category account', () => {
+		setAccountDirectory({
+			'Expenses:Grocery': { name: 'Grocery', kind: 'category', color: '#f295c5' }
+		});
+
+		expect(categoryVar('Grocery')).toBe('#f295c5');
 	});
 
-	it('falls back to lavender for unknown categories', () => {
+	it('falls back to lavender for a category with no colour', () => {
 		expect(categoryVar('Nonsense')).toBe('var(--lav)');
-	});
-
-	it('has a Misc token', () => {
-		expect(CATEGORY_TOKEN.Misc).toBe('cat-misc');
 	});
 });
 

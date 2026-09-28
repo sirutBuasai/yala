@@ -3,7 +3,7 @@ fails a strict reload restores every file it touched."""
 
 from __future__ import annotations
 
-from yala.sink.accounts import SETTINGS_FILE, AccountWrites
+from yala.sink.accounts import AccountWrites
 from yala.sink.balances import BalanceWrites
 from yala.sink.paychecks import PaycheckWrites
 from yala.sink.spending import SpendingWrites
@@ -12,7 +12,6 @@ from yala.sink.types import ContributionLeg, Credit, DeductionLeg
 from yala.sink.writer import LedgerWriter
 
 __all__ = [
-    "SETTINGS_FILE",
     "ContributionLeg",
     "Credit",
     "DeductionLeg",

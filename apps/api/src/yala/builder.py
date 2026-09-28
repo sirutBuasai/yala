@@ -37,6 +37,8 @@ from yala.schema import (
     YearPage,
     YearSpend,
 )
+from yala.user_settings import UserSettings
+from yala.user_settings import read as read_settings
 
 # The vite build copies the web app's static/ dir into its build output, so writing the snapshot
 # straight there needs no extra copy step.
@@ -242,9 +244,9 @@ def _networth(networth) -> NetWorthSection:
     )
 
 
-def _settings(settings) -> SettingsSection:
+def _settings(settings: UserSettings) -> SettingsSection:
     """Effective settings as the contract shape: hyphenated keys become underscored fields."""
-    values = settings.values()
+    values = settings.planning_values()
     return SettingsSection(
         **{
             key.replace("-", "_"): (None if value is None else float(value))
@@ -279,6 +281,7 @@ def build(ledger: Ledger) -> DashboardData:
     )
 
     networth_section = _networth(networth)
+    user = read_settings(ledger.path)
 
     return DashboardData(
         schema_version=SCHEMA_VERSION,
@@ -298,7 +301,8 @@ def build(ledger: Ledger) -> DashboardData:
         months=_months(spending, income, transfers, all_months),
         income=_income(income),
         networth=networth_section,
-        settings=_settings(ledger.settings),
+        settings=_settings(user),
+        layouts=user.layouts,
         setting_specs=setting_fields(),
         account_lists=account_lists(ledger),
     )

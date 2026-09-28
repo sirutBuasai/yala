@@ -3,7 +3,7 @@ atomically by :meth:`yala.sink.FileLedgerSink.rewrite_files`."""
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -131,15 +131,18 @@ def institution_rename_map(ledger: "Ledger", old: str, new: str) -> dict[str, st
     return renames
 
 
-def institution_rename_problem(ledger: "Ledger", old: str, new: str) -> str | None:
-    """Why institution ``old`` cannot be renamed to ``new``, or ``None`` if it can."""
+def institution_rename_problem(
+    ledger: "Ledger", old: str, new: str, colored: Iterable[str] = ()
+) -> str | None:
+    """Why institution ``old`` cannot be renamed to ``new``, or ``None`` if it can. ``colored``
+    names the institutions the user has coloured."""
     if old == new:
         return "the new name matches the current one"
 
     if not institution_accounts(ledger, old):
         return f"no account is held at {old}"
 
-    if new in institutions.named(ledger.entries):
+    if new in institutions.named(ledger.entries, colored):
         return f"{new} is already declared; renaming would merge two institutions"
 
     renames = institution_rename_map(ledger, old, new)
@@ -155,15 +158,14 @@ def institution_rename_problem(ledger: "Ledger", old: str, new: str) -> str | No
 def institution_rename_plan(
     ledger: "Ledger", files: Mapping[Path, str], old: str, new: str
 ) -> tuple[dict[Path, str], dict[str, str]]:
-    """The name lives in paths, the ``institution_name`` meta and the colour swatch; missing any
-    splits the institution in two."""
+    """The name lives in paths and the ``institution_name`` meta; missing either splits the
+    institution in two. Its colour is keyed apart, in the user's settings."""
     renames = institution_rename_map(ledger, old, new)
 
     after: dict[Path, str] = {}
     for path, text in files.items():
         updated = rewrite.rename_accounts(text, renames)
-        updated = rewrite.rename_meta_value(updated, INSTITUTION_NAME_META, old, new)
-        after[path] = rewrite.rename_custom_value(updated, institutions.INSTITUTION_TYPE, old, new)
+        after[path] = rewrite.rename_meta_value(updated, INSTITUTION_NAME_META, old, new)
 
     return rewrite.changed_only(files, after), renames
 
