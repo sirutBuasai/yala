@@ -5,7 +5,8 @@ from __future__ import annotations
 
 import datetime as dt
 import uuid
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
 from pathlib import Path
 from typing import NamedTuple
 
@@ -46,9 +47,11 @@ class LedgerWriter:
         self.ledger_dir = Path(ledger_dir) if ledger_dir else config.LEDGER_DIR
         self.main_ledger = self.ledger_dir / "main.beancount"
 
-    def _assert_accounts_active(self, date: dt.date, accounts: list[str]) -> None:
+    def _assert_accounts_active(
+        self, date: dt.date, accounts: list[str], ledger: Ledger | None = None
+    ) -> None:
         """Verify every account is active on ``date`` before writing, for a clean error message."""
-        opened, closed = Ledger(self.main_ledger).load().open_close_dates()
+        opened, closed = (ledger or Ledger(self.main_ledger).load()).open_close_dates()
 
         for account in dict.fromkeys(accounts):  # de-dupe, preserve order
             open_date = opened.get(account)
@@ -203,9 +206,19 @@ class LedgerWriter:
 
         return entry_id
 
-    def _insert(self, subdir: str, date: dt.date, block: str, *, resync: bool = True) -> None:
+    def _insert(
+        self,
+        subdir: str,
+        date: dt.date,
+        block: str,
+        *,
+        resync: bool = True,
+        check: bool = True,
+        entries: list[data.Directive] | None = None,
+    ) -> None:
         """Creates the year file and its include when needed, rolling back if the result won't
-        load."""
+        load. ``check=False`` leaves the reload to a caller batching several inserts, which must
+        then hold them in :meth:`_all_or_nothing`."""
         year_file = self.ledger_dir / subdir / f"{date.year}.beancount"
         include_line = f'include "{subdir}/{date.year}.beancount"'
         agg_file = self.ledger_dir / f"{subdir}.beancount"
@@ -222,9 +235,10 @@ class LedgerWriter:
                 files.atomic_write(year_file, f"{header}\n" if header else "")
                 self._ensure_include(subdir, include_line)
 
-            files.atomic_write(year_file, self._placed(subdir, year_file, date, block))
+            files.atomic_write(year_file, self._placed(subdir, year_file, date, block, entries))
 
-            files.load_checked(self.main_ledger, resync=resync)
+            if check:
+                files.load_checked(self.main_ledger, resync=resync)
 
         except Exception:
             if year_before is None:
@@ -238,11 +252,18 @@ class LedgerWriter:
 
             raise
 
-    def _placed(self, subdir: str, path: Path, date: dt.date, block: str) -> str:
+    def _placed(
+        self,
+        subdir: str,
+        path: Path,
+        date: dt.date,
+        block: str,
+        entries: list[data.Directive] | None = None,
+    ) -> str:
         """``path``'s text with ``block`` in date order, under its month's heading where the file is
-        sectioned that way."""
+        sectioned that way. ``entries`` must have been parsed since ``path`` last changed."""
         lines = self._lines(path)
-        anchors = placement.spans(self._entries(), path, lines)
+        anchors = placement.spans(self._entries() if entries is None else entries, path, lines)
 
         if subdir in directives.MONTHLY:
             at, header = placement.section_slot(lines, anchors, date)
@@ -254,6 +275,23 @@ class LedgerWriter:
             at = placement.insert_at(lines, anchors, date, spaced=True)
 
         return placement.splice(lines, at, block, spaced=True)
+
+    @contextmanager
+    def _all_or_nothing(self, *, resync: bool = True) -> Iterator[None]:
+        """Several unchecked writes as one: a single checked reload at the end, and every ledger
+        file restored, and every new one removed, if it or any write fails."""
+        before = files.snapshot(self.ledger_dir.rglob("*.beancount"))
+
+        try:
+            yield
+            files.load_checked(self.main_ledger, resync=resync)
+
+        except Exception:
+            for path in set(self.ledger_dir.rglob("*.beancount")) - before.keys():
+                path.unlink()
+            for path, text in before.items():
+                files.restore(path, text)
+            raise
 
     def _commit(self, path: Path, content: str) -> None:
         files.commit(self.main_ledger, {path: content})

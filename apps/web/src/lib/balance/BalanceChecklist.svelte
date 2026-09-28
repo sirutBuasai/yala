@@ -1,15 +1,16 @@
 <script lang="ts">
 	// Every loggable account on one screen. A row that can't be saved blocks (see `blockReason`); Save
-	// commits the rest and says what it skipped.
+	// commits the rest in one request and says what it skipped.
+	import { SvelteMap } from 'svelte/reactivity';
 	import type { DashboardData } from '$lib/data/types';
 	import { NO_VALUE } from '$lib/copy';
 	import {
 		type AccountsInfo,
 		type NetWorthAt,
+		type Reading,
 		live,
-		logBalance,
-		networthAt,
-		updateBalance
+		logBalances,
+		networthAt
 	} from '$lib/data/load';
 	import { amountExact, formatAccount, money, moneyExact, monthLabel } from '$lib/utils/format';
 	import { accountVar } from '$lib/utils/theme';
@@ -134,9 +135,14 @@
 			: expectedAt(row.account, atRead, adjRead, adjBefore, loggedOnReading(row.account));
 	const mustAgree = (row: Row) => row.card && (cardChecks.get(row.account)?.must_agree ?? false);
 	const previous = (account: string) => previousAt.get(account)?.amount ?? null;
+	/** Figures sent but not yet read back, by cell and in the ledger's sign, so a sitting reads as saved
+	    the moment Save is pressed rather than row by row as the write lands. */
+	const sent = new SvelteMap<string, number>();
+
 	/** What the account stands at as of the reading, in the ledger's sign. Zero is a figure, so this is
 	    null only when the reading's month holds nothing for the account. */
-	const onRecord = (account: string) => standingAt.get(account)?.amount ?? null;
+	const onRecord = (account: string) =>
+		sent.get(cellKey(account)) ?? standingAt.get(account)?.amount ?? null;
 
 	/** Rows by account, for opening at one. Plain, not state: only the effect below reads it. */
 	const rowEls: Record<string, HTMLTableRowElement> = {};
@@ -237,26 +243,45 @@
 
 	async function saveAll() {
 		if (!savable.length) return;
+		const date = snapshotDate;
+		const batch = savable.flatMap((row) => {
+			const value = parsed(row);
+			const where = target(row);
+			if (value == null || where == null) return []; // blocked, so never in `savable`
+			const key = cellKey(row.account);
+			// Sent in the convention it was typed in; the API applies the ledger's sign.
+			const reading: Reading = { account: row.account, amount: asTyped(row, value) };
+			if ('locator' in where) reading.locator = where.locator;
+			return [{ key, value, typedAs: typed[key] ?? null, reading }];
+		});
+
+		for (const { key, value } of batch) {
+			sent.set(key, value);
+			delete typed[key];
+		}
+
 		await save.run(async () => {
-			const failures: string[] = [];
-			for (const row of savable) {
-				const value = parsed(row);
-				if (value == null) continue;
-				// Sent in the convention it was typed in; the API applies the ledger's sign.
-				const amount = asTyped(row, value);
-				const where = target(row);
-				if (where == null) continue; // blocked, so never in `savable`
-				const { error } =
-					'locator' in where
-						? await updateBalance(where.locator, amount)
-						: await logBalance(row.account, amount, where.date);
-				if (error) failures.push(`${formatAccount(row.account)}: ${error}`);
-				else delete typed[cellKey(row.account)];
+			const { failed, error } = await logBalances(
+				date,
+				batch.map((b) => b.reading)
+			);
+			// A refused row gets its figure back, so nothing typed is lost to a failed save.
+			const refused = batch.filter((b) => error != null || b.reading.account in failed);
+			for (const { key, typedAs } of refused) {
+				sent.delete(key);
+				typed[key] = typedAs;
 			}
-			return failures.join(' · ') || null;
+			if (error) return error;
+			return (
+				refused
+					.map((b) => `${formatAccount(b.reading.account)}: ${failed[b.reading.account]}`)
+					.join(' · ') || null
+			);
 		});
 		onsaved();
 		await refresh();
+		// Only once the read-back lands, or a row would flash to its old figure in between.
+		for (const { key } of batch) sent.delete(key);
 	}
 </script>
 
@@ -342,7 +367,7 @@
 											prefix="$"
 											placeholder={rec == null ? NO_VALUE : amountExact(asTyped(row, rec))}
 											signed
-											disabled={save.busy}
+											disabled={sent.has(cellKey(row.account))}
 											ariaLabel={`Balance for ${formatAccount(row.account)}`}
 											bind:value={typed[cellKey(row.account)]}
 										/>

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import datetime as dt
 import uuid
+from collections.abc import Callable, Iterable, Mapping
 from decimal import Decimal
 
 from beancount.core import data, prices
@@ -85,32 +86,32 @@ class BalanceWrites(AccountWrites):
         if plug is not None:
             self.close_account(plug, date)
 
-    def _ensure_plug(self, account: str, plug: str) -> None:
+    def _ensure_plugs(self, pairs: Iterable[tuple[str, str]]) -> None:
         """A card gets its plug at its first snapshot, dated from the account so a back-dated
-        snapshot finds it open."""
+        snapshot finds it open. ``pairs`` is ``(account, plug)``."""
         ledger = Ledger(self.main_ledger, strict=True).load()
-        if open_entry(ledger, plug) is not None:
-            return
 
-        opened = open_entry(ledger, account)
-        if opened is None:
-            return  # no such account: the active-accounts check is what reports that
+        for account, plug in pairs:
+            if open_entry(ledger, plug) is not None:
+                continue
 
-        self.open_account(plug, opened.date)
+            opened = open_entry(ledger, account)
+            if opened is None:
+                continue  # no such account: the active-accounts check is what reports that
 
-    def log_balance(
-        self, account: str, amount: Decimal, date: dt.date, counter_account: str
-    ) -> str:
-        """The ``balance`` is always written; the ``pad``, dated the day before, only when needed,
-        since beancount rejects an unused pad. A card's pending charges are added back, and past its
-        baseline it must agree."""
+            self.open_account(plug, opened.date)
+
+    def _snapshot_block(
+        self, ledger: Ledger, account: str, amount: Decimal, date: dt.date, counter_account: str
+    ) -> tuple[str, str]:
+        """``(block, id)`` for one snapshot. The ``balance`` is always written; the ``pad``, dated
+        the day before, only when needed, since beancount rejects an unused pad. A card's pending
+        charges are added back, and past its baseline it must agree."""
         # Through the shared sign rule: a liability is inverted, and a negative asset refused.
         amount = directives.stored_amount(account, round_cents(amount))
         pad_date = date - dt.timedelta(days=1)
-        self._ensure_plug(account, counter_account)
-        self._assert_accounts_active(date, [account, counter_account])
+        self._assert_accounts_active(date, [account, counter_account], ledger)
 
-        ledger = Ledger(self.main_ledger, strict=True).load()
         usd = ledger.currency
         card = cards.is_card(account)
         if card:
@@ -155,8 +156,62 @@ class BalanceWrites(AccountWrites):
 
         # The pad is dated the day before the assertion, so the pair is placed as one block by the
         # assertion's date — splitting them would file the pad in the month before it belongs to.
-        self._insert(directives.balance_subdir(account), date, "\n\n".join(blocks), resync=False)
+        return "\n\n".join(blocks), entry_id
+
+    def log_balance(
+        self, account: str, amount: Decimal, date: dt.date, counter_account: str
+    ) -> str:
+        """One snapshot, written and checked on its own (see :meth:`_snapshot_block`)."""
+        self._ensure_plugs([(account, counter_account)])
+        ledger = Ledger(self.main_ledger, strict=True).load()
+        block, entry_id = self._snapshot_block(ledger, account, amount, date, counter_account)
+
+        self._insert(directives.balance_subdir(account), date, block, resync=False)
         return entry_id
+
+    def log_balances(
+        self, readings: Mapping[str, Decimal], date: dt.date, plug_of: Callable[[str], str]
+    ) -> tuple[dict[str, str], dict[str, str]]:
+        """Every reading dated ``date``, against one load and one checked write, so a full sitting
+        lands at once. Returns ``(ids, errors)`` by account: a refused reading is reported and the
+        rest still land."""
+        self._ensure_plugs((account, plug_of(account)) for account in readings)
+        ledger = Ledger(self.main_ledger, strict=True).load()
+
+        ids: dict[str, str] = {}
+        errors: dict[str, str] = {}
+        by_side: dict[str, list[str]] = {}
+
+        for account, amount in readings.items():
+            try:
+                block, ids[account] = self._snapshot_block(
+                    ledger, account, amount, date, plug_of(account)
+                )
+            except ValueError as e:
+                errors[account] = str(e)
+                continue
+            by_side.setdefault(directives.balance_subdir(account), []).append(block)
+
+        try:
+            with self._all_or_nothing(resync=False):
+                # Each side is its own file, so the one parse still places both.
+                for subdir, blocks in by_side.items():
+                    self._insert(
+                        subdir, date, "\n\n".join(blocks), check=False, entries=ledger.entries
+                    )
+
+        except Exception:
+            # The joint reload only says that one failed, so write each on its own to learn which.
+            for account in ids.copy():
+                try:
+                    ids[account] = self.log_balance(
+                        account, readings[account], date, plug_of(account)
+                    )
+                except Exception as e:
+                    del ids[account]
+                    errors[account] = str(e)
+
+        return ids, errors
 
     def update_balance(self, locator: str, amount: Decimal) -> tuple[str, dt.date, str]:
         """Returns ``(account, date, locator)``; the pad is reconciled either way and an id stamped
