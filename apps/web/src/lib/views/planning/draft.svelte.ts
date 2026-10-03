@@ -4,6 +4,7 @@
 import type { DashboardData } from '$lib/data/types';
 import { getSettings, setSetting, type SettingsInfo } from '$lib/data/load';
 import { withSettings } from '$lib/data/assumptions';
+import { Draft } from '$lib/forms/draft.svelte';
 import { SaveState } from '$lib/forms/saveState.svelte';
 import { validateRange } from '$lib/forms/validate';
 
@@ -15,6 +16,9 @@ export class PlanDraft {
 	    on its default, which for a figure derived from the ledger means following the ledger as it grows. */
 	values = $state<Record<string, number | null>>({});
 	readonly save = new SaveState();
+	/** Construct during the page's init: unsaved values outlive a page switch. Kept only once loaded, since
+	    the empty values before then would read as every setting on its default. */
+	readonly #draft = new Draft('planning', () => (this.info ? this.values : undefined));
 
 	specs = $derived(this.info?.specs ?? []);
 	changed = $derived(
@@ -31,7 +35,7 @@ export class PlanDraft {
 		const { info, error } = await getSettings();
 		this.info = info;
 		this.loadError = error ?? '';
-		this.values = { ...(info?.values ?? {}) };
+		this.values = { ...(this.#draft.saved ?? info?.values ?? {}) };
 		this.loading = false;
 	}
 

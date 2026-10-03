@@ -1,5 +1,5 @@
 <script lang="ts">
-	// No period controls: it reads now. Every pane draws the draft, and leaving the page drops it.
+	// No period controls: it reads now. Every pane draws the draft, which outlives a page switch but not a reload.
 	import { onMount } from 'svelte';
 	import type { DashboardData } from '$lib/data/types';
 	import type { BoardLayout } from '$lib/layout/grid/types';

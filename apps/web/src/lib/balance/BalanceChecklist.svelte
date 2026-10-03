@@ -36,6 +36,7 @@
 	import SaveButton from '$lib/forms/SaveButton.svelte';
 	import SaveFeedback from '$lib/forms/SaveFeedback.svelte';
 	import { SaveState } from '$lib/forms/saveState.svelte';
+	import { Draft } from '$lib/forms/draft.svelte';
 	import { sumBy } from '$lib/utils/num';
 	import { words } from '$lib/ui/label';
 
@@ -65,8 +66,14 @@
 	/** The day every balance was read off its app, in one sitting. Everything the pane shows is as of
 	    this reading, so picking a date reads that date's snapshot. */
 	let readOn = $state('');
+	type Left = { monthKey: string; readOn: string; typed: Typed };
+	const draft = new Draft('balances', (): Left => ({ monthKey, readOn, typed }));
+	/** The reading left on comes back only for the month it was left in, and only as the pane opens. */
+	let resumed = false;
 	$effect(() => {
-		readOn = defaultReadOn(monthKey, todayIso());
+		const left = draft.saved;
+		readOn = !resumed && left?.monthKey === monthKey ? left.readOn : defaultReadOn(monthKey, todayIso());
+		resumed = true;
 	});
 	// An assertion is checked at the start of its day, so a figure read at the end of `readOn`
 	// asserts on the day after.
@@ -158,7 +165,8 @@
 
 	// Keyed by reading so picking another date never carries an entry across. Liabilities are typed as
 	// the amount owed and stored negative.
-	let typed = $state<Record<string, number | null>>({});
+	type Typed = Record<string, number | null>;
+	let typed = $state<Typed>(draft.saved?.typed ?? {});
 	const cellKey = (account: string) => `${snapshotDate}|${account}`;
 
 	function parsed(row: Row): number | null {

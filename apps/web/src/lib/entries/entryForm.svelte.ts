@@ -2,6 +2,7 @@
 // the entry loaded as is `$state`.
 
 import { entryAction, fetchEntry, postJson, type AccountsInfo } from '$lib/data/load';
+import { Draft } from '$lib/forms/draft.svelte';
 import { SaveState } from '$lib/forms/saveState.svelte';
 
 /** What every add/edit entry form takes. Declared once: the three forms differ in what they ask
@@ -27,6 +28,7 @@ export class EntryForm extends SaveState {
 	readonly #body: () => object;
 	/** The body as the entry loaded, serialized; null while adding, when everything is new. */
 	#loaded = $state<string | null>(null);
+	#draft: Draft<object> | null = null;
 
 	constructor(kind: EntryKind, onsaved: () => void, body: () => object) {
 		super();
@@ -38,6 +40,22 @@ export class EntryForm extends SaveState {
 	/** An add always has something to write; an edit, once the body differs from what loaded. */
 	get dirty(): boolean {
 		return this.#loaded === null || JSON.stringify(this.#body()) !== this.#loaded;
+	}
+
+	get #editing(): boolean {
+		const body = this.#body();
+		return 'locator' in body && body.locator != null;
+	}
+
+	/** Called from the form component's init. While adding, the body is kept as a draft until it saves, and
+	    one left earlier goes to `fill`, the same filler `load` takes. A day the form was opened on outranks
+	    the draft's. True when a draft was restored. */
+	resume(fill: (entry: Record<string, any>) => void, presetDate: () => string | undefined): boolean {
+		this.#draft = new Draft(this.#kind, () => (this.#editing ? undefined : this.#body()));
+		const saved = this.#draft.saved;
+		if (!saved || this.#editing) return false;
+		fill({ ...saved, date: presetDate() ?? ('date' in saved ? saved.date : undefined) });
+		return true;
 	}
 
 	/** Prefill from the entry `locator` names, handing the record to `apply`. */
@@ -57,14 +75,17 @@ export class EntryForm extends SaveState {
 			this.fail(problem);
 			return;
 		}
-		const body = this.#body();
-		const editing = 'locator' in body && body.locator != null;
+		const editing = this.#editing;
 		const ok = await this.run(async () => {
-			const { ok, error } = await postJson(`/api/${this.#kind}${editing ? '/update' : ''}`, body);
+			const { ok, error } = await postJson(
+				`/api/${this.#kind}${editing ? '/update' : ''}`,
+				this.#body()
+			);
 			return ok ? null : (error ?? 'save failed');
 		});
 		if (!ok) return;
 		if (!editing) remember?.();
+		this.#draft?.clear();
 		this.#onsaved();
 	}
 

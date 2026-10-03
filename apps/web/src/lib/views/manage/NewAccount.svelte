@@ -9,6 +9,7 @@
 	} from '$lib/data/load';
 	import type { AccountKind } from '$lib/data/types';
 	import { SaveState } from '$lib/forms/saveState.svelte';
+	import { Draft } from '$lib/forms/draft.svelte';
 	import { problems, validateLabel, validateName, validateOptionalName } from '$lib/forms/validate';
 	import { NOT_SET, NONE } from '$lib/copy';
 	import Choice from '$lib/forms/Choice.svelte';
@@ -53,18 +54,49 @@
 
 	const save = new SaveState();
 
-	let at = $state(0);
-	let kindName = $state('');
-	let institutionName = $state('');
-	let institutionAlias = $state('');
-	let accountName = $state('');
-	let accountAlias = $state('');
-	let name = $state('');
-	let tier = $state<AccountTier>('Taxable');
-	let employer = $state('');
-	let options = $state<TextRow[]>([]);
-	let includesPending = $state(false);
-	let date = $state('');
+	/** Every answer, kept as a draft until the account opens. */
+	interface Answers {
+		at: number;
+		kindName: string;
+		institutionName: string;
+		institutionAlias: string;
+		accountName: string;
+		accountAlias: string;
+		name: string;
+		tier: AccountTier;
+		employer: string;
+		options: TextRow[];
+		includesPending: boolean;
+		date: string;
+	}
+	const draft = new Draft('new-account', (): Answers => ({
+		at,
+		kindName,
+		institutionName,
+		institutionAlias,
+		accountName,
+		accountAlias,
+		name,
+		tier,
+		employer,
+		options,
+		includesPending,
+		date
+	}));
+	const left = draft.saved;
+
+	let at = $state(left?.at ?? 0);
+	let kindName = $state(left?.kindName ?? '');
+	let institutionName = $state(left?.institutionName ?? '');
+	let institutionAlias = $state(left?.institutionAlias ?? '');
+	let accountName = $state(left?.accountName ?? '');
+	let accountAlias = $state(left?.accountAlias ?? '');
+	let name = $state(left?.name ?? '');
+	let tier = $state<AccountTier>(left?.tier ?? 'Taxable');
+	let employer = $state(left?.employer ?? '');
+	let options = $state<TextRow[]>(left?.options ?? []);
+	let includesPending = $state(left?.includesPending ?? false);
+	let date = $state(left?.date ?? '');
 
 	const kind = $derived<AccountKind | undefined>(kinds[kindName]);
 	const offered = $derived(KIND_ORDER.filter((k) => kinds[k]));
@@ -279,6 +311,7 @@
 		});
 
 		if (ok) {
+			draft.clear();
 			save.note = `Added ${opened}.`;
 			onsaved();
 			onclose();

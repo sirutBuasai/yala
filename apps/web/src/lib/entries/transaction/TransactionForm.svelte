@@ -34,6 +34,21 @@
 		() => body
 	);
 
+	// The entry's `amount` is the total bill.
+	function fill(s: Record<string, any>) {
+		date = s.date ?? '';
+		payee = s.payee ?? '';
+		total = s.amount ?? null;
+		category = s.category ?? '';
+		funding_account = s.funding_account ?? '';
+		pending = !!s.pending;
+		awaiting = !!s.awaiting_reimbursement;
+		credits = (s.credits ?? []).map((x: { account: string; amount: number }) => ({
+			value: x.account,
+			amount: x.amount
+		}));
+	}
+
 	$effect(() => {
 		if (locator == null) {
 			// Add mode: seed from the last entry's picks once the account lists load, without clobbering
@@ -44,20 +59,7 @@
 				funding_account = seed(get(lastFundingAccount), accounts.funding_accounts);
 			return;
 		}
-		// The entry's `amount` is the total bill.
-		void form.load(locator, (s) => {
-			date = s.date ?? '';
-			payee = s.payee ?? '';
-			total = s.amount ?? null;
-			category = s.category ?? '';
-			funding_account = s.funding_account ?? '';
-			pending = !!s.pending;
-			awaiting = !!s.awaiting_reimbursement;
-			credits = (s.credits ?? []).map((x: { account: string; amount: number }) => ({
-				value: x.account,
-				amount: x.amount
-			}));
-		});
+		void form.load(locator, fill);
 	});
 
 	// Your share = total bill - everything reimbursed on the credits.
@@ -78,6 +80,8 @@
 			.filter((s) => s.value && s.amount != null)
 			.map((s) => ({ account: s.value, amount: s.amount as number }))
 	});
+
+	form.resume(fill, () => presetDate);
 
 	function submit() {
 		// A net share below zero is a valid net refund, not an error; the summary flags it anyway.
