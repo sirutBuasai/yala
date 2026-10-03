@@ -32,6 +32,15 @@
 	// A bill pay can target any money-in account except the one being paid from.
 	const toAccounts = $derived(accounts.funding_accounts.filter((a) => a !== from_account));
 
+	function fill(s: Record<string, any>) {
+		date = s.date ?? '';
+		payee = s.payee ?? 'payment';
+		from_account = s.from_account ?? '';
+		to_account = s.to_account ?? '';
+		amount = s.amount ?? null;
+		pending = !!s.pending;
+	}
+
 	$effect(() => {
 		if (locator == null) {
 			if (!date && presetDate) date = presetDate;
@@ -39,14 +48,7 @@
 			if (!to_account) to_account = seed(get(lastTransferTo), toAccounts);
 			return;
 		}
-		void form.load(locator, (s) => {
-			date = s.date ?? '';
-			payee = s.payee ?? 'payment';
-			from_account = s.from_account ?? '';
-			to_account = s.to_account ?? '';
-			amount = s.amount ?? null;
-			pending = !!s.pending;
-		});
+		void form.load(locator, fill);
 	});
 
 	/** What a save sends, and what an edit compares against the entry as it loaded. */
@@ -59,6 +61,8 @@
 		amount,
 		pending
 	});
+
+	form.resume(fill, () => presetDate);
 
 	function submit() {
 		const problem = problems()

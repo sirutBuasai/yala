@@ -65,6 +65,16 @@
 		return m;
 	};
 
+	function fill(s: Record<string, any>) {
+		date = s.date ?? '';
+		employer = s.employer ?? accounts.employers[0] ?? '';
+		gross = s.gross ?? null;
+		deposit_account = s.deposit_account ?? '';
+		payee = s.payee ?? 'Paycheck';
+		deductions = toRows(s.deductions ?? {});
+		contributions = toRows(s.contributions ?? {});
+	}
+
 	$effect(() => {
 		if (locator == null) {
 			// Add mode: employer, deposit account and the deduction/contribution ROWS all carry over,
@@ -83,15 +93,7 @@
 			}
 			return;
 		}
-		void form.load(locator, (s) => {
-			date = s.date ?? '';
-			employer = s.employer ?? accounts.employers[0] ?? '';
-			gross = s.gross ?? null;
-			deposit_account = s.deposit_account ?? '';
-			payee = s.payee ?? 'Paycheck';
-			deductions = toRows(s.deductions ?? {});
-			contributions = toRows(s.contributions ?? {});
-		});
+		void form.load(locator, fill);
 	});
 
 	const sum = (rows: AmountRow[]) => rows.reduce((a, r) => a + (r.amount || 0), 0);
@@ -108,6 +110,9 @@
 		deposit_account,
 		payee: payee.trim() || 'Paycheck'
 	});
+
+	// A restored draft brings its own rows, which seeding would overwrite with blank remembered ones.
+	if (form.resume(fill, () => presetDate)) rowsSeeded = true;
 
 	function submit() {
 		const problem = problems()

@@ -1,3 +1,4 @@
+import { flushSync } from 'svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SettingsInfo } from '$lib/data/load';
 
@@ -31,6 +32,15 @@ function settings(): SettingsInfo {
 
 const { PlanDraft } = await import('./draft.svelte');
 
+/** A draft keeps itself with an effect, which needs an owner outside a component. */
+function fresh(): InstanceType<typeof PlanDraft> {
+	let draft!: InstanceType<typeof PlanDraft>;
+	$effect.root(() => {
+		draft = new PlanDraft();
+	});
+	return draft;
+}
+
 describe('PlanDraft', () => {
 	beforeEach(() => {
 		written.length = 0;
@@ -38,7 +48,7 @@ describe('PlanDraft', () => {
 	});
 
 	it('has nothing to save until a figure moves, and nothing again once it is saved', async () => {
-		const draft = new PlanDraft();
+		const draft = fresh();
 		await draft.load();
 		expect(draft.changed).toEqual([]);
 
@@ -49,7 +59,7 @@ describe('PlanDraft', () => {
 	});
 
 	it('returns a stated figure to its default, which is saved as a reset', async () => {
-		const draft = new PlanDraft();
+		const draft = fresh();
 		await draft.load();
 		expect(draft.atDefault('planned-spending')).toBe(false);
 
@@ -63,9 +73,21 @@ describe('PlanDraft', () => {
 
 	it('counts a figure stated as exactly its default as on the default', async () => {
 		stated = { 'planned-spending': null, swr: 4 };
-		const draft = new PlanDraft();
+		const draft = fresh();
 		await draft.load();
 		expect(draft.atDefault('swr')).toBe(true);
 		expect(draft.atDefault('planned-spending')).toBe(true);
+	});
+
+	it('brings unsaved figures back when the page is opened again', async () => {
+		const left = fresh();
+		await left.load();
+		left.set('swr', 3.5);
+		flushSync();
+
+		const back = fresh();
+		await back.load();
+		expect(back.value('swr')).toBe(3.5);
+		expect(back.changed.map((s) => s.key)).toEqual(['swr']);
 	});
 });

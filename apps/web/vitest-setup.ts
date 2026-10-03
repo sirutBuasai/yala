@@ -4,6 +4,7 @@ import { afterEach, beforeEach } from 'vitest';
 import { cleanup } from '@testing-library/svelte';
 import { live } from './src/lib/data/load';
 import { seedLayouts } from './src/lib/data/layouts';
+import { forgetDrafts } from './src/lib/forms/draft.svelte';
 
 // jsdom has no ResizeObserver, which `bind:clientWidth` and the grid's fitted-pane measurement both
 // need. A no-op stub: nothing in jsdom has a layout to observe anyway, so the grid renders folded —
@@ -69,6 +70,8 @@ beforeEach(() => {
 	live.set(true);
 	// Layouts load once per page in the app, so each test starts from an empty settings file.
 	seedLayouts({});
+	// Drafts live in module memory, so each test starts as a fresh page load would.
+	forgetDrafts();
 });
 
 // Node's experimental `localStorage` global warns without `--localstorage-file`, and app code reads

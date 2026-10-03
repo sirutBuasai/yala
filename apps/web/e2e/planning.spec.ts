@@ -139,13 +139,18 @@ test('the summary keeps to one line, scaling rather than wrapping, until a phone
 	}
 });
 
-test('leaving the page drops the draft', async ({ page }) => {
+test('the draft outlives a page switch but not a reload', async ({ page }) => {
 	const stated = await rate(page).getAttribute('aria-valuenow');
 	await stepUp(page, 'Withdrawal rate');
+	const moved = await rate(page).getAttribute('aria-valuenow');
+	expect(moved).not.toBe(stated);
 
 	await showPage(page, 'Dashboard');
 	await showPage(page, 'Planning');
-	expect(await rate(page).getAttribute('aria-valuenow')).toBe(stated);
+	expect(await rate(page).getAttribute('aria-valuenow')).toBe(moved);
+
+	await page.reload();
+	await expect(rate(page)).toHaveAttribute('aria-valuenow', stated!);
 });
 
 test("the projection's hover reads every line and the age at that year", async ({ page }) => {
