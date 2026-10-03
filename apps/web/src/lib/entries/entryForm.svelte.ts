@@ -1,7 +1,7 @@
 // The round trips an entry form makes, reported through the shared `SaveState`; `.svelte.ts` because what
 // the entry loaded as is `$state`.
 
-import { deleteTransaction, fetchEntry, postJson, type AccountsInfo } from '$lib/data/load';
+import { entryAction, fetchEntry, postJson, type AccountsInfo } from '$lib/data/load';
 import { SaveState } from '$lib/forms/saveState.svelte';
 
 /** What every add/edit entry form takes. Declared once: the three forms differ in what they ask
@@ -69,6 +69,6 @@ export class EntryForm extends SaveState {
 	}
 
 	async remove(locator: string): Promise<void> {
-		if (await this.run(() => deleteTransaction(locator))) this.#onsaved();
+		if (await this.run(() => entryAction('delete', locator))) this.#onsaved();
 	}
 }

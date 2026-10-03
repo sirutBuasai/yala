@@ -230,6 +230,55 @@ def test_awaiting_reimbursement_round_trips_and_clears_once_settled(client: Test
     assert "awaiting" not in spending.read_text()
 
 
+def test_post_settles_a_pending_transaction_and_its_awaited_reimbursement(client: TestClient):
+    body = {
+        "date": "2026-02-01",
+        "payee": "fronted flight",
+        "amount": 400.0,
+        "category": "Takeouts",
+        "funding_account": "Liabilities:CC:CardA",
+        "pending": True,
+        "awaiting_reimbursement": True,
+    }
+    locator = f"id:{client.post('/api/transaction', json=body).json()['id']}"
+
+    r = client.post("/api/entry/post", json={"locator": locator})
+    assert r.status_code == 200, r.json()
+    detail = client.get("/api/transaction", params={"locator": locator}).json()
+    assert detail["pending"] is False
+    assert detail["awaiting_reimbursement"] is False
+    assert detail["amount"] == 400.0
+    spending = client.ledger_dir / "spending" / "2026.beancount"  # type: ignore[attr-defined]
+    assert "awaiting" not in spending.read_text()
+
+
+def test_post_settles_a_pending_transfer(client: TestClient):
+    body = {
+        "date": "2026-03-02",
+        "from_account": "Assets:Cash:BankA",
+        "to_account": "Liabilities:CC:CardA",
+        "amount": 120.0,
+        "pending": True,
+    }
+    locator = f"id:{client.post('/api/transfer', json=body).json()['id']}"
+
+    assert client.post("/api/entry/post", json={"locator": locator}).status_code == 200
+    assert client.get("/api/transfer", params={"locator": locator}).json()["pending"] is False
+
+
+def test_post_refuses_an_entry_already_posted(client: TestClient):
+    body = _txn_body(date="2026-02-01")
+    locator = f"id:{client.post('/api/transaction', json=body).json()['id']}"
+
+    r = client.post("/api/entry/post", json={"locator": locator})
+    assert r.status_code == 422
+    assert r.json()["detail"] == "already posted"
+
+
+def test_post_unknown_locator_is_404(client: TestClient):
+    assert client.post("/api/entry/post", json={"locator": "id:nope"}).status_code == 404
+
+
 def test_txn_detail_when_funding_and_credit_share_account(client: TestClient):
     # Regression: funding account == credit account (all Assets:Cash:BankA).
     # The prefill must still identify the outflow (-total) as funding, not a credit.

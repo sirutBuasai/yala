@@ -15,10 +15,10 @@ from beancount.parser import printer
 
 from yala import config
 from yala.ledger import Ledger, directives, files, placement
-from yala.ledger.constants import DROPPED_META
+from yala.ledger.constants import AWAITING_META, DROPPED_META
 from yala.ledger.locators import find_entry, source_file, source_of
 from yala.ledger.paths import parent
-from yala.ledger.rewrite import block_end
+from yala.ledger.rewrite import block_end, set_meta_block
 
 
 class Carried(NamedTuple):
@@ -353,12 +353,26 @@ class LedgerWriter:
 
         files.atomic_write(path, placement.splice(lines, at, include_line, spaced=False))
 
-    def delete_entry(self, locator: str) -> None:
-        entry = find_entry(
-            Ledger(self.main_ledger, strict=True).load().entries, locator
-        )  # raises KeyError if unknown
+    def _span_of(self, locator: str) -> tuple[data.Transaction, Path, list[str], int, int]:
+        """``(entry, path, lines, begin, end)`` for ``locator``; ``KeyError`` when unknown."""
+        entry = find_entry(Ledger(self.main_ledger, strict=True).load().entries, locator)
+        path, _, lines, begin, end = self._entry_span(entry, locator)
+        return entry, path, lines, begin, end
 
-        path, original, lines, begin, end = self._entry_span(entry, locator)
+    def delete_entry(self, locator: str) -> None:
+        _, path, lines, begin, end = self._span_of(locator)
         kept, _ = placement.cut(lines, begin, end)
 
         self._commit(path, "".join(kept))
+
+    def post_entry(self, locator: str) -> None:
+        """Settles a pending entry: it takes the posted flag, and an awaited reimbursement no longer
+        holds it open. Raises on an entry already posted."""
+        entry, path, lines, begin, _ = self._span_of(locator)
+        if entry.flag != flag_for(True):
+            raise ValueError("already posted")
+
+        day = entry.date.isoformat()
+        lines[begin] = lines[begin].replace(f"{day} {entry.flag}", f"{day} {flag_for(False)}", 1)
+
+        self._commit(path, set_meta_block("".join(lines), begin + 1, {AWAITING_META: None}))

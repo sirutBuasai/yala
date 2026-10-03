@@ -149,6 +149,23 @@ def test_deleting_the_sweep_directly_is_rejected(client: TestClient):
     assert len(_sweeps(client, "2026-02")) == 1  # still there
 
 
+def test_the_sweep_alone_is_flagged_auto_managed(client: TestClient):
+    _spend_from_passthrough(client, "2026-02-10", 30.00)
+    _fund_passthrough(client, "2026-02-12", 10.00)
+    transfers = client.get("/api/data").json()["months"]["2026-02"]["transfers"]
+
+    flagged = {t["locator"] for t in transfers if t["auto_managed"]}
+    assert flagged == {s["locator"] for s in _sweeps(client, "2026-02")}
+    assert len(transfers) > len(flagged)
+
+
+def test_posting_the_sweep_directly_is_rejected(client: TestClient):
+    _spend_from_passthrough(client, "2026-02-10", 30.00)
+    sweep = _sweeps(client, "2026-02")[0]
+
+    assert client.post("/api/entry/post", json={"locator": sweep["locator"]}).status_code == 409
+
+
 def test_deleting_the_last_passthrough_payment_removes_the_sweep(client: TestClient):
     add = _spend_from_passthrough(client, "2026-02-10", 30.00)
     locator = f"id:{add.json()['id']}"

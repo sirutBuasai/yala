@@ -1,7 +1,7 @@
-"""Entries by kind, which the accounts they post to decide, plus a shared delete."""
+"""Entries by kind, which the accounts they post to decide, plus the shared delete and post."""
 
-from yala.routes.entries import deleting, paychecks, transactions, transfers
+from yala.routes.entries import actions, paychecks, transactions, transfers
 
-ROUTERS = (transactions.router, paychecks.router, transfers.router, deleting.router)
+ROUTERS = (transactions.router, paychecks.router, transfers.router, actions.router)
 
-__all__ = ["ROUTERS", "deleting", "paychecks", "transactions", "transfers"]
+__all__ = ["ROUTERS", "actions", "paychecks", "transactions", "transfers"]

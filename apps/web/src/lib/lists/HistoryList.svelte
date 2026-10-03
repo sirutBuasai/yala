@@ -5,11 +5,11 @@
 	import { accountVar, categoryVar } from '$lib/utils/theme';
 	import RowList from '$lib/lists/RowList.svelte';
 	import Amount from '$lib/ui/Amount.svelte';
-	import TxnMain from '$lib/lists/parts/TxnMain.svelte';
-	import TransferMain from '$lib/lists/parts/TransferMain.svelte';
+	import { txnHead } from '$lib/lists/TransactionList.svelte';
+	import { transferHead } from '$lib/lists/TransferList.svelte';
 	import PaycheckFigs from '$lib/lists/parts/PaycheckFigs.svelte';
-	import PaycheckMain from '$lib/lists/parts/PaycheckMain.svelte';
 	import MetaCol from '$lib/lists/parts/MetaCol.svelte';
+	import type { RowHead } from '$lib/lists/parts/RowMain.svelte';
 
 	interface Props {
 		entries: HistoryEntry[];
@@ -26,6 +26,12 @@
 		if (e.type === 'pay') return 'var(--role-income)';
 		return accountVar(e.row.from_account);
 	}
+
+	function head(e: HistoryEntry): RowHead {
+		if (e.type === 'txn') return txnHead(e.row);
+		if (e.type === 'pay') return { title: e.row.payee };
+		return transferHead(e.row);
+	}
 </script>
 
 <!-- A size container, so a paycheck's figures drop out when the pane is too narrow for them. -->
@@ -36,16 +42,8 @@
 		columnTracks="auto"
 		{dotColor}
 		dateOf={showDate ? (e) => e.date : undefined}
+		main={head}
 	>
-		{#snippet main(e)}
-			{#if e.type === 'txn'}
-				<TxnMain t={e.row} />
-			{:else if e.type === 'pay'}
-				<PaycheckMain p={e.row} />
-			{:else}
-				<TransferMain t={e.row} />
-			{/if}
-		{/snippet}
 		{#snippet columns(e)}
 			{#if e.type === 'txn'}
 				<MetaCol text={formatAccount(e.row.source)} />

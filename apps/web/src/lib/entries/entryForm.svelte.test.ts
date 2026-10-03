@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('$lib/data/load', () => ({
 	fetchEntry: async () => ({ entry: { payee: 'coffee', amount: 4 }, error: null }),
 	postJson: async () => ({ ok: true, error: null }),
-	deleteTransaction: async () => null
+	entryAction: async () => null
 }));
 
 const { EntryForm } = await import('./entryForm.svelte');

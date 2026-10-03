@@ -27,6 +27,8 @@ class Transfer:
     to_account: str  # the account money entered (inflow leg)
     pending: bool
     locator: str
+    #: A passthrough sweep, which the ledger re-derives and refuses to edit or delete by hand.
+    auto_managed: bool = False
 
 
 class Transfers:
@@ -34,7 +36,10 @@ class Transfers:
         self._led = ledger
 
     def transactions(self, year: int | None = None, month: int | None = None) -> list[Transfer]:
+        from yala.ledger.sweep import sweep_pairs
+
         out: list[Transfer] = []
+        sweeps = sweep_pairs(self._led)
 
         for t in self._led.transactions(year, month):
             if len(t.postings) != 2:
@@ -55,6 +60,7 @@ class Transfers:
                     to_account=inflow.account,
                     pending=t.pending,
                     locator=t.locator,
+                    auto_managed=frozenset((outflow.account, inflow.account)) in sweeps,
                 )
             )
 

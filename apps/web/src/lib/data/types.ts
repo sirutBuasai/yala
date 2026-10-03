@@ -70,6 +70,7 @@ export type FromAccount = string;
 export type ToAccount = string;
 export type Pending1 = boolean;
 export type Locator2 = string;
+export type AutoManaged = boolean;
 export type Transfers = Transfer[];
 export type Year1 = number;
 export type Gross1 = number;
@@ -269,6 +270,7 @@ export interface Transfer {
 	to_account: ToAccount;
 	pending: Pending1;
 	locator: Locator2;
+	auto_managed?: AutoManaged;
 }
 export interface IncomeSection {
 	by_year: ByYear1;

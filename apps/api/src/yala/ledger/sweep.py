@@ -49,10 +49,14 @@ def sweep_targets(ledger: Ledger) -> dict[str, str]:
     return {source: resolve_terminal(edges, source) for source in edges}
 
 
+def sweep_pairs(ledger: Ledger) -> set[frozenset[str]]:
+    """Every passthrough↔terminal account pair a sweep moves between."""
+    return {frozenset((s, t)) for s, t in sweep_targets(ledger).items()}
+
+
 def is_sweep(accounts: list[str], ledger: Ledger) -> bool:
     """Whether the accounts match a passthrough↔terminal sweep slot."""
-    pairs = {frozenset((s, t)) for s, t in sweep_targets(ledger).items()}
-    return len(accounts) == 2 and frozenset(accounts) in pairs
+    return len(accounts) == 2 and frozenset(accounts) in sweep_pairs(ledger)
 
 
 def _sweeps_in(

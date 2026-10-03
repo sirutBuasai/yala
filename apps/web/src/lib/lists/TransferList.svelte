@@ -1,4 +1,6 @@
 <script module lang="ts">
+	import { formatAccount } from '$lib/utils/format';
+
 	interface TransferRow {
 		locator: string;
 		date: string;
@@ -7,14 +9,22 @@
 		from_account: string;
 		to_account: string;
 		pending: boolean;
+		auto_managed?: boolean;
 	}
+
+	/** A bill pay row's head: the route between accounts, with the payee under it. */
+	export const transferHead = (t: TransferRow) => ({
+		title: `${formatAccount(t.from_account)} → ${formatAccount(t.to_account)}`,
+		pending: t.pending,
+		sub: t.payee,
+		fixed: t.auto_managed
+	});
 </script>
 
 <script lang="ts">
 	import { accountVar } from '$lib/utils/theme';
 	import RowList from '$lib/lists/RowList.svelte';
 	import Amount from '$lib/ui/Amount.svelte';
-	import TransferMain from '$lib/lists/parts/TransferMain.svelte';
 
 	interface Props {
 		transfers: TransferRow[];
@@ -31,10 +41,8 @@
 	{onedit}
 	dotColor={(t) => accountVar(t.from_account)}
 	dateOf={showDate ? (t) => t.date : undefined}
+	main={transferHead}
 >
-	{#snippet main(t)}
-		<TransferMain {t} />
-	{/snippet}
 	{#snippet amount(t)}
 		<Amount value={t.amount} />
 	{/snippet}

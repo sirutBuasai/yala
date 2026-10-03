@@ -80,6 +80,7 @@ def _transfer_out(t) -> Transfer:
         to_account=t.to_account,
         pending=t.pending,
         locator=t.locator,
+        auto_managed=t.auto_managed,
     )
 
 

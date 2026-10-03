@@ -17,6 +17,13 @@
 	/** A field the list can be ordered by via the `sortKey` prop. */
 	export type TxnSort = 'date' | 'category' | 'amount' | 'source';
 
+	/** A transaction row's head: the payee, with its category under it. */
+	export const txnHead = (t: { payee: string; pending: boolean; category: string }) => ({
+		title: t.payee,
+		pending: t.pending,
+		sub: t.category
+	});
+
 	/** Sortable fields with display labels, for driving a SortMenu. */
 	export const TXN_SORTS: { key: TxnSort; label: string }[] = [
 		{ key: 'date', label: 'Date' },
@@ -31,7 +38,6 @@
 	import { categoryVar } from '$lib/utils/theme';
 	import RowList from '$lib/lists/RowList.svelte';
 	import Amount from '$lib/ui/Amount.svelte';
-	import TxnMain from '$lib/lists/parts/TxnMain.svelte';
 	import MetaCol from '$lib/lists/parts/MetaCol.svelte';
 
 	interface Props {
@@ -100,10 +106,8 @@
 	{columnTracks}
 	dotColor={(t) => categoryVar(t.category)}
 	dateOf={showDate ? (t) => t.date : undefined}
+	main={txnHead}
 >
-	{#snippet main(t)}
-		<TxnMain {t} />
-	{/snippet}
 	{#snippet columns(t)}
 		{#each fields as f (f)}<MetaCol text={column(t, f)} />{/each}
 	{/snippet}
