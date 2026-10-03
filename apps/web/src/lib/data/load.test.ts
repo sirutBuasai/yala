@@ -10,7 +10,7 @@ import {
 	closeAccount,
 	type CloseOptions,
 	data,
-	deleteTransaction,
+	entryAction,
 	invalidateDerivedCache,
 	live,
 	loadData,
@@ -141,27 +141,35 @@ describe('the write guard', () => {
 		vi.stubGlobal('fetch', f);
 		live.set(false);
 
-		expect(await deleteTransaction('id:x')).toBe(API_UNAVAILABLE);
+		expect(await entryAction('delete', 'id:x')).toBe(API_UNAVAILABLE);
 		expect(f).not.toHaveBeenCalled();
 	});
 });
 
-describe('deleteTransaction', () => {
+describe('entryAction', () => {
 	beforeEach(() => live.set(true));
 
 	it('returns null on success', async () => {
 		vi.stubGlobal('fetch', mockFetchOnce({ ok: true }));
-		expect(await deleteTransaction('id:x')).toBeNull();
+		expect(await entryAction('delete', 'id:x')).toBeNull();
 	});
 
 	it('returns the API detail on failure', async () => {
 		vi.stubGlobal('fetch', mockFetchOnce({ detail: 'no transaction found' }, false, 404));
-		expect(await deleteTransaction('id:missing')).toBe('no transaction found');
+		expect(await entryAction('delete', 'id:missing')).toBe('no transaction found');
 	});
 
 	it('returns a friendly message when the API is unreachable', async () => {
 		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
-		expect(await deleteTransaction('id:x')).toContain('API unreachable');
+		expect(await entryAction('delete', 'id:x')).toContain('API unreachable');
+	});
+
+	it('posts to the endpoint the action names', async () => {
+		const f = mockFetchOnce({ ok: true });
+		vi.stubGlobal('fetch', f);
+		await entryAction('post', 'id:x');
+		expect(f.mock.calls[0]![0]).toBe('/api/entry/post');
+		expect(JSON.parse(f.mock.calls[0]![1].body)).toEqual({ locator: 'id:x' });
 	});
 });
 
@@ -322,9 +330,9 @@ describe('networthAt caching', () => {
 		vi.stubGlobal('fetch', first);
 		await networthAt('2026-07-01');
 
-		// deleteTransaction goes through postJson, the single write choke point
+		// entryAction goes through postJson, the single write choke point
 		vi.stubGlobal('fetch', mockFetchOnce({ ok: true }));
-		await deleteTransaction('id:x');
+		await entryAction('delete', 'id:x');
 
 		const after = mockFetchOnce({ accounts: [], adjustments: [], logged: {} });
 		vi.stubGlobal('fetch', after);

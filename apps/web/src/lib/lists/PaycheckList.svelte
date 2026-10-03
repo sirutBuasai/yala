@@ -3,7 +3,6 @@
 	import RowList from '$lib/lists/RowList.svelte';
 	import Amount from '$lib/ui/Amount.svelte';
 	import PaycheckFigs, { type PaycheckField } from '$lib/lists/parts/PaycheckFigs.svelte';
-	import PaycheckMain from '$lib/lists/parts/PaycheckMain.svelte';
 
 	interface Props {
 		paychecks: PaycheckOut[];
@@ -25,10 +24,8 @@
 		density="comfortable"
 		dotColor={() => 'var(--role-income)'}
 		dateOf={showDate ? (p) => p.date : undefined}
+		main={(p) => ({ title: p.payee })}
 	>
-		{#snippet main(p)}
-			<PaycheckMain {p} />
-		{/snippet}
 		{#snippet columns(p)}
 			<PaycheckFigs {p} {fields} />
 		{/snippet}

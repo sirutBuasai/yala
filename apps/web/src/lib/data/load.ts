@@ -186,9 +186,12 @@ export async function refreshData(): Promise<void> {
 	}
 }
 
-/** Delete a ledger entry by locator. Resolves to an error message, or null on success. */
-export async function deleteTransaction(locator: string): Promise<string | null> {
-	return (await postJson('/api/entry/delete', { locator })).error;
+/** What can be done to any entry by locator alone, whatever its kind. */
+export type EntryAction = 'delete' | 'post';
+
+/** `delete` removes the entry; `post` settles a pending one. Resolves to an error message, or null on success. */
+export async function entryAction(action: EntryAction, locator: string): Promise<string | null> {
+	return (await postJson(`/api/entry/${action}`, { locator })).error;
 }
 
 /** Re-pull the document, then the lists. Order matters: a list refreshed first flashes a raw leaf

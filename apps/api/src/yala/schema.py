@@ -109,6 +109,7 @@ class Transfer(_Base):
     to_account: str
     pending: bool
     locator: str
+    auto_managed: bool = False  # a passthrough sweep: re-derived, never edited or deleted by hand
 
 
 class PaycheckOut(_Base):

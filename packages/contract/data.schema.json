@@ -1059,6 +1059,11 @@
         "locator": {
           "title": "Locator",
           "type": "string"
+        },
+        "auto_managed": {
+          "default": false,
+          "title": "Auto Managed",
+          "type": "boolean"
         }
       },
       "required": [
